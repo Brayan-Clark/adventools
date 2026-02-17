@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NativeWind supports v3 syntax in global.css too */
+@layer base {
+  :root {
+    --color-primary: #195de6;
+    --color-background-light: #f6f6f8;
+    --color-background-dark: #111621;
+    --color-surface-dark: #1a2233;
+  }
+}
