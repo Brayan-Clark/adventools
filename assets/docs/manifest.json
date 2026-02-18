@@ -1,0 +1,43 @@
+{
+  "categories": [
+    {
+      "id": "esprit_prophetie",
+      "title": "Esprit de Prophétie",
+      "icon": "BookOpen",
+      "color": "#ec4899",
+      "bg": "rgba(236, 72, 153, 0.1)"
+    },
+    {
+      "id": "etudes_bibliques",
+      "title": "Études Bibliques",
+      "icon": "FileText",
+      "color": "#3b82f6",
+      "bg": "rgba(59, 130, 246, 0.1)"
+    },
+    {
+      "id": "dossiers_eglise",
+      "title": "Dossiers de l'Église",
+      "icon": "FolderOpen",
+      "color": "#10b981",
+      "bg": "rgba(16, 185, 129, 0.1)"
+    }
+  ],
+  "documents": [
+    {
+      "id": "ifm_001",
+      "title": "Ilay Fitiavana Mandresy",
+      "fileName": "IFM.pdf",
+      "categoryId": "esprit_prophetie",
+      "size": "3.1 MB",
+      "isAsset": true
+    },
+    {
+      "id": "hfm_001",
+      "title": "Hymnes et Farantsa Masina",
+      "fileName": "HFM.pdf",
+      "categoryId": "etudes_bibliques",
+      "size": "432 KB",
+      "isAsset": true
+    }
+  ]
+}

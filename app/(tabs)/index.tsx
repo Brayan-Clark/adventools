@@ -159,7 +159,10 @@ export default function Home() {
         <View className="mb-20">
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-lg font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Récemment lu</Text>
-            <TouchableOpacity onPress={() => setHistory([])}>
+            <TouchableOpacity onPress={async () => {
+              setHistory([]);
+              await AsyncStorage.removeItem('app_history');
+            }}>
               <Text className="text-xs text-primary font-bold">Effacer</Text>
             </TouchableOpacity>
           </View>
@@ -168,13 +171,24 @@ export default function Home() {
             history.map((item, index) => (
               <ActivityItem
                 key={index}
-                icon={<Bookmark color="#195de6" size={18} />}
+                icon={
+                  item.type === 'bible' ? <Bookmark color="#195de6" size={18} /> :
+                    item.type === 'hymn' ? <Music color="#ec4899" size={18} /> :
+                      item.type === 'pdf' ? <FileText color="#f59e0b" size={18} /> :
+                        <StickyNote color="#10b981" size={18} />
+                }
                 title={item.title}
                 subtitle={item.subtitle}
                 bg="bg-slate-900"
                 onPress={() => {
                   if (item.type === 'bible') {
                     router.push({ pathname: '/bible/reader', params: item.params });
+                  } else if (item.type === 'hymn') {
+                    router.push(`/hymnes/${item.params.id}`);
+                  } else if (item.type === 'pdf') {
+                    router.push({ pathname: '/pdf/viewer', params: item.params });
+                  } else if (item.type === 'note') {
+                    router.push({ pathname: '/notes', params: item.params });
                   }
                 }}
               />

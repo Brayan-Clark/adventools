@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, StyleSheet, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, StickyNote, Trash2, X, Check, ArrowLeft, Eye, Edit, Bold, Italic, List, Code, BookOpen } from 'lucide-react-native';
+import { Plus, Search, StickyNote, Trash2, X, Check, ArrowLeft, Eye, Edit, Bold, Italic, List, Code, BookOpen, Quote, Link as LinkIcon, Heading } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Markdown from 'react-native-markdown-display';
 import { cn } from '@/lib/utils';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
 
 interface Note {
@@ -24,22 +24,57 @@ export default function Notes() {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const textInputRef = React.useRef<TextInput>(null);
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   // State for detected bible verse modal
   const [detectedVerse, setDetectedVerse] = useState<{ book: string, chapter: string, verses: string } | null>(null);
   const [verseContent, setVerseContent] = useState<string | null>(null);
   const [verseLoading, setVerseLoading] = useState(false);
   const [targetBookId, setTargetBookId] = useState<number | null>(null);
+  const [resolvedBookName, setResolvedBookName] = useState<string>('');
 
   useEffect(() => {
     loadNotes();
   }, []);
+
+  // Handle opening specific note from history/params
+  useEffect(() => {
+    if (params.noteId && notes.length > 0) {
+      const targetNote = notes.find(n => n.id === String(params.noteId));
+      if (targetNote) {
+        setEditingNote(targetNote);
+        setIsPreviewMode(true);
+      }
+    }
+  }, [params.noteId, notes]);
+
+  const addToHistory = async (note: Note) => {
+    try {
+      const historyItem = {
+        type: 'note',
+        title: note.title || "Note sans titre",
+        subtitle: new Date(note.date).toLocaleDateString("fr-FR"),
+        timestamp: Date.now(),
+        params: { noteId: note.id }
+      };
+
+      const existingHistory = await AsyncStorage.getItem('app_history');
+      let history = existingHistory ? JSON.parse(existingHistory) : [];
+      // Remove duplicate by id
+      history = history.filter((h: any) => !(h.type === 'note' && h.params?.noteId === note.id));
+      history.unshift(historyItem);
+      await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 5)));
+    } catch (e) {
+      console.error("Failed to save note history", e);
+    }
+  };
 
   // Fetch verse content when detectedVerse changes
   useEffect(() => {
     async function fetchVerse() {
       if (!detectedVerse) {
         setVerseContent(null);
+        setResolvedBookName('');
         return;
       }
 
@@ -77,49 +112,35 @@ export default function Notes() {
         };
 
         const cleanDetectedBook = detectedVerse.book.replace(/[\.\s]/g, '').toLowerCase();
-        let searchName = cleanDetectedBook;
 
-        // Check if we have a mapping
-        if (BOOK_MAP[cleanDetectedBook]) {
-          searchName = BOOK_MAP[cleanDetectedBook].toLowerCase().replace(/[\s]/g, '');
-        } else if (cleanDetectedBook.length > 3 && BOOK_MAP[cleanDetectedBook.substring(0, 3)]) {
-          // Try prefix like "salam" -> "Salamo" might not work, but "sal" works.
-          // This is for cases like "Sala" which isn't in map but starts with "Sal"
+        // First, try to get the full name from our mapping
+        let searchBookName = BOOK_MAP[cleanDetectedBook];
+
+        // If not found in map, try with first 3 letters
+        if (!searchBookName && cleanDetectedBook.length >= 3) {
+          const shortName = cleanDetectedBook.substring(0, 3);
+          searchBookName = BOOK_MAP[shortName];
         }
 
-        // Try exact match or LIKE match on name or abbreviation
-        const bookQuery = `SELECT id, b_name, b_abbreviation FROM ${bookTable} WHERE REPLACE(LOWER(b_name), ' ', '') LIKE ? OR REPLACE(LOWER(b_abbreviation), ' ', '') LIKE ? LIMIT 1`;
-        let bookRes: any = await db.getFirstAsync(bookQuery, [`%${searchName}%`, `%${cleanDetectedBook}%`]);
-
-        if (!bookRes && BOOK_MAP[cleanDetectedBook]) {
-          // If direct search failed but we had a mapped name, try searching with the mapped name strictly
-          const mappedName = BOOK_MAP[cleanDetectedBook];
-          bookRes = await db.getFirstAsync(`SELECT id, b_name FROM ${bookTable} WHERE b_name LIKE ? LIMIT 1`, [`%${mappedName}%`]);
+        // If still not found, use the original cleaned name
+        if (!searchBookName) {
+          searchBookName = detectedVerse.book;
         }
+
+        // Search in database using ONLY b_name (b_abbreviation doesn't exist)
+        const bookQuery = `SELECT id, b_name FROM ${bookTable} WHERE REPLACE(LOWER(b_name), ' ', '') LIKE ? LIMIT 1`;
+        const searchPattern = `%${searchBookName.toLowerCase().replace(/[\s]/g, '')}%`;
+
+        let bookRes: any = await db.getFirstAsync(bookQuery, [searchPattern]);
 
         if (!bookRes) {
-          // Fallback: Try with just the first 3 letters if length > 3
-          if (cleanDetectedBook.length >= 3) {
-            const shortName = cleanDetectedBook.substring(0, 3);
-            // Check map again with short name
-            const shortMappedName = BOOK_MAP[shortName];
-            if (shortMappedName) {
-              bookRes = await db.getFirstAsync(`SELECT id, b_name FROM ${bookTable} WHERE b_name LIKE ? LIMIT 1`, [`%${shortMappedName}%`]);
-            }
-
-            if (!bookRes) {
-              bookRes = await db.getFirstAsync(bookQuery, [`%${shortName}%`, `%${shortName}%`]);
-            }
-          }
-        }
-
-        if (!bookRes) {
-          setVerseContent(`Livre "${detectedVerse.book}" (recherche: ${searchName}) introuvable.`);
+          setVerseContent(`Livre "${detectedVerse.book}" introuvable dans la base.`);
           setVerseLoading(false);
           return;
         }
 
         setTargetBookId(bookRes.id);
+        setResolvedBookName(bookRes.b_name); // Store the full book name
 
         // Use the discovered verse table for the query
         const verseTableName = verseTable; // Capture for closure if needed, though block-scoped let is fine.
@@ -244,30 +265,31 @@ export default function Notes() {
   };
 
   const BIBLE_BOOKS = "Gen|Eks|Lev|Nom|Deo|Jos|Mpits|Rota|1Sam|2Sam|1Mpanj|2Mpanj|1Tant|2Tant|Ezra|Neh|Est|Joba|Sal|Ohab|Mpito|Tonon|Isa|Jer|Fitom|Ezek|Dan|Hosea|Joela|Amosa|Obad|Jon|Mika|Nah|Hab|Zef|Hag|Zak|Mal|Mat|Mar|Lio|Jao|Asa|Rom|1Kor|2Kor|Gal|Efe|Filip|Kol|1Tes|2Tes|1Tim|2Tim|Tit|File|Heb|Jak|1Pet|2Pet|1Jao|2Jao|3Jao|Jod|Apok|Genesis|Eksodosy|Levitikosy|Nomery|Deoteronomia|Josoa|Mpitsara|Rota|1Samoela|2Samoela|1Mpanjaka|2Mpanjaka|1Tantara|2Tantara|Ezra|Nehemia|Estera|Joba|Salamo|Ohabolana|Mpitoriteny|Tononkiran'i Solomona|Isaia|Jeremia|Fitomaniana|Ezekiela|Daniela|Hosea|Joela|Amosa|Obadia|Jona|Mika|Nahoma|Habakoka|Zefania|Hagay|Zakaria|Malakia|Matio|Marka|Lioka|Jaona|Asan'ny Apostoly|Romanina|1Korintiana|2Korintiana|Galatiana|Efesiana|Filipiana|Kolosiana|1Tesaloniana|2Tesaloniana|1Timoty|2Timoty|Titosy|Filemona|Hebreo|Jakoba|1Petera|2Petera|1Jaona|2Jaona|3Jaona|Joda|Apokalypsy";
-
   // Regex construction: (Book) (Chapter) : (Verses part)
   const BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
 
   const handleVerseClick = (url: string) => {
-    if (url.startsWith('bible://')) {
-      const parts = url.replace('bible://', '').split('/');
-      if (parts.length >= 2) { // At least Book and Chapter
+    // Use #verse: format instead of bible:// to avoid Android intent issues
+    if (url.startsWith('#verse:')) {
+      const data = url.replace('#verse:', '');
+      const parts = data.split('/');
+      if (parts.length >= 2) {
         setDetectedVerse({
           book: decodeURIComponent(parts[0]),
           chapter: parts[1],
           verses: parts[2] || ""
         });
       }
-      return true;
+      return false; // Prevent default
     }
-    return false;
+    return true;
   };
 
   const processContent = (text: string) => {
     if (!text) return "";
     return text.replace(BIBLE_REGEX, (match, book, chapter, verses) => {
-      // match is the full string, book/chapter/verses are captured groups
-      return `[${match}](bible://${encodeURIComponent(book.trim())}/${chapter}/${verses ? verses.trim() : ''})`;
+      // Use #verse: format instead of bible:// to avoid external URL handling
+      return `[${match}](#verse:${encodeURIComponent(book.trim())}/${chapter}/${verses ? verses.trim() : ''})`;
     });
   };
 
@@ -316,24 +338,44 @@ export default function Notes() {
           {filteredNotes.map((note) => (
             <TouchableOpacity
               key={note.id}
-              onPress={() => { setEditingNote(note); setIsPreviewMode(true); }}
-              className="w-[100%] p-6 rounded-[35px] bg-slate-900 mb-5 border border-slate-800/50 shadow-lg"
+              onPress={() => {
+                setEditingNote(note);
+                setIsPreviewMode(true);
+                addToHistory(note);
+              }}
+              activeOpacity={0.7}
+              className="w-[48%] bg-slate-800/50 p-4 rounded-2xl mb-4 border border-slate-700/50 relative overflow-hidden"
             >
-              <View className="flex-row justify-between items-start mb-3">
-                <Text className="font-bold text-white text-lg flex-1 mr-2" numberOfLines={1}>{note.title || "Sans titre"}</Text>
-                <TouchableOpacity onPress={() => deleteNote(note.id)} className="w-8 h-8 rounded-full bg-red-500/10 items-center justify-center">
-                  <Trash2 size={14} color="#ef4444" />
-                </TouchableOpacity>
+              <View className="flex-row justify-between items-start mb-2">
+                <Text className="font-bold text-white text-base leading-tight flex-1 mr-1" numberOfLines={2}>
+                  {note.title || "Note sans titre"}
+                </Text>
               </View>
-              <Text className="text-sm text-slate-400 mb-6 leading-5" numberOfLines={3}>
-                {note.content || "Commencez à écrire votre réflexion..."}
+
+              <Text className="text-xs text-slate-400 mb-3 leading-4" numberOfLines={4}>
+                {note.content?.replace(/[#*`]/g, '') || "Aucun contenu..."}
               </Text>
-              <View className="flex-row items-center">
-                <View className="bg-slate-800 px-3 py-1 rounded-full">
-                  <Text className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                    {new Date(note.date).toLocaleDateString("fr-FR")}
-                  </Text>
-                </View>
+
+              <View className="flex-row justify-between items-center mt-auto pt-2 border-t border-slate-700/30">
+                <Text className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  {new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert(
+                      "Supprimer",
+                      "Voulez-vous vraiment supprimer cette note ?",
+                      [
+                        { text: "Annuler", style: "cancel" },
+                        { text: "Supprimer", style: "destructive", onPress: () => deleteNote(note.id) }
+                      ]
+                    );
+                  }}
+                  className="p-1.5 -mr-2 bg-red-500/10 rounded-full"
+                >
+                  <Trash2 size={12} color="#ef4444" opacity={0.8} />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           ))}
@@ -412,6 +454,11 @@ export default function Notes() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 px-2">
                   <TouchableOpacity onPress={() => insertMarkdown('**', '**')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><Bold size={18} color="#8b949e" /></TouchableOpacity>
                   <TouchableOpacity onPress={() => insertMarkdown('*', '*')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><Italic size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdown('# ', '')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><Heading size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdown('- ', '')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><List size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdown('> ', '')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><Quote size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdown('`', '`')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><Code size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdown('[', '](url)')} className="w-10 h-10 bg-[#21262d] rounded-lg items-center justify-center border border-[#30363d]"><LinkIcon size={18} color="#8b949e" /></TouchableOpacity>
                 </ScrollView>
               </View>
             )}
@@ -429,7 +476,7 @@ export default function Notes() {
             <View className="flex-row items-center mb-4">
               <BookOpen size={20} color="#1f6feb" className="mr-3" />
               <Text className="text-white text-lg font-bold">
-                {detectedVerse?.book} {detectedVerse?.chapter}:{detectedVerse?.verses}
+                {resolvedBookName || detectedVerse?.book} {detectedVerse?.chapter}{detectedVerse?.verses ? `:${detectedVerse.verses}` : ''}
               </Text>
             </View>
             <ScrollView className="bg-[#0d1117] rounded-xl border border-[#30363d] mb-6 max-h-64" contentContainerStyle={{ padding: 16 }}>
@@ -443,10 +490,36 @@ export default function Notes() {
             </ScrollView>
             <TouchableOpacity
               className="bg-[#1f6feb] w-full py-3.5 rounded-xl items-center"
+              disabled={!targetBookId}
               onPress={() => {
+                if (!targetBookId || !detectedVerse?.chapter) {
+                  Alert.alert('Erreur', 'Impossible d\'ouvrir ce verset dans la Bible.');
+                  return;
+                }
+
+                console.log('Navigation params:', {
+                  bookId: targetBookId,
+                  chapter: detectedVerse.chapter,
+                  verses: detectedVerse.verses
+                });
+
                 setDetectedVerse(null);
-                const params = { bookId: targetBookId, chapter: detectedVerse?.chapter };
-                router.push({ pathname: '/bible/reader', params });
+
+                // Extract first verse number if range (e.g., "16" from "16-18" or "16,17")
+                let verseNum = null;
+                if (detectedVerse.verses) {
+                  const match = detectedVerse.verses.match(/^\d+/);
+                  if (match) verseNum = match[0];
+                }
+
+                router.push({
+                  pathname: '/bible/reader',
+                  params: {
+                    bookId: String(targetBookId),
+                    chapter: String(detectedVerse.chapter),
+                    verse: verseNum || undefined
+                  }
+                });
               }}
             >
               <Text className="text-white font-bold">Ouvrir dans la Bible</Text>
