@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSettings } from '@/lib/settings-context';
 
 export default function HymneDetail() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function HymneDetail() {
   const [hymnNumber, setHymnNumber] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
+  const { settings: globalSettings } = useSettings();
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
@@ -189,7 +191,10 @@ export default function HymneDetail() {
               </TouchableOpacity>
             </View>
           ) : (
-            <Text className="text-xl leading-[40px] text-center text-slate-300" style={{ fontFamily: 'Lexend_400Regular' }}>
+            <Text className="leading-[40px] text-center text-slate-300" style={{
+              fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
+              fontSize: globalSettings.fontSize + 2 // Base offset for hymns
+            }}>
               {hymn.c_content}
             </Text>
           )}

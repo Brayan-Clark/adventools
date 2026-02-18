@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSettings } from '@/lib/settings-context';
 
 export default function Settings() {
   const router = useRouter();
+  const { settings: globalSettings } = useSettings();
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [language, setLanguage] = useState('Français');
@@ -223,6 +225,7 @@ function SettingsGroup({ title, children }: { title: string, children: React.Rea
 
 function SettingItem({ icon, label, onPress, rightElement, value, isLast }: any) {
   const Container = onPress ? TouchableOpacity : View;
+  const { settings: globalSettings } = useSettings();
 
   return (
     <Container
@@ -230,7 +233,9 @@ function SettingItem({ icon, label, onPress, rightElement, value, isLast }: any)
       className={`flex-row items-center p-4 pl-5 ${!isLast ? 'border-b border-slate-800/50' : ''} bg-slate-900 active:bg-slate-800`}
     >
       <View className="w-8 items-center mr-3">{icon}</View>
-      <Text className="flex-1 text-slate-200 font-medium text-sm">{label}</Text>
+      <Text className="flex-1 text-slate-200 font-medium text-sm" style={{
+        fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily
+      }}>{label}</Text>
       {value && <Text className="text-slate-500 text-xs mr-2">{value}</Text>}
       {rightElement ? rightElement : <ChevronRight size={16} color="#475569" />}
     </Container>

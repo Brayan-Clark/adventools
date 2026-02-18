@@ -7,8 +7,11 @@ import { loadDatabase } from '@/lib/database';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useSettings } from '@/lib/settings-context';
+
 export default function Home() {
   const router = useRouter();
+  const { settings: globalSettings } = useSettings();
   const [verse, setVerse] = React.useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
 
@@ -104,7 +107,10 @@ export default function Home() {
 
             {verse ? (
               <View>
-                <Text className="text-xl font-medium text-white italic mb-6 leading-8" style={{ fontFamily: 'Lexend_400Regular' }}>
+                <Text className="text-white italic mb-6 leading-8" style={{
+                  fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
+                  fontSize: 20 * (globalSettings.fontSize / 18) // Scaling based on base size
+                }}>
                   "{verse.text}"
                 </Text>
                 <View className="flex-row items-center">

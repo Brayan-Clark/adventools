@@ -26,12 +26,21 @@ SplashScreen.preventAutoHideAsync();
 
 import { Lexend_400Regular, Lexend_700Bold, Lexend_600SemiBold } from '@expo-google-fonts/lexend';
 
+import { SettingsProvider } from '@/lib/settings-context';
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     Lexend_400Regular,
     Lexend_700Bold,
     Lexend_600SemiBold,
+    'Alice': require('../assets/fonts/Alice.ttf'),
+    'Allura': require('../assets/fonts/Allura.ttf'),
+    'Choco': require('../assets/fonts/Chococooky.ttf'),
+    'Comfortaa': require('../assets/fonts/Comfortaa.ttf'),
+    'Cool': require('../assets/fonts/Cooljazz.ttf'),
+    'Rosemary': require('../assets/fonts/Rosemary.ttf'),
+    'OpenSans': require('../assets/fonts/OpenSans.ttf'),
     ...FontAwesome.font,
   });
 
@@ -59,12 +68,14 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   return (
-    <ThemeProvider value={DarkTheme}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <SettingsProvider>
+      <ThemeProvider value={DarkTheme}>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </ThemeProvider>
+    </SettingsProvider>
   );
 }

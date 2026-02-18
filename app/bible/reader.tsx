@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { cn } from '@/lib/utils';
 import { StatusBar } from 'expo-status-bar';
+import { useSettings } from '@/lib/settings-context';
 
 // Static imports for all database files
 const DB_SOURCES: Record<string, any> = {
@@ -53,12 +54,7 @@ export default function BibleReader() {
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [selectedVerse, setSelectedVerse] = useState<{ verse: number, text: string } | null>(null);
   const [showBookmarksModal, setShowBookmarksModal] = useState(false);
-  const [readingSettings, setReadingSettings] = useState({
-    fontSize: 18,
-    lineHeight: 1.5,
-    letterSpacing: 0,
-    fontFamily: 'System'
-  });
+  const { settings: globalSettings } = useSettings();
   const [wordHighlights, setWordHighlights] = useState<Record<string, any>>({});
   const [wordSelectMode, setWordSelectMode] = useState(false);
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
@@ -67,7 +63,6 @@ export default function BibleReader() {
   useEffect(() => {
     loadHighlights();
     loadBookmarks();
-    loadReadingSettings();
     loadWordHighlights();
   }, [chapter, bookId, lang]);
 
@@ -94,13 +89,6 @@ export default function BibleReader() {
     await AsyncStorage.setItem(`word_highlights_${bookId}_${chapter}`, JSON.stringify(newWh));
     setWordSelectMode(false);
     setSelectedVerse(null);
-  };
-
-  const loadReadingSettings = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('bible_reading_settings');
-      if (stored) setReadingSettings(JSON.parse(stored));
-    } catch (e) { console.error(e); }
   };
 
   const loadWordHighlights = async () => {
@@ -422,10 +410,10 @@ export default function BibleReader() {
                 <Text
                   className="text-slate-300"
                   style={{
-                    fontSize: readingSettings.fontSize,
-                    lineHeight: readingSettings.fontSize * readingSettings.lineHeight,
-                    letterSpacing: readingSettings.letterSpacing,
-                    fontFamily: readingSettings.fontFamily === 'System' ? 'Lexend_400Regular' : 'Lexend_400Regular', // Use Lexend as cool default
+                    fontSize: globalSettings.fontSize,
+                    lineHeight: globalSettings.fontSize * globalSettings.lineHeight,
+                    letterSpacing: globalSettings.letterSpacing,
+                    fontFamily: globalSettings.fontFamily === 'System' ? undefined : globalSettings.fontFamily,
                     color: userTextColor || '#cbd5e1'
                   }}
                 >
