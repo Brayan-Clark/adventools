@@ -86,14 +86,14 @@ export default function BibleReader() {
     }
 
     setWordHighlights(newWh);
-    await AsyncStorage.setItem(`word_highlights_${bookId}_${chapter}`, JSON.stringify(newWh));
+    await AsyncStorage.setItem(`word_highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newWh));
     setWordSelectMode(false);
     setSelectedVerse(null);
   };
 
   const loadWordHighlights = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`word_highlights_${bookId}_${chapter}`);
+      const stored = await AsyncStorage.getItem(`word_highlights_${lang}_${bookId}_${chapter}`);
       setWordHighlights(stored ? JSON.parse(stored) : {});
     } catch (e) { console.error(e); }
   };
@@ -117,13 +117,13 @@ export default function BibleReader() {
       }
 
       setWordHighlights(newWh);
-      await AsyncStorage.setItem(`word_highlights_${bookId}_${chapter}`, JSON.stringify(newWh));
+      await AsyncStorage.setItem(`word_highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newWh));
     } catch (e) { console.error(e); }
   };
 
   const loadBookmarks = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`bookmarks_${bookId}_${chapter}`);
+      const stored = await AsyncStorage.getItem(`bookmarks_${lang}_${bookId}_${chapter}`);
       setBookmarks(stored ? JSON.parse(stored) : {});
     } catch (e) {
       console.error(e);
@@ -137,7 +137,7 @@ export default function BibleReader() {
       newBookmarks[key] = !newBookmarks[key];
       if (!newBookmarks[key]) delete newBookmarks[key];
       setBookmarks(newBookmarks);
-      await AsyncStorage.setItem(`bookmarks_${bookId}_${chapter}`, JSON.stringify(newBookmarks));
+      await AsyncStorage.setItem(`bookmarks_${lang}_${bookId}_${chapter}`, JSON.stringify(newBookmarks));
     } catch (e) {
       console.error(e);
     }
@@ -145,7 +145,7 @@ export default function BibleReader() {
 
   const loadHighlights = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`highlights_${bookId}_${chapter}`);
+      const stored = await AsyncStorage.getItem(`highlights_${lang}_${bookId}_${chapter}`);
       setHighlights(stored ? JSON.parse(stored) : {});
     } catch (e) {
       console.error(e);
@@ -173,7 +173,7 @@ export default function BibleReader() {
       }
 
       setHighlights(newHighlights);
-      await AsyncStorage.setItem(`highlights_${bookId}_${chapter}`, JSON.stringify(newHighlights));
+      await AsyncStorage.setItem(`highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newHighlights));
     } catch (e) { console.error(e); }
   };
 

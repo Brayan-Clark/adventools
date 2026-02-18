@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Alert, Linking } from 'react-native';
-import { User, Bell, Shield, CircleHelp, LogOut, ChevronRight, Globe, Moon, Sun, Lock, FileText, ChevronLeft, Camera, Heart, Info, Type } from 'lucide-react-native';
+import {
+  User, Bell, Shield, CircleHelp, LogOut, ChevronRight, Globe, Moon, Sun, Lock,
+  FileText, ChevronLeft, Camera, Heart, Info, Type, Save, Download, RefreshCcw
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettings } from '@/lib/settings-context';
+import { exportHymnCorrections, importHymnCorrections } from '@/lib/backup-utils';
 
 export default function Settings() {
   const router = useRouter();
@@ -51,19 +55,6 @@ export default function Settings() {
     saveSetting('notifications', value);
   };
 
-  const handleLanguageChange = () => {
-    Alert.alert(
-      'Langue de l\'interface',
-      'Choisissez votre langue',
-      [
-        { text: 'Français', onPress: () => { setLanguage('Français'); saveSetting('language', 'Français'); } },
-        { text: 'Malagasy', onPress: () => { setLanguage('Malagasy'); saveSetting('language', 'Malagasy'); } },
-        { text: 'English', onPress: () => { setLanguage('English'); saveSetting('language', 'English'); } },
-        { text: 'Annuler', style: 'cancel' }
-      ]
-    );
-  };
-
   const handleClearHistory = async () => {
     Alert.alert(
       'Effacer l\'historique',
@@ -88,7 +79,7 @@ export default function Settings() {
 
       {/* Header */}
       <View className="px-6 py-4 flex-row items-center justify-between border-b border-slate-800/50">
-        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
+        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center border border-slate-700">
           <ChevronLeft size={20} color="#cbd5e1" />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Paramètres</Text>
@@ -100,51 +91,34 @@ export default function Settings() {
         {/* Profile Card */}
         <View className="items-center mb-8">
           <View className="relative mb-4">
-            <View className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 overflow-hidden items-center justify-center shadow-2xl">
-              <User size={40} color="#64748b" />
+            <View className="w-24 h-24 rounded-full bg-slate-900 border-4 border-slate-800 items-center justify-center">
+              <User size={48} color="#475569" />
             </View>
-            <TouchableOpacity className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-[#111621]">
+            <TouchableOpacity className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary items-center justify-center border-4 border-background-dark">
               <Camera size={14} color="white" />
             </TouchableOpacity>
           </View>
-          <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>Utilisateur</Text>
-          <Text className="text-sm text-slate-500 font-medium">Adventools Mobile</Text>
-          <View className="bg-primary/10 px-3 py-1 rounded-full mt-3 border border-primary/20">
-            <Text className="text-primary text-[10px] font-bold uppercase tracking-widest">Version Gratuite</Text>
-          </View>
+          <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>Étudiant Biblique</Text>
+          <Text className="text-slate-500 text-sm">Prêt pour une nouvelle étude ?</Text>
         </View>
 
-        {/* Settings Groups */}
+        {/* Categories */}
         <SettingsGroup title="Préférences">
           <SettingItem
-            icon={isDarkMode ? <Moon size={18} color="#818cf8" /> : <Sun size={18} color="#f59e0b" />}
+            icon={<Moon size={18} color="#64748b" />}
             label="Mode Sombre"
-            rightElement={
-              <Switch
-                value={isDarkMode}
-                onValueChange={handleDarkModeToggle}
-                trackColor={{ false: '#334155', true: '#195de6' }}
-                thumbColor={isDarkMode ? 'white' : '#cbd5e1'}
-              />
-            }
+            rightElement={<Switch value={isDarkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: '#334155', true: '#195de6' }} />}
           />
           <SettingItem
             icon={<Bell size={18} color="#64748b" />}
             label="Notifications"
-            rightElement={
-              <Switch
-                value={notifications}
-                onValueChange={handleNotificationsToggle}
-                trackColor={{ false: '#334155', true: '#195de6' }}
-                thumbColor={notifications ? 'white' : '#cbd5e1'}
-              />
-            }
+            rightElement={<Switch value={notifications} onValueChange={handleNotificationsToggle} trackColor={{ false: '#334155', true: '#195de6' }} />}
           />
           <SettingItem
             icon={<Globe size={18} color="#64748b" />}
-            label="Langue de l'interface"
+            label="Langue"
             value={language}
-            onPress={handleLanguageChange}
+            onPress={() => Alert.alert('Langue', 'Choix de langue bientôt disponible')}
             isLast
           />
         </SettingsGroup>
@@ -164,10 +138,21 @@ export default function Settings() {
           />
         </SettingsGroup>
 
-        <SettingsGroup title="Données">
+        <SettingsGroup title="Données & Sauvegarde">
           <SettingItem
-            icon={<FileText size={18} color="#64748b" />}
-            label="Effacer l'historique"
+            icon={<Save size={18} color="#64748b" />}
+            label="Exporter les corrections"
+            value="Vers fichier JSON"
+            onPress={exportHymnCorrections}
+          />
+          <SettingItem
+            icon={<Download size={18} color="#64748b" />}
+            label="Importer des corrections"
+            onPress={importHymnCorrections}
+          />
+          <SettingItem
+            icon={<RefreshCcw size={18} color="#f87171" />}
+            label="Réinitialiser l'historique"
             onPress={handleClearHistory}
             isLast
           />
@@ -198,14 +183,12 @@ export default function Settings() {
         </SettingsGroup>
 
         <TouchableOpacity
-          className="flex-row items-center justify-center bg-red-500/10 border border-red-500/20 p-4 rounded-2xl mb-12 active:bg-red-500/20 transition-colors"
-          onPress={() => Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [{ text: "Annuler" }, { text: "Déconnexion", style: "destructive" }])}
+          onPress={() => Alert.alert('Déconnexion', 'Bientôt disponible')}
+          className="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex-row items-center justify-center mb-10"
         >
-          <LogOut size={18} color="#ef4444" className="mr-2" />
-          <Text className="text-red-500 font-bold">Se déconnecter</Text>
+          <LogOut size={18} color="#f87171" className="mr-2" />
+          <Text className="text-red-400 font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Se déconnecter</Text>
         </TouchableOpacity>
-
-        <Text className="text-center text-slate-700 text-[10px] font-bold uppercase tracking-widest mb-8">Adventools Mobile v1.0.0 (Build 2026)</Text>
 
       </ScrollView>
     </SafeAreaView>
