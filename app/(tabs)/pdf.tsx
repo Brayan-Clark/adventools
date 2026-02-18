@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, FolderOpen, BookOpen, Clock, FileText, ChevronRight, Plus, Download, X, CloudDownload, Trash2, CheckCircle2, ArrowLeft } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -122,12 +122,25 @@ export default function PDFLibrary() {
   };
 
   const deleteFile = async (fileName: string) => {
-    try {
-      await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
-      setLocalFiles(prev => prev.filter(f => f !== fileName));
-    } catch (e) {
-      console.error(e);
-    }
+    Alert.alert(
+      "Supprimer le fichier",
+      "Êtes-vous sûr de vouloir supprimer ce document de votre téléphone ? Vous pourrez toujours le télécharger à nouveau depuis le catalogue.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
+              setLocalFiles(prev => prev.filter(f => f !== fileName));
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const openPdf = async (file: string, title: string) => {

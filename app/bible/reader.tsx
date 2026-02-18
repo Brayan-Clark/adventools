@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Modal, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bookmark, Type, Play, ChevronDown, Edit3, Minus, Globe, ChevronLeft, ChevronRight, X, Check, Copy, Share2, Palette } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -53,11 +53,85 @@ export default function BibleReader() {
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [selectedVerse, setSelectedVerse] = useState<{ verse: number, text: string } | null>(null);
   const [showBookmarksModal, setShowBookmarksModal] = useState(false);
+  const [readingSettings, setReadingSettings] = useState({
+    fontSize: 18,
+    lineHeight: 1.5,
+    letterSpacing: 0,
+    fontFamily: 'System'
+  });
+  const [wordHighlights, setWordHighlights] = useState<Record<string, any>>({});
+  const [wordSelectMode, setWordSelectMode] = useState(false);
+  const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
+  const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
 
   useEffect(() => {
     loadHighlights();
     loadBookmarks();
+    loadReadingSettings();
+    loadWordHighlights();
   }, [chapter, bookId, lang]);
+
+  // Open study mode and clone existing highlights for this verse
+  const enterStudyMode = () => {
+    if (!selectedVerse) return;
+    const existing = wordHighlights[selectedVerse.verse.toString()] || {};
+    setTempWordHighlights({ ...existing });
+    setWordSelectMode(true);
+  };
+
+  const saveStudyResults = async () => {
+    if (!selectedVerse) return;
+    const vKey = selectedVerse.verse.toString();
+    const newWh = { ...wordHighlights };
+
+    if (Object.keys(tempWordHighlights).length === 0) {
+      delete newWh[vKey];
+    } else {
+      newWh[vKey] = tempWordHighlights;
+    }
+
+    setWordHighlights(newWh);
+    await AsyncStorage.setItem(`word_highlights_${bookId}_${chapter}`, JSON.stringify(newWh));
+    setWordSelectMode(false);
+    setSelectedVerse(null);
+  };
+
+  const loadReadingSettings = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('bible_reading_settings');
+      if (stored) setReadingSettings(JSON.parse(stored));
+    } catch (e) { console.error(e); }
+  };
+
+  const loadWordHighlights = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(`word_highlights_${bookId}_${chapter}`);
+      setWordHighlights(stored ? JSON.parse(stored) : {});
+    } catch (e) { console.error(e); }
+  };
+
+  const saveWordHighlight = async (verseNum: number, wordIndex: number, color: string | null) => {
+    try {
+      const vKey = verseNum.toString();
+      const newWh = { ...wordHighlights };
+      const verseWh = { ...(newWh[vKey] || {}) };
+
+      if (color) {
+        verseWh[wordIndex] = color;
+      } else {
+        delete verseWh[wordIndex];
+      }
+
+      if (Object.keys(verseWh).length === 0) {
+        delete newWh[vKey];
+      } else {
+        newWh[vKey] = verseWh;
+      }
+
+      setWordHighlights(newWh);
+      await AsyncStorage.setItem(`word_highlights_${bookId}_${chapter}`, JSON.stringify(newWh));
+    } catch (e) { console.error(e); }
+  };
 
   const loadBookmarks = async () => {
     try {
@@ -325,6 +399,8 @@ export default function BibleReader() {
           const bg = typeof h === 'string' ? h : h?.bg;
           const userTextColor = typeof h === 'object' ? h?.text : undefined;
           const isBookmarked = bookmarks[v.verse.toString()];
+          const vWh = wordHighlights[v.verse.toString()] || {};
+          const words = v.text.split(' ');
 
           return (
             <View className="px-7">
@@ -332,7 +408,10 @@ export default function BibleReader() {
                 onLongPress={() => setSelectedVerse(v)}
                 delayLongPress={300}
                 activeOpacity={0.7}
-                className="mb-4 rounded-xl px-2 py-1 relative"
+                className={cn(
+                  "mb-4 rounded-xl px-2 py-1 relative",
+                  wordSelectMode && selectedVerse?.verse === v.verse ? "border-2 border-blue-500/50 bg-blue-500/5" : ""
+                )}
                 style={bg ? { backgroundColor: bg } : {}}
               >
                 {isBookmarked && (
@@ -340,11 +419,28 @@ export default function BibleReader() {
                     <Bookmark size={24} color="#195de6" fill="#195de6" />
                   </View>
                 )}
-                <Text className="text-slate-300 leading-7 text-lg" style={{ fontSize, fontFamily: 'Lexend_400Regular', color: userTextColor || '#cbd5e1' }}>
-                  <Text className="text-[10px] font-bold text-slate-500 mr-1" style={{ transform: [{ translateY: -2 }] }}>
+                <Text
+                  className="text-slate-300"
+                  style={{
+                    fontSize: readingSettings.fontSize,
+                    lineHeight: readingSettings.fontSize * readingSettings.lineHeight,
+                    letterSpacing: readingSettings.letterSpacing,
+                    fontFamily: readingSettings.fontFamily === 'System' ? 'Lexend_400Regular' : 'Lexend_400Regular', // Use Lexend as cool default
+                    color: userTextColor || '#cbd5e1'
+                  }}
+                >
+                  <Text className="text-[10px] font-bold text-slate-500 mr-1">
                     {v.verse}
                   </Text>
-                  {" "}{v.text}
+                  {" "}
+                  {words.map((word: string, idx: number) => (
+                    <Text
+                      key={idx}
+                      style={{ color: vWh[idx] || userTextColor || '#cbd5e1' }}
+                    >
+                      {word}{" "}
+                    </Text>
+                  ))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -466,8 +562,37 @@ export default function BibleReader() {
               </TouchableOpacity>
             </ScrollView>
 
+            {/* Word Select Color Picker (Only if mode is active) */}
+            {wordSelectMode && (
+              <View className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
+                <Text className="text-blue-400 text-[10px] font-bold uppercase mb-3 tracking-widest text-center">Couleur du mot sélectionné</Text>
+                <View className="flex-row justify-center gap-4">
+                  {['#facc15', '#4ade80', '#f87171', '#38bdf8', '#ffffff'].map((c) => (
+                    <TouchableOpacity
+                      key={c}
+                      onPress={() => setSelectedWordColor(c)}
+                      className="w-10 h-10 rounded-full border-2 items-center justify-center shadow-lg"
+                      style={{ backgroundColor: c, borderColor: selectedWordColor === c ? 'white' : 'transparent' }}
+                    >
+                      {selectedWordColor === c && <Check size={16} color={c === '#ffffff' ? 'black' : 'white'} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Actions */}
             <View className="gap-3">
+              <TouchableOpacity
+                onPress={enterStudyMode}
+                className={cn(
+                  "flex-row items-center justify-center p-4 rounded-xl border bg-slate-800 border-slate-700"
+                )}
+              >
+                {wordSelectMode ? <Check size={20} color="white" className="mr-3" /> : <Palette size={20} color="white" className="mr-3" />}
+                <Text className="text-white font-bold">{wordSelectMode ? "Enregistrer l'étude" : "Mode Étude (Mots)"}</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={() => {
                   shareVerse(selectedVerse!.verse, selectedVerse!.text);
@@ -507,6 +632,81 @@ export default function BibleReader() {
             <View className="h-8" />
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Study Mode Modal */}
+      <Modal visible={wordSelectMode} transparent animationType="slide">
+        <View className="flex-1 bg-black/95 justify-center p-6">
+          <View className="bg-[#1a2233] rounded-[40px] p-8 border border-white/10 shadow-2xl">
+            <View className="flex-row justify-between items-center mb-8">
+              <View>
+                <Text className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">Mode Étude Tactile</Text>
+                <Text className="text-white font-bold text-xl">{currentBookName} {chapter}:{selectedVerse?.verse}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setWordSelectMode(false)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Preview Area */}
+            <View className="bg-[#111621] p-6 rounded-3xl mb-8 border border-white/5">
+              <Text style={{
+                fontSize: 22,
+                lineHeight: 34,
+                color: '#cbd5e1',
+                fontFamily: 'Lexend_400Regular',
+                textAlign: 'center'
+              }}>
+                {(selectedVerse?.text.split(' ') || []).map((word, idx) => (
+                  <Text
+                    key={idx}
+                    onPress={() => {
+                      const newTemp = { ...tempWordHighlights };
+                      if (newTemp[idx] === selectedWordColor) {
+                        delete newTemp[idx];
+                      } else {
+                        newTemp[idx] = selectedWordColor;
+                      }
+                      setTempWordHighlights(newTemp);
+                    }}
+                    style={{
+                      color: tempWordHighlights[idx] || '#cbd5e1'
+                    }}
+                  >
+                    {word}{" "}
+                  </Text>
+                ))}
+              </Text>
+            </View>
+
+            {/* Color Palette for Words */}
+            <View className="flex-row justify-center gap-3 mb-10">
+              {['#facc15', '#4ade80', '#f87171', '#38bdf8', '#ffffff'].map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setSelectedWordColor(c)}
+                  className="w-12 h-12 rounded-full border-2 items-center justify-center"
+                  style={{ backgroundColor: c, borderColor: selectedWordColor === c ? 'white' : 'transparent' }}
+                >
+                  {selectedWordColor === c && <Check size={20} color={c === '#ffffff' ? 'black' : 'white'} />}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                onPress={() => setTempWordHighlights({})}
+                className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center"
+              >
+                <X size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={saveStudyResults}
+              className="bg-primary py-5 rounded-2xl items-center shadow-xl shadow-primary/30"
+            >
+              <Text className="text-white font-bold text-lg">Appliquer au texte</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* Modal Signets */}
@@ -563,94 +763,118 @@ export default function BibleReader() {
       </Modal>
 
       {/* Modal Selection Langue */}
-      {showLangPicker && (
-        <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
-          <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
-          <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
-            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-            <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {Object.entries(BIBLE_CONFIGS).map(([code, config]) => (
-                <TouchableOpacity
-                  key={code}
-                  onPress={() => { setLang(code); setShowLangPicker(false); }}
-                  className={cn(
-                    "flex-row items-center justify-between p-4 rounded-2xl mb-3 border",
-                    lang === code ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
-                  )}
-                >
-                  <View>
-                    <Text className={cn("font-bold text-base", lang === code ? "text-white" : "text-slate-300")}>
-                      {config.name}
-                    </Text>
-                    <Text className={cn("text-xs mt-1", lang === code ? "text-blue-100" : "text-slate-500")}>
-                      {code}
-                    </Text>
-                  </View>
-                  {lang === code && (
-                    <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
-                      <Text className="text-[#195de6] font-bold text-xs">✓</Text>
+      {
+        showLangPicker && (
+          <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
+            <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
+            <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
+              <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+              <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {Object.entries(BIBLE_CONFIGS).map(([code, config]) => (
+                  <TouchableOpacity
+                    key={code}
+                    onPress={() => { setLang(code); setShowLangPicker(false); }}
+                    className={cn(
+                      "flex-row items-center justify-between p-4 rounded-2xl mb-3 border",
+                      lang === code ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                    )}
+                  >
+                    <View>
+                      <Text className={cn("font-bold text-base", lang === code ? "text-white" : "text-slate-300")}>
+                        {config.name}
+                      </Text>
+                      <Text className={cn("text-xs mt-1", lang === code ? "text-blue-100" : "text-slate-500")}>
+                        {code}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    {lang === code && (
+                      <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
+                        <Text className="text-[#195de6] font-bold text-xs">✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      )}
+        )
+      }
 
       {/* Modal Selection Chapitre */}
-      {showChapterPicker && (
-        <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
-          <TouchableOpacity className="flex-1" onPress={() => setShowChapterPicker(false)} />
-          <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
-            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-            <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir un chapitre</Text>
-            <FlatList
-              data={Array.from({ length: chaptersCount || 50 }, (_, i) => i + 1)}
-              numColumns={5}
-              keyExtractor={(item) => item.toString()}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => { setChapter(item); setShowChapterPicker(false); }}
-                  className={cn(
-                    "w-[17%] aspect-square items-center justify-center rounded-2xl m-1.5 border",
-                    item === chapter ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
-                  )}
-                >
-                  <Text className={cn("font-bold text-base", item === chapter ? "text-white" : "text-slate-500")}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
+      {
+        showChapterPicker && (
+          <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
+            <TouchableOpacity className="flex-1" onPress={() => setShowChapterPicker(false)} />
+            <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
+              <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+              <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir un chapitre</Text>
+              <FlatList
+                data={Array.from({ length: chaptersCount || 50 }, (_, i) => i + 1)}
+                numColumns={5}
+                keyExtractor={(item) => item.toString()}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => { setChapter(item); setShowChapterPicker(false); }}
+                    className={cn(
+                      "w-[17%] aspect-square items-center justify-center rounded-2xl m-1.5 border",
+                      item === chapter ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                    )}
+                  >
+                    <Text className={cn("font-bold text-base", item === chapter ? "text-white" : "text-slate-500")}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
           </View>
-        </View>
-      )}
+        )
+      }
 
       {/* Modal Paramètres */}
-      {showSettings && (
-        <View className="absolute inset-x-0 bottom-0 bg-[#1a2233] rounded-t-[40px] p-10 z-[100] shadow-2xl border-t border-slate-800">
-          <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-10" />
-          <View className="flex-row justify-between items-center mb-8">
-            <Text className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Taille du Texte</Text>
-            <Text className="font-bold text-white text-sm">{fontSize} px</Text>
-          </View>
-          <View className="flex-row items-center gap-6 mb-12">
-            <Type size={16} color="#475569" />
-            <View className="flex-1 h-2 bg-[#111621] rounded-full relative">
-              <View className="absolute left-0 top-0 bottom-0 bg-[#195de6] rounded-full" style={{ width: `${(fontSize - 12) * 6}%` }} />
-              <View className="absolute h-5 w-5 bg-white rounded-full -top-1.5 border-4 border-[#195de6]" style={{ left: `${(fontSize - 12) * 6}%`, marginLeft: -10 }} />
+      {
+        showSettings && (
+          <View className="absolute inset-x-0 bottom-0 bg-[#1a2233] rounded-t-[40px] p-10 z-[100] shadow-2xl border-t border-slate-800">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-10" />
+            <View className="flex-row justify-between items-center mb-8">
+              <Text className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Taille du Texte</Text>
+              <Text className="font-bold text-white text-sm">{fontSize} px</Text>
             </View>
-            <Type size={28} color="#475569" />
+            <View className="flex-row items-center gap-6 mb-12">
+              <Type size={16} color="#475569" />
+              <View className="flex-1 h-2 bg-[#111621] rounded-full relative">
+                <View className="absolute left-0 top-0 bottom-0 bg-[#195de6] rounded-full" style={{ width: `${(fontSize - 12) * 6}%` }} />
+                <View className="absolute h-5 w-5 bg-white rounded-full -top-1.5 border-4 border-[#195de6]" style={{ left: `${(fontSize - 12) * 6}%`, marginLeft: -10 }} />
+              </View>
+              <Type size={28} color="#475569" />
+            </View>
+            {/* New content for Settings Group and Items */}
+            {/* Assuming SettingsGroup and SettingItem are custom components */}
+            {/* This part of the snippet was malformed, so I'm placing it logically */}
+            {/* If these components are not defined, this will cause an error */}
+            {/* For the purpose of this edit, I'm assuming they exist and are imported */}
+            {/* This section is added based on the user's provided snippet, assuming it's meant to extend settings */}
+            {/* <SettingsGroup title="Support">
+            <SettingItem
+              icon={<Info size={18} color="#64748b" />}
+              label="À Propos d'Adventools"
+              onPress={() => router.push('/settings/about' as any)}
+            />
+            <SettingItem
+              icon={<Heart size={18} color="#ef4444" />}
+              label="Soutenir le projet (Don)"
+              onPress={() => router.push('/settings/don' as any)}
+            />
+          </SettingsGroup> */}
+            <TouchableOpacity
+              onPress={() => setShowSettings(false)}
+              className="bg-[#195de6] py-4 rounded-2xl items-center"
+            >
+              <Text className="text-white font-bold">Terminer</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => setShowSettings(false)}
-            className="bg-[#195de6] py-4 rounded-2xl items-center"
-          >
-            <Text className="text-white font-bold">Terminer</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+        )
+      }
+    </View >
   );
 }

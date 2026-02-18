@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Alert } from 'react-native';
-import { User, Bell, Shield, CircleHelp, LogOut, ChevronRight, Globe, Moon, Sun, Lock, FileText, ChevronLeft, Camera } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Alert, Linking } from 'react-native';
+import { User, Bell, Shield, CircleHelp, LogOut, ChevronRight, Globe, Moon, Sun, Lock, FileText, ChevronLeft, Camera, Heart, Info, Type } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -155,9 +155,9 @@ export default function Settings() {
             onPress={() => Alert.alert('Info', 'Fonctionnalité à venir')}
           />
           <SettingItem
-            icon={<User size={18} color="#64748b" />}
+            icon={<Type size={18} color="#64748b" />}
             label="Paramètres de lecture"
-            onPress={() => Alert.alert('Info', 'Fonctionnalité à venir')}
+            onPress={() => router.push('/bible/settings' as any)}
             isLast
           />
         </SettingsGroup>
@@ -173,9 +173,19 @@ export default function Settings() {
 
         <SettingsGroup title="Support">
           <SettingItem
+            icon={<Info size={18} color="#64748b" />}
+            label="À Propos d'Adventools"
+            onPress={() => router.push('/settings/about' as any)}
+          />
+          <SettingItem
+            icon={<Heart size={18} color="#ef4444" />}
+            label="Faire un Don"
+            onPress={() => router.push('/settings/don' as any)}
+          />
+          <SettingItem
             icon={<CircleHelp size={18} color="#64748b" />}
             label="Centre d'aide"
-            onPress={() => Alert.alert('Support', 'Contactez-nous à support@adventools.com')}
+            onPress={() => Alert.alert('Support', 'Contactez-nous à contact@adventools.com')}
           />
           <SettingItem
             icon={<Shield size={18} color="#64748b" />}
