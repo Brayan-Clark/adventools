@@ -56,6 +56,33 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/PATRIARKA%20SY%20MPAMINANY.pdf",
       "size": "1,8 MB",
       "isAsset": false
+    },
+    {
+      "id": "fff_001",
+      "title": "FIOMANANA HO AMIN'NY RANONORANA FARANY",
+      "fileName": "FIOMANANA HO AMIN'NY RANONORANA FARANY.pdf",
+      "categoryId": "esprit_prophetie",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/FIOMANANA%20HO%20AMIN'NY%20RANONORANA%20FARANY.pdf",
+      "size": "155,2 KB",
+      "isAsset": false
+    },
+    {
+      "id": "faha7_001",
+      "title": "NY FIANGONANA ADVANTISTA MITANDRINA NY ANDRO FAHA7",
+      "fileName": "NY FIANGONANA ADVANTISTA MITANDRINA NY ANDRO FAHA7.pdf",
+      "categoryId": "dossiers_eglise",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/NY%20FIANGONANA%20ADVANTISTA%20MITANDRINA%20NY%20ANDRO%20FAHA7.pdf",
+      "size": "1,9 MB",
+      "isAsset": false
+    },
+    {
+      "id": "zs_001",
+      "title": "NY ZANAKA SISA 12",
+      "fileName": "NY ZANAKA SISA 12.pdf",
+      "categoryId": "dossiers_eglise",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/NY%20ZANAKA%20SISA%2012.pdf",
+      "size": "925,9 KB",
+      "isAsset": false
     }
   ]
 }

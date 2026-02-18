@@ -31,6 +31,7 @@ export default function PDFLibrary() {
   const [showStore, setShowStore] = useState(false);
   const [recentPdfs, setRecentPdfs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,14 +53,22 @@ export default function PDFLibrary() {
     }
   };
 
-  const loadManifest = async () => {
+  const loadManifest = async (force = false) => {
     try {
-      setManifest(localManifest);
-      const GITHUB_MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      if (force) setRefreshing(true);
 
-      const response = await fetch(GITHUB_MANIFEST_URL, { signal: controller.signal });
+      // 1. Initial load from local manifest if not already set
+      if (!manifest) setManifest(localManifest);
+
+      // 2. Attempt to sync with GitHub (Online) with anti-cache
+      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json?t=${Date.now()}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+      const response = await fetch(GITHUB_MANIFEST_URL, {
+        signal: controller.signal,
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       clearTimeout(timeoutId);
 
       if (response.ok) {
@@ -67,9 +76,10 @@ export default function PDFLibrary() {
         setManifest(remoteData);
       }
     } catch (e) {
-      console.log("Using local manifest (offline or sync error)");
+      console.log("Using local/cached manifest (offline or sync error)");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -356,13 +366,26 @@ export default function PDFLibrary() {
       <Modal visible={showStore} animationType="slide" transparent>
         <SafeAreaView className="flex-1 bg-slate-950">
           <View className="px-6 py-4 flex-row justify-between items-center border-b border-slate-800">
-            <View>
+            <View className="flex-1">
               <Text className="text-xl font-bold text-white">Ressources Cloud</Text>
               <Text className="text-xs text-slate-400">Bibliothèque Adventiste en ligne</Text>
             </View>
-            <TouchableOpacity onPress={() => setShowStore(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
-              <X size={24} color="white" />
-            </TouchableOpacity>
+            <View className="flex-row items-center gap-2">
+              <TouchableOpacity
+                onPress={() => loadManifest(true)}
+                disabled={refreshing}
+                className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center"
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color="#3b82f6" />
+                ) : (
+                  <Clock size={20} color="#3b82f6" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowStore(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                <X size={24} color="white" />
+              </TouchableOpacity>
+            </View>
           </View>
           <ScrollView className="flex-1 px-6 pt-6">
             {manifest?.categories.map((cat: any) => {
