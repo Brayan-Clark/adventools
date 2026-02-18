@@ -47,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="pdf"
         options={{
-          title: 'PDF',
+          title: 'Books',
           tabBarIcon: ({ color }) => <FileText size={24} color={color} />,
         }}
       />

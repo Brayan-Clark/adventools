@@ -20,6 +20,13 @@
       "icon": "FolderOpen",
       "color": "#10b981",
       "bg": "rgba(16, 185, 129, 0.1)"
+    },
+    {
+      "id": "dossiers_JA",
+      "title": "Dossiers de club JA",
+      "icon": "FolderOpen",
+      "color": "#11ff55",
+      "bg": "rgba(17, 255, 85, 0.1)"
     }
   ],
   "documents": [
@@ -33,7 +40,7 @@
     },
     {
       "id": "hfm_001",
-      "title": "Hymnes et Farantsa Masina",
+      "title": "FAHATOKIANA AMIN’NY FOMBA FIAINANA KRISTIANA",
       "fileName": "HFM.pdf",
       "categoryId": "etudes_bibliques",
       "size": "432 KB",
@@ -82,6 +89,105 @@
       "categoryId": "dossiers_eglise",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/NY%20ZANAKA%20SISA%2012.pdf",
       "size": "925,9 KB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_001",
+      "title": "SAKAIZA",
+      "fileName": "SAKAIZA.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/SAKAIZA.pdf",
+      "size": "2,7 KB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_002",
+      "title": "ASTUCES DE CAMP",
+      "fileName": "ASTUCES-DE-CAMP.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/ASTUCES-DE-CAMP.pdf",
+      "size": "1,6 MB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_003",
+      "title": "COMMUNICATION-NIVEAU-1",
+      "fileName": "COMMUNICATION-NIVEAU-1.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/COMMUNICATION-NIVEAU-1.pdf",
+      "size": "309,4 KB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_004",
+      "title": "FEUX-CUISINE-DE-CAMP",
+      "fileName": "FEUX-CUISINE-DE-CAMP.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/FEUX-CUISINE-DE-CAMP.pdf",
+      "size": "230,8 KB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_005",
+      "title": "Galerie noeuds",
+      "fileName": "GALERIE-NOEUDS.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/GALERIE-NOEUDS.pdf",
+      "size": "780,7 KB",
+      "isAsset": false
+    },
+    {
+      "id": "JA_006",
+      "title": "Noeuds",
+      "fileName": "NOEUDS.pdf",
+      "categoryId": "dossiers_eglise",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/NOEUDS.pdf",
+      "size": "663,8 KB",
+      "isAsset": false
+    },
+    {
+      "id": "AAA_001",
+      "title": "ANY AMPARANY ANY",
+      "fileName": "ANY AMPARANY ANY.pdf",
+      "categoryId": "esprit_prophetie",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/ANY%20AMPARANY%20ANY.pdf",
+      "size": "3,7 KB",
+      "isAsset": false
+    },
+    {
+      "id": "TOM_001",
+      "title": "BOKY TOMOERA",
+      "fileName": "BOKY TOMOERA.pdf",
+      "categoryId": "dossiers_eglise",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/BOKY%20TOMOERA.pdf",
+      "size": "797,8 KB",
+      "isAsset": false
+    },
+    {
+      "id": "SK_001",
+      "title": "Fanompoana kristiana (service chretien)",
+      "fileName": "FANOMPOANA KRISTIANA.pdf",
+      "categoryId": "esprit_prophetie",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/FANOMPOANA%20KRISTIANA.pdf",
+      "size": "871,3 KB",
+      "isAsset": false
+    },
+    {
+      "id": "HHT_001",
+      "title": "Hafatra Hoanny Tanora",
+      "fileName": "HAFATRA-HOANNY-TANORA.pdf",
+      "categoryId": "esprit_prophetie",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/HAFATRA-HOANNY-TANORA.pdf",
+      "size": "1,3 KB",
+      "isAsset": false
+    },
+    {
+      "id": "HMF_001",
+      "title": "HERY MIFANANDRINA",
+      "fileName": "HERY MIFANANDRINA.pdf",
+      "categoryId": "esprit_prophetie",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/HERY%20MIFANANDRINA.pdf",
+      "size": "2,1 KB",
       "isAsset": false
     }
   ]
