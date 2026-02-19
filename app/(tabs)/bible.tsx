@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, ChevronRight, ArrowLeft, Globe, ChevronDown, Check, X } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
-import { StatusBar } from 'expo-status-bar';
+import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ArrowLeft, ChevronDown, ChevronRight, Globe, Search, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Static imports for all database files
-const DB_SOURCES: Record<string, any> = {
+export const DB_SOURCES: Record<string, any> = {
   'protestant.db': require('../../assets/databases/protestant.db'),
   'king_james.db': require('../../assets/databases/king_james.db'),
   'le_bible.db': require('../../assets/databases/le_bible.db'),
@@ -21,7 +22,7 @@ const DB_SOURCES: Record<string, any> = {
 };
 
 // Bible database configurations
-const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
+export const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
   'MG': { file: 'protestant.db', prefix: 'protestant', name: 'Malagasy' },
   'FR': { file: 'le_bible.db', prefix: 'fr', name: 'Français' },
   'EN': { file: 'king_james.db', prefix: 'en', name: 'English (KJV)' },
@@ -35,6 +36,7 @@ const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string
 
 export default function Bible() {
   const router = useRouter();
+  const { settings: globalSettings } = useSettings();
   const [books, setBooks] = useState<any[]>([]);
   const [testaments, setTestaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function Bible() {
   const [searchMode, setSearchMode] = useState<'books' | 'verses'>('books');
   const [verseResults, setVerseResults] = useState<any[]>([]);
   const [isSearchingVerses, setIsSearchingVerses] = useState(false);
-  const [lang, setLang] = useState<string>('MG');
+  const [lang, setLang] = useState<string>(globalSettings.bibleVersion || 'MG');
   const [showLangPicker, setShowLangPicker] = useState(false);
 
   useEffect(() => {

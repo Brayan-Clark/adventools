@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Modal, Alert, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Bookmark, Type, Play, ChevronDown, Edit3, Minus, Globe, ChevronLeft, ChevronRight, X, Check, Copy, Share2, Palette } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
+import { useSettings } from '@/lib/settings-context';
+import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
-import { cn } from '@/lib/utils';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useSettings } from '@/lib/settings-context';
+import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 // Static imports for all database files
 const DB_SOURCES: Record<string, any> = {
@@ -47,14 +46,14 @@ export default function BibleReader() {
   const [fontSize, setFontSize] = useState(18);
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
-  const [lang, setLang] = useState<string>((langParam as string) || 'MG');
+  const { settings: globalSettings } = useSettings();
+  const [lang, setLang] = useState<string>((langParam as string) || globalSettings.bibleVersion || 'MG');
   const [currentBookName, setCurrentBookName] = useState(bookName);
   const flatListRef = React.useRef<FlatList>(null);
   const [highlights, setHighlights] = useState<Record<string, any>>({});
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [selectedVerse, setSelectedVerse] = useState<{ verse: number, text: string } | null>(null);
   const [showBookmarksModal, setShowBookmarksModal] = useState(false);
-  const { settings: globalSettings } = useSettings();
   const [wordHighlights, setWordHighlights] = useState<Record<string, any>>({});
   const [wordSelectMode, setWordSelectMode] = useState(false);
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');

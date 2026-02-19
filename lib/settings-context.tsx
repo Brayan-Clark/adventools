@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type AppSettings = {
   fontFamily: string;
@@ -7,6 +7,10 @@ type AppSettings = {
   lineHeight: number;
   letterSpacing: number;
   scalingFactor: number;
+  bibleVersion: string;
+  language: string;
+  darkMode: boolean;
+  notifications: boolean;
 };
 
 type SettingsContextType = {
@@ -21,6 +25,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   lineHeight: 1.5,
   letterSpacing: 0,
   scalingFactor: 1,
+  bibleVersion: 'MG',
+  language: 'Français',
+  darkMode: true,
+  notifications: true,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

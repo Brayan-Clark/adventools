@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart, Facebook, Mail, ChevronLeft, Info, ExternalLink, Sparkles, Landmark } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft, Copy, ExternalLink, Facebook, Heart, Landmark, Mail, Sparkles } from 'lucide-react-native';
+import React from 'react';
+import { Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DonateScreen() {
   const router = useRouter();
@@ -65,16 +65,58 @@ export default function DonateScreen() {
           {/* Action Links */}
           <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4 ml-4">Moyens de soutien</Text>
 
+          <View className="bg-white/5 border border-white/10 rounded-[32px] p-6 mb-4">
+            <View className="flex-row items-center mb-6">
+              <View className="w-12 h-12 rounded-2xl bg-amber-500/10 items-center justify-center mr-4">
+                <Landmark size={24} color="#f59e0b" />
+              </View>
+              <View>
+                <Text className="text-white font-bold text-lg">Mobile Money</Text>
+                <Text className="text-slate-500 text-xs">Transfert direct à Madagascar</Text>
+              </View>
+            </View>
+
+            <View className="gap-3">
+              <TouchableOpacity
+                onPress={() => alert("+261343739528")}
+                className="flex-row items-center bg-slate-800/50 p-4 rounded-2xl border border-white/5"
+              >
+                <View className="w-8 h-8 rounded-full bg-yellow-400 items-center justify-center mr-3">
+                  <Text className="text-[10px] font-bold text-black">M</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-sm">Mvola</Text>
+                  <Text className="text-slate-400 text-xs">+261 34 37 395 28</Text>
+                </View>
+                <Copy size={16} color="#64748b" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => alert("+261328894201")}
+                className="flex-row items-center bg-slate-800/50 p-4 rounded-2xl border border-white/5"
+              >
+                <View className="w-8 h-8 rounded-full bg-orange-500 items-center justify-center mr-3">
+                  <Text className="text-[10px] font-bold text-white">O</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-sm">Orange Money</Text>
+                  <Text className="text-slate-400 text-xs">+261 32 88 942 01</Text>
+                </View>
+                <Copy size={16} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity
             className="flex-row items-center bg-primary p-5 rounded-3xl mb-4 shadow-xl shadow-primary/20"
-            onPress={() => alert("Lien de paiement à configurer.")}
+            onPress={() => alert("Lien de paiement en ligne bientôt disponible.")}
           >
             <View className="w-12 h-12 rounded-2xl bg-white/20 items-center justify-center mr-4">
               <Heart size={24} color="white" fill="white" />
             </View>
             <View className="flex-1">
-              <Text className="text-white font-bold text-lg">Faire un Don</Text>
-              <Text className="text-blue-100/60 text-xs">Soutenir le développement</Text>
+              <Text className="text-white font-bold text-lg">Paiement en ligne</Text>
+              <Text className="text-blue-100/60 text-xs">Visa, Mastercard, PayPal</Text>
             </View>
             <ExternalLink size={20} color="white" opacity={0.5} />
           </TouchableOpacity>

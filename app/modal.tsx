@@ -26,14 +26,12 @@ import {
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BIBLE_CONFIGS } from './(tabs)/bible';
 
 
 export default function Settings() {
   const router = useRouter();
-  const { settings: globalSettings } = useSettings();
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [notifications, setNotifications] = useState(true);
-  const [language, setLanguage] = useState('Français');
+  const { settings: globalSettings, updateSettings } = useSettings();
   const [userName, setUserName] = useState('Fianatra Baiboly');
   const [userImage, setUserImage] = useState<string | null>(null);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
@@ -65,16 +63,10 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const darkMode = await AsyncStorage.getItem('settings_darkMode');
-      const notifs = await AsyncStorage.getItem('settings_notifications');
-      const lang = await AsyncStorage.getItem('settings_language');
       const name = await AsyncStorage.getItem('profile_name');
       const image = await AsyncStorage.getItem('profile_image');
       const depts = await AsyncStorage.getItem('profile_departments');
 
-      if (darkMode !== null) setIsDarkMode(darkMode === 'true');
-      if (notifs !== null) setNotifications(notifs === 'true');
-      if (lang !== null) setLanguage(lang);
       if (name !== null) setUserName(name);
       if (image !== null) setUserImage(image);
       if (depts !== null) setUserDepartments(JSON.parse(depts));
@@ -83,23 +75,6 @@ export default function Settings() {
     }
   };
 
-  const saveSetting = async (key: string, value: any) => {
-    try {
-      await AsyncStorage.setItem(`settings_${key}`, String(value));
-    } catch (e) {
-      console.error('Failed to save setting', e);
-    }
-  };
-
-  const handleDarkModeToggle = (value: boolean) => {
-    setIsDarkMode(value);
-    saveSetting('darkMode', value);
-  };
-
-  const handleNotificationsToggle = (value: boolean) => {
-    setNotifications(value);
-    saveSetting('notifications', value);
-  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -231,18 +206,27 @@ export default function Settings() {
           <SettingItem
             icon={<Moon size={18} color="#64748b" />}
             label="Mode Sombre"
-            rightElement={<Switch value={isDarkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: '#334155', true: '#195de6' }} />}
+            rightElement={<Switch value={globalSettings.darkMode ?? true} onValueChange={(v) => updateSettings({ darkMode: v })} trackColor={{ false: '#334155', true: '#195de6' }} />}
           />
           <SettingItem
             icon={<Bell size={18} color="#64748b" />}
             label="Notifications"
-            rightElement={<Switch value={notifications} onValueChange={handleNotificationsToggle} trackColor={{ false: '#334155', true: '#195de6' }} />}
+            rightElement={<Switch value={globalSettings.notifications ?? true} onValueChange={(v) => updateSettings({ notifications: v })} trackColor={{ false: '#334155', true: '#195de6' }} />}
           />
           <SettingItem
             icon={<Globe size={18} color="#64748b" />}
             label="Langue"
-            value={language}
-            onPress={() => Alert.alert('Langue', 'Choix de langue bientôt disponible')}
+            value={globalSettings.language}
+            onPress={() => {
+              Alert.alert(
+                'Langue',
+                'Choisissez votre langue',
+                [
+                  { text: 'Français', onPress: () => updateSettings({ language: 'Français' }) },
+                  { text: 'English', onPress: () => updateSettings({ language: 'English' }) },
+                ]
+              )
+            }}
             isLast
           />
         </SettingsGroup>
@@ -251,8 +235,17 @@ export default function Settings() {
           <SettingItem
             icon={<FileText size={18} color="#64748b" />}
             label="Version de Bible par défaut"
-            value="Baiboly Malagasy"
-            onPress={() => Alert.alert('Info', 'Fonctionnalité à venir')}
+            value={BIBLE_CONFIGS[globalSettings.bibleVersion]?.name || globalSettings.bibleVersion}
+            onPress={() => {
+              Alert.alert(
+                "Version par défaut",
+                "Choisissez la version de la Bible à ouvrir par défaut",
+                Object.entries(BIBLE_CONFIGS).map(([code, config]) => ({
+                  text: `${config.name} (${code})`,
+                  onPress: () => updateSettings({ bibleVersion: code })
+                }))
+              )
+            }}
           />
           <SettingItem
             icon={<Type size={18} color="#64748b" />}
@@ -294,6 +287,11 @@ export default function Settings() {
             onPress={() => router.push('/settings/about' as any)}
           />
           <SettingItem
+            icon={<Shield size={18} color="#64748b" />}
+            label="Politique de confidentialité"
+            onPress={() => router.push('/settings/privacy' as any)}
+          />
+          <SettingItem
             icon={<Heart size={18} color="#ef4444" />}
             label="Faire un Don"
             onPress={() => router.push('/settings/don' as any)}
@@ -301,12 +299,8 @@ export default function Settings() {
           <SettingItem
             icon={<CircleHelp size={18} color="#64748b" />}
             label="Centre d'aide"
-            onPress={() => Alert.alert('Support', 'Contactez-nous à contact@adventools.com')}
-          />
-          <SettingItem
-            icon={<Shield size={18} color="#64748b" />}
-            label="Politique de confidentialité"
-            onPress={() => Alert.alert('Confidentialité', 'Vos données sont stockées localement sur votre appareil.')}
+            value="Par Email"
+            onPress={() => Alert.alert('Aide', 'Pour toute assistance, contactez-nous à : brayanraherinandrasana@gmail.com')}
             isLast
           />
         </SettingsGroup>

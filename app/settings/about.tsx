@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Info, Heart, Shield, Globe, Github, Mail, Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ChevronLeft, Github, Globe, Mail, Shield } from 'lucide-react-native';
+import React from 'react';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -24,8 +24,12 @@ export default function AboutScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* App Info Hero */}
         <View className="items-center py-12 px-8">
-          <View className="w-24 h-24 bg-primary rounded-[30px] items-center justify-center shadow-2xl shadow-primary/40 mb-6">
-            <Sparkles size={48} color="white" />
+          <View className="mb-6 items-center justify-center">
+            <Image
+              source={require('../../assets/images/Adventiste_logo_colored.png')}
+              style={{ width: 100, height: 100 }}
+              resizeMode="contain"
+            />
           </View>
           <Text className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>Adventools</Text>
           <Text className="text-slate-500 font-medium tracking-widest uppercase text-[10px]">Version 1.0.0 (Stable)</Text>
@@ -69,7 +73,7 @@ export default function AboutScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-white font-bold">Support Technique</Text>
-              <Text className="text-xs text-slate-500">contact@adventools.com</Text>
+              <Text className="text-xs text-slate-500">brayanraherinandrasana@gmail.com</Text>
             </View>
           </TouchableOpacity>
 

@@ -8,45 +8,62 @@ import { Alert, PanResponder, ScrollView, Text, TouchableOpacity, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function ModernSlider({ value, min, max, onChange, step = 1 }: { value: number, min: number, max: number, onChange: (val: number) => void, step?: number }) {
-  const [width, setWidth] = React.useState(0);
+  const [layoutWidth, setLayoutWidth] = React.useState(0);
+  const widthRef = React.useRef(0);
+  const propsRef = React.useRef({ min, max, onChange, step });
+
+  React.useEffect(() => {
+    propsRef.current = { min, max, onChange, step };
+  }, [min, max, onChange, step]);
+
+  const handleTouch = (x: number) => {
+    const { min, max, onChange, step } = propsRef.current;
+    if (widthRef.current <= 0) return;
+    const percentage = Math.max(0, Math.min(1, x / widthRef.current));
+    const rawValue = min + percentage * (max - min);
+    const steppedValue = Math.round(rawValue / (step || 1)) * (step || 1);
+    onChange(Number(steppedValue.toFixed(2)));
+  };
 
   const panResponder = React.useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
       onPanResponderGrant: (evt) => {
         handleTouch(evt.nativeEvent.locationX);
       },
       onPanResponderMove: (evt) => {
         handleTouch(evt.nativeEvent.locationX);
       },
+      onPanResponderTerminationRequest: () => false,
     })
   ).current;
 
-  const handleTouch = (x: number) => {
-    if (width <= 0) return;
-    const percentage = Math.max(0, Math.min(1, x / width));
-    const rawValue = min + percentage * (max - min);
-    const steppedValue = Math.round(rawValue / step) * step;
-    onChange(Number(steppedValue.toFixed(2)));
-  };
-
-  const percentage = ((value - min) / (max - min)) * 100;
+  const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
   return (
     <View
-      className="flex-1 h-1.5 bg-slate-800 rounded-full relative justify-center"
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      className="flex-1 h-12 justify-center"
+      style={{ paddingHorizontal: 0 }}
       {...panResponder.panHandlers}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        setLayoutWidth(w);
+        widthRef.current = w;
+      }}
     >
-      <View
-        className="absolute h-full bg-primary rounded-full"
-        style={{ width: `${percentage}%` }}
-      />
-      <View
-        className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
-        style={{ left: `${percentage}%`, marginLeft: -12 }}
-      />
+      <View pointerEvents="none" className="h-1.5 bg-slate-800 rounded-full w-full relative justify-center">
+        <View
+          className="absolute h-full bg-primary rounded-full"
+          style={{ width: `${percentage}%` }}
+        />
+        <View
+          className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
+          style={{ left: `${percentage}%`, marginLeft: -12 }}
+        />
+      </View>
     </View>
   );
 }
@@ -95,17 +112,21 @@ export default function BibleSettings() {
               <Sparkles size={14} color="#3b82f6" className="mr-2" />
               <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aperçu du texte</Text>
             </View>
-            <View className="p-8 bg-[#111621]">
-              <Text style={{
-                fontSize: settings.fontSize,
-                lineHeight: settings.fontSize * settings.lineHeight,
-                letterSpacing: settings.letterSpacing,
-                fontFamily: settings.fontFamily === 'System' ? undefined : settings.fontFamily,
-                color: '#cbd5e1'
-              }}>
-                [1] Tamin'ny voalohany Andriamanitra nahary ny lanitra sy ny tany. {"\n\n"}
-                [2] Ary ny tany dia tsy nisy endrika sady foana; ary aizina no tambonin'ny lalina.
-              </Text>
+            <View className="h-48 bg-[#111621]">
+              <ScrollView className="p-8" showsVerticalScrollIndicator={true}>
+                <Text style={{
+                  fontSize: settings.fontSize,
+                  lineHeight: settings.fontSize * settings.lineHeight,
+                  letterSpacing: settings.letterSpacing,
+                  fontFamily: settings.fontFamily === 'System' ? undefined : settings.fontFamily,
+                  color: '#cbd5e1'
+                }}>
+                  [1] Tamin'ny voalohany Andriamanitra nahary ny lanitra sy ny tany. {"\n\n"}
+                  [2] Ary ny tany dia tsy nisy endrika sady foana; ary aizina no tambonin'ny lalina. {"\n\n"}
+                  [3] Ary Andriamanitra nanao hoe: "Misy mazava" ; dia nisy mazava. {"\n\n"}
+                  [4] Ary hitan'Andriamanitra fa tsara ny mazava; ary nampisarahin'Andriamanitra ny mazava sy ny aizina.
+                </Text>
+              </ScrollView>
             </View>
           </View>
         </View>

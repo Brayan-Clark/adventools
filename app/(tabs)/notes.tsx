@@ -1,4 +1,5 @@
 import { loadDatabase } from '@/lib/database';
+import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BIBLE_CONFIGS, DB_SOURCES } from './bible';
 
 interface Note {
   id: string;
@@ -24,6 +26,7 @@ export default function Notes() {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const textInputRef = React.useRef<TextInput>(null);
   const router = useRouter();
+  const { settings: globalSettings } = useSettings();
   const params = useLocalSearchParams();
 
   // State for detected bible verse modal
@@ -80,7 +83,8 @@ export default function Notes() {
 
       setVerseLoading(true);
       try {
-        const db = await loadDatabase('protestant.db', require('../../assets/databases/protestant.db'));
+        const config = BIBLE_CONFIGS[globalSettings.bibleVersion || 'MG'];
+        const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
 
         // Dynamically find table names
         const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");

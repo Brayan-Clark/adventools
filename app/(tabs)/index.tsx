@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, BookOpen, Music, FileText, StickyNote, Share2, Bookmark, History, ChevronRight, User } from 'lucide-react-native';
-import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
-import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Bookmark, BookOpen, ChevronRight, FileText, History, Music, Settings, Share2, StickyNote } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSettings } from '@/lib/settings-context';
 
@@ -65,9 +65,16 @@ export default function Home() {
       <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="flex-row justify-between items-center mb-10">
-          <View>
-            <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{greeting}</Text>
-            <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Bienvenue !</Text>
+          <View className="flex-row items-center">
+            <Image
+              source={require('../../assets/images/Adventiste_logo_colored.png')}
+              style={{ width: 40, height: 40, marginRight: 12 }}
+              resizeMode="contain"
+            />
+            <View>
+              <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{greeting}</Text>
+              <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Bienvenue !</Text>
+            </View>
           </View>
           <TouchableOpacity
             onPress={() => router.push('/modal')}
@@ -174,7 +181,7 @@ export default function Home() {
           </View>
 
           {history.length > 0 ? (
-            history.map((item, index) => (
+            history.slice(0, 5).map((item, index) => (
               <ActivityItem
                 key={index}
                 icon={
