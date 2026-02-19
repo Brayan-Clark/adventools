@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
 export async function exportHymnCorrections() {
@@ -79,5 +79,35 @@ export async function importHymnCorrections() {
   } catch (error) {
     console.error("Import Error", error);
     Alert.alert("Erreur", "Impossible d'importer le fichier. Vérifiez le format.");
+  }
+}
+export async function resetHymnCorrections() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const hymnKeys = keys.filter(key => key.startsWith('hymne_edit_'));
+
+    if (hymnKeys.length === 0) {
+      Alert.alert("Information", "Aucune correction à réinitialiser.");
+      return;
+    }
+
+    Alert.alert(
+      "Réinitialisation",
+      `Voulez-vous supprimer les ${hymnKeys.length} corrections locales ? Cette action est irréversible.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Réinitialiser",
+          style: "destructive",
+          onPress: async () => {
+            await AsyncStorage.multiRemove(hymnKeys);
+            Alert.alert("Succès", "Toutes les corrections ont été effacées.");
+          }
+        }
+      ]
+    );
+  } catch (e) {
+    console.error(e);
+    Alert.alert("Erreur", "Impossible de réinitialiser les corrections.");
   }
 }

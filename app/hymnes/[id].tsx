@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Play, Bookmark, Music, Hash, X, Edit3, Save, Copy, Heart } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
-import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettings } from '@/lib/settings-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ArrowLeft, Edit3, Hash, Heart, Music, Save, Share2, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HymneDetail() {
   const router = useRouter();
@@ -171,9 +171,14 @@ export default function HymneDetail() {
               />
               <TouchableOpacity
                 onPress={async () => {
-                  await AsyncStorage.setItem(`hymne_edit_${id}`, editedContent);
-                  setHymn({ ...hymn, c_content: editedContent });
-                  setIsEditing(false);
+                  try {
+                    await AsyncStorage.setItem(`hymne_edit_${id}`, editedContent);
+                    setHymn({ ...hymn, c_content: editedContent });
+                    setIsEditing(false);
+                    Alert.alert("Succès", "Modification enregistrée avec succès.");
+                  } catch (e) {
+                    Alert.alert("Erreur", "Impossible d'enregistrer la modification.");
+                  }
                 }}
                 className="mt-6 bg-green-600 py-4 rounded-2xl items-center flex-row justify-center"
               >

@@ -1,11 +1,55 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Info, Type, AlignLeft, MoveHorizontal, Check, Palette, Sparkles } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { AlignLeft, ChevronLeft, Info, MoveHorizontal, Sparkles } from 'lucide-react-native';
+import React from 'react';
+import { Alert, PanResponder, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+function ModernSlider({ value, min, max, onChange, step = 1 }: { value: number, min: number, max: number, onChange: (val: number) => void, step?: number }) {
+  const [width, setWidth] = React.useState(0);
+
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        handleTouch(evt.nativeEvent.locationX);
+      },
+      onPanResponderMove: (evt) => {
+        handleTouch(evt.nativeEvent.locationX);
+      },
+    })
+  ).current;
+
+  const handleTouch = (x: number) => {
+    if (width <= 0) return;
+    const percentage = Math.max(0, Math.min(1, x / width));
+    const rawValue = min + percentage * (max - min);
+    const steppedValue = Math.round(rawValue / step) * step;
+    onChange(Number(steppedValue.toFixed(2)));
+  };
+
+  const percentage = ((value - min) / (max - min)) * 100;
+
+  return (
+    <View
+      className="flex-1 h-1.5 bg-slate-800 rounded-full relative justify-center"
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      {...panResponder.panHandlers}
+    >
+      <View
+        className="absolute h-full bg-primary rounded-full"
+        style={{ width: `${percentage}%` }}
+      />
+      <View
+        className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
+        style={{ left: `${percentage}%`, marginLeft: -12 }}
+      />
+    </View>
+  );
+}
 
 export default function BibleSettings() {
   const router = useRouter();
@@ -22,8 +66,6 @@ export default function BibleSettings() {
   ];
 
   if (isLoading) return null;
-
-  const fontConfig = fonts.find(f => f.value === settings.fontFamily) || fonts[0];
 
   return (
     <SafeAreaView className="flex-1 bg-[#0f172a]">
@@ -104,28 +146,11 @@ export default function BibleSettings() {
               </View>
               <View className="flex-row items-center gap-4">
                 <Text className="text-slate-500 text-xs">Aa</Text>
-                <View className="flex-1 h-1.5 bg-slate-800 rounded-full relative justify-center">
-                  <View
-                    className="absolute h-full bg-primary rounded-full"
-                    style={{ width: `${((settings.fontSize - 12) / 18) * 100}%` }}
-                  />
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
-                    style={{ left: `${((settings.fontSize - 12) / 18) * 100}%`, marginLeft: -12 }}
-                  />
-                  <ScrollView
-                    horizontal
-                    scrollEnabled={false}
-                    contentContainerStyle={{ width: '100%', height: 40 }}
-                    onTouchStart={(e) => {
-                      const x = e.nativeEvent.locationX;
-                      const width = Dimensions.get('window').width - 110;
-                      const val = Math.round(12 + (x / width) * 18);
-                      updateSettings({ fontSize: Math.min(30, Math.max(12, val)) });
-                    }}
-                  />
-                </View>
+                <ModernSlider
+                  value={settings.fontSize}
+                  min={12} max={30}
+                  onChange={(v) => updateSettings({ fontSize: v })}
+                />
                 <Text className="text-slate-200 text-lg font-bold">Aa</Text>
               </View>
             </View>
@@ -138,28 +163,12 @@ export default function BibleSettings() {
               </View>
               <View className="flex-row items-center gap-4">
                 <AlignLeft size={16} color="#64748b" />
-                <View className="flex-1 h-1.5 bg-slate-800 rounded-full relative justify-center">
-                  <View
-                    className="absolute h-full bg-primary rounded-full"
-                    style={{ width: `${((settings.lineHeight - 1) / 1.5) * 100}%` }}
-                  />
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
-                    style={{ left: `${((settings.lineHeight - 1) / 1.5) * 100}%`, marginLeft: -12 }}
-                  />
-                  <ScrollView
-                    horizontal
-                    scrollEnabled={false}
-                    contentContainerStyle={{ width: '100%', height: 40 }}
-                    onTouchStart={(e) => {
-                      const x = e.nativeEvent.locationX;
-                      const width = Dimensions.get('window').width - 110;
-                      const val = 1 + (x / width) * 1.5;
-                      updateSettings({ lineHeight: Number(val.toFixed(1)) });
-                    }}
-                  />
-                </View>
+                <ModernSlider
+                  value={settings.lineHeight}
+                  min={1} max={2.5}
+                  step={0.1}
+                  onChange={(v) => updateSettings({ lineHeight: v })}
+                />
                 <AlignLeft size={22} color="#cbd5e1" />
               </View>
             </View>
@@ -172,28 +181,12 @@ export default function BibleSettings() {
               </View>
               <View className="flex-row items-center gap-4">
                 <MoveHorizontal size={16} color="#64748b" />
-                <View className="flex-1 h-1.5 bg-slate-800 rounded-full relative justify-center">
-                  <View
-                    className="absolute h-full bg-primary rounded-full"
-                    style={{ width: `${((settings.letterSpacing + 1) / 4) * 100}%` }}
-                  />
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    className="w-6 h-6 rounded-full bg-white absolute shadow-lg shadow-black"
-                    style={{ left: `${((settings.letterSpacing + 1) / 4) * 100}%`, marginLeft: -12 }}
-                  />
-                  <ScrollView
-                    horizontal
-                    scrollEnabled={false}
-                    contentContainerStyle={{ width: '100%', height: 40 }}
-                    onTouchStart={(e) => {
-                      const x = e.nativeEvent.locationX;
-                      const width = Dimensions.get('window').width - 110;
-                      const val = -1 + (x / width) * 4;
-                      updateSettings({ letterSpacing: Number(val.toFixed(1)) });
-                    }}
-                  />
-                </View>
+                <ModernSlider
+                  value={settings.letterSpacing}
+                  min={-1} max={3}
+                  step={0.1}
+                  onChange={(v) => updateSettings({ letterSpacing: v })}
+                />
                 <MoveHorizontal size={22} color="#cbd5e1" />
               </View>
             </View>

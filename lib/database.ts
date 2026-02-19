@@ -1,5 +1,5 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 
@@ -12,11 +12,11 @@ function sanitizeParams(params: any[]): any[] {
   if (!params || params.length === 0) return [];
 
   if (params.length === 1 && Array.isArray(params[0])) {
-    return [params[0].map(p => {
+    return params[0].map(p => {
       if (p === undefined || p === null) return null;
       if (typeof p === 'number' && isNaN(p)) return null;
       return p;
-    })];
+    });
   }
 
   return params.map(p => {

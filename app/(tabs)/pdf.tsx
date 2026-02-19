@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, FolderOpen, BookOpen, Clock, FileText, ChevronRight, Plus, Download, X, CloudDownload, Trash2, CheckCircle2, ArrowLeft } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
-import * as Sharing from 'expo-sharing';
 import localManifest from '@/assets/docs/manifest.json';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import { StatusBar } from 'expo-status-bar';
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, Trash2, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ICON_MAP: Record<string, any> = {
   BookOpen,
@@ -32,13 +32,24 @@ export default function PDFLibrary() {
   const [recentPdfs, setRecentPdfs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userDepartments, setUserDepartments] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     loadManifest();
     checkLocalFiles();
     loadRecentPdfs();
+    loadUserDepartments();
   }, []);
+
+  const loadUserDepartments = async () => {
+    try {
+      const depts = await AsyncStorage.getItem('profile_departments');
+      if (depts) setUserDepartments(JSON.parse(depts));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const loadRecentPdfs = async () => {
     try {
@@ -57,13 +68,20 @@ export default function PDFLibrary() {
     try {
       if (force) setRefreshing(true);
 
-      // 1. Initial load from local manifest if not already set
-      if (!manifest) setManifest(localManifest);
+      // 1. Toujours charger le manifeste local en premier
+      if (!manifest || force) setManifest(localManifest);
 
-      // 2. Attempt to sync with GitHub (Online) with anti-cache
+      // 2. Tentative de synchronisation avec GitHub
+      // On ignore le sync automatique en mode développement pour vous laisser tester vos changements locaux
+      if (__DEV__ && !force) {
+        console.log("Mode DEV : Utilisation du manifeste local uniquement");
+        setLoading(false);
+        return;
+      }
+
       const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json?t=${Date.now()}`;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const response = await fetch(GITHUB_MANIFEST_URL, {
         signal: controller.signal,
@@ -202,6 +220,20 @@ export default function PDFLibrary() {
       pathname: '/pdf/viewer',
       params: { fileName: file, title: title }
     });
+  };
+
+  const isDocVisible = (doc: any) => {
+    // Les Pasteurs et les Anciens voient absolument tout
+    if (userDepartments.includes("Pasteur") || userDepartments.includes("Ancien")) return true;
+
+    // Si pas de tags définis, on considère le document comme public
+    if (!doc.tags || doc.tags.length === 0) return true;
+
+    // "Tous" est un tag spécial pour la visibilité globale
+    if (doc.tags.includes("Tous")) return true;
+
+    // Vérifier si un des tags du livre correspond à un département de l'utilisateur
+    return doc.tags.some((tag: string) => userDepartments.includes(tag));
   };
 
   const SmartCover = ({ title, categoryId, size = "md" }: { title: string, categoryId: string, size?: "sm" | "md" }) => {
@@ -402,7 +434,7 @@ export default function PDFLibrary() {
           </View>
           <ScrollView className="flex-1 px-6 pt-6">
             {manifest?.categories.map((cat: any) => {
-              const cloudDocs = manifest?.documents.filter((d: any) => d.categoryId === cat.id);
+              const cloudDocs = manifest?.documents.filter((d: any) => d.categoryId === cat.id && isDocVisible(d));
               if (cloudDocs.length === 0) return null;
               return (
                 <View key={cat.id} className="mb-8">

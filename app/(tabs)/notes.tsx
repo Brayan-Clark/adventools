@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, StyleSheet, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, StickyNote, Trash2, X, Check, ArrowLeft, Eye, Edit, Bold, Italic, List, Code, BookOpen, Quote, Link as LinkIcon, Heading } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Markdown from 'react-native-markdown-display';
-import { cn } from '@/lib/utils';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loadDatabase } from '@/lib/database';
+import { cn } from '@/lib/utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ArrowLeft, Bold, BookOpen, Check, Code, Edit, Eye, Heading, Italic, Link as LinkIcon, List, Plus, Quote, Search, StickyNote, Trash2, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Markdown from 'react-native-markdown-display';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Note {
   id: string;
@@ -96,14 +96,14 @@ export default function Notes() {
         // 1. Find Book ID
         // Hardcoded mapping for common abbreviations
         const BOOK_MAP: Record<string, string> = {
-          'gen': 'Genesis', 'eks': 'Eksodosy', 'lev': 'Levitikosy', 'nom': 'Nomery', 'deo': 'Deoteronomia',
+          'gen': 'Genesisy', 'eks': 'Eksodosy', 'lev': 'Levitikosy', 'nom': 'Nomery', 'deo': 'Deotoronomia',
           'jos': 'Josoa', 'mpits': 'Mpitsara', 'rota': 'Rota', '1sam': '1 Samoela', '2sam': '2 Samoela',
           '1mpanj': '1 Mpanjaka', '2mpanj': '2 Mpanjaka', '1tant': '1 Tantara', '2tant': '2 Tantara',
           'ezra': 'Ezra', 'neh': 'Nehemia', 'est': 'Estera', 'joba': 'Joba', 'sal': 'Salamo', 'ohab': 'Ohabolana',
-          'mpito': 'Mpitoriteny', 'tonon': 'Tononkiran\'i Solomona', 'isa': 'Isaia', 'jer': 'Jeremia',
+          'mpito': 'Mpitoriteny', 'tonon': "Tonon-kiran'i Solomona", 'isa': 'Isaia', 'jer': 'Jeremia',
           'fitom': 'Fitomaniana', 'ezek': 'Ezekiela', 'dan': 'Daniela',
-          'mat': 'Matio', 'mar': 'Marka', 'lio': 'Lioka', 'jao': 'Jaona', 'asa': 'Asan\'ny Apostoly',
-          'rom': 'Romanina', '1kor': '1 Korintiana', '2kor': '2 Korintiana', 'gal': 'Galatiana',
+          'mat': 'Matio', 'mar': 'Marka', 'lio': 'Lioka', 'jao': 'Jaona', 'asa': "Asan'ny Apostoly",
+          'rom': 'Romana', '1kor': '1 Korintiana', '2kor': '2 Korintiana', 'gal': 'Galatiana',
           'efe': 'Efesiana', 'filip': 'Filipiana', 'kol': 'Kolosiana',
           '1tes': '1 Tesaloniana', '2tes': '2 Tesaloniana', '1tim': '1 Timoty', '2tim': '2 Timoty',
           'tit': 'Titosy', 'file': 'Filemona', 'heb': 'Hebreo', 'jak': 'Jakoba',
@@ -127,9 +127,14 @@ export default function Notes() {
           searchBookName = detectedVerse.book;
         }
 
-        // Search in database using ONLY b_name (b_abbreviation doesn't exist)
-        const bookQuery = `SELECT id, b_name FROM ${bookTable} WHERE REPLACE(LOWER(b_name), ' ', '') LIKE ? LIMIT 1`;
-        const searchPattern = `%${searchBookName.toLowerCase().replace(/[\s]/g, '')}%`;
+        // Search in database ignoring spaces, hyphens and quotes for maximum compatibility
+        const bookQuery = `
+          SELECT id, b_name 
+          FROM ${bookTable} 
+          WHERE REPLACE(REPLACE(REPLACE(LOWER(b_name), ' ', ''), '-', ''), "'", '') LIKE ? 
+          LIMIT 1
+        `;
+        const searchPattern = `%${searchBookName.toLowerCase().replace(/[\s\-\']/g, '')}%`;
 
         let bookRes: any = await db.getFirstAsync(bookQuery, [searchPattern]);
 
@@ -264,7 +269,7 @@ export default function Notes() {
     setIsPreviewMode(!isPreviewMode);
   };
 
-  const BIBLE_BOOKS = "Gen|Eks|Lev|Nom|Deo|Jos|Mpits|Rota|1Sam|2Sam|1Mpanj|2Mpanj|1Tant|2Tant|Ezra|Neh|Est|Joba|Sal|Ohab|Mpito|Tonon|Isa|Jer|Fitom|Ezek|Dan|Hosea|Joela|Amosa|Obad|Jon|Mika|Nah|Hab|Zef|Hag|Zak|Mal|Mat|Mar|Lio|Jao|Asa|Rom|1Kor|2Kor|Gal|Efe|Filip|Kol|1Tes|2Tes|1Tim|2Tim|Tit|File|Heb|Jak|1Pet|2Pet|1Jao|2Jao|3Jao|Jod|Apok|Genesis|Eksodosy|Levitikosy|Nomery|Deoteronomia|Josoa|Mpitsara|Rota|1Samoela|2Samoela|1Mpanjaka|2Mpanjaka|1Tantara|2Tantara|Ezra|Nehemia|Estera|Joba|Salamo|Ohabolana|Mpitoriteny|Tononkiran'i Solomona|Isaia|Jeremia|Fitomaniana|Ezekiela|Daniela|Hosea|Joela|Amosa|Obadia|Jona|Mika|Nahoma|Habakoka|Zefania|Hagay|Zakaria|Malakia|Matio|Marka|Lioka|Jaona|Asan'ny Apostoly|Romanina|1Korintiana|2Korintiana|Galatiana|Efesiana|Filipiana|Kolosiana|1Tesaloniana|2Tesaloniana|1Timoty|2Timoty|Titosy|Filemona|Hebreo|Jakoba|1Petera|2Petera|1Jaona|2Jaona|3Jaona|Joda|Apokalypsy";
+  const BIBLE_BOOKS = "Gen|Eks|Lev|Nom|Deo|Jos|Mpits|Rota|1Sam|2Sam|1Mpanj|2Mpanj|1Tant|2Tant|Ezra|Neh|Est|Joba|Sal|Ohab|Mpito|Tonon|Isa|Jer|Fitom|Ezek|Dan|Hosea|Joela|Amosa|Obad|Jon|Mika|Nah|Hab|Zef|Hag|Zak|Mal|Mat|Mar|Lio|Jao|Asa|Rom|1Kor|2Kor|Gal|Efe|Filip|Kol|1Tes|2Tes|1Tim|2Tim|Tit|File|Heb|Jak|1Pet|2Pet|1Jao|2Jao|3Jao|Jod|Apok|Genesisy|Eksodosy|Levitikosy|Nomery|Deoteronomia|Josoa|Mpitsara|Rota|1Samoela|2Samoela|1Mpanjaka|2Mpanjaka|1Tantara|2Tantara|Ezra|Nehemia|Estera|Joba|Salamo|Ohabolana|Mpitoriteny|Tonon-kiran'i Solomona|Isaia|Jeremia|Fitomaniana|Ezekiela|Daniela|Hosea|Joela|Amosa|Obadia|Jona|Mika|Nahoma|Habakoka|Zefania|Hagay|Zakaria|Malakia|Matio|Marka|Lioka|Jaona|Asan'ny Apostoly|Romana|Romanina|1Korintiana|2Korintiana|Galatiana|Efesiana|Filipiana|Kolosiana|1Tesaloniana|2Tesaloniana|1Timoty|2Timoty|Titosy|Filemona|Hebreo|Jakoba|1Petera|2Petera|1Jaona|2Jaona|3Jaona|Joda|Apokalypsy";
   // Regex construction: (Book) (Chapter) : (Verses part)
   const BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
 
