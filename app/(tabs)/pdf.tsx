@@ -383,10 +383,21 @@ export default function PDFLibrary() {
             {manifest?.documents
               .filter((d: any) => d.categoryId === selectedCategory.id && (d.isAsset || localFiles.includes(d.fileName)))
               .map((doc: any) => (
-                <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden">
+                <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden flex-row items-center">
+                  {!doc.isAsset && (
+                    <TouchableOpacity
+                      onPress={() => deleteFile(doc.fileName)}
+                      className="p-4 pr-1 active:bg-red-500/10"
+                    >
+                      <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
+                        <Trash2 size={14} color="#f87171" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity
                     onPress={() => openPdf(doc.fileName, doc.title)}
-                    className="flex-row items-center p-4"
+                    className="flex-1 flex-row items-center p-4 pl-2"
                   >
                     <View className="w-12 h-16 bg-slate-800 rounded-lg items-center justify-center mr-4 border border-slate-700/50">
                       <FileText size={24} color={selectedCategory.color} />
@@ -395,11 +406,6 @@ export default function PDFLibrary() {
                       <Text className="font-bold text-white text-base" numberOfLines={1}>{doc.title}</Text>
                       <Text className="text-xs text-slate-500">{doc.size} • Prêt à lire</Text>
                     </View>
-                    {!doc.isAsset && (
-                      <TouchableOpacity onPress={() => deleteFile(doc.fileName)} className="p-2 mr-2">
-                        <Trash2 size={18} color="#475569" />
-                      </TouchableOpacity>
-                    )}
                     <ChevronRight size={20} color="#334155" />
                   </TouchableOpacity>
                 </View>

@@ -57,7 +57,7 @@
   ],
   "documents": [
     {
-      "id": "ifm_001",
+      "id": "esp_001",
       "title": "Ilay Fitiavana Mandresy",
       "fileName": "IFM.pdf",
       "categoryId": "esprit_prophetie",
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "id": "hfm_001",
+      "id": "etb_001",
       "title": "FAHATOKIANA AMIN’NY FOMBA FIAINANA KRISTIANA",
       "fileName": "HFM.pdf",
       "categoryId": "etudes_bibliques",
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "id": "dhk_001",
+      "id": "esp_002",
       "title": "Ny dia ho eo amin'i Kristy",
       "fileName": "NY DIA HO EO AMIN'I KRISTY.pdf",
       "categoryId": "esprit_prophetie",
@@ -91,7 +91,7 @@
       ]
     },
     {
-      "id": "ppm_001",
+      "id": "esp_003",
       "title": "PATRIARKA SY MPAMINANY",
       "fileName": "PATRIARKA SY MPAMINANY.pdf",
       "categoryId": "esprit_prophetie",
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "id": "fff_001",
+      "id": "esp_004",
       "title": "FIOMANANA HO AMIN'NY RANONORANA FARANY",
       "fileName": "FIOMANANA HO AMIN'NY RANONORANA FARANY.pdf",
       "categoryId": "esprit_prophetie",
@@ -115,7 +115,7 @@
       ]
     },
     {
-      "id": "faha7_001",
+      "id": "deg_001",
       "title": "NY FIANGONANA ADVANTISTA MITANDRINA NY ANDRO FAHA7",
       "fileName": "NY FIANGONANA ADVANTISTA MITANDRINA NY ANDRO FAHA7.pdf",
       "categoryId": "dossiers_eglise",
@@ -127,10 +127,10 @@
       ]
     },
     {
-      "id": "zs_001",
+      "id": "etb_002",
       "title": "NY ZANAKA SISA 12",
       "fileName": "NY ZANAKA SISA 12.pdf",
-      "categoryId": "dossiers_eglise",
+      "categoryId": "etudes_bibliques",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/NY%20ZANAKA%20SISA%2012.pdf",
       "size": "925,9 KB",
       "isAsset": false,
@@ -139,7 +139,7 @@
       ]
     },
     {
-      "id": "JA_001",
+      "id": "aja_001",
       "title": "SAKAIZA",
       "fileName": "SAKAIZA.pdf",
       "categoryId": "dossiers_JA",
@@ -151,7 +151,7 @@
       ]
     },
     {
-      "id": "JA_002",
+      "id": "aja_002",
       "title": "ASTUCES DE CAMP",
       "fileName": "ASTUCES-DE-CAMP.pdf",
       "categoryId": "dossiers_JA",
@@ -163,7 +163,7 @@
       ]
     },
     {
-      "id": "JA_003",
+      "id": "aja_003",
       "title": "COMMUNICATION-NIVEAU-1",
       "fileName": "COMMUNICATION-NIVEAU-1.pdf",
       "categoryId": "dossiers_JA",
@@ -175,7 +175,7 @@
       ]
     },
     {
-      "id": "JA_004",
+      "id": "aja_004",
       "title": "FEUX-CUISINE-DE-CAMP",
       "fileName": "FEUX-CUISINE-DE-CAMP.pdf",
       "categoryId": "dossiers_JA",
@@ -187,7 +187,7 @@
       ]
     },
     {
-      "id": "JA_005",
+      "id": "aja_005",
       "title": "Galerie noeuds",
       "fileName": "GALERIE-NOEUDS.pdf",
       "categoryId": "dossiers_JA",
@@ -199,7 +199,7 @@
       ]
     },
     {
-      "id": "JA_006",
+      "id": "aja_006",
       "title": "Noeuds",
       "fileName": "NOEUDS.pdf",
       "categoryId": "dossiers_JA",
@@ -211,7 +211,7 @@
       ]
     },
     {
-      "id": "AAA_001",
+      "id": "esp_005",
       "title": "ANY AMPARANY ANY",
       "fileName": "ANY AMPARANY ANY.pdf",
       "categoryId": "esprit_prophetie",
@@ -223,10 +223,10 @@
       ]
     },
     {
-      "id": "TOM_001",
+      "id": "etb_003",
       "title": "BOKY TOMOERA",
       "fileName": "BOKY TOMOERA.pdf",
-      "categoryId": "dossiers_eglise",
+      "categoryId": "etudes_bibliques",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/BOKY%20TOMOERA.pdf",
       "size": "797,8 KB",
       "isAsset": false,
@@ -235,7 +235,19 @@
       ]
     },
     {
-      "id": "SK_001",
+      "id": "etb_004",
+      "title": "MPAMITAKA",
+      "fileName": "Mpamitaka.docx",
+      "categoryId": "etudes_bibliques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/Mpamitaka.docx",
+      "size": "9,6 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "esp_006",
       "title": "Fanompoana kristiana (service chretien)",
       "fileName": "FANOMPOANA KRISTIANA.pdf",
       "categoryId": "esprit_prophetie",
@@ -247,7 +259,7 @@
       ]
     },
     {
-      "id": "HHT_001",
+      "id": "esp_007",
       "title": "Hafatra Hoanny Tanora",
       "fileName": "HAFATRA-HOANNY-TANORA.pdf",
       "categoryId": "esprit_prophetie",
@@ -259,7 +271,7 @@
       ]
     },
     {
-      "id": "HMF_001",
+      "id": "esp_008",
       "title": "HERY MIFANANDRINA",
       "fileName": "HERY MIFANANDRINA.pdf",
       "categoryId": "esprit_prophetie",

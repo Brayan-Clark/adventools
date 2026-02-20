@@ -1,5 +1,5 @@
 import localManifest from '@/assets/docs/manifest.json';
-import { exportHymnCorrections, importHymnCorrections, resetHymnCorrections } from '@/lib/backup-utils';
+import { exportAllAppData, exportHymnCorrections, importAllAppData, importHymnCorrections, resetHymnCorrections } from '@/lib/backup-utils';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -257,9 +257,21 @@ export default function Settings() {
 
         <SettingsGroup title="Données & Sauvegarde">
           <SettingItem
+            icon={<Save size={18} color="#3b82f6" />}
+            label="Sauvegarde complète"
+            value="Notes, Bible, Profil..."
+            onPress={exportAllAppData}
+          />
+          <SettingItem
+            icon={<Download size={18} color="#3b82f6" />}
+            label="Restaurer une sauvegarde"
+            onPress={importAllAppData}
+          />
+          <View className="h-4" />
+          <SettingItem
             icon={<Save size={18} color="#64748b" />}
             label="Exporter les corrections"
-            value="Vers fichier JSON"
+            value="Cantiques uniquement"
             onPress={exportHymnCorrections}
           />
           <SettingItem

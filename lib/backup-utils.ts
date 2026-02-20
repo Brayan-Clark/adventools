@@ -111,3 +111,107 @@ export async function resetHymnCorrections() {
     Alert.alert("Erreur", "Impossible de réinitialiser les corrections.");
   }
 }
+
+/**
+ * EXPORT COMPLET DE L'APPLICATION
+ */
+export async function exportAllAppData() {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+
+    // Filtrage des clés importantes pour la sauvegarde
+    const keysToBackup = allKeys.filter(key =>
+      key.startsWith('hymne_edit_') ||
+      key.startsWith('highlights_') ||
+      key.startsWith('word_highlights_') ||
+      key.startsWith('bookmarks_') ||
+      key.startsWith('pdf_bookmarks_') ||
+      key.startsWith('pdf_notes_') ||
+      key === 'adventools_notes' ||
+      key === 'profile_name' ||
+      key === 'profile_image' ||
+      key === 'profile_departments' ||
+      key === 'app_history' ||
+      key === 'app_settings'
+    );
+
+    if (keysToBackup.length === 0) {
+      Alert.alert("Information", "Aucune donnée à sauvegarder.");
+      return;
+    }
+
+    const pairs = await AsyncStorage.multiGet(keysToBackup);
+    const backupData = {
+      version: "1.0",
+      timestamp: Date.now(),
+      data: Object.fromEntries(pairs)
+    };
+
+    const json = JSON.stringify(backupData, null, 2);
+    const filename = `adventools_backup_${new Date().toISOString().split('T')[0]}.json`;
+    const fileUri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || "") + filename;
+
+    await FileSystem.writeAsStringAsync(fileUri, json);
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Sauvegarde complète Adventools',
+      UTI: 'public.json'
+    });
+  } catch (error) {
+    console.error("Full Export Error", error);
+    Alert.alert("Erreur", "Impossible de créer la sauvegarde.");
+  }
+}
+
+/**
+ * IMPORT COMPLET DE L'APPLICATION
+ */
+export async function importAllAppData() {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/json',
+      copyToCacheDirectory: true
+    });
+
+    if (result.canceled) return;
+
+    const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
+    const backup = JSON.parse(fileContent);
+
+    if (!backup.data || typeof backup.data !== 'object') {
+      Alert.alert("Erreur", "Format de sauvegarde invalide.");
+      return;
+    }
+
+    const entries = Object.entries(backup.data);
+    const validPairs: [string, string][] = entries.map(([key, value]) => [key, String(value)]);
+
+    Alert.alert(
+      "Restauration Complète",
+      `Cette action va restaurer ${validPairs.length} éléments (notes, réglages, surlignages...). Vos données actuelles seront écrasées. Continuer ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Restaurer",
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiSet(validPairs);
+              Alert.alert(
+                "Succès",
+                "Restauration terminée ! Il est conseillé de redémarrer l'application pour appliquer tous les changements.",
+                [{ text: "OK" }]
+              );
+            } catch (e) {
+              console.error(e);
+              Alert.alert("Erreur", "Échec de l'écriture des données restaureés.");
+            }
+          }
+        }
+      ]
+    );
+
+  } catch (error) {
+    console.error("Full Import Error", error);
+    Alert.alert("Erreur", "Le fichier de sauvegarde est corrompu ou illisible.");
+  }
+}
