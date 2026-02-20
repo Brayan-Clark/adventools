@@ -7,7 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ICON_MAP: Record<string, any> = {
@@ -20,6 +20,22 @@ const ICON_MAP: Record<string, any> = {
 const BUNDLED_ASSETS: Record<string, any> = {
   'HFM.pdf': require('@/assets/docs/HFM.pdf'),
   'IFM.pdf': require('@/assets/docs/Ilay Fitiavana Mandresy (IFM).pdf'),
+};
+
+const getMimeType = (fileName: string) => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  const mimes: Record<string, string> = {
+    'pdf': 'application/pdf',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'doc': 'application/msword',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'txt': 'text/plain',
+  };
+  return mimes[extension || ''] || 'application/octet-stream';
 };
 
 export default function PDFLibrary() {
@@ -182,12 +198,28 @@ export default function PDFLibrary() {
     }
 
     if (!isPdf) {
-      // If it's not a PDF, use system sharing/preview
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(finalUri, { UTI: 'public.data', mimeType: 'application/octet-stream' });
-      } else {
-        alert("Ce format nécessite une application externe pour être ouvert.");
+      // If it's not a PDF, use system intent (Android) or sharing/preview (iOS)
+      const mimeType = getMimeType(file);
+      try {
+        if (Platform.OS === 'android') {
+          // Sur Android, on utilise ReactNativeBlobUtil pour envoyer un intent ACTION_VIEW 
+          // au lieu de ACTION_SEND (partage), pour que l'Outil s'ouvre directement.
+          const ReactNativeBlobUtil = require('react-native-blob-util').default;
+          const cleanPath = finalUri.replace('file://', '');
+          await ReactNativeBlobUtil.android.actionViewIntent(cleanPath, mimeType);
+        } else {
+          // Sur iOS, Sharing.shareAsync gère très bien le "Open In"
+          await Sharing.shareAsync(finalUri, { UTI: 'public.data', mimeType });
+        }
+      } catch (e) {
+        console.error("Erreur d'ouverture externe:", e);
+        // Fallback sur le partage classique si l'intent échoue
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(finalUri, { mimeType });
+        } else {
+          alert("Ce format nécessite une application externe pour être ouvert.");
+        }
       }
       return;
     }

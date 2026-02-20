@@ -62,7 +62,7 @@
       "fileName": "IFM.pdf",
       "categoryId": "esprit_prophetie",
       "size": "3.1 MB",
-      "isAsset": true,
+      "isAsset": false,
       "tags": [
         "Tous"
       ]
@@ -73,7 +73,7 @@
       "fileName": "HFM.pdf",
       "categoryId": "etudes_bibliques",
       "size": "432 KB",
-      "isAsset": true,
+      "isAsset": false,
       "tags": [
         "Tous"
       ]
