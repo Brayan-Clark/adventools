@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lineHeight: 1.5,
   letterSpacing: 0,
   scalingFactor: 1,
-  bibleVersion: 'MG',
+  bibleVersion: 'MG65',
   language: 'Français',
   darkMode: true,
   notifications: true,

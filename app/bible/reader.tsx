@@ -5,39 +5,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X, CloudDownload, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 
-// Static imports for all database files
-const DB_SOURCES: Record<string, any> = {
-  'protestant.db': require('../../assets/databases/protestant.db'),
-  'king_james.db': require('../../assets/databases/king_james.db'),
-  'le_bible.db': require('../../assets/databases/le_bible.db'),
-  'arabic.db': require('../../assets/databases/arabic.db'),
-  'basic_english.db': require('../../assets/databases/basic_english.db'),
-  'esperanto.db': require('../../assets/databases/esperanto.db'),
-  'greek.db': require('../../assets/databases/greek.db'),
-  'schlachter.db': require('../../assets/databases/schlachter.db'),
-  'diem.db': require('../../assets/databases/diem.db'),
-};
-
-// Bible database configurations
-const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
-  'MG': { file: 'protestant.db', prefix: 'protestant', name: 'Malagasy' },
-  'FR': { file: 'le_bible.db', prefix: 'fr', name: 'Français' },
-  'EN': { file: 'king_james.db', prefix: 'en', name: 'English (KJV)' },
-  'AR': { file: 'arabic.db', prefix: 'ar', name: 'العربية' },
-  'BE': { file: 'basic_english.db', prefix: 'en', name: 'Basic English' },
-  'ES': { file: 'esperanto.db', prefix: 'es', name: 'Esperanto' },
-  'GR': { file: 'greek.db', prefix: 'gr', name: 'Ελληνικά' },
-  'DE': { file: 'schlachter.db', prefix: 'sc', name: 'Deutsch' },
-  'CI': { file: 'diem.db', prefix: 'ci_diem', name: 'Diem' },
-};
+import { getBibleConfigs, BibleConfig } from '@/lib/bible';
 
 export default function BibleReader() {
   const router = useRouter();
-  const { bookId, bookName, testament, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
+  const { bookId, bookName, testament: testamentParam, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
+  const [testament, setTestament] = useState<string>(testamentParam as string || "1");
   const [chapter, setChapter] = useState(Number(chapterParam) || 1);
   const [chaptersCount, setChaptersCount] = useState(0);
   const [verses, setVerses] = useState<any[]>([]);
@@ -47,7 +25,67 @@ export default function BibleReader() {
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const { settings: globalSettings } = useSettings();
-  const [lang, setLang] = useState<string>((langParam as string) || globalSettings.bibleVersion || 'MG');
+
+  const [availableVersions, setAvailableVersions] = useState<BibleConfig[]>([]);
+  const [localFiles, setLocalFiles] = useState<string[]>([]);
+  const [downloading, setDownloading] = useState<Record<string, number>>({});
+  const [lang, setLang] = useState<string>((langParam as string) || globalSettings.bibleVersion || 'MG65');
+
+  useEffect(() => {
+    setAvailableVersions(getBibleConfigs());
+    checkLocalFiles();
+  }, []);
+
+  const checkLocalFiles = async () => {
+    try {
+      const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory!);
+      setLocalFiles(files);
+    } catch (e) { console.error(e); }
+  };
+
+  const downloadBible = async (version: BibleConfig) => {
+    try {
+      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
+      const callback = (p: any) => {
+        const progress = p.totalBytesWritten / p.totalBytesExpectedToWrite;
+        setDownloading(prev => ({ ...prev, [version.id]: progress }));
+      };
+      const downloadResumable = FileSystem.createDownloadResumable(
+        version.url,
+        FileSystem.documentDirectory + version.file,
+        {},
+        callback
+      );
+      const result = await downloadResumable.downloadAsync();
+      if (result) {
+        setLocalFiles(prev => [...prev, version.file]);
+      }
+    } catch (e) {
+      Alert.alert("Erreur", "Impossible de télécharger cette version.");
+    } finally {
+      setDownloading(prev => {
+        const next = { ...prev };
+        delete next[version.id];
+        return next;
+      });
+    }
+  };
+
+  const deleteBible = async (version: BibleConfig) => {
+    Alert.alert("Supprimer", `Voulez-vous supprimer ${version.name} ?`, [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Supprimer", style: "destructive", onPress: async () => {
+          await FileSystem.deleteAsync(FileSystem.documentDirectory + version.file);
+          setLocalFiles(prev => prev.filter(f => f !== version.file));
+          if (lang === version.id) {
+            const next = availableVersions.find(v => localFiles.includes(v.file) && v.id !== version.id);
+            if (next) setLang(next.id);
+          }
+        }
+      }
+    ]);
+  };
   const [currentBookName, setCurrentBookName] = useState(bookName);
   const flatListRef = React.useRef<FlatList>(null);
   const [highlights, setHighlights] = useState<Record<string, any>>({});
@@ -219,15 +257,42 @@ export default function BibleReader() {
       if (!bookId) return;
       setLoading(true);
       try {
-        const config = BIBLE_CONFIGS[lang];
+        const config = availableVersions.find(v => v.id === lang) || availableVersions.find(v => v.isDefault) || availableVersions[0];
+        if (!config) {
+          setLoading(false);
+          return;
+        }
+
         console.log(`[BibleReader] Loading ${lang} - Book: ${bookId}, Chapter: ${chapter}`);
+        const db = await loadDatabase(config.file);
 
-        const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
-
-        // Dynamically discover table names
+        // Dynamically discover table names and schema
         const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-        const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-        const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+        const isNewSchema = tables.some((t: any) => t.name === 'verses');
+
+        let bookTable, verseTable, colId, colName, colVerseBid, colVerseToko, colVerseAnd, colVerseText;
+
+        if (isNewSchema) {
+          bookTable = 'books';
+          verseTable = 'verses';
+          colId = 'book_number';
+          colName = 'long_name';
+          colVerseBid = 'book_number';
+          colVerseToko = 'chapter';
+          colVerseAnd = 'verse';
+          colVerseText = 'text';
+        } else {
+          bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
+          verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+          colId = 'id';
+          colName = 'b_name';
+          colVerseBid = 'a_bid';
+          colVerseToko = 'a_toko';
+          colVerseAnd = 'a_and';
+          colVerseText = 'a_text';
+        }
+
+        const colTestId = isNewSchema ? `(CASE WHEN ${colId} <= 39 THEN 1 ELSE 2 END)` : 'b_testid';
 
         if (!bookTable || !verseTable) {
           console.error("[BibleReader] Tables not found");
@@ -237,18 +302,19 @@ export default function BibleReader() {
 
         const bookIdNum = Number(bookId);
 
-        // Get book name in selected language
+        // Get book name and testament in selected language
         const bookInfo: any = await db.getFirstAsync(`
-          SELECT b_name as name FROM ${bookTable} WHERE id = ?
+          SELECT ${colName} as name, ${colTestId} as testamentId FROM ${bookTable} WHERE ${colId} = ?
         `, [bookIdNum]);
 
         if (bookInfo) {
           setCurrentBookName(bookInfo.name);
+          setTestament(String(bookInfo.testamentId));
         }
 
         // Get total chapters for this book
         const countResult: any = await db.getFirstAsync(`
-          SELECT COUNT(DISTINCT a_toko) as count FROM ${verseTable} WHERE a_bid = ?
+          SELECT COUNT(DISTINCT ${colVerseToko}) as count FROM ${verseTable} WHERE ${colVerseBid} = ?
         `, [bookIdNum]);
 
         if (countResult) {
@@ -258,10 +324,10 @@ export default function BibleReader() {
         // Get verses
         const chapterNum = Number(chapter);
         const versesResult: any = await db.getAllAsync(`
-          SELECT a_and as verse, a_text as text 
+          SELECT ${colVerseAnd} as verse, ${colVerseText} as text 
           FROM ${verseTable} 
-          WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?
-            ORDER BY CAST(a_and AS INTEGER) ASC
+          WHERE ${colVerseBid} = ? AND CAST(${colVerseToko} AS INTEGER) = ?
+            ORDER BY CAST(${colVerseAnd} AS INTEGER) ASC
         `, [bookIdNum, isNaN(chapterNum) ? 1 : chapterNum]);
 
         setVerses(versesResult || []);
@@ -758,30 +824,75 @@ export default function BibleReader() {
               <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
               <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
-                {Object.entries(BIBLE_CONFIGS).map(([code, config]) => (
-                  <TouchableOpacity
-                    key={code}
-                    onPress={() => { setLang(code); setShowLangPicker(false); }}
-                    className={cn(
-                      "flex-row items-center justify-between p-4 rounded-2xl mb-3 border",
-                      lang === code ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
-                    )}
-                  >
-                    <View>
-                      <Text className={cn("font-bold text-base", lang === code ? "text-white" : "text-slate-300")}>
-                        {config.name}
-                      </Text>
-                      <Text className={cn("text-xs mt-1", lang === code ? "text-blue-100" : "text-slate-500")}>
-                        {code}
-                      </Text>
+                {availableVersions.map((version) => {
+                  const isLocal = localFiles.includes(version.file);
+                  const isDownloading = downloading[version.id] !== undefined;
+                  const progress = downloading[version.id] || 0;
+
+                  return (
+                    <View key={version.id} className="mb-4">
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (isLocal) {
+                            setLang(version.id);
+                            setShowLangPicker(false);
+                          }
+                        }}
+                        className={cn(
+                          "flex-row items-center justify-between p-5 rounded-3xl border",
+                          lang === version.id && isLocal ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                        )}
+                      >
+                        <View className="flex-1">
+                          <View className="flex-row items-center">
+                            <Text className={cn("font-bold text-base", (lang === version.id && isLocal) ? "text-white" : "text-slate-300")}>
+                              {version.name}
+                            </Text>
+                            {isLocal && <View className="ml-2 bg-green-500/20 px-2 py-0.5 rounded-full"><Text className="text-green-500 text-[8px] font-bold">LOCAL</Text></View>}
+                          </View>
+                          <Text className={cn("text-xs mt-1", (lang === version.id && isLocal) ? "text-blue-100" : "text-slate-500")}>
+                            {version.language} • {version.size}
+                          </Text>
+                        </View>
+
+                        <View className="flex-row items-center">
+                          {isDownloading ? (
+                            <View className="items-center">
+                              <ActivityIndicator size="small" color="#195de6" />
+                              <Text className="text-[8px] text-blue-400 font-bold mt-1">{Math.round(progress * 100)}%</Text>
+                            </View>
+                          ) : !isLocal ? (
+                            <TouchableOpacity
+                              onPress={() => downloadBible(version)}
+                              className="bg-white/5 p-3 rounded-2xl border border-white/5"
+                            >
+                              <CloudDownload size={20} color="#3b82f6" />
+                            </TouchableOpacity>
+                          ) : (
+                            <View className="flex-row gap-2">
+                              <TouchableOpacity
+                                onPress={() => deleteBible(version)}
+                                className="bg-red-500/10 p-3 rounded-2xl border border-red-500/20"
+                              >
+                                <Trash2 size={20} color="#ef4444" />
+                              </TouchableOpacity>
+                              {lang === version.id && (
+                                <View className="w-10 h-10 rounded-full bg-white items-center justify-center">
+                                  <Text className="text-[#195de6] font-bold text-xs">✓</Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                      {isDownloading && (
+                        <View className="h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
+                          <View className="h-full bg-blue-500" style={{ width: `${progress * 100}%` }} />
+                        </View>
+                      )}
                     </View>
-                    {lang === code && (
-                      <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
-                        <Text className="text-[#195de6] font-bold text-xs">✓</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                  );
+                })}
               </ScrollView>
             </View>
           </View>

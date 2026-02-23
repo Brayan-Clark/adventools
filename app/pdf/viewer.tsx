@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, Platform, Modal, ScrollView, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, Platform, Modal, ScrollView, TextInput, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, ZoomIn, ZoomOut, Bookmark, FileText, Menu, X, Save, Edit3, Trash2, ChevronRight, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, ZoomIn, ZoomOut, Bookmark, FileText, Menu, X, Save, Edit3, Trash2, ChevronRight, AlertCircle, Hash, Search } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -17,10 +16,7 @@ try {
   console.log("react-native-pdf not available");
 }
 
-const DOCUMENTS: Record<string, any> = {
-  'HFM.pdf': require('../../assets/docs/HFM.pdf'),
-  'IFM.pdf': require('../../assets/docs/Ilay Fitiavana Mandresy (IFM).pdf'),
-};
+// No bundled documents - everything is downloadable
 
 export default function PdfViewer() {
   const { fileName, title } = useLocalSearchParams();
@@ -38,6 +34,8 @@ export default function PdfViewer() {
   const [showStudyMenu, setShowStudyMenu] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [currentNoteText, setCurrentNoteText] = useState("");
+  const [showPagePicker, setShowPagePicker] = useState(false);
+  const [pagePickerValue, setPagePickerValue] = useState("");
 
   const isExpoGo = Constants.appOwnership === 'expo';
   const pdfRef = React.useRef<any>(null);
@@ -122,29 +120,15 @@ export default function PdfViewer() {
           return;
         }
 
-        const assetModule = DOCUMENTS[fileName];
+        // Check if it's in document directory (downloaded)
+        const localPath = `${FileSystem.documentDirectory}${fileName}`;
+        const info = await FileSystem.getInfoAsync(localPath);
 
-        if (assetModule) {
-          // It's a bundled asset
-          const asset = Asset.fromModule(assetModule);
-          await asset.downloadAsync();
-
-          if (asset.localUri) {
-            setSource({ uri: asset.localUri, cache: true });
-          } else {
-            const dest = `${FileSystem.documentDirectory}${fileName}`;
-            await FileSystem.copyAsync({ from: asset.uri, to: dest });
-            setSource({ uri: dest, cache: true });
-          }
+        if (info.exists) {
+          // For local files, we don't need 'cache: true'
+          setSource({ uri: localPath, cache: false });
         } else {
-          // Check if it's in document directory (downloaded)
-          const localPath = `${FileSystem.documentDirectory}${fileName}`;
-          const info = await FileSystem.getInfoAsync(localPath);
-          if (info.exists) {
-            setSource({ uri: localPath, cache: true });
-          } else {
-            setError("Fichier introuvable localement : " + fileName);
-          }
+          setError("Fichier introuvable localement : " + fileName);
         }
       } catch (e) {
         console.error("Error loading PDF:", e);
@@ -187,10 +171,19 @@ export default function PdfViewer() {
           <TouchableOpacity onPress={() => router.back()} className="mr-3 w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
             <ArrowLeft size={20} color="#cbd5e1" />
           </TouchableOpacity>
-          <View>
+          <TouchableOpacity
+            onPress={() => {
+              setPagePickerValue("");
+              setShowPagePicker(true);
+            }}
+            className="active:opacity-60"
+          >
             <Text className="text-white font-bold text-sm" numberOfLines={1}>{title || fileName}</Text>
-            <Text className="text-[10px] text-slate-400">Page {currentPage} sur {totalPages}</Text>
-          </View>
+            <View className="flex-row items-center">
+              <Text className="text-[10px] text-blue-400 font-bold">Aller à la page {currentPage} / {totalPages}</Text>
+              <Search size={8} color="#3b82f6" className="ml-1" />
+            </View>
+          </TouchableOpacity>
         </View>
         <View className="flex-row gap-2">
           <TouchableOpacity
@@ -360,6 +353,67 @@ export default function PdfViewer() {
                 <Text className="text-white font-bold">Enregistrer</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Page Picker Modal - Premium Search Experience */}
+      <Modal visible={showPagePicker} transparent animationType="fade">
+        <View className="flex-1 bg-black/80 justify-center items-center px-8">
+          <View className="bg-slate-900 rounded-[40px] p-8 w-full max-w-sm border border-slate-700 shadow-2xl">
+            <View className="flex-row justify-between items-center mb-8">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                  <Hash size={20} color="#3b82f6" />
+                </View>
+                <Text className="text-xl font-bold text-white">Aller à la page</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowPagePicker(false)}
+                className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center"
+              >
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="mb-6">
+              <TextInput
+                placeholder="Numéro..."
+                placeholderTextColor="#475569"
+                className="bg-slate-800/50 border-2 border-slate-700 focus:border-blue-500 rounded-3xl px-6 py-6 text-white text-4xl font-bold text-center mb-2"
+                style={{ fontFamily: 'Lexend_700Bold' }}
+                value={pagePickerValue}
+                onChangeText={setPagePickerValue}
+                keyboardType="number-pad"
+                autoFocus
+                onSubmitEditing={() => {
+                  const page = parseInt(pagePickerValue);
+                  if (page >= 1 && page <= totalPages) {
+                    jumpToPage(page);
+                    setShowPagePicker(false);
+                  } else {
+                    Alert.alert("Hors limites", `Veuillez entrer une page entre 1 et ${totalPages}`);
+                  }
+                }}
+              />
+              <Text className="text-center text-slate-500 font-medium">Sur un total de {totalPages} pages</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                const page = parseInt(pagePickerValue);
+                if (page >= 1 && page <= totalPages) {
+                  jumpToPage(page);
+                  setShowPagePicker(false);
+                } else {
+                  Alert.alert("Invalide", `La page doit être comprise entre 1 et ${totalPages}`);
+                }
+              }}
+              className="bg-blue-600 py-5 rounded-3xl items-center shadow-lg shadow-blue-600/30 flex-row justify-center"
+            >
+              <Text className="text-white font-bold text-lg mr-2">Valider</Text>
+              <ChevronRight size={20} color="white" />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, FlatList, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Music as MusicIcon, Search as SearchIcon, ChevronRight as ChevronRightIcon, ArrowLeft, Hash, X, Bookmark, Globe } from 'lucide-react-native';
@@ -8,6 +8,9 @@ import { loadDatabase } from '@/lib/database';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cn } from '@/lib/utils';
+import { getHymnConfigs, getRemoteHymnManifest, HymnConfig } from '@/lib/hymnes';
+import * as FileSystem from 'expo-file-system/legacy';
+import { CloudDownload, Trash2, AlertCircle } from 'lucide-react-native';
 
 export default function Hymnes() {
   const router = useRouter();
@@ -21,9 +24,67 @@ export default function Hymnes() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
 
+  // Dynamic assets state
+  const [availableVersions, setAvailableVersions] = useState<HymnConfig[]>([]);
+  const [localFiles, setLocalFiles] = useState<string[]>([]);
+  const [downloading, setDownloading] = useState<Record<string, number>>({});
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  const checkLocalFiles = async () => {
+    try {
+      const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory!);
+      setLocalFiles(files);
+
+      const config = getHymnConfigs()[0];
+      const dbPath = `${FileSystem.documentDirectory}SQLite/${config.file}`;
+      const info = await FileSystem.getInfoAsync(dbPath);
+      setIsDbReady(info.exists);
+    } catch (e) {
+      // Si SQLite n'existe pas encore, c'est normal au premier lancement
+      setIsDbReady(false);
+    }
+  };
+
+  const downloadHymns = async (version: HymnConfig) => {
+    try {
+      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
+      const callback = (p: any) => {
+        const progress = p.totalBytesWritten / p.totalBytesExpectedToWrite;
+        setDownloading(prev => ({ ...prev, [version.id]: progress }));
+      };
+
+      const downloadResumable = FileSystem.createDownloadResumable(
+        version.url,
+        FileSystem.documentDirectory + version.file,
+        {},
+        callback
+      );
+
+      const result = await downloadResumable.downloadAsync();
+      if (result) {
+        await checkLocalFiles();
+      }
+    } catch (e) {
+      Alert.alert("Erreur", "Impossible de télécharger les cantiques.");
+    } finally {
+      setDownloading(prev => {
+        const next = { ...prev };
+        delete next[version.id];
+        return next;
+      });
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
+      checkLocalFiles();
+
+      const sync = async () => {
+        const configs = await getRemoteHymnManifest();
+        setAvailableVersions(configs);
+      };
+      sync();
       fetchCategories();
     }, [])
   );
@@ -37,9 +98,11 @@ export default function Hymnes() {
     }
   };
 
+
   const fetchCategories = async () => {
     try {
-      const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
+      const config = getHymnConfigs()[0];
+      const db = await loadDatabase(config.file, require('../../assets/databases/cantique.db'));
       const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
       const cats = result.map((r: any) => r.c_categories.split(' - ')[0]);
       setCategories(Array.from(new Set(cats)) as string[]);
@@ -51,7 +114,8 @@ export default function Hymnes() {
   useEffect(() => {
     async function fetchHymns() {
       try {
-        const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
+        const config = getHymnConfigs()[0];
+        const db = await loadDatabase(config.file, require('../../assets/databases/cantique.db'));
         let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
         let conditions = [];
         let params: any[] = [];
@@ -98,7 +162,8 @@ export default function Hymnes() {
     if (isNaN(num) || num < 1 || num > 800) return;
 
     try {
-      const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
+      const config = getHymnConfigs()[0];
+      const db = await loadDatabase(config.file, require('../../assets/databases/cantique.db'));
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {
@@ -178,6 +243,36 @@ export default function Hymnes() {
           ))}
         </ScrollView>
       </View>
+
+      {/* Download Alert for Hymns */}
+      {!isDbReady && (
+        <View className="px-6 mb-4">
+          <View className="bg-blue-600/10 border border-blue-500/20 rounded-3xl p-5 flex-row items-center">
+            <View className="w-12 h-12 rounded-2xl bg-blue-500/20 items-center justify-center mr-4">
+              <CloudDownload size={24} color="#3b82f6" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-bold text-sm">Chants disponibles en ligne</Text>
+              <Text className="text-slate-400 text-[10px] mt-1">Téléchargez la base de données pour une utilisation hors-ligne optimale.</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => downloadHymns(availableVersions[0] || getHymnConfigs()[0])}
+              className="bg-blue-600 px-4 py-2 rounded-xl"
+            >
+              {downloading[availableVersions[0]?.id || getHymnConfigs()[0].id] !== undefined ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text className="text-white font-bold text-xs">Télécharger</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          {downloading[availableVersions[0]?.id || getHymnConfigs()[0].id] !== undefined && (
+            <View className="h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
+              <View className="h-full bg-blue-500" style={{ width: `${downloading[availableVersions[0]?.id || getHymnConfigs()[0].id] * 100}%` }} />
+            </View>
+          )}
+        </View>
+      )}
 
       <FlatList
         data={hymns}

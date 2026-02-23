@@ -26,7 +26,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BIBLE_CONFIGS } from './(tabs)/bible';
+import { getBibleConfigs, BibleConfig } from '@/lib/bible';
 
 
 export default function Settings() {
@@ -39,6 +39,7 @@ export default function Settings() {
   const [isNameEditVisible, setIsNameEditVisible] = useState(false);
   const [tempName, setTempName] = useState('');
   const [availableDepartments, setAvailableDepartments] = useState<string[]>(localManifest.departments || []);
+  const [availableBibles, setAvailableBibles] = useState<BibleConfig[]>(getBibleConfigs());
 
   // Load settings on mount
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function Settings() {
 
   const syncDepartments = async () => {
     try {
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json?t=${Date.now()}`;
+      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
       const response = await fetch(GITHUB_MANIFEST_URL);
       if (response.ok) {
         const remoteData = await response.json();
@@ -235,14 +236,14 @@ export default function Settings() {
           <SettingItem
             icon={<FileText size={18} color="#64748b" />}
             label="Version de Bible par défaut"
-            value={BIBLE_CONFIGS[globalSettings.bibleVersion]?.name || globalSettings.bibleVersion}
+            value={availableBibles.find(b => b.id === globalSettings.bibleVersion)?.name || globalSettings.bibleVersion}
             onPress={() => {
               Alert.alert(
                 "Version par défaut",
                 "Choisissez la version de la Bible à ouvrir par défaut",
-                Object.entries(BIBLE_CONFIGS).map(([code, config]) => ({
-                  text: `${config.name} (${code})`,
-                  onPress: () => updateSettings({ bibleVersion: code })
+                availableBibles.map((config) => ({
+                  text: `${config.name} (${config.id})`,
+                  onPress: () => updateSettings({ bibleVersion: config.id })
                 }))
               )
             }}

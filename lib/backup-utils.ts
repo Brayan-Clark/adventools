@@ -132,7 +132,7 @@ export async function exportAllAppData() {
       key === 'profile_image' ||
       key === 'profile_departments' ||
       key === 'app_history' ||
-      key === 'app_settings'
+      key === 'app_global_settings'
     );
 
     if (keysToBackup.length === 0) {

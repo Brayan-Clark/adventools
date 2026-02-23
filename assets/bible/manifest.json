@@ -1,0 +1,31 @@
+{
+  "versions": [
+    {
+      "id": "MG65",
+      "name": "Malagasy 1965",
+      "language": "Malagasy",
+      "file": "MG'65.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/bibles/MG'65.db",
+      "size": "5.9 MB",
+      "isDefault": true
+    },
+    {
+      "id": "LSG",
+      "name": "Louis Segond (FB)",
+      "language": "Français",
+      "file": "FB.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/bibles/FB.SQLite3",
+      "size": "7.0 MB",
+      "isDefault": false
+    },
+    {
+      "id": "KJV",
+      "name": "King James Version",
+      "language": "English",
+      "file": "king_james.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/bibles/king_james.db",
+      "size": "5.7 MB",
+      "isDefault": false
+    }
+  ]
+}

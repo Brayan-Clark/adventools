@@ -1,34 +1,26 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
 import '../global.css';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { SettingsProvider } from '@/lib/settings-context';
+import { Lexend_400Regular, Lexend_700Bold, Lexend_600SemiBold } from '@expo-google-fonts/lexend';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-import { Lexend_400Regular, Lexend_700Bold, Lexend_600SemiBold } from '@expo-google-fonts/lexend';
-
-import { SettingsProvider } from '@/lib/settings-context';
-
-export default function RootLayout() {
+function RootLayoutNav() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     Lexend_400Regular,
@@ -44,7 +36,6 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -55,27 +46,29 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  if (!loaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <RootLayoutNav />
-    </SafeAreaProvider>
+    <ThemeProvider value={DarkTheme}>
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="bible/reader" options={{ headerShown: false }} />
+        <Stack.Screen name="bible/settings" options={{ headerShown: false }} />
+        <Stack.Screen name="promises/index" options={{ headerShown: false }} />
+        <Stack.Screen name="pdf/viewer" options={{ headerShown: false }} />
+      </Stack>
+    </ThemeProvider>
   );
 }
 
-function RootLayoutNav() {
+export default function RootLayout() {
   return (
     <SettingsProvider>
-      <ThemeProvider value={DarkTheme}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <RootLayoutNav />
+      </SafeAreaProvider>
     </SettingsProvider>
   );
 }

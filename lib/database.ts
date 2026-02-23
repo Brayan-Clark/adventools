@@ -30,7 +30,7 @@ function sanitizeParams(params: any[]): any[] {
  * Opens and prepares the database. 
  * Includes a singleton pattern to avoid re-opening and re-copying files constantly.
  */
-export async function loadDatabase(dbName: string, assetSource: any): Promise<SQLite.SQLiteDatabase> {
+export async function loadDatabase(dbName: string, assetSource?: any): Promise<SQLite.SQLiteDatabase> {
   // Return cached connection if available
   if (dbConnections[dbName]) {
     return dbConnections[dbName];
@@ -49,21 +49,34 @@ export async function loadDatabase(dbName: string, assetSource: any): Promise<SQ
   try {
     const info = await FileSystem.getInfoAsync(dbPath);
 
-    // ONLY copy if the file doesn't exist to avoid "NullPointerException" or "Locked" errors
     if (!info.exists) {
-      console.log(`Database ${dbName} not found, copying from assets...`);
+      if (assetSource) {
+        console.log(`Database ${dbName} not found, copying from assets...`);
+        const dirInfo = await FileSystem.getInfoAsync(dbDir);
+        if (!dirInfo.exists) {
+          await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+        }
 
-      const dirInfo = await FileSystem.getInfoAsync(dbDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
-      }
-
-      const asset = await Asset.fromModule(assetSource).downloadAsync();
-      if (asset.localUri) {
-        await FileSystem.copyAsync({
-          from: asset.localUri,
-          to: dbPath,
-        });
+        const asset = await Asset.fromModule(assetSource).downloadAsync();
+        if (asset.localUri) {
+          await FileSystem.copyAsync({
+            from: asset.localUri,
+            to: dbPath,
+          });
+        }
+      } else {
+        // Check if the file exists directly in DocumentDirectory (maybe downloaded manually elsewhere)
+        const rootPath = `${docDir}${dbName}`;
+        const rootInfo = await FileSystem.getInfoAsync(rootPath);
+        if (rootInfo.exists) {
+          const dirInfo = await FileSystem.getInfoAsync(dbDir);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+          }
+          await FileSystem.copyAsync({ from: rootPath, to: dbPath });
+        } else {
+          console.warn(`Database ${dbName} not found in assets or downloads.`);
+        }
       }
     }
   } catch (error) {

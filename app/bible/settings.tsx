@@ -135,25 +135,29 @@ export default function BibleSettings() {
           {/* Font Selection - Grid style */}
           <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 ml-4">Police d'écriture</Text>
           <View className="flex-row flex-wrap gap-3 mb-8">
-            {fonts.map((f) => (
-              <TouchableOpacity
-                key={f.value}
-                onPress={() => updateSettings({ fontFamily: f.value })}
-                className={cn(
-                  "px-5 py-3 rounded-2xl border transition-all",
-                  settings.fontFamily === f.value
-                    ? "bg-primary border-primary shadow-lg shadow-primary/20"
-                    : "bg-white/5 border-white/10"
-                )}
-              >
-                <Text
-                  className={cn("text-sm", settings.fontFamily === f.value ? "text-white font-bold" : "text-slate-400")}
-                  style={{ fontFamily: f.value === 'System' ? undefined : f.value }}
+            {fonts.map((f) => {
+              const isSelected = settings.fontFamily === f.value;
+              return (
+                <TouchableOpacity
+                  key={f.value}
+                  onPress={() => updateSettings({ fontFamily: f.value })}
+                  activeOpacity={0.7}
+                  className={cn(
+                    "px-5 py-3 rounded-2xl border",
+                    isSelected
+                      ? "bg-primary border-primary shadow-lg"
+                      : "bg-white/5 border-white/10"
+                  )}
                 >
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    className={cn("text-sm", isSelected ? "text-white font-bold" : "text-slate-400")}
+                    style={{ fontFamily: f.value === 'System' ? undefined : f.value }}
+                  >
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Sliders Area */}
