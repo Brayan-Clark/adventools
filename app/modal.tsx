@@ -26,7 +26,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BIBLE_CONFIGS } from './(tabs)/bible';
+import { BIBLE_CONFIGS } from '@/lib/bible';
 
 
 export default function Settings() {

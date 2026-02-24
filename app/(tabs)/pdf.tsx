@@ -1,6 +1,5 @@
 import localManifest from '@/assets/docs/manifest.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -17,10 +16,7 @@ const ICON_MAP: Record<string, any> = {
   Clock
 };
 
-const BUNDLED_ASSETS: Record<string, any> = {
-  'HFM.pdf': require('@/assets/docs/HFM.pdf'),
-  'IFM.pdf': require('@/assets/docs/Ilay Fitiavana Mandresy (IFM).pdf'),
-};
+// No bundled assets - everything is downloadable
 
 const getMimeType = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
@@ -155,21 +151,40 @@ export default function PDFLibrary() {
     }
   };
 
-  const deleteFile = async (fileName: string) => {
+  const deleteFile = async (fileName: string, title: string) => {
     Alert.alert(
-      "Supprimer le fichier",
-      "Êtes-vous sûr de vouloir supprimer ce document de votre téléphone ? Vous pourrez toujours le télécharger à nouveau depuis le catalogue.",
+      "Suppression : " + title,
+      "Voulez-vous également supprimer définitivement vos notes et marque-pages associés à ce livre ?",
       [
         { text: "Annuler", style: "cancel" },
         {
-          text: "Supprimer",
-          style: "destructive",
+          text: "Garder mes notes",
           onPress: async () => {
             try {
               await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
               setLocalFiles(prev => prev.filter(f => f !== fileName));
             } catch (e) {
               console.error(e);
+            }
+          }
+        },
+        {
+          text: "Tout supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Supprimer le fichier physique
+              await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
+
+              // Supprimer les données d'étude associées dans AsyncStorage
+              await AsyncStorage.removeItem(`pdf_bookmarks_${fileName}`);
+              await AsyncStorage.removeItem(`pdf_notes_${fileName}`);
+
+              setLocalFiles(prev => prev.filter(f => f !== fileName));
+              Alert.alert("Succès", "Le document et ses données liées ont été supprimés.");
+            } catch (e) {
+              console.error(e);
+              Alert.alert("Erreur", "Une erreur est survenue lors de la suppression totale.");
             }
           }
         }
@@ -181,21 +196,7 @@ export default function PDFLibrary() {
     const isPdf = file.toLowerCase().endsWith('.pdf');
     const localPath = `${FileSystem.documentDirectory}${file}`;
 
-    // Check if it's an asset or dynamic file
-    const doc = manifest?.documents.find((d: any) => d.fileName === file);
-    let finalUri = "";
-
-    if (doc?.isAsset) {
-      // Use the static mapping instead of dynamic require
-      const assetModule = BUNDLED_ASSETS[file];
-      if (assetModule) {
-        const asset = Asset.fromModule(assetModule);
-        await asset.downloadAsync();
-        finalUri = asset.localUri || "";
-      }
-    } else {
-      finalUri = localPath;
-    }
+    const finalUri = localPath;
 
     if (!isPdf) {
       // If it's not a PDF, use system intent (Android) or sharing/preview (iOS)
@@ -418,7 +419,7 @@ export default function PDFLibrary() {
                 <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden flex-row items-center">
                   {!doc.isAsset && (
                     <TouchableOpacity
-                      onPress={() => deleteFile(doc.fileName)}
+                      onPress={() => deleteFile(doc.fileName, doc.title)}
                       className="p-4 pr-1 active:bg-red-500/10"
                     >
                       <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center border border-slate-700">

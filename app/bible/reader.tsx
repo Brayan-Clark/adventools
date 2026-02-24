@@ -9,31 +9,7 @@ import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Cop
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-// Static imports for all database files
-const DB_SOURCES: Record<string, any> = {
-  'protestant.db': require('../../assets/databases/protestant.db'),
-  'king_james.db': require('../../assets/databases/king_james.db'),
-  'le_bible.db': require('../../assets/databases/le_bible.db'),
-  'arabic.db': require('../../assets/databases/arabic.db'),
-  'basic_english.db': require('../../assets/databases/basic_english.db'),
-  'esperanto.db': require('../../assets/databases/esperanto.db'),
-  'greek.db': require('../../assets/databases/greek.db'),
-  'schlachter.db': require('../../assets/databases/schlachter.db'),
-  'diem.db': require('../../assets/databases/diem.db'),
-};
-
-// Bible database configurations
-const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
-  'MG': { file: 'protestant.db', prefix: 'protestant', name: 'Malagasy' },
-  'FR': { file: 'le_bible.db', prefix: 'fr', name: 'Français' },
-  'EN': { file: 'king_james.db', prefix: 'en', name: 'English (KJV)' },
-  'AR': { file: 'arabic.db', prefix: 'ar', name: 'العربية' },
-  'BE': { file: 'basic_english.db', prefix: 'en', name: 'Basic English' },
-  'ES': { file: 'esperanto.db', prefix: 'es', name: 'Esperanto' },
-  'GR': { file: 'greek.db', prefix: 'gr', name: 'Ελληνικά' },
-  'DE': { file: 'schlachter.db', prefix: 'sc', name: 'Deutsch' },
-  'CI': { file: 'diem.db', prefix: 'ci_diem', name: 'Diem' },
-};
+import { DB_SOURCES, BIBLE_CONFIGS } from '@/lib/bible';
 
 export default function BibleReader() {
   const router = useRouter();

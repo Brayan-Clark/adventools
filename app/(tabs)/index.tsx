@@ -1,48 +1,82 @@
-import { loadDatabase } from '@/lib/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, History, Music, Settings, Share2, StickyNote } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, Music, RefreshCw, Settings, Share2, StickyNote } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
+import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
+
+const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
+  try {
+    const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
+    
+    const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
+    const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
+    const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+
+    if (!bookTable || !verseTable) return null;
+
+    const verseQuery = `
+      SELECT a_and as verse, a_text as text, b_name as book, a_toko as chapter
+      FROM ${verseTable}
+      JOIN ${bookTable} ON ${verseTable}.a_bid = ${bookTable}.id
+      WHERE ${verseTable}.a_bid = ? AND a_toko = ? AND a_and = ?
+    `;
+
+    const result: any = await db.getFirstAsync(verseQuery, [bookId, parseInt(chapter), parseInt(verse)]);
+    if (!result) return null;
+
+    return {
+      text: result.text,
+      book: result.book,
+      bookId: bookId,
+      chapter: parseInt(chapter),
+      verses: verse
+    };
+  } catch (error) {
+    console.error('Error loading verse content:', error);
+    return null;
+  }
+};
 
 export default function Home() {
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
-  const [verse, setVerse] = React.useState<any>(null);
+  const [currentReference, setCurrentReference] = useState<VerseReference | null>(null);
+  const [verseText, setVerseText] = useState<string>('');
   const [history, setHistory] = useState<any[]>([]);
 
   React.useEffect(() => {
     async function init() {
       try {
-        const db = await loadDatabase('protestant.db', require('../../assets/databases/protestant.db'));
-        const candidates = [
-          { bid: 23, toko: 23, and: 1 },
-          { bid: 26, toko: 29, and: 11 },
-          { bid: 43, toko: 3, and: 16 },
-        ];
-        const pick = candidates[Math.floor(Math.random() * candidates.length)];
-
-        const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-        const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
-        const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-
-        if (verseTable && bookTable && pick) {
-          const result: any = await db.getFirstAsync(`
-            SELECT a_and as verse, a_text as text, b_name as book, a_toko as chapter
-            FROM ${verseTable}
-            JOIN ${bookTable} ON ${verseTable}.a_bid = ${bookTable}.id
-            WHERE a_bid = ? AND a_toko = ? AND a_and = ?
-          `, [pick.bid || 1, pick.toko || 1, pick.and || 1]);
-          if (result) {
-            setVerse(result);
+        // Obtenir une référence aléatoire depuis notre fichier
+        const randomReference = getRandomVerseReference();
+        setCurrentReference(randomReference);
+        
+        // Récupérer le texte du verset depuis la base de données selon la langue
+        if (randomReference.bookId && randomReference.chapter && randomReference.verse) {
+          const verseContent = await loadVerseContent(
+            globalSettings.bibleVersion,
+            randomReference.bookId,
+            randomReference.chapter.toString(),
+            randomReference.verse.toString()
+          );
+          
+          if (verseContent) {
+            setVerseText(verseContent.text);
+          } else {
+            setVerseText('Verset non trouvé dans la base de données.');
           }
+        } else {
+          setVerseText('Référence incomplète.');
         }
       } catch (e) {
-        console.error("DB Error", e);
+        console.error("Error loading verse:", e);
+        setVerseText('Erreur lors du chargement du verset.');
       }
     }
     init();
@@ -55,6 +89,35 @@ export default function Home() {
       });
     }, [])
   );
+
+  const refreshVerse = async () => {
+    try {
+      // Obtenir une nouvelle référence aléatoire depuis notre fichier
+      const randomReference = getRandomVerseReference();
+      setCurrentReference(randomReference);
+      
+      // Récupérer le texte du verset depuis la base de données selon la langue
+      if (randomReference.bookId && randomReference.chapter && randomReference.verse) {
+        const verseContent = await loadVerseContent(
+          globalSettings.bibleVersion,
+          randomReference.bookId,
+          randomReference.chapter.toString(),
+          randomReference.verse.toString()
+        );
+        
+        if (verseContent) {
+          setVerseText(verseContent.text);
+        } else {
+          setVerseText('Verset non trouvé dans la base de données.');
+        }
+      } else {
+        setVerseText('Référence incomplète.');
+      }
+    } catch (e) {
+      console.error("Error refreshing verse:", e);
+      setVerseText('Erreur lors du chargement du verset.');
+    }
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 17 ? "Bonjour ☀️" : "Bonsoir 🌙";
@@ -85,7 +148,10 @@ export default function Home() {
         </View>
 
         {/* Hero Verse Card */}
-        <View className="relative overflow-hidden rounded-[40px] bg-primary mb-10 shadow-2xl shadow-primary/40">
+        <TouchableOpacity 
+          onPress={() => router.push('/verse-du-jour')}
+          className="relative overflow-hidden rounded-[40px] bg-primary mb-10 shadow-2xl shadow-primary/40"
+        >
           {/* Background Decoration */}
           <View className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
           <View className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full" />
@@ -95,35 +161,46 @@ export default function Home() {
               <View className="bg-white/20 px-3 py-1.5 rounded-full">
                 <Text className="text-[10px] font-bold uppercase text-white tracking-widest">Verset du Jour</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => {
-                  if (verse) {
-                    router.push({
-                      pathname: '/share/verset',
-                      params: {
-                        verseText: verse.text,
-                        verseRef: `${verse.book} ${verse.chapter}:${verse.verse}`
-                      }
-                    });
-                  }
-                }}
-                className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
-                <Share2 size={14} color="white" />
-              </TouchableOpacity>
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    refreshVerse();
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                  <RefreshCw size={14} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (currentReference && verseText) {
+                      router.push({
+                        pathname: '/share/verset',
+                        params: {
+                          verseText: verseText,
+                          verseRef: currentReference.reference
+                        }
+                      });
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                  <Share2 size={14} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {verse ? (
+            {currentReference ? (
               <View>
                 <Text className="text-white italic mb-6 leading-8" style={{
                   fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
                   fontSize: 20 * (globalSettings.fontSize / 18) // Scaling based on base size
                 }}>
-                  "{verse.text}"
+                  "{verseText}"
                 </Text>
                 <View className="flex-row items-center">
                   <View className="h-[2px] w-6 bg-white/30 mr-3" />
                   <Text className="text-sm font-bold text-blue-100" style={{ fontFamily: 'Lexend_700Bold' }}>
-                    {verse.book} {verse.chapter}:{verse.verse}
+                    {currentReference.reference}
                   </Text>
                 </View>
               </View>
@@ -133,7 +210,7 @@ export default function Home() {
               </View>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Feature Grid */}
         <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">Outils Principaux</Text>
@@ -165,6 +242,13 @@ export default function Home() {
             subtitle="Réflexions"
             icon={<StickyNote color="#10b981" size={28} />}
             bgColor="bg-emerald-500/10"
+          />
+          <FeatureCard
+            href="/promesses"
+            title="Promesses"
+            subtitle="Paroles divines"
+            icon={<Heart color="#ef4444" size={28} />}
+            bgColor="bg-red-500/10"
           />
         </View>
 
