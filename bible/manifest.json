@@ -1,0 +1,202 @@
+{
+  "versions": [
+    {
+      "id": "AFR_SQLite3",
+      "name": "AFR",
+      "language": "Afrikaans",
+      "file": "AFR.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/AFR.SQLite3",
+      "size": "5.0 MB",
+      "isDefault": false
+    },
+    {
+      "id": "ARAi__SQLite3",
+      "name": "ARAi+",
+      "language": "Portuguese",
+      "file": "ARAi+.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/ARAi%2B.SQLite3",
+      "size": "20.8 MB",
+      "isDefault": false
+    },
+    {
+      "id": "AVD_SQLite3",
+      "name": "AVD",
+      "language": "Arabic",
+      "file": "AVD.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/AVD.SQLite3",
+      "size": "9.6 MB",
+      "isDefault": false
+    },
+    {
+      "id": "BHN_SQLite3",
+      "name": "BHN",
+      "language": "Swahili",
+      "file": "BHN.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/BHN.SQLite3",
+      "size": "4.9 MB",
+      "isDefault": false
+    },
+    {
+      "id": "D_1871_SQLite3",
+      "name": "D'1871",
+      "language": "Danish",
+      "file": "D'1871.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/D'1871.SQLite3",
+      "size": "4.8 MB",
+      "isDefault": false
+    },
+    {
+      "id": "ESS_SQLite3",
+      "name": "ESS",
+      "language": "German",
+      "file": "ESS.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/ESS.SQLite3",
+      "size": "5.2 MB",
+      "isDefault": false
+    },
+    {
+      "id": "FB_SQLite3",
+      "name": "Louis Segond (FB)",
+      "language": "Français",
+      "file": "FB.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/FB.SQLite3",
+      "size": "6.7 MB",
+      "isDefault": false
+    },
+    {
+      "id": "HTB_SQLite3",
+      "name": "HTB",
+      "language": "Nederlandse",
+      "file": "HTB.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/HTB.SQLite3",
+      "size": "4.9 MB",
+      "isDefault": false
+    },
+    {
+      "id": "IceB_SQLite3",
+      "name": "IceB",
+      "language": "Icelandic",
+      "file": "IceB.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/IceB.SQLite3",
+      "size": "5.3 MB",
+      "isDefault": false
+    },
+    {
+      "id": "KNRSV_SQLite3",
+      "name": "KNRSV",
+      "language": "Korean",
+      "file": "KNRSV.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/KNRSV.SQLite3",
+      "size": "6.5 MB",
+      "isDefault": false
+    },
+    {
+      "id": "KS_SQLite3",
+      "name": "KS",
+      "language": "Croatian",
+      "file": "KS.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/KS.SQLite3",
+      "size": "4.8 MB",
+      "isDefault": false
+    },
+    {
+      "id": "LCCMN_SQLite3",
+      "name": "LCCMN",
+      "language": "Vietnamese",
+      "file": "LCCMN.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/LCCMN.SQLite3",
+      "size": "5.9 MB",
+      "isDefault": false
+    },
+    {
+      "id": "MG_65_db",
+      "name": "Malagasy 1965",
+      "language": "Malagasy",
+      "file": "MG'65.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG'65.db",
+      "size": "5.6 MB",
+      "isDefault": true
+    },
+    {
+      "id": "MHB_SQLite3",
+      "name": "MHB",
+      "language": "Hebrew",
+      "file": "MHB.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MHB.SQLite3",
+      "size": "7.6 MB",
+      "isDefault": false
+    },
+    {
+      "id": "NBD_08_SQLite3",
+      "name": "NBD'08",
+      "language": "Spanish",
+      "file": "NBD'08.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/NBD'08.SQLite3",
+      "size": "5.4 MB",
+      "isDefault": false
+    },
+    {
+      "id": "Niobe_SQLite3",
+      "name": "Niobe",
+      "language": "English",
+      "file": "Niobe.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/Niobe.SQLite3",
+      "size": "5.2 MB",
+      "isDefault": false
+    },
+    {
+      "id": "SBF_SQLite3",
+      "name": "SBF",
+      "language": "French",
+      "file": "SBF.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.SQLite3",
+      "size": "5.9 MB",
+      "isDefault": false
+    },
+    {
+      "id": "SMOV_SQLite3",
+      "name": "SMOV",
+      "language": "Samoan",
+      "file": "SMOV.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SMOV.SQLite3",
+      "size": "5.8 MB",
+      "isDefault": false
+    },
+    {
+      "id": "SOM_SQLite3",
+      "name": "SOM",
+      "language": "Somali",
+      "file": "SOM.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SOM.SQLite3",
+      "size": "5.6 MB",
+      "isDefault": false
+    },
+    {
+      "id": "Sfilos_SQLite3",
+      "name": "Sfilos",
+      "language": "Greek",
+      "file": "Sfilos.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/Sfilos.SQLite3",
+      "size": "8.2 MB",
+      "isDefault": false
+    },
+    {
+      "id": "TILC_85_SQLite3",
+      "name": "TILC'85",
+      "language": "Italian",
+      "file": "TILC'85.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/TILC'85.SQLite3",
+      "size": "5.8 MB",
+      "isDefault": false
+    },
+    {
+      "id": "UBIO_62_SQLite3",
+      "name": "UBIO'62",
+      "language": "Ukrainian",
+      "file": "UBIO'62.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/UBIO'62.SQLite3",
+      "size": "7.1 MB",
+      "isDefault": false
+    }
+  ]
+}
