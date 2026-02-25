@@ -13,7 +13,7 @@ import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
   try {
     const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
-    
+
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
     const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
@@ -56,7 +56,7 @@ export default function Home() {
         // Obtenir une référence aléatoire depuis notre fichier
         const randomReference = getRandomVerseReference();
         setCurrentReference(randomReference);
-        
+
         // Récupérer le texte du verset depuis la base de données selon la langue
         if (randomReference.bookId && randomReference.chapter && randomReference.verse) {
           const verseContent = await loadVerseContent(
@@ -65,7 +65,7 @@ export default function Home() {
             randomReference.chapter.toString(),
             randomReference.verse.toString()
           );
-          
+
           if (verseContent) {
             setVerseText(verseContent.text);
           } else {
@@ -95,7 +95,7 @@ export default function Home() {
       // Obtenir une nouvelle référence aléatoire depuis notre fichier
       const randomReference = getRandomVerseReference();
       setCurrentReference(randomReference);
-      
+
       // Récupérer le texte du verset depuis la base de données selon la langue
       if (randomReference.bookId && randomReference.chapter && randomReference.verse) {
         const verseContent = await loadVerseContent(
@@ -104,7 +104,7 @@ export default function Home() {
           randomReference.chapter.toString(),
           randomReference.verse.toString()
         );
-        
+
         if (verseContent) {
           setVerseText(verseContent.text);
         } else {
@@ -148,8 +148,23 @@ export default function Home() {
         </View>
 
         {/* Hero Verse Card */}
-        <TouchableOpacity 
-          onPress={() => router.push('/verse-du-jour')}
+        <TouchableOpacity
+          onPress={() => {
+            if (currentReference) {
+              router.push({
+                pathname: '/verse-du-jour',
+                params: {
+                  bookId: currentReference.bookId,
+                  chapter: currentReference.chapter,
+                  verse: currentReference.verse,
+                  reference: currentReference.reference,
+                  category: currentReference.category
+                }
+              });
+            } else {
+              router.push('/verse-du-jour');
+            }
+          }}
           className="relative overflow-hidden rounded-[40px] bg-primary mb-10 shadow-2xl shadow-primary/40"
         >
           {/* Background Decoration */}
@@ -231,7 +246,7 @@ export default function Home() {
           />
           <FeatureCard
             href="/pdf"
-            title="PDF"
+            title="Livres"
             subtitle="Documents"
             icon={<FileText color="#f59e0b" size={28} />}
             bgColor="bg-amber-500/10"
@@ -243,13 +258,13 @@ export default function Home() {
             icon={<StickyNote color="#10b981" size={28} />}
             bgColor="bg-emerald-500/10"
           />
-          <FeatureCard
-            href="/promesses"
+          {/* <FeatureCard
+            href="/versets-categories"
             title="Promesses"
             subtitle="Paroles divines"
             icon={<Heart color="#ef4444" size={28} />}
             bgColor="bg-red-500/10"
-          />
+          /> */}
         </View>
 
         {/* Recent Section - Dynamic */}

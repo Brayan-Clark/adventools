@@ -1,7 +1,7 @@
 import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, BookmarkPlus, Heart, RefreshCw, Share2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
   try {
     const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
-    
+
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
     const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
@@ -43,6 +43,8 @@ const loadVerseContent = async (lang: string, bookId: number, chapter: string, v
 export default function VerDuJourPage() {
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
+  const { bookId, chapter, verse, reference, category } = useLocalSearchParams();
+
   const [currentReference, setCurrentReference] = useState<VerseReference | null>(null);
   const [verseText, setVerseText] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,12 +53,10 @@ export default function VerDuJourPage() {
   const loadNewVerse = async () => {
     try {
       setIsRefreshing(true);
-      
-      // Obtenir une référence aléatoire depuis notre fichier
+
       const randomReference = getRandomVerseReference();
       setCurrentReference(randomReference);
-      
-      // Récupérer le texte du verset depuis la base de données selon la langue
+
       if (randomReference.bookId && randomReference.chapter && randomReference.verse) {
         const verseContent = await loadVerseContent(
           globalSettings.bibleVersion,
@@ -64,7 +64,7 @@ export default function VerDuJourPage() {
           randomReference.chapter.toString(),
           randomReference.verse.toString()
         );
-        
+
         if (verseContent) {
           setVerseText(verseContent.text);
         } else {
@@ -73,7 +73,7 @@ export default function VerDuJourPage() {
       } else {
         setVerseText('Référence incomplète.');
       }
-      
+
     } catch (error) {
       console.error('Error loading verse:', error);
       setVerseText('Erreur lors du chargement du verset.');
@@ -83,8 +83,46 @@ export default function VerDuJourPage() {
     }
   };
 
+  const loadInitialVerse = async () => {
+    try {
+      setIsLoading(true);
+
+      if (bookId && chapter && verse) {
+        const ref: VerseReference = {
+          id: 0,
+          bookId: parseInt(bookId as string),
+          chapter: parseInt(chapter as string),
+          verse: parseInt(verse as string),
+          reference: (reference as string) || '',
+          category: (category as string) || '',
+          bookName: ''
+        };
+        setCurrentReference(ref);
+
+        const verseContent = await loadVerseContent(
+          globalSettings.bibleVersion,
+          ref.bookId,
+          ref.chapter.toString(),
+          ref.verse.toString()
+        );
+
+        if (verseContent) {
+          setVerseText(verseContent.text);
+        } else {
+          setVerseText('Verset non trouvé.');
+        }
+        setIsLoading(false);
+      } else {
+        await loadNewVerse();
+      }
+    } catch (error) {
+      console.error('Error loading initial verse:', error);
+      await loadNewVerse();
+    }
+  };
+
   useEffect(() => {
-    loadNewVerse();
+    loadInitialVerse();
   }, []);
 
   const handleShare = () => {
@@ -111,6 +149,16 @@ export default function VerDuJourPage() {
         return 'bg-green-500';
       case 'Fiovam-po':
         return 'bg-pink-500';
+      case 'Famela-keloka':
+        return 'bg-indigo-500';
+      case 'Fandresena ny fahotana':
+        return 'bg-red-500';
+      case 'Fahasitranana':
+        return 'bg-emerald-500';
+      case 'Hery hanaovana ny sitrapony':
+        return 'bg-cyan-500';
+      case 'Maha-vavolombelona':
+        return 'bg-yellow-600';
       default:
         return 'bg-gray-500';
     }
@@ -130,10 +178,10 @@ export default function VerDuJourPage() {
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
       <StatusBar barStyle="light-content" />
-      
+
       {/* Header */}
-      <View className="bg-slate-800 px-4 py-4 flex-row items-center">
-        <TouchableOpacity 
+      <View className="px-4 py-4 flex-row items-center">
+        <TouchableOpacity
           onPress={() => router.back()}
           className="mr-4"
         >
@@ -175,22 +223,22 @@ export default function VerDuJourPage() {
             {/* Verse Text */}
             {currentReference ? (
               <View>
-                <Text 
-                  className="text-white leading-8 mb-6" 
+                <Text
+                  className="text-white text-center leading-8 mb-6"
                   style={{
                     fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
                     fontSize: 20 * (globalSettings.fontSize / 18),
                     lineHeight: 32
                   }}
                 >
-                  "{verseText}"
+                  {verseText}
                 </Text>
-                
+
                 {/* Reference */}
                 <View className="flex-row items-center">
                   <View className="h-[2px] w-8 bg-white/30 mr-3" />
-                  <Text 
-                    className="text-white font-bold" 
+                  <Text
+                    className="text-white font-bold"
                     style={{ fontFamily: 'Lexend_700Bold', fontSize: 16 }}
                   >
                     {currentReference.reference}
@@ -211,13 +259,13 @@ export default function VerDuJourPage() {
               >
                 <Share2 size={20} color="white" />
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-sm"
               >
                 <Heart size={20} color="white" />
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-sm"
               >
@@ -231,13 +279,12 @@ export default function VerDuJourPage() {
         <TouchableOpacity
           onPress={loadNewVerse}
           disabled={isRefreshing}
-          className={`w-full rounded-2xl bg-slate-800 p-4 mb-8 flex-row items-center justify-center ${
-            isRefreshing ? 'opacity-50' : ''
-          }`}
+          className={`w-full rounded-2xl bg-slate-800 p-4 mb-8 flex-row items-center justify-center ${isRefreshing ? 'opacity-50' : ''
+            }`}
         >
-          <RefreshCw 
-            size={20} 
-            color="#94a3b8" 
+          <RefreshCw
+            size={20}
+            color="#94a3b8"
             className={`mr-3 ${isRefreshing ? 'animate-spin' : ''}`}
           />
           <Text className="text-slate-300 font-bold text-base">
@@ -252,7 +299,7 @@ export default function VerDuJourPage() {
           </Text>
           <View className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
             <Text className="text-slate-300 leading-6" style={{ fontSize: 16 }}>
-              Prenez un moment pour réfléchir à cette parole. Comment peut-elle s'appliquer à votre vie aujourd'hui ? 
+              Prenez un moment pour réfléchir à cette parole. Comment peut-elle s'appliquer à votre vie aujourd'hui ?
               Laissez cette vérité transformer votre cœur et vos pensées.
             </Text>
           </View>

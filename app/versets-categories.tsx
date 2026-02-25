@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
   try {
     const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
-    
+
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
     const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
@@ -47,6 +47,11 @@ const CATEGORIES = [
   { id: "Herin'Andriamanitra", name: "Herin'Andriamanitra", color: 'bg-orange-500' },
   { id: "Fitarihan'Andriamanitra", name: "Fitarihan'Andriamanitra", color: 'bg-green-500' },
   { id: 'Fiovam-po', name: 'Fiovam-po', color: 'bg-pink-500' },
+  { id: 'Famela-keloka', name: 'Famela-keloka', color: 'bg-indigo-500' },
+  { id: 'Fandresena ny fahotana', name: 'Fandresena ny fahotana', color: 'bg-red-500' },
+  { id: 'Fahasitranana', name: 'Fahasitranana', color: 'bg-emerald-500' },
+  { id: 'Hery hanaovana ny sitrapony', name: 'Hery hanaovana ny sitrapony', color: 'bg-cyan-500' },
+  { id: 'Maha-vavolombelona', name: 'Maha-vavolombelona', color: 'bg-yellow-600' },
 ];
 
 export default function VersetsCategoriesPage() {
@@ -63,14 +68,14 @@ export default function VersetsCategoriesPage() {
   const loadVerses = async () => {
     try {
       setIsLoading(true);
-      
+
       // Obtenir les références selon la catégorie
-      const references = selectedCategory === 'all' 
+      const references = selectedCategory === 'all'
         ? getAllVerseReferences()
         : getVerseReferencesByCategory(selectedCategory);
-      
+
       setVerses(references);
-      
+
       // Récupérer le texte pour chaque référence
       const versesWithContent = await Promise.all(
         references.map(async (reference: VerseReference) => {
@@ -82,7 +87,7 @@ export default function VersetsCategoriesPage() {
                 reference.chapter.toString(),
                 reference.verse.toString()
               );
-              
+
               return {
                 ...reference,
                 text: verseContent?.text || 'Texte non trouvé'
@@ -101,7 +106,7 @@ export default function VersetsCategoriesPage() {
           };
         })
       );
-      
+
       setVerses(versesWithContent);
     } catch (error) {
       console.error('Error loading verses:', error);
@@ -113,7 +118,7 @@ export default function VersetsCategoriesPage() {
   const handleShare = (verse: VerseReference & { text?: string }) => {
     const verseText = verse.text || 'Texte du verset';
     const verseRef = verse.reference;
-    
+
     router.push({
       pathname: '/share/verset',
       params: {
@@ -135,10 +140,10 @@ export default function VersetsCategoriesPage() {
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
       <StatusBar barStyle="light-content" />
-      
+
       {/* Header */}
-      <View className="bg-slate-800 px-4 py-4 flex-row items-center">
-        <TouchableOpacity 
+      <View className="px-4 py-4 flex-row items-center">
+        <TouchableOpacity
           onPress={() => router.back()}
           className="mr-4"
         >
@@ -150,7 +155,7 @@ export default function VersetsCategoriesPage() {
       </View>
 
       {/* Categories */}
-      <View className="bg-slate-700 px-1 py-4 border-b border-slate-600">
+      <View className="px-1 py-4 border-b border-slate-600">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">
           {CATEGORIES.map((category) => (
             <TouchableOpacity
@@ -158,7 +163,7 @@ export default function VersetsCategoriesPage() {
               onPress={() => setSelectedCategory(category.id)}
               className={`px-4 py-2 mx-1 rounded-full ${selectedCategory === category.id ? category.color : 'bg-slate-600'}`}
             >
-              <Text 
+              <Text
                 className={`text-sm font-medium ${selectedCategory === category.id ? 'text-white' : 'text-slate-300'}`}
                 style={{ fontFamily: 'Lexend_500Medium' }}
               >
@@ -201,9 +206,9 @@ export default function VersetsCategoriesPage() {
                 </View>
 
                 {/* Verse Text */}
-                <Text 
-                  className="text-slate-200 mb-5 leading-7" 
-                  style={{ 
+                <Text
+                  className="text-slate-200 mb-5 leading-7"
+                  style={{
                     fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
                     fontSize: 16 * (globalSettings.fontSize / 18)
                   }}
