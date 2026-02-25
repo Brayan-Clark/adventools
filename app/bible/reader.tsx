@@ -9,7 +9,7 @@ import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Cop
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-import { DB_SOURCES, BIBLE_CONFIGS } from '@/lib/bible';
+import { BIBLE_CONFIGS, DB_SOURCES } from '@/lib/bible';
 
 export default function BibleReader() {
   const router = useRouter();
@@ -198,7 +198,7 @@ export default function BibleReader() {
         const config = BIBLE_CONFIGS[lang];
         console.log(`[BibleReader] Loading ${lang} - Book: ${bookId}, Chapter: ${chapter}`);
 
-        const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
+        const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
         // Dynamically discover table names
         const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");

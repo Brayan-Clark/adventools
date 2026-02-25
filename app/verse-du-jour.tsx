@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
   try {
-    const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
+    const db = await loadDatabase('protestant.db', require('@/assets/bibles/protestant.db'), 'bibles');
 
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;

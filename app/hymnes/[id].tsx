@@ -62,7 +62,7 @@ export default function HymneDetail() {
         const hymnId = Number(id);
         if (isNaN(hymnId)) return;
 
-        const db = await loadDatabase(dbName);
+        const db = await loadDatabase(dbName, null, 'hymnes');
         const result: any = await db.getFirstAsync("SELECT * FROM adventiste_cantique WHERE id = ?", [hymnId]);
 
         if (result) {
@@ -111,7 +111,7 @@ export default function HymneDetail() {
     if (isNaN(num) || num < 1 || num > 800) return;
 
     try {
-      const db = await loadDatabase(dbName);
+      const db = await loadDatabase(dbName, null, 'hymnes');
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE id = ?", [num]);
 
       if (result) {

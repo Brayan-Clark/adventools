@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DB_SOURCES, BIBLE_CONFIGS } from '@/lib/bible';
+import { BIBLE_CONFIGS, DB_SOURCES } from '@/lib/bible';
 
 export default function Bible() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function Bible() {
       setLoading(true);
       try {
         const config = BIBLE_CONFIGS[lang];
-        const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
+        const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
         const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
         const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
         const testamentTable = tables.find((t: any) => t.name.endsWith("_testamenta"))?.name;
@@ -74,7 +74,7 @@ export default function Bible() {
     setIsSearchingVerses(true);
     try {
       const config = BIBLE_CONFIGS[lang];
-      const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
+      const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
       const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
       const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;

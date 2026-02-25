@@ -30,34 +30,61 @@ function sanitizeParams(params: any[]): any[] {
  * Opens and prepares the database. 
  * Includes a singleton pattern to avoid re-opening and re-copying files constantly.
  */
-export async function loadDatabase(dbName: string, assetSource?: any): Promise<SQLite.SQLiteDatabase> {
+export async function loadDatabase(dbName: string, assetSource?: any, subfolder?: string): Promise<SQLite.SQLiteDatabase> {
+  // Normalize dbName if it already contains a path
+  let finalDbName = dbName;
+  let finalSubfolder = subfolder;
+
+  if (dbName.includes('/')) {
+    const parts = dbName.split('/');
+    finalDbName = parts.pop()!;
+    finalSubfolder = parts.join('/');
+  }
+
+  const cacheKey = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
+
   // Return cached connection if available
-  if (dbConnections[dbName]) {
-    return dbConnections[dbName];
+  if (dbConnections[cacheKey]) {
+    return dbConnections[cacheKey];
   }
 
   const docDir = FileSystem.documentDirectory;
   if (Platform.OS === 'web' || !docDir) {
-    const db = await SQLite.openDatabaseAsync(dbName);
-    dbConnections[dbName] = wrapDatabase(db);
-    return dbConnections[dbName];
+    const db = await SQLite.openDatabaseAsync(finalDbName);
+    dbConnections[cacheKey] = wrapDatabase(db);
+    return dbConnections[cacheKey];
   }
 
-  const dbDir = `${docDir}SQLite`;
-  const dbPath = `${dbDir}/${dbName}`;
+  const dbDir = finalSubfolder ? `${docDir}SQLite/${finalSubfolder}` : `${docDir}SQLite`;
+  const dbPath = `${dbDir}/${finalDbName}`;
+  const rootDbPath = `${docDir}SQLite/${finalDbName}`;
 
   try {
+    // 1. Ensure the target directory exists
+    const dirInfo = await FileSystem.getInfoAsync(dbDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+    }
+
     const info = await FileSystem.getInfoAsync(dbPath);
 
-    // ONLY copy if the file doesn't exist and we have an asset source
-    if (!info.exists && assetSource) {
-      console.log(`Database ${dbName} not found, copying from assets...`);
-
-      const dirInfo = await FileSystem.getInfoAsync(dbDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+    // 2. Migration: If not in subfolder but exists in root, move it
+    if (!info.exists && finalSubfolder) {
+      const rootInfo = await FileSystem.getInfoAsync(rootDbPath);
+      if (rootInfo.exists) {
+        console.log(`Migrating ${finalDbName} from root to ${finalSubfolder}...`);
+        await FileSystem.moveAsync({
+          from: rootDbPath,
+          to: dbPath
+        });
       }
+    }
 
+    const finalInfo = await FileSystem.getInfoAsync(dbPath);
+
+    // 3. Initial Copy from Assets if needed
+    if (!finalInfo.exists && assetSource) {
+      console.log(`Database ${finalDbName} not found, copying from assets...`);
       const asset = await Asset.fromModule(assetSource).downloadAsync();
       if (asset.localUri) {
         await FileSystem.copyAsync({
@@ -66,18 +93,36 @@ export async function loadDatabase(dbName: string, assetSource?: any): Promise<S
         });
       }
     } else if (!info.exists && !assetSource) {
-      // If no asset source and file doesn't exist, we might be trying to open a file that was deleted or not yet downloaded
-      console.error(`Database ${dbName} not found and no asset source provided.`);
-      throw new Error(`Database ${dbName} not found`);
+      console.error(`Database ${finalDbName} not found and no asset source provided.`);
+      throw new Error(`Database ${finalDbName} not found`);
     }
   } catch (error) {
-    console.error(`Error preparing database ${dbName}:`, error);
+    console.error(`Error preparing database ${finalDbName}:`, error);
     throw error;
   }
 
-  const db = await SQLite.openDatabaseAsync(dbName);
-  dbConnections[dbName] = wrapDatabase(db);
-  return dbConnections[dbName];
+  let db;
+  try {
+    // expo-sqlite openDatabaseAsync expects a relative path from the SQLite folder
+    const openPath = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
+    db = await SQLite.openDatabaseAsync(openPath);
+
+    // Verify database integrity
+    await db.execAsync("PRAGMA user_version;");
+
+    dbConnections[cacheKey] = wrapDatabase(db);
+    return dbConnections[cacheKey];
+  } catch (error: any) {
+    console.error(`Error opening/verifying database ${finalDbName}:`, error);
+
+    // Cleanup corrupted file
+    const msg = error.message?.toLowerCase() || "";
+    if (msg.includes("not a database") || msg.includes("code 26") || msg.includes("malformed")) {
+      await FileSystem.deleteAsync(dbPath, { idempotent: true }).catch(() => { });
+    }
+    delete dbConnections[cacheKey];
+    throw error;
+  }
 }
 
 function wrapDatabase(db: SQLite.SQLiteDatabase) {

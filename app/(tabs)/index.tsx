@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, Music, RefreshCw, Settings, Share2, StickyNote } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, History, Music, RefreshCw, Settings, Share2, StickyNote } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 
 const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
   try {
-    const db = await loadDatabase('protestant.db', require('@/assets/databases/protestant.db'));
+    const db = await loadDatabase('protestant.db', require('@/assets/bibles/protestant.db'), 'bibles');
 
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;

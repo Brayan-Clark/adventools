@@ -79,34 +79,28 @@ export default function PDFLibrary() {
     try {
       if (force) setRefreshing(true);
 
-      // 1. Charger depuis le cache local (AsyncStorage) s'il existe
+      // 1. Initial load from cache
       const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
-      if (cachedManifest && !manifest && !force) {
-        setManifest(JSON.parse(cachedManifest));
+      if (cachedManifest && !manifest) {
+        const parsed = JSON.parse(cachedManifest);
+        setManifest(parsed);
       }
 
-      // 2. Tentative de synchronisation avec GitHub (branche 'data')
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      // 2. Sync with GitHub
+      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json?t=${Date.now()}`;
+      const response = await fetch(GITHUB_MANIFEST_URL).catch(() => null);
 
-      const response = await fetch(GITHUB_MANIFEST_URL, {
-        signal: controller.signal,
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
+      if (response && response.ok) {
         const remoteData = await response.json();
         setManifest(remoteData);
-        // Mettre à jour le cache
         await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
       }
     } catch (e) {
-      console.log("Using cached manifest (offline or sync error)");
+      console.log("PDF Manifest sync error - using cache if available");
     } finally {
       setLoading(false);
       setRefreshing(false);
+      checkLocalFiles();
     }
   };
 
@@ -136,8 +130,13 @@ export default function PDFLibrary() {
       if (result) {
         setLocalFiles(prev => [...prev, doc.fileName]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      let errorMsg = "Le téléchargement a échoué.";
+      if (e.message?.includes("Network request failed") || e.message?.includes("network")) {
+        errorMsg = "Impossible de se connecter au serveur. Vérifiez votre connexion internet.";
+      }
+      Alert.alert("Erreur", errorMsg);
     } finally {
       setDownloading(prev => {
         const next = { ...prev };

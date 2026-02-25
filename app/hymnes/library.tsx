@@ -11,8 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Hymnes() {
   const router = useRouter();
-  const { db: dbNameParam } = useLocalSearchParams();
-  const dbName = (dbNameParam as string) || 'cantique.db';
+  const { db: dbNameParam, title: pageTitle } = useLocalSearchParams<{ db: string, title?: string }>();
+  const dbName = dbNameParam || 'cantique.db';
+  const dbPath = `hymnes/${dbName}`;
 
   const [hymns, setHymns] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -23,6 +24,8 @@ export default function Hymnes() {
   const [hymnNumber, setHymnNumber] = useState("");
   const [showFavorites, setShowFavorites] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  const [totalHymns, setTotalHymns] = useState(0);
+  const [maxHymnNumber, setMaxHymnNumber] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,10 +45,19 @@ export default function Hymnes() {
 
   const fetchCategories = async () => {
     try {
-      const db = await loadDatabase(dbName);
+      const db = await loadDatabase(dbName, null, 'hymnes');
+
+      // Get categories
       const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
       const cats = result.map((r: any) => r.c_categories.split(' - ')[0]);
       setCategories(Array.from(new Set(cats)) as string[]);
+
+      // Get total count and max number
+      const stats: any = await db.getFirstAsync("SELECT COUNT(*) as count, MAX(c_num) as max_num FROM adventiste_cantique");
+      if (stats) {
+        setTotalHymns(stats.count);
+        setMaxHymnNumber(stats.max_num);
+      }
     } catch (e) {
       console.error(e);
       // If DB not found, redirect back to selector
@@ -57,7 +69,7 @@ export default function Hymnes() {
   useEffect(() => {
     async function fetchHymns() {
       try {
-        const db = await loadDatabase(dbName);
+        const db = await loadDatabase(dbName, null, 'hymnes');
         let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
         let conditions = [];
         let params: any[] = [];
@@ -86,7 +98,7 @@ export default function Hymnes() {
           query += " WHERE " + conditions.join(" AND ");
         }
 
-        query += " ORDER BY c_num ASC LIMIT 800";
+        query += " ORDER BY c_num ASC";
         const result: any = await db.getAllAsync(query, params);
         setHymns(result);
       } catch (e) {
@@ -101,10 +113,10 @@ export default function Hymnes() {
 
   const goToHymnByNumber = async () => {
     const num = parseInt(hymnNumber);
-    if (isNaN(num) || num < 1 || num > 800) return;
+    if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName);
+      const db = await loadDatabase(dbName, null, 'hymnes');
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {
@@ -120,22 +132,8 @@ export default function Hymnes() {
     }
   };
 
-  const handleBack = async () => {
-    try {
-      const cached = await AsyncStorage.getItem('hymn_manifest_cache');
-      if (cached) {
-        const manifest = JSON.parse(cached);
-        if (manifest.versions?.length === 1) {
-          // If only one source, going back would trigger auto-redirect loop
-          // Go to home tab instead
-          router.replace('/(tabs)');
-          return;
-        }
-      }
-      router.back();
-    } catch (e) {
-      router.back();
-    }
+  const handleBack = () => {
+    router.back();
   };
 
   return (
@@ -146,10 +144,10 @@ export default function Hymnes() {
           <TouchableOpacity onPress={handleBack} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Hymnes</Text>
+          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{pageTitle || "Hymnes"}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/(tabs)/hymnes', params: { manage: 'true' } })}
+          onPress={() => router.push('/hymnes/store')}
           className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800"
         >
           <Globe size={18} color="#ec4899" />
@@ -160,7 +158,7 @@ export default function Hymnes() {
         <View className="relative flex-row items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-1 shadow-inner">
           <SearchIcon size={18} color="#64748b" />
           <TextInput
-            placeholder="Numéro ou titre..."
+            placeholder={totalHymns > 0 ? `Rechercher parmi ${totalHymns} cantiques...` : "Numéro ou titre..."}
             placeholderTextColor="#475569"
             className="flex-1 h-12 ml-3 text-white font-medium"
             value={search}
@@ -286,7 +284,9 @@ export default function Hymnes() {
               </TouchableOpacity>
             </View>
 
-            <Text className="text-slate-400 text-sm mb-4">Entrez le numéro du cantique (1-800)</Text>
+            <Text className="text-slate-400 text-sm mb-4">
+              Entrez le numéro du cantique {maxHymnNumber > 0 ? `(1-${maxHymnNumber})` : ""}
+            </Text>
 
             <TextInput
               placeholder="Ex: 123"

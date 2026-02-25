@@ -1,128 +1,158 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { BookOpen, ChevronRight, CloudDownload, Globe, Music, RefreshCw } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { BookOpen, ChevronRight, Music, Plus, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
-
-export default function HymneSelector() {
+export default function HymneManager() {
   const router = useRouter();
-  const { manage } = useLocalSearchParams();
-  const [manifest, setManifest] = useState<any>(null);
-  const [localFiles, setLocalFiles] = useState<string[]>([]);
+  const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState<Record<string, number>>({});
-  const [hasRedirected, setHasRedirected] = useState(false);
 
-  useEffect(() => {
-    loadManifest();
-    checkLocalFiles();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      checkLocalFiles();
+    }, [])
+  );
 
-  const checkLocalFiles = async (currentManifest?: any) => {
+  const checkLocalFiles = async () => {
     try {
+      setLoading(true);
       const docDir = FileSystem.documentDirectory;
       if (!docDir) return;
 
-      const dbDir = `${docDir}SQLite`;
-      const dirInfo = await FileSystem.getInfoAsync(dbDir);
+      const rootDbDir = `${docDir}SQLite`;
+      const hymnDbDir = `${docDir}SQLite/hymnes`;
 
-      let presentFiles: string[] = [];
-      if (dirInfo.exists) {
-        const files = await FileSystem.readDirectoryAsync(dbDir);
-        presentFiles = files.filter(f => f.endsWith('.db'));
+      // Ensure hymn directory exists
+      if (!(await FileSystem.getInfoAsync(hymnDbDir)).exists) {
+        await FileSystem.makeDirectoryAsync(hymnDbDir, { intermediates: true });
       }
 
-      const activeManifest = currentManifest || manifest;
-      const manifestVersions = activeManifest?.versions || [];
-
-      const hymnFiles = presentFiles.filter(f =>
-        manifestVersions.some((v: any) => v.file.toLowerCase() === f.toLowerCase())
-      );
-
-      setLocalFiles(hymnFiles);
-    } catch (e) {
-      console.error("Error checking local hymn files:", e);
-    }
-  };
-
-  const loadManifest = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
-      let data;
-      if (response.ok) {
-        data = await response.json();
-        setManifest(data);
-        await AsyncStorage.setItem('hymn_manifest_cache', JSON.stringify(data));
-      } else {
+      // Load manifest to know which files are actually hymns
+      let manifestData: any = null;
+      try {
         const cached = await AsyncStorage.getItem('hymn_manifest_cache');
-        if (cached) data = JSON.parse(cached);
-        if (data) setManifest(data);
+        if (cached) manifestData = JSON.parse(cached);
+
+        // Try to refresh manifest if possible
+        const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
+        const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`).catch(() => null);
+        if (response && response.ok) {
+          manifestData = await response.json();
+          await AsyncStorage.setItem('hymn_manifest_cache', JSON.stringify(manifestData));
+        }
+      } catch (e) {
+        console.log("Could not load manifest for filtering");
       }
 
-      if (data) await checkLocalFiles(data);
+      const validHymnFiles = manifestData?.versions?.map((v: any) => v.file.toLowerCase()) || [];
+
+      let presentFiles: any[] = [];
+
+      // Check both directories during transition
+      const scanDirs = [rootDbDir, hymnDbDir];
+      const foundFilesSet = new Set<string>();
+
+      for (const dir of scanDirs) {
+        if ((await FileSystem.getInfoAsync(dir)).exists) {
+          const files = await FileSystem.readDirectoryAsync(dir);
+          for (const file of files) {
+            if (file.endsWith('.db')) {
+              const fileNameLower = file.toLowerCase();
+              if (foundFilesSet.has(fileNameLower)) continue;
+
+              const isDefault = fileNameLower === 'cantique.db';
+              const isInManifest = validHymnFiles.includes(fileNameLower);
+
+              if (isDefault || isInManifest) {
+                const fileInfo = await FileSystem.getInfoAsync(`${dir}/${file}`);
+                if (fileInfo.exists && fileInfo.size > 0) {
+                  foundFilesSet.add(fileNameLower);
+                  // Migration logic is in loadDatabase, but we still want to show them here
+                  let displayName = file.replace('.db', '').replace(/_/g, ' ');
+                  if (isDefault) {
+                    displayName = "Fihirana Advantista";
+                  } else if (isInManifest && manifestData) {
+                    const version = manifestData.versions.find((v: any) => v.file.toLowerCase() === fileNameLower);
+                    if (version) displayName = version.name;
+                  }
+
+                  presentFiles.push({
+                    file,
+                    name: displayName,
+                    size: (fileInfo.size / 1024).toFixed(0) + " KB",
+                    isDefault,
+                    fullPath: `${dir}/${file}`
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      setLocalFiles(presentFiles);
     } catch (e) {
-      console.error("Manifest load error:", e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadDatabase = async (version: any) => {
-    try {
-      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
-
-      const docDir = FileSystem.documentDirectory;
-      const dbDir = `${docDir}SQLite/`;
-      const localPath = `${dbDir}${version.file}`;
-
-      const dirInfo = await FileSystem.getInfoAsync(dbDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
-      }
-
-      const callback = (downloadProgress: any) => {
-        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setDownloading(prev => ({ ...prev, [version.id]: progress }));
-      };
-
-      const downloadResumable = FileSystem.createDownloadResumable(
-        version.url,
-        localPath,
-        {},
-        callback
-      );
-
-      const result = await downloadResumable.downloadAsync();
-      if (result) {
-        await checkLocalFiles();
-        Alert.alert("Succès", `${version.name} a été téléchargé.`);
-      }
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Erreur", "Le téléchargement a échoué.");
-    } finally {
-      setDownloading(prev => {
-        const next = { ...prev };
-        delete next[version.id];
-        return next;
-      });
+  const deleteHymnSource = async (version: any) => {
+    if (version.isDefault) {
+      Alert.alert("Action impossible", "Ce recueil est essentiel au fonctionnement de l'application et ne peut pas être supprimé.");
+      return;
     }
+
+    Alert.alert(
+      "Suppression : " + version.name,
+      "Voulez-vous également supprimer définitivement vos favoris et corrections associés à ce recueil ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Garder mes données",
+          onPress: async () => {
+            try {
+              // Try deleting from both locations if they exist
+              const rootPath = `${FileSystem.documentDirectory}SQLite/${version.file}`;
+              const hymnPath = `${FileSystem.documentDirectory}SQLite/hymnes/${version.file}`;
+              await FileSystem.deleteAsync(rootPath, { idempotent: true });
+              await FileSystem.deleteAsync(hymnPath, { idempotent: true });
+              checkLocalFiles();
+            } catch (e) { console.error(e); }
+          }
+        },
+        {
+          text: "Tout supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const rootPath = `${FileSystem.documentDirectory}SQLite/${version.file}`;
+              const hymnPath = `${FileSystem.documentDirectory}SQLite/hymnes/${version.file}`;
+              await FileSystem.deleteAsync(rootPath, { idempotent: true });
+              await FileSystem.deleteAsync(hymnPath, { idempotent: true });
+              await AsyncStorage.removeItem(`hymn_favorites_${version.file}`);
+              checkLocalFiles();
+            } catch (e) { console.error(e); }
+          }
+        }
+      ]
+    );
   };
 
-  const openLibrary = (db: string) => {
+  const openLibrary = (version: any) => {
     router.push({
       pathname: '/hymnes/library',
-      params: { db }
+      params: { db: version.file, title: version.name }
     });
   };
 
-  if (loading && !manifest) {
+  if (loading && localFiles.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background-dark justify-center items-center">
         <ActivityIndicator size="large" color="#ec4899" />
@@ -130,153 +160,70 @@ export default function HymneSelector() {
     );
   }
 
-  const versions = manifest?.versions || [];
-  const isOnlyOneSource = versions.length === 1;
-  const theOnlySource = versions[0];
-  const isTheOnlySourceLocal = theOnlySource && localFiles.some(f => f.toLowerCase() === theOnlySource.file.toLowerCase());
-
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
       <StatusBar style="light" />
 
       <View className="px-6 py-6 flex-row items-center justify-between border-b border-slate-800/50">
         <View>
-          <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Hymnes</Text>
-          <Text className="text-slate-500 text-xs mt-1">
-            {isOnlyOneSource ? theOnlySource.name : "Choisissez votre recueil"}
-          </Text>
+          <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Mes Recueils</Text>
+          <Text className="text-slate-500 text-xs mt-1">Gérez vos chants locaux</Text>
         </View>
-        <TouchableOpacity onPress={loadManifest} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center">
-          <RefreshCw size={18} color="#94a3b8" />
+        <TouchableOpacity
+          onPress={() => router.push('/hymnes/store')}
+          className="bg-pink-600 px-4 py-2 rounded-full flex-row items-center"
+        >
+          <Plus size={16} color="white" className="mr-1" />
+          <Text className="text-white font-bold text-xs uppercase">Boutique</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {isOnlyOneSource ? (
-          <View className="flex-1 px-8 pt-20 items-center justify-center">
-            <View className="w-32 h-32 rounded-[40px] bg-pink-500/10 items-center justify-center mb-10 border border-pink-500/20 shadow-2xl shadow-pink-500/20">
-              <Music size={60} color="#ec4899" />
-            </View>
-
-            <Text className="text-2xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{theOnlySource.name}</Text>
-            <Text className="text-slate-400 text-center mb-10 leading-6 px-4">
-              {isTheOnlySourceLocal
-                ? "Votre recueil de chants est prêt. Cliquez ci-dessous pour commencer à chanter."
-                : "Ce recueil de chants doit être téléchargé avant d'être utilisé."}
-            </Text>
-
-            {isTheOnlySourceLocal ? (
+      <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+        <View className="gap-4 pb-20">
+          {localFiles.map((item: any) => (
+            <View
+              key={item.file}
+              className="flex-row items-center bg-slate-900/50 border border-slate-800/50 rounded-[25px] overflow-hidden"
+            >
               <TouchableOpacity
-                onPress={() => openLibrary(theOnlySource.file)}
-                className="w-full bg-pink-500 py-5 rounded-[25px] flex-row items-center justify-center shadow-xl shadow-pink-500/30"
+                onPress={() => openLibrary(item)}
+                className="flex-1 flex-row items-center p-4"
               >
-                <BookOpen size={24} color="white" className="mr-3" />
-                <Text className="text-white font-bold text-lg">Ouvrir le Recueil</Text>
+                <View className="w-10 h-10 rounded-xl bg-pink-500/10 items-center justify-center mr-3">
+                  <Music size={20} color="#ec4899" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>{item.name}</Text>
+                  <Text className="text-[10px] text-slate-500 mt-0.5">{item.isDefault ? 'Recueil Intégré' : item.size}</Text>
+                </View>
+                <ChevronRight size={16} color="#475569" className="ml-2" />
               </TouchableOpacity>
-            ) : (
-              <DownloadButton
-                version={theOnlySource}
-                onPress={() => downloadDatabase(theOnlySource)}
-                progress={downloading[theOnlySource.id]}
-              />
-            )}
 
-            <View className="mt-12 flex-row items-center bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800">
-              <Globe size={14} color="#64748b" className="mr-2" />
-              <Text className="text-xs text-slate-500 uppercase font-bold tracking-widest">{theOnlySource.language} • {theOnlySource.size}</Text>
-            </View>
-          </View>
-        ) : (
-          <View className="px-6 pt-6">
-            <Text className="text-[10px] font-bold uppercase text-slate-500 mb-4 ml-2 tracking-widest">Recueils Disponibles</Text>
-            <View className="gap-4 pb-20">
-              {versions.map((version: any) => {
-                const isLocal = localFiles.some(f => f.toLowerCase() === version.file.toLowerCase());
-                const isDownloading = downloading[version.id] !== undefined;
-
-                return (
+              {!item.isDefault && (
+                <View className="flex-row items-center pr-2">
+                  <View className="w-[1px] h-8 bg-slate-800 mr-2" />
                   <TouchableOpacity
-                    key={version.id}
-                    onPress={() => isLocal ? openLibrary(version.file) : downloadDatabase(version)}
-                    className={`flex-row items-center p-5 rounded-[30px] border ${isLocal ? 'bg-slate-900/50 border-slate-800/50' : 'bg-slate-900/20 border-slate-800/20'}`}
+                    onPress={() => deleteHymnSource(item)}
+                    className="w-10 h-10 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20"
                   >
-                    <View className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 ${isLocal ? 'bg-pink-500/10' : 'bg-slate-800'}`}>
-                      {isLocal ? <Music size={28} color="#ec4899" /> : <BookOpen size={28} color="#475569" />}
-                    </View>
-                    <View className="flex-1">
-                      <Text className={`text-lg font-bold ${isLocal ? 'text-white' : 'text-slate-500'}`} style={{ fontFamily: 'Lexend_700Bold' }}>{version.name}</Text>
-                      <Text className="text-xs text-slate-600 mt-1">{version.language} {isLocal ? '• Installé' : `• ${version.size}`}</Text>
-                    </View>
-
-                    {isDownloading ? (
-                      <View className="w-12 h-12 items-center justify-center">
-                        <ActivityIndicator size="small" color="#ec4899" />
-                      </View>
-                    ) : (
-                      <View className={`w-10 h-10 rounded-full items-center justify-center ${isLocal ? 'bg-slate-800' : 'bg-pink-600/10 border border-pink-500/20'}`}>
-                        {isLocal ? <ChevronRight size={18} color="#475569" /> : <CloudDownload size={20} color="#ec4899" />}
-                      </View>
-                    )}
+                    <Trash2 size={16} color="#f87171" />
                   </TouchableOpacity>
-                );
-              })}
+                </View>
+              )}
             </View>
-          </View>
-        )}
-      </ScrollView>
+          ))}
 
-      <AutoRedirect
-        localFiles={localFiles}
-        loading={loading}
-        manifest={manifest}
-        manage={manage}
-      />
+          {localFiles.length === 0 && !loading && (
+            <View className="py-20 items-center opacity-50">
+              <BookOpen size={64} color="#475569" />
+              <Text className="text-slate-400 mt-4 font-bold">Aucun recueil trouvé</Text>
+              <TouchableOpacity onPress={() => router.push('/hymnes/store')} className="mt-4">
+                <Text className="text-pink-500 font-bold uppercase text-xs">Aller à la boutique</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-}
-
-function DownloadButton({ version, onPress, progress }: { version: any, onPress: () => void, progress: number | undefined }) {
-  const isDownloading = progress !== undefined;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDownloading}
-      className={`w-full py-5 rounded-[25px] flex-row items-center justify-center shadow-xl ${isDownloading ? 'bg-slate-800' : 'bg-pink-600 shadow-pink-600/20'}`}
-    >
-      {isDownloading ? (
-        <>
-          <ActivityIndicator size="small" color="#ec4899" className="mr-3" />
-          <Text className="text-slate-400 font-bold text-lg">Téléchargement {Math.round(progress * 100)}%</Text>
-        </>
-      ) : (
-        <>
-          <CloudDownload size={24} color="white" className="mr-3" />
-          <Text className="text-white font-bold text-lg">Télécharger le recueil</Text>
-        </>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-function AutoRedirect({ localFiles, loading, manifest, manage }: any) {
-  const router = useRouter();
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (!loading && manifest?.versions?.length === 1 && !done && manage !== 'true') {
-      const theOnlySource = manifest.versions[0];
-      const isLocal = localFiles.some((f: string) => f.toLowerCase() === theOnlySource.file.toLowerCase());
-
-      if (isLocal) {
-        router.replace({
-          pathname: '/hymnes/library',
-          params: { db: theOnlySource.file }
-        });
-        setDone(true);
-      }
-    }
-  }, [loading, localFiles, manifest, done, manage]);
-
-  return null;
 }

@@ -1,15 +1,15 @@
 import { loadDatabase } from './database';
 
 export const DB_SOURCES: Record<string, any> = {
-  'protestant.db': require('../assets/databases/protestant.db'),
-  'king_james.db': require('../assets/databases/king_james.db'),
-  'le_bible.db': require('../assets/databases/le_bible.db'),
-  'arabic.db': require('../assets/databases/arabic.db'),
-  'basic_english.db': require('../assets/databases/basic_english.db'),
-  'esperanto.db': require('../assets/databases/esperanto.db'),
-  'greek.db': require('../assets/databases/greek.db'),
-  'schlachter.db': require('../assets/databases/schlachter.db'),
-  'diem.db': require('../assets/databases/diem.db'),
+  'protestant.db': require('../assets/bibles/protestant.db'),
+  'king_james.db': require('../assets/bibles/king_james.db'),
+  'le_bible.db': require('../assets/bibles/le_bible.db'),
+  'arabic.db': require('../assets/bibles/arabic.db'),
+  'basic_english.db': require('../assets/bibles/basic_english.db'),
+  'esperanto.db': require('../assets/bibles/esperanto.db'),
+  'greek.db': require('../assets/bibles/greek.db'),
+  'schlachter.db': require('../assets/bibles/schlachter.db'),
+  'diem.db': require('../assets/bibles/diem.db'),
 };
 
 export const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
@@ -47,7 +47,7 @@ export const BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{
 export async function fetchVerseContent(lang: string, bookName: string, chapter: string, verses: string) {
   try {
     const config = BIBLE_CONFIGS[lang || 'MG'];
-    const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
+    const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
@@ -124,7 +124,7 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
 export async function fetchVerseContentById(lang: string, bookId: number, chapter: string, verse: string) {
   try {
     const config = BIBLE_CONFIGS[lang || 'MG'];
-    const db = await loadDatabase(config.file, DB_SOURCES[config.file]);
+    const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
     const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
     const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
