@@ -129,6 +129,18 @@
       ]
     },
     {
+      "id": "deg_002",
+      "title": "Manuel d'église 2022",
+      "fileName": "Manuel-deglise-2022.pdf",
+      "categoryId": "dossiers_eglise",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/Manuel-deglise-2022.pdf",
+      "size": "925,9 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
       "id": "etb_002",
       "title": "NY ZANAKA SISA 12",
       "fileName": "NY ZANAKA SISA 12.pdf",
