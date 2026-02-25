@@ -1,5 +1,5 @@
-import localManifest from '@/assets/docs/manifest.json';
 import { exportAllAppData, exportHymnCorrections, importAllAppData, importHymnCorrections, resetHymnCorrections } from '@/lib/backup-utils';
+import { BIBLE_CONFIGS } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,7 +26,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BIBLE_CONFIGS } from '@/lib/bible';
 
 
 export default function Settings() {
@@ -38,7 +37,7 @@ export default function Settings() {
   const [isDeptModalVisible, setIsDeptModalVisible] = useState(false);
   const [isNameEditVisible, setIsNameEditVisible] = useState(false);
   const [tempName, setTempName] = useState('');
-  const [availableDepartments, setAvailableDepartments] = useState<string[]>(localManifest.departments || []);
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
 
   // Load settings on mount
   useEffect(() => {
@@ -48,16 +47,26 @@ export default function Settings() {
 
   const syncDepartments = async () => {
     try {
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json?t=${Date.now()}`;
+      // 1. Charger depuis le cache local (AsyncStorage) s'il existe
+      const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
+      if (cachedManifest) {
+        const data = JSON.parse(cachedManifest);
+        if (data.departments) setAvailableDepartments(data.departments);
+      }
+
+      // 2. Tentative de synchronisation avec GitHub (branche 'data')
+      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
       const response = await fetch(GITHUB_MANIFEST_URL);
       if (response.ok) {
         const remoteData = await response.json();
         if (remoteData.departments) {
           setAvailableDepartments(remoteData.departments);
+          // Mettre à jour le cache
+          await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
         }
       }
     } catch (e) {
-      console.log("Using local departments list");
+      console.log("Error syncing departments with remote manifest");
     }
   };
 

@@ -1,278 +1,282 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, FlatList } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Music as MusicIcon, Search as SearchIcon, ChevronRight as ChevronRightIcon, ArrowLeft, Hash, X, Bookmark, Globe } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { loadDatabase } from '@/lib/database';
-import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cn } from '@/lib/utils';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { BookOpen, ChevronRight, CloudDownload, Globe, Music, RefreshCw } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function Hymnes() {
+const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
+
+export default function HymneSelector() {
   const router = useRouter();
-  const [hymns, setHymns] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { manage } = useLocalSearchParams();
+  const [manifest, setManifest] = useState<any>(null);
+  const [localFiles, setLocalFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [showNumberPicker, setShowNumberPicker] = useState(false);
-  const [hymnNumber, setHymnNumber] = useState("");
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadFavorites();
-      fetchCategories();
-    }, [])
-  );
-
-  const loadFavorites = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('hymn_favorites');
-      setFavoriteIds(stored ? JSON.parse(stored) : []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
-      const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
-      const cats = result.map((r: any) => r.c_categories.split(' - ')[0]);
-      setCategories(Array.from(new Set(cats)) as string[]);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const [downloading, setDownloading] = useState<Record<string, number>>({});
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    async function fetchHymns() {
-      try {
-        const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
-        let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
-        let conditions = [];
-        let params: any[] = [];
+    loadManifest();
+    checkLocalFiles();
+  }, []);
 
-        if (search) {
-          conditions.push("(c_title LIKE ? OR c_num = ? OR c_content LIKE ?)");
-          params.push(`%${search}%`, search, `%${search}%`);
-        }
-
-        if (selectedCategory) {
-          conditions.push("c_categories LIKE ?");
-          params.push(`${selectedCategory}%`);
-        }
-
-        if (showFavorites) {
-          if (favoriteIds.length > 0) {
-            conditions.push(`id IN (${favoriteIds.join(',')})`);
-          } else {
-            setHymns([]);
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (conditions.length > 0) {
-          query += " WHERE " + conditions.join(" AND ");
-        }
-
-        query += " ORDER BY c_num ASC LIMIT 800";
-        const result: any = await db.getAllAsync(query, params);
-        setHymns(result);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    const timer = setTimeout(fetchHymns, 300);
-    return () => clearTimeout(timer);
-  }, [search, selectedCategory, showFavorites, favoriteIds]);
-
-  const goToHymnByNumber = async () => {
-    const num = parseInt(hymnNumber);
-    if (isNaN(num) || num < 1 || num > 800) return;
-
+  const checkLocalFiles = async (currentManifest?: any) => {
     try {
-      const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
-      const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
+      const docDir = FileSystem.documentDirectory;
+      if (!docDir) return;
 
+      const dbDir = `${docDir}SQLite`;
+      const dirInfo = await FileSystem.getInfoAsync(dbDir);
+
+      let presentFiles: string[] = [];
+      if (dirInfo.exists) {
+        const files = await FileSystem.readDirectoryAsync(dbDir);
+        presentFiles = files.filter(f => f.endsWith('.db'));
+      }
+
+      const activeManifest = currentManifest || manifest;
+      const manifestVersions = activeManifest?.versions || [];
+
+      const hymnFiles = presentFiles.filter(f =>
+        manifestVersions.some((v: any) => v.file.toLowerCase() === f.toLowerCase())
+      );
+
+      setLocalFiles(hymnFiles);
+    } catch (e) {
+      console.error("Error checking local hymn files:", e);
+    }
+  };
+
+  const loadManifest = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
+      let data;
+      if (response.ok) {
+        data = await response.json();
+        setManifest(data);
+        await AsyncStorage.setItem('hymn_manifest_cache', JSON.stringify(data));
+      } else {
+        const cached = await AsyncStorage.getItem('hymn_manifest_cache');
+        if (cached) data = JSON.parse(cached);
+        if (data) setManifest(data);
+      }
+
+      if (data) await checkLocalFiles(data);
+    } catch (e) {
+      console.error("Manifest load error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadDatabase = async (version: any) => {
+    try {
+      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
+
+      const docDir = FileSystem.documentDirectory;
+      const dbDir = `${docDir}SQLite/`;
+      const localPath = `${dbDir}${version.file}`;
+
+      const dirInfo = await FileSystem.getInfoAsync(dbDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+      }
+
+      const callback = (downloadProgress: any) => {
+        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+        setDownloading(prev => ({ ...prev, [version.id]: progress }));
+      };
+
+      const downloadResumable = FileSystem.createDownloadResumable(
+        version.url,
+        localPath,
+        {},
+        callback
+      );
+
+      const result = await downloadResumable.downloadAsync();
       if (result) {
-        setShowNumberPicker(false);
-        setHymnNumber("");
-        router.push(`/hymnes/${result.id}`);
+        await checkLocalFiles();
+        Alert.alert("Succès", `${version.name} a été téléchargé.`);
       }
     } catch (e) {
       console.error(e);
+      Alert.alert("Erreur", "Le téléchargement a échoué.");
+    } finally {
+      setDownloading(prev => {
+        const next = { ...prev };
+        delete next[version.id];
+        return next;
+      });
     }
   };
+
+  const openLibrary = (db: string) => {
+    router.push({
+      pathname: '/hymnes/library',
+      params: { db }
+    });
+  };
+
+  if (loading && !manifest) {
+    return (
+      <SafeAreaView className="flex-1 bg-background-dark justify-center items-center">
+        <ActivityIndicator size="large" color="#ec4899" />
+      </SafeAreaView>
+    );
+  }
+
+  const versions = manifest?.versions || [];
+  const isOnlyOneSource = versions.length === 1;
+  const theOnlySource = versions[0];
+  const isTheOnlySourceLocal = theOnlySource && localFiles.some(f => f.toLowerCase() === theOnlySource.file.toLowerCase());
 
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
       <StatusBar style="light" />
-      <View className="px-6 py-6 flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
-            <ArrowLeft size={20} color="#94a3b8" />
-          </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Hymnes</Text>
+
+      <View className="px-6 py-6 flex-row items-center justify-between border-b border-slate-800/50">
+        <View>
+          <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Hymnes</Text>
+          <Text className="text-slate-500 text-xs mt-1">
+            {isOnlyOneSource ? theOnlySource.name : "Choisissez votre recueil"}
+          </Text>
         </View>
+        <TouchableOpacity onPress={loadManifest} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center">
+          <RefreshCw size={18} color="#94a3b8" />
+        </TouchableOpacity>
       </View>
 
-      <View className="px-6 mb-4">
-        <View className="relative flex-row items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-1 shadow-inner">
-          <SearchIcon size={18} color="#64748b" />
-          <TextInput
-            placeholder="Numéro ou titre..."
-            placeholderTextColor="#475569"
-            className="flex-1 h-12 ml-3 text-white font-medium"
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <X size={16} color="#64748b" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View className="mb-4">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}>
-          <TouchableOpacity
-            onPress={() => { setSelectedCategory(null); setShowFavorites(false); }}
-            className={cn(
-              "px-5 py-2.5 rounded-xl border",
-              (!selectedCategory && !showFavorites) ? "bg-pink-500 border-pink-500" : "bg-slate-900 border-slate-800"
-            )}
-          >
-            <Text className={cn("font-bold text-xs", (!selectedCategory && !showFavorites) ? "text-white" : "text-slate-400")}>TOUS</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => { setShowFavorites(true); setSelectedCategory(null); }}
-            className={cn(
-              "px-5 py-2.5 rounded-xl border flex-row items-center",
-              showFavorites ? "bg-pink-600 border-pink-600" : "bg-slate-900 border-slate-800"
-            )}
-          >
-            <Bookmark size={12} color={showFavorites ? "white" : "#ef4444"} fill={showFavorites ? "white" : "transparent"} className="mr-1.5" />
-            <Text className={cn("font-bold text-xs", showFavorites ? "text-white" : "text-slate-400")}>FAVORIS</Text>
-          </TouchableOpacity>
-
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => { setSelectedCategory(cat); setShowFavorites(false); }}
-              className={cn(
-                "px-5 py-2.5 rounded-xl border",
-                selectedCategory === cat ? "bg-pink-500 border-pink-500" : "bg-slate-900 border-slate-800"
-              )}
-            >
-              <Text className={cn("font-bold text-xs uppercase", selectedCategory === cat ? "text-white" : "text-slate-400")}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <FlatList
-        data={hymns}
-        keyExtractor={(item) => item.id.toString()}
-        initialNumToRender={20}
-        maxToRenderPerBatch={20}
-        windowSize={10}
-        removeClippedSubviews={true}
-        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          loading ? (
-            <View className="py-20">
-              <ActivityIndicator color="#ec4899" />
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {isOnlyOneSource ? (
+          <View className="flex-1 px-8 pt-20 items-center justify-center">
+            <View className="w-32 h-32 rounded-[40px] bg-pink-500/10 items-center justify-center mb-10 border border-pink-500/20 shadow-2xl shadow-pink-500/20">
+              <Music size={60} color="#ec4899" />
             </View>
-          ) : (
-            <View className="py-20 items-center">
-              <MusicIcon size={48} color="#1e293b" />
-              <Text className="text-slate-500 mt-4">Aucun cantique trouvé</Text>
-            </View>
-          )
-        }
-        renderItem={({ item, index }) => {
-          const prevItem = index > 0 ? hymns[index - 1] : null;
-          const showSubCat = selectedCategory && item.c_categories?.includes(' - ') && (!prevItem || prevItem.c_categories !== item.c_categories);
-          const subCat = item.c_categories?.split(' - ')[1];
 
-          return (
-            <View>
-              {showSubCat && (
-                <View className="flex-row items-center mb-4 mt-2">
-                  <View className="h-[2px] w-6 bg-pink-500/30 mr-3 rounded-full" />
-                  <Text className="text-[10px] font-bold uppercase text-pink-400 tracking-widest">{subCat}</Text>
-                </View>
-              )}
+            <Text className="text-2xl font-bold text-white text-center mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{theOnlySource.name}</Text>
+            <Text className="text-slate-400 text-center mb-10 leading-6 px-4">
+              {isTheOnlySourceLocal
+                ? "Votre recueil de chants est prêt. Cliquez ci-dessous pour commencer à chanter."
+                : "Ce recueil de chants doit être téléchargé avant d'être utilisé."}
+            </Text>
+
+            {isTheOnlySourceLocal ? (
               <TouchableOpacity
-                onPress={() => router.push(`/hymnes/${item.id}`)}
-                className={`flex-row items-center p-5 bg-slate-900/50 border-slate-800/50 mb-3 rounded-2xl border`}
+                onPress={() => openLibrary(theOnlySource.file)}
+                className="w-full bg-pink-500 py-5 rounded-[25px] flex-row items-center justify-center shadow-xl shadow-pink-500/30"
               >
-                <View className="w-12 h-12 rounded-2xl bg-pink-500/10 items-center justify-center mr-4">
-                  <Text className="text-pink-500 font-bold text-sm">{item.c_num}</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-white text-base" style={{ fontFamily: 'Lexend_600SemiBold' }} numberOfLines={1}>{item.c_title}</Text>
-                  <Text className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{item.c_categories?.split(' - ')[1] || item.c_categories || "Louange"}</Text>
-                </View>
-                <ChevronRightIcon size={16} color="#475569" />
+                <BookOpen size={24} color="white" className="mr-3" />
+                <Text className="text-white font-bold text-lg">Ouvrir le Recueil</Text>
               </TouchableOpacity>
+            ) : (
+              <DownloadButton
+                version={theOnlySource}
+                onPress={() => downloadDatabase(theOnlySource)}
+                progress={downloading[theOnlySource.id]}
+              />
+            )}
+
+            <View className="mt-12 flex-row items-center bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800">
+              <Globe size={14} color="#64748b" className="mr-2" />
+              <Text className="text-xs text-slate-500 uppercase font-bold tracking-widest">{theOnlySource.language} • {theOnlySource.size}</Text>
             </View>
-          );
-        }}
-      />
-
-      {/* Floating Number Search Button */}
-      <TouchableOpacity
-        onPress={() => setShowNumberPicker(true)}
-        className="absolute bottom-8 right-8 w-16 h-16 rounded-full bg-pink-500 items-center justify-center shadow-2xl shadow-pink-500/40"
-      >
-        <Hash size={28} color="white" />
-      </TouchableOpacity>
-
-      {/* Number Picker Modal */}
-      <Modal visible={showNumberPicker} transparent animationType="fade">
-        <View className="flex-1 bg-black/70 justify-center items-center px-8">
-          <View className="bg-[#1a2233] rounded-3xl p-8 w-full max-w-sm border border-slate-700">
-            <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Recherche rapide</Text>
-              <TouchableOpacity onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
-                <X size={18} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-slate-400 text-sm mb-4">Entrez le numéro du cantique (1-800)</Text>
-
-            <TextInput
-              placeholder="Ex: 123"
-              placeholderTextColor="#475569"
-              className="bg-[#111621] border border-slate-800 rounded-2xl px-6 py-4 text-white text-2xl font-bold text-center mb-6"
-              style={{ fontFamily: 'Lexend_700Bold' }}
-              value={hymnNumber}
-              onChangeText={setHymnNumber}
-              keyboardType="number-pad"
-              autoFocus
-              onSubmitEditing={goToHymnByNumber}
-            />
-
-            <TouchableOpacity
-              onPress={goToHymnByNumber}
-              className="bg-pink-500 rounded-2xl py-4 items-center shadow-lg shadow-pink-500/30"
-            >
-              <Text className="text-white font-bold text-base">Aller au cantique</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          <View className="px-6 pt-6">
+            <Text className="text-[10px] font-bold uppercase text-slate-500 mb-4 ml-2 tracking-widest">Recueils Disponibles</Text>
+            <View className="gap-4 pb-20">
+              {versions.map((version: any) => {
+                const isLocal = localFiles.some(f => f.toLowerCase() === version.file.toLowerCase());
+                const isDownloading = downloading[version.id] !== undefined;
+
+                return (
+                  <TouchableOpacity
+                    key={version.id}
+                    onPress={() => isLocal ? openLibrary(version.file) : downloadDatabase(version)}
+                    className={`flex-row items-center p-5 rounded-[30px] border ${isLocal ? 'bg-slate-900/50 border-slate-800/50' : 'bg-slate-900/20 border-slate-800/20'}`}
+                  >
+                    <View className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 ${isLocal ? 'bg-pink-500/10' : 'bg-slate-800'}`}>
+                      {isLocal ? <Music size={28} color="#ec4899" /> : <BookOpen size={28} color="#475569" />}
+                    </View>
+                    <View className="flex-1">
+                      <Text className={`text-lg font-bold ${isLocal ? 'text-white' : 'text-slate-500'}`} style={{ fontFamily: 'Lexend_700Bold' }}>{version.name}</Text>
+                      <Text className="text-xs text-slate-600 mt-1">{version.language} {isLocal ? '• Installé' : `• ${version.size}`}</Text>
+                    </View>
+
+                    {isDownloading ? (
+                      <View className="w-12 h-12 items-center justify-center">
+                        <ActivityIndicator size="small" color="#ec4899" />
+                      </View>
+                    ) : (
+                      <View className={`w-10 h-10 rounded-full items-center justify-center ${isLocal ? 'bg-slate-800' : 'bg-pink-600/10 border border-pink-500/20'}`}>
+                        {isLocal ? <ChevronRight size={18} color="#475569" /> : <CloudDownload size={20} color="#ec4899" />}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
+      <AutoRedirect
+        localFiles={localFiles}
+        loading={loading}
+        manifest={manifest}
+        manage={manage}
+      />
     </SafeAreaView>
   );
+}
+
+function DownloadButton({ version, onPress, progress }: { version: any, onPress: () => void, progress: number | undefined }) {
+  const isDownloading = progress !== undefined;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={isDownloading}
+      className={`w-full py-5 rounded-[25px] flex-row items-center justify-center shadow-xl ${isDownloading ? 'bg-slate-800' : 'bg-pink-600 shadow-pink-600/20'}`}
+    >
+      {isDownloading ? (
+        <>
+          <ActivityIndicator size="small" color="#ec4899" className="mr-3" />
+          <Text className="text-slate-400 font-bold text-lg">Téléchargement {Math.round(progress * 100)}%</Text>
+        </>
+      ) : (
+        <>
+          <CloudDownload size={24} color="white" className="mr-3" />
+          <Text className="text-white font-bold text-lg">Télécharger le recueil</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function AutoRedirect({ localFiles, loading, manifest, manage }: any) {
+  const router = useRouter();
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!loading && manifest?.versions?.length === 1 && !done && manage !== 'true') {
+      const theOnlySource = manifest.versions[0];
+      const isLocal = localFiles.some((f: string) => f.toLowerCase() === theOnlySource.file.toLowerCase());
+
+      if (isLocal) {
+        router.replace({
+          pathname: '/hymnes/library',
+          params: { db: theOnlySource.file }
+        });
+        setDone(true);
+      }
+    }
+  }, [loading, localFiles, manifest, done, manage]);
+
+  return null;
 }

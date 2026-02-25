@@ -1,4 +1,3 @@
-import localManifest from '@/assets/docs/manifest.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
@@ -16,7 +15,7 @@ const ICON_MAP: Record<string, any> = {
   Clock
 };
 
-// No bundled assets - everything is downloadable
+// Documents are exclusively downloadable from the 'data' branch
 
 const getMimeType = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
@@ -80,18 +79,14 @@ export default function PDFLibrary() {
     try {
       if (force) setRefreshing(true);
 
-      // 1. Toujours charger le manifeste local en premier
-      if (!manifest || force) setManifest(localManifest);
-
-      // 2. Tentative de synchronisation avec GitHub
-      // On ignore le sync automatique en mode développement pour vous laisser tester vos changements locaux
-      if (__DEV__ && !force) {
-        console.log("Mode DEV : Utilisation du manifeste local uniquement");
-        setLoading(false);
-        return;
+      // 1. Charger depuis le cache local (AsyncStorage) s'il existe
+      const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
+      if (cachedManifest && !manifest && !force) {
+        setManifest(JSON.parse(cachedManifest));
       }
 
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/main/assets/docs/manifest.json?t=${Date.now()}`;
+      // 2. Tentative de synchronisation avec GitHub (branche 'data')
+      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -104,9 +99,11 @@ export default function PDFLibrary() {
       if (response.ok) {
         const remoteData = await response.json();
         setManifest(remoteData);
+        // Mettre à jour le cache
+        await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
       }
     } catch (e) {
-      console.log("Using local/cached manifest (offline or sync error)");
+      console.log("Using cached manifest (offline or sync error)");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -123,7 +120,6 @@ export default function PDFLibrary() {
   };
 
   const downloadFile = async (doc: any) => {
-    if (doc.isAsset) return;
     try {
       setDownloading(prev => ({ ...prev, [doc.id]: 0 }));
       const callback = (downloadProgress: any) => {
@@ -312,7 +308,7 @@ export default function PDFLibrary() {
               {selectedCategory ? selectedCategory.title : "Bibliothèque"}
             </Text>
             <Text className="text-slate-400 text-sm mt-1">
-              {selectedCategory ? `${manifest?.documents.filter((d: any) => d.categoryId === selectedCategory.id && (d.isAsset || localFiles.includes(d.fileName))).length} documents` : "Gérez vos ressources d'étude"}
+              {selectedCategory ? `${manifest?.documents.filter((d: any) => d.categoryId === selectedCategory.id && localFiles.includes(d.fileName)).length} documents` : "Gérez vos ressources d'étude"}
             </Text>
           </View>
         </View>
@@ -380,7 +376,7 @@ export default function PDFLibrary() {
                 {manifest?.categories.map((cat: any) => {
                   const Icon = ICON_MAP[cat.icon] || FolderOpen;
                   const localDocs = manifest?.documents.filter((d: any) =>
-                    d.categoryId === cat.id && (d.isAsset || localFiles.includes(d.fileName))
+                    d.categoryId === cat.id && localFiles.includes(d.fileName)
                   );
                   if (localDocs.length === 0) return null;
                   return (
@@ -401,7 +397,7 @@ export default function PDFLibrary() {
                   );
                 })}
                 {manifest?.categories.every((cat: any) =>
-                  manifest?.documents.filter((d: any) => d.categoryId === cat.id && (d.isAsset || localFiles.includes(d.fileName))).length === 0) && (
+                  manifest?.documents.filter((d: any) => d.categoryId === cat.id && localFiles.includes(d.fileName)).length === 0) && (
                     <View className="items-center py-10 opacity-50">
                       <BookOpen size={48} color="#475569" className="mb-4" />
                       <Text className="text-slate-400 text-center font-medium">Votre bibliothèque est vide.</Text>
@@ -414,19 +410,17 @@ export default function PDFLibrary() {
         ) : (
           <View className="mt-4 pb-20">
             {manifest?.documents
-              .filter((d: any) => d.categoryId === selectedCategory.id && (d.isAsset || localFiles.includes(d.fileName)))
+              .filter((d: any) => d.categoryId === selectedCategory.id && localFiles.includes(d.fileName))
               .map((doc: any) => (
                 <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden flex-row items-center">
-                  {!doc.isAsset && (
-                    <TouchableOpacity
-                      onPress={() => deleteFile(doc.fileName, doc.title)}
-                      className="p-4 pr-1 active:bg-red-500/10"
-                    >
-                      <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
-                        <Trash2 size={14} color="#f87171" />
-                      </View>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    onPress={() => deleteFile(doc.fileName, doc.title)}
+                    className="p-4 pr-1 active:bg-red-500/10"
+                  >
+                    <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
+                      <Trash2 size={14} color="#f87171" />
+                    </View>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={() => openPdf(doc.fileName, doc.title)}
@@ -484,7 +478,7 @@ export default function PDFLibrary() {
                     <Text className="text-sm font-bold text-slate-300 uppercase tracking-widest">{cat.title}</Text>
                   </View>
                   {cloudDocs.map((doc: any) => {
-                    const isDownloaded = localFiles.includes(doc.fileName) || doc.isAsset;
+                    const isDownloaded = localFiles.includes(doc.fileName);
                     const isDownloading = downloading[doc.id] !== undefined;
                     return (
                       <View key={doc.id} className="mb-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-row items-center">

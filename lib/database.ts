@@ -30,7 +30,7 @@ function sanitizeParams(params: any[]): any[] {
  * Opens and prepares the database. 
  * Includes a singleton pattern to avoid re-opening and re-copying files constantly.
  */
-export async function loadDatabase(dbName: string, assetSource: any): Promise<SQLite.SQLiteDatabase> {
+export async function loadDatabase(dbName: string, assetSource?: any): Promise<SQLite.SQLiteDatabase> {
   // Return cached connection if available
   if (dbConnections[dbName]) {
     return dbConnections[dbName];
@@ -49,8 +49,8 @@ export async function loadDatabase(dbName: string, assetSource: any): Promise<SQ
   try {
     const info = await FileSystem.getInfoAsync(dbPath);
 
-    // ONLY copy if the file doesn't exist to avoid "NullPointerException" or "Locked" errors
-    if (!info.exists) {
+    // ONLY copy if the file doesn't exist and we have an asset source
+    if (!info.exists && assetSource) {
       console.log(`Database ${dbName} not found, copying from assets...`);
 
       const dirInfo = await FileSystem.getInfoAsync(dbDir);
@@ -65,9 +65,14 @@ export async function loadDatabase(dbName: string, assetSource: any): Promise<SQ
           to: dbPath,
         });
       }
+    } else if (!info.exists && !assetSource) {
+      // If no asset source and file doesn't exist, we might be trying to open a file that was deleted or not yet downloaded
+      console.error(`Database ${dbName} not found and no asset source provided.`);
+      throw new Error(`Database ${dbName} not found`);
     }
   } catch (error) {
     console.error(`Error preparing database ${dbName}:`, error);
+    throw error;
   }
 
   const db = await SQLite.openDatabaseAsync(dbName);

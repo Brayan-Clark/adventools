@@ -11,7 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HymneDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, db: dbNameParam } = useLocalSearchParams();
+  const dbName = (dbNameParam as string) || 'cantique.db';
+
   const [hymn, setHymn] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showNumberPicker, setShowNumberPicker] = useState(false);
@@ -23,11 +25,11 @@ export default function HymneDetail() {
 
   useEffect(() => {
     checkFavorite();
-  }, [id]);
+  }, [id, dbName]);
 
   const checkFavorite = async () => {
     try {
-      const stored = await AsyncStorage.getItem('hymn_favorites');
+      const stored = await AsyncStorage.getItem(`hymn_favorites_${dbName}`);
       const favorites = stored ? JSON.parse(stored) : [];
       setIsFavorite(favorites.includes(Number(id)));
     } catch (e) {
@@ -37,7 +39,7 @@ export default function HymneDetail() {
 
   const toggleFavorite = async () => {
     try {
-      const stored = await AsyncStorage.getItem('hymn_favorites');
+      const stored = await AsyncStorage.getItem(`hymn_favorites_${dbName}`);
       let favorites = stored ? JSON.parse(stored) : [];
       const hymnId = Number(id);
 
@@ -48,7 +50,7 @@ export default function HymneDetail() {
         favorites.push(hymnId);
         setIsFavorite(true);
       }
-      await AsyncStorage.setItem('hymn_favorites', JSON.stringify(favorites));
+      await AsyncStorage.setItem(`hymn_favorites_${dbName}`, JSON.stringify(favorites));
     } catch (e) {
       console.error(e);
     }
@@ -60,12 +62,12 @@ export default function HymneDetail() {
         const hymnId = Number(id);
         if (isNaN(hymnId)) return;
 
-        const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
+        const db = await loadDatabase(dbName);
         const result: any = await db.getFirstAsync("SELECT * FROM adventiste_cantique WHERE id = ?", [hymnId]);
 
         if (result) {
           // Load edited content if exists
-          const localEdit = await AsyncStorage.getItem(`hymne_edit_${hymnId}`);
+          const localEdit = await AsyncStorage.getItem(`hymne_edit_${dbName}_${hymnId}`);
           if (localEdit) {
             result.c_content = localEdit;
           }
@@ -78,41 +80,47 @@ export default function HymneDetail() {
             const historyItem = {
               type: 'hymn',
               title: result.c_title || `Cantique ${result.c_num}`,
-              subtitle: `Cantique ${result.c_num} • ${new Date().toLocaleDateString('fr-FR')}`,
+              subtitle: `${dbName.replace('.db', '').toUpperCase()} • Cantique ${result.c_num}`,
               timestamp: Date.now(),
-              params: { id: hymnId }
+              params: { id: hymnId, db: dbName }
             };
 
             const existingHistory = await AsyncStorage.getItem('app_history');
             let history = existingHistory ? JSON.parse(existingHistory) : [];
-            history = history.filter((h: any) => h.title !== historyItem.title);
+            // Deduplicate by both ID and DB
+            history = history.filter((h: any) => !(h.type === 'hymn' && h.params?.id === hymnId && h.params?.db === dbName));
             history.unshift(historyItem);
-            await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 5)));
+            await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 20)));
           } catch (e) {
             console.error("Failed to save hymn history", e);
           }
         }
       } catch (e) {
         console.error(e);
+        Alert.alert("Erreur", "Base de données introuvable.");
+        router.back();
       } finally {
         setLoading(false);
       }
     }
     fetchHymn();
-  }, [id]);
+  }, [id, dbName]);
 
   const goToHymnByNumber = async () => {
     const num = parseInt(hymnNumber);
     if (isNaN(num) || num < 1 || num > 800) return;
 
     try {
-      const db = await loadDatabase('cantique.db', require('../../assets/databases/cantique.db'));
-      const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
+      const db = await loadDatabase(dbName);
+      const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE id = ?", [num]);
 
       if (result) {
         setShowNumberPicker(false);
         setHymnNumber("");
-        router.push(`/hymnes/${result.id}`);
+        router.push({
+          pathname: `/hymnes/[id]`,
+          params: { id: result.id, db: dbName }
+        });
       }
     } catch (e) {
       console.error(e);
@@ -172,7 +180,7 @@ export default function HymneDetail() {
               <TouchableOpacity
                 onPress={async () => {
                   try {
-                    await AsyncStorage.setItem(`hymne_edit_${id}`, editedContent);
+                    await AsyncStorage.setItem(`hymne_edit_${dbName}_${id}`, editedContent);
                     setHymn({ ...hymn, c_content: editedContent });
                     setIsEditing(false);
                     Alert.alert("Succès", "Modification enregistrée avec succès.");
