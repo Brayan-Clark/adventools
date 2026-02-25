@@ -1,13 +1,22 @@
 {
   "versions": [
     {
-      "id": "cantique_fr",
+      "id": "cantique_mg",
       "name": "Cantiques Adventistes",
       "language": "Malagasy",
       "file": "cantique.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/cantique.db",
       "size": "600 KB",
       "isDefault": true
+    },
+    {
+      "id": "cantique_fr",
+      "name": "Hymnes et Louanges",
+      "language": "Français",
+      "file": "hymnes&louanges.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/hymnes&louanges.db",
+      "size": "1 Mo",
+      "isDefault": false
     }
   ]
 }
