@@ -3,7 +3,7 @@
     {
       "id": "cantique_fr",
       "name": "Cantiques Adventistes",
-      "language": "Français/Malagasy",
+      "language": "Malagasy",
       "file": "cantique.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/cantique.db",
       "size": "600 KB",
