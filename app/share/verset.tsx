@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions, Platform, Share, Alert, ImageBackground } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Download, Copy, Instagram, Twitter, Facebook, MessageCircle, X, Image as ImageIcon, Palette } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Alert, Image, ImageBackground, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // Use legacy import to avoid deprecation error
 import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 
 // ... (Rest of imports or constants)
 
@@ -191,7 +191,10 @@ export default function ShareVerse() {
           <X size={20} color="white" />
         </TouchableOpacity>
         <Text className="text-white font-bold text-lg">Partager le verset</Text>
-        <TouchableOpacity className="w-10 h-10 rounded-full bg-blue-600 items-center justify-center shadow-lg shadow-blue-600/30">
+        <TouchableOpacity
+          onPress={() => handleShare('default')}
+          className="w-10 h-10 rounded-full bg-blue-600 items-center justify-center shadow-lg shadow-blue-600/30"
+        >
           <Share2 size={20} color="white" />
         </TouchableOpacity>
       </View>

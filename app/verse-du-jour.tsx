@@ -1,6 +1,7 @@
 import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, BookmarkPlus, Heart, RefreshCw, Share2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -49,6 +50,8 @@ export default function VerDuJourPage() {
   const [verseText, setVerseText] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   const loadNewVerse = async () => {
     try {
@@ -74,6 +77,9 @@ export default function VerDuJourPage() {
         setVerseText('Référence incomplète.');
       }
 
+      // Reset favorite/bookmark status for new verse
+      setIsFavorite(false);
+      setIsBookmarked(false);
     } catch (error) {
       console.error('Error loading verse:', error);
       setVerseText('Erreur lors du chargement du verset.');
@@ -121,9 +127,89 @@ export default function VerDuJourPage() {
     }
   };
 
+  const checkStatus = async () => {
+    if (!currentReference) return;
+    try {
+      const favs = await AsyncStorage.getItem('bible_favorites');
+      const marks = await AsyncStorage.getItem('bible_bookmarks');
+
+      const favorites = favs ? JSON.parse(favs) : [];
+      const bookmarks = marks ? JSON.parse(marks) : [];
+
+      const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
+
+      setIsFavorite(favorites.some((f: any) => f.key === key));
+      setIsBookmarked(bookmarks.some((b: any) => b.key === key));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     loadInitialVerse();
   }, []);
+
+  useEffect(() => {
+    if (currentReference) {
+      checkStatus();
+    }
+  }, [currentReference]);
+
+  const toggleFavorite = async () => {
+    if (!currentReference || !verseText) return;
+    try {
+      const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
+      const stored = await AsyncStorage.getItem('bible_favorites');
+      let favorites = stored ? JSON.parse(stored) : [];
+
+      if (isFavorite) {
+        favorites = favorites.filter((f: any) => f.key !== key);
+        setIsFavorite(false);
+      } else {
+        favorites.push({
+          key,
+          bookId: currentReference.bookId,
+          chapter: currentReference.chapter,
+          verse: currentReference.verse,
+          reference: currentReference.reference,
+          text: verseText,
+          timestamp: Date.now()
+        });
+        setIsFavorite(true);
+      }
+      await AsyncStorage.setItem('bible_favorites', JSON.stringify(favorites));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleBookmark = async () => {
+    if (!currentReference || !verseText) return;
+    try {
+      const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
+      const stored = await AsyncStorage.getItem('bible_bookmarks');
+      let bookmarks = stored ? JSON.parse(stored) : [];
+
+      if (isBookmarked) {
+        bookmarks = bookmarks.filter((b: any) => b.key !== key);
+        setIsBookmarked(false);
+      } else {
+        bookmarks.push({
+          key,
+          bookId: currentReference.bookId,
+          chapter: currentReference.chapter,
+          verse: currentReference.verse,
+          reference: currentReference.reference,
+          text: verseText,
+          timestamp: Date.now()
+        });
+        setIsBookmarked(true);
+      }
+      await AsyncStorage.setItem('bible_bookmarks', JSON.stringify(bookmarks));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleShare = () => {
     if (currentReference && verseText) {
@@ -252,24 +338,26 @@ export default function VerDuJourPage() {
             )}
 
             {/* Action Buttons */}
-            <View className="flex-row justify-between">
+            <View className="flex-row justify-between mb-4">
               <TouchableOpacity
                 onPress={handleShare}
-                className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-sm"
+                className="w-14 h-14 rounded-full bg-white/20 items-center justify-center backdrop-blur-md"
               >
-                <Share2 size={20} color="white" />
+                <Share2 size={22} color="white" />
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-sm"
+                onPress={toggleFavorite}
+                className={`w-14 h-14 rounded-full items-center justify-center backdrop-blur-md ${isFavorite ? 'bg-red-500' : 'bg-white/20'}`}
               >
-                <Heart size={20} color="white" />
+                <Heart size={22} color="white" fill={isFavorite ? "white" : "transparent"} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-sm"
+                onPress={toggleBookmark}
+                className={`w-14 h-14 rounded-full items-center justify-center backdrop-blur-md ${isBookmarked ? 'bg-blue-600' : 'bg-white/20'}`}
               >
-                <BookmarkPlus size={20} color="white" />
+                <BookmarkPlus size={22} color="white" fill={isBookmarked ? "white" : "transparent"} />
               </TouchableOpacity>
             </View>
           </View>
