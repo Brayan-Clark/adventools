@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, BookOpen, Copy, Plus, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, Copy, Pencil, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,9 +19,17 @@ interface StudySection {
   verses: VerseEntry[];
 }
 
+const CATEGORIES_LIST = [
+  "I - ASA FITORIANA (Prédication)",
+  "II - FANAMBINANA (Prospérité / Bénédiction)",
+  "III - FANDROSOANA (Progrès / Avancée)",
+  "IV - FITSINGERENAN-TAONA (Cycle / Anniversaire)",
+  "V - MPAMANGY (Visite / Compassion)"
+];
+
 const DEFAULT_STUDIES = [
   {
-    category: "I - FITORIANA (Prédication)",
+    category: "I - ASA FITORIANA (Prédication)",
     verses: [
       { ref: "Matio 24:14", text: "Ary hotononina amin'izao tontolo izao ity filazantsaran'ny fanjakana ity ho vavolombelona amin'ny firenena rehetra, dia vao ho tonga ny farany." },
       { ref: "Matio 28:19", text: "Koa mandehana ianareo, dia ataovy mpianatra ny firenena rehetra, manao batisa azy amin'ny anaran'ny Ray sy ny Zanaka ary ny Fanahy Masina." },
@@ -29,28 +37,23 @@ const DEFAULT_STUDIES = [
     ]
   },
   {
-    category: "II - FANAMP (Aide / Soutien)",
+    category: "II - FANAMBINANA (Prospérité / Bénédiction)",
     verses: [
       { ref: "Asan'ny Apostoly 15:36", text: "Ary rehefa afaka andro vitsivitsy, dia hoy Paoly tamin'i Barnaba: Andao isika hiverina hamangy ny rahalahy any amin'ny tanàna rehetra izay nitoriantsika ny tenin'ny Tompo, hahitantsika izay toetry ny rainy." },
-      { ref: "Asan'ny Apostoly 14:3", text: "Ary nitoetra ela teo ihany izy roa lahy ka niteny tamin'ny fahasahiana tao amin'ny Tompo, Izay nanambara ny tenin'ny fahasoavany ary nampanao famantarana sy fahagagana tamin'ny tanany." }
-    ]
-  },
-  {
-    category: "III - TANAMBINANA (Prospérité / Bénédiction)",
-    verses: [
+      { ref: "Asan'ny Apostoly 14:3", text: "Ary nitoetra ela teo ihany izy roa lahy ka niteny tamin'ny fahasahiana tao amin'ny Tompo, Izay nanambara ny tenin'ny fahasoavany ary nampanao famantarana sy fahagagana tamin'ny tanany." },
       { ref: "Deoteronomia 28:1-3", text: "Ary raha hihaino tsara ny feon'i Jehovah Andriamanitrao ianao ka hitandrina hanao ny didiny rehetra ... hateraka ho ambony ambonin'ny firenena rehetra ambonin'ny tany ianao." },
       { ref: "Fitomaniana 3:22-23", text: "Ny famindram-pon'i Jehovah no tsy nahalany laniana antsika, fa tsy mitsahatra ny fiantrany. Vaovao isa-maraina izany; lehibe ny fahatokianao." }
     ]
   },
   {
-    category: "III bis - FANDROSOANA (Progrès / Avancée)",
+    category: "III - FANDROSOANA (Progrès / Avancée)",
     verses: [
       { ref: "1 Timoty 4:14-15", text: "Aza hotsiratsiraina ny fanomezam-pahasoasana izay ao anatinao ... Hevero tsara izany zavatra izany, dia hitoero, mba hita miharihary amin'ny olona rehetra ny fandrosoanao." },
       { ref: "Eksodosy 14:15", text: "Ary Jehovah niteny tamin'i Mosesy hoe: Nahoana no mitaraina amiko ianao? Lazao amin'ny Zanak'Isiraely mba handroso." }
     ]
   },
   {
-    category: "IV - FITSINGERENA (Cycle / Persévérance)",
+    category: "IV - FITSINGERENAN-TAONA (Cycle / Anniversaire)",
     verses: [
       { ref: "Joba 1:4-5", text: "Ary ny zanany lahy nandeha ka nanao fanasana tao an-tranon'izy rehetra avy ... Ary raha vao tapitra ny andro nanaovany fanasana, dia naniraka Joba ka nanamasina azy." },
       { ref: "Ohabolana 10:27", text: "Ny fahatahorana an'i Jehovah no mampitombo andro; fa ny taonan'ny ratsy fanahy hofohezina." },
@@ -76,6 +79,7 @@ export default function EtudeSerie() {
   const [categoryName, setCategoryName] = useState("");
   const [verseRef, setVerseRef] = useState("");
   const [verseText, setVerseText] = useState("");
+  const [editingVerseIdx, setEditingVerseIdx] = useState<number | null>(null);
 
   useEffect(() => {
     loadStudies();
@@ -131,23 +135,57 @@ export default function EtudeSerie() {
     }
   };
 
-  const addVerseToCategory = () => {
+  const saveVerse = () => {
     if (!categoryName.trim() || !verseRef.trim()) return;
 
-    const updated = [...studies];
-    let sectionIdx = updated.findIndex(s => s.category === categoryName);
-
+    let updated = [...studies];
     const newEntry = { ref: verseRef, text: verseText };
 
-    if (sectionIdx > -1) {
-      updated[sectionIdx].verses.push(newEntry);
+    // If we were editing a verse
+    if (editingSectionIdx !== null && editingVerseIdx !== null) {
+      const oldCategory = updated[editingSectionIdx].category;
+
+      if (oldCategory === categoryName) {
+        // Same category, just update the verse
+        updated[editingSectionIdx].verses[editingVerseIdx] = newEntry;
+      } else {
+        // Category changed: remove from old, add to new/existing
+        updated[editingSectionIdx].verses.splice(editingVerseIdx, 1);
+        if (updated[editingSectionIdx].verses.length === 0) {
+          updated.splice(editingSectionIdx, 1);
+        }
+
+        // Add to new category
+        let targetIdx = updated.findIndex(s => s.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
+        if (targetIdx > -1) {
+          updated[targetIdx].verses.push(newEntry);
+        } else {
+          updated.push({ category: categoryName, verses: [newEntry] });
+        }
+      }
     } else {
-      updated.push({ category: categoryName, verses: [newEntry] });
+      // Adding new verse
+      let targetIdx = updated.findIndex(s => s.category.trim().toLowerCase() === categoryName.trim().toLowerCase());
+      if (targetIdx > -1) {
+        updated[targetIdx].verses.push(newEntry);
+      } else {
+        updated.push({ category: categoryName, verses: [newEntry] });
+      }
     }
 
     saveStudies(updated);
     setIsModalVisible(false);
     resetForm();
+  };
+
+  const handleEditVerse = (sIdx: number, vIdx: number) => {
+    const v = studies[sIdx].verses[vIdx];
+    setCategoryName(studies[sIdx].category);
+    setVerseRef(v.ref);
+    setVerseText(v.text);
+    setEditingSectionIdx(sIdx);
+    setEditingVerseIdx(vIdx);
+    setIsModalVisible(true);
   };
 
   const deleteVerse = (sIdx: number, vIdx: number) => {
@@ -168,6 +206,8 @@ export default function EtudeSerie() {
     setCategoryName("");
     setVerseRef("");
     setVerseText("");
+    setEditingSectionIdx(null);
+    setEditingVerseIdx(null);
   };
 
   const copyToClipboard = async (text: string) => {
@@ -215,6 +255,9 @@ export default function EtudeSerie() {
                     <TouchableOpacity onPress={() => copyToClipboard(`${v.ref}: ${v.text}`)}>
                       <Copy size={16} color="#475569" />
                     </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleEditVerse(sIdx, vIdx)}>
+                      <Pencil size={16} color="#3b82f6" />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => deleteVerse(sIdx, vIdx)}>
                       <Trash2 size={16} color="#ef4444" />
                     </TouchableOpacity>
@@ -234,16 +277,29 @@ export default function EtudeSerie() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10">
             <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white">Ajouter un Verset</Text>
+              <Text className="text-xl font-bold text-white">{editingVerseIdx !== null ? "Modifier le Verset" : "Ajouter un Verset"}</Text>
               <TouchableOpacity onPress={() => { setIsModalVisible(false); resetForm(); }}>
                 <X size={24} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">Catégorie (I, II, III...)</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">Catégorie (Sélect. ou Saisir)</Text>
+            <View className="flex-row flex-wrap gap-2 mb-4">
+              {CATEGORIES_LIST.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setCategoryName(cat)}
+                  className={`px-3 py-2 rounded-xl border ${categoryName === cat ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/10'}`}
+                >
+                  <Text className={`text-[10px] ${categoryName === cat ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
+                    {cat.split(' (')[0]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
-              placeholder="Ex: I - FITORIANA"
+              placeholder="Ou saisir une nouvelle catégorie..."
               placeholderTextColor="#475569"
               value={categoryName}
               onChangeText={setCategoryName}
@@ -268,7 +324,7 @@ export default function EtudeSerie() {
               onChangeText={setVerseText}
             />
 
-            <TouchableOpacity onPress={addVerseToCategory} className="bg-blue-600 py-5 rounded-2xl items-center">
+            <TouchableOpacity onPress={saveVerse} className="bg-blue-600 py-5 rounded-2xl items-center">
               <Text className="text-white font-bold text-lg">Enregistrer</Text>
             </TouchableOpacity>
           </View>

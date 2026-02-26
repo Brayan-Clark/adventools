@@ -4,28 +4,32 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
-export async function exportHymnCorrections() {
+export async function exportUserModifications() {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const hymnKeys = keys.filter(key => key.startsWith('hymne_edit_'));
+    const modKeys = keys.filter(key =>
+      key.startsWith('hymne_edit_') ||
+      key === 'utiles_etude_serie' ||
+      key === 'utiles_themes_divers' ||
+      key === 'adventools_notes'
+    );
 
-    if (hymnKeys.length === 0) {
-      Alert.alert("Information", "Aucune correction à exporter.");
+    if (modKeys.length === 0) {
+      Alert.alert("Information", "Aucune modification à exporter.");
       return;
     }
 
-    const pairs = await AsyncStorage.multiGet(hymnKeys);
+    const pairs = await AsyncStorage.multiGet(modKeys);
     const data = Object.fromEntries(pairs);
     const json = JSON.stringify(data, null, 2);
 
-    const filename = `adventools_corrections_${new Date().toISOString().split('T')[0]}.json`;
-    // Using documentDirectory as it's more stable for certain systems
+    const filename = `adventools_modifications_${new Date().toISOString().split('T')[0]}.json`;
     const fileUri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || "") + filename;
 
     await FileSystem.writeAsStringAsync(fileUri, json);
     await Sharing.shareAsync(fileUri, {
       mimeType: 'application/json',
-      dialogTitle: 'Exporter les corrections de cantiques',
+      dialogTitle: 'Exporter les modifications',
       UTI: 'public.json'
     });
   } catch (error) {
@@ -34,7 +38,7 @@ export async function exportHymnCorrections() {
   }
 }
 
-export async function importHymnCorrections() {
+export async function importUserModifications() {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/json',
@@ -48,17 +52,16 @@ export async function importHymnCorrections() {
 
     const entries = Object.entries(data);
     const validPairs: [string, string][] = entries
-      .filter(([key]) => key.startsWith('hymne_edit_'))
       .map(([key, value]) => [key, String(value)]);
 
     if (validPairs.length === 0) {
-      Alert.alert("Erreur", "Le fichier ne contient aucune correction de cantique valide.");
+      Alert.alert("Erreur", "Le fichier est vide ou invalide.");
       return;
     }
 
     Alert.alert(
       "Confirmation",
-      `Voulez-vous importer ${validPairs.length} corrections ? Cela pourrait écraser vos modifications actuelles.`,
+      `Voulez-vous importer ${validPairs.length} éléments ? Cela pourrait écraser vos modifications actuelles.`,
       [
         { text: "Annuler", style: "cancel" },
         {
@@ -128,6 +131,8 @@ export async function exportAllAppData() {
       key.startsWith('pdf_bookmarks_') ||
       key.startsWith('pdf_notes_') ||
       key === 'adventools_notes' ||
+      key === 'utiles_etude_serie' ||
+      key === 'utiles_themes_divers' ||
       key === 'profile_name' ||
       key === 'profile_image' ||
       key === 'profile_departments' ||

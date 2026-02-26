@@ -1,4 +1,4 @@
-import { exportAllAppData, exportHymnCorrections, importAllAppData, importHymnCorrections, resetHymnCorrections } from '@/lib/backup-utils';
+import { exportAllAppData, exportUserModifications, importAllAppData, importUserModifications, resetHymnCorrections } from '@/lib/backup-utils';
 import { BIBLE_CONFIGS } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   Bell,
+  BookOpen,
   Camera,
   Check,
   ChevronLeft,
@@ -21,7 +22,8 @@ import {
   Save,
   Shield,
   Type,
-  User
+  User,
+  X,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -38,6 +40,20 @@ export default function Settings() {
   const [isNameEditVisible, setIsNameEditVisible] = useState(false);
   const [tempName, setTempName] = useState('');
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
+  const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
+  const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
+
+  const EDS_CLASSES = [
+    "Lesona Zaza minono (0-12 volana)",
+    "Lesona Zazakely (1-3 taona)",
+    "Lesona Kilonga (4-6 taona)",
+    "Lesona Ankizy (7-9 taona)",
+    "Lesona Tanora zandriny (10-12 taona)",
+    "Lesona Mantoanto (13-14 taona)",
+    "Lesona Zatovo (15-18 taona)",
+    "Lesona Tanora zokiny (19-35 taona)",
+    "Lesona Lehibe (+ 35 taona)"
+  ];
 
   // Load settings on mount
   useEffect(() => {
@@ -75,10 +91,12 @@ export default function Settings() {
       const name = await AsyncStorage.getItem('profile_name');
       const image = await AsyncStorage.getItem('profile_image');
       const depts = await AsyncStorage.getItem('profile_departments');
+      const eds = await AsyncStorage.getItem('profile_eds_class');
 
       if (name !== null) setUserName(name);
       if (image !== null) setUserImage(image);
       if (depts !== null) setUserDepartments(JSON.parse(depts));
+      if (eds !== null) setUserEDS(eds);
     } catch (e) {
       console.error('Failed to load settings', e);
     }
@@ -117,6 +135,12 @@ export default function Settings() {
     }
     setUserDepartments(newDepts);
     await AsyncStorage.setItem('profile_departments', JSON.stringify(newDepts));
+  };
+
+  const saveEDS = async (eds: string) => {
+    setUserEDS(eds);
+    await AsyncStorage.setItem('profile_eds_class', eds);
+    setIsEDSModalVisible(false);
   };
 
   const handleClearHistory = async () => {
@@ -203,6 +227,12 @@ export default function Settings() {
             }}
           />
           <SettingItem
+            icon={<BookOpen size={18} color="#64748b" />}
+            label="Classe EDS"
+            value={userEDS}
+            onPress={() => setIsEDSModalVisible(true)}
+          />
+          <SettingItem
             icon={<Shield size={18} color="#64748b" />}
             label="Mes Départements"
             value={`${userDepartments.length} sélectionnés`}
@@ -279,14 +309,14 @@ export default function Settings() {
           <View className="h-4" />
           <SettingItem
             icon={<Save size={18} color="#64748b" />}
-            label="Exporter les corrections"
-            value="Cantiques uniquement"
-            onPress={exportHymnCorrections}
+            label="Exporter les modifications"
+            value="Tout exporter"
+            onPress={exportUserModifications}
           />
           <SettingItem
             icon={<Download size={18} color="#64748b" />}
-            label="Importer des corrections"
-            onPress={importHymnCorrections}
+            label="Importer des modifications"
+            onPress={importUserModifications}
           />
           <SettingItem
             icon={<RefreshCcw size={18} color="#f87171" />}
@@ -348,6 +378,43 @@ export default function Settings() {
                 <Text className="text-white font-bold">Enregistrer</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* EDS Selection Modal */}
+      <Modal visible={isEDSModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%] border-t border-slate-800">
+            <View className="flex-row justify-between items-center mb-6 px-2">
+              <View>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Classe EDS</Text>
+                <Text className="text-slate-500 mt-1">Safidio ny kilasinao amin'ny Sekoly Sabata</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsEDSModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="gap-2 mb-10">
+                {EDS_CLASSES.map((eds) => {
+                  const isSelected = userEDS === eds;
+                  return (
+                    <TouchableOpacity
+                      key={eds}
+                      onPress={() => saveEDS(eds)}
+                      className={`px-5 py-4 rounded-2xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <Text className={`text-sm ${isSelected ? 'text-primary font-bold' : 'text-slate-300'}`}>{eds}</Text>
+                        {isSelected && <Check size={18} color="#3b82f6" />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

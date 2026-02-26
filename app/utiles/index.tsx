@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, ChevronRight, List, Star } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, ChevronRight, List, Star } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,14 @@ export default function UtilesIndex() {
   const router = useRouter();
 
   const RESOURCES = [
+    {
+      id: 'lesona',
+      title: "Lesona Sekoly Sabata",
+      subtitle: "Fandalinana isan'andro",
+      icon: <BookOpen color="#f59e0b" size={24} />,
+      color: "bg-amber-500/10",
+      path: "/utiles/lesona"
+    },
     {
       id: 'etude-serie',
       title: "Série d'Études Bibliques",
