@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Correction de Cantiques</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e4e4e7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 800px;
+            max-height: 98vh;
+            background: rgba(25, 25, 40, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 80px rgba(59, 130, 246, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+        
+        .container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        .container::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #9ca3af;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 18px;
+        }
+        
+        .form-group.small {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #d1d5db;
+            font-size: 0.9rem;
+            letter-spacing: 0.01em;
+        }
+        
+        select, textarea, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            font-size: 15px;
+            background: rgba(15, 15, 35, 0.6);
+            color: #e4e4e7;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .small input, .small select {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        
+        select:focus, textarea:focus, input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(15, 15, 35, 0.8);
+            box-shadow: 
+                0 0 0 4px rgba(59, 130, 246, 0.1),
+                0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        select:hover, textarea:hover, input:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        
+        textarea {
+            height: 400px;
+            resize: vertical;
+            font-family: 'Inter', monospace;
+            line-height: 1.5;
+        }
+        
+        textarea.small {
+            height: 80px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 10px;
+            display: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: 1px solid;
+            backdrop-filter: blur(10px);
+        }
+        
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        
+        #fieldsContainer {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎼 Correction de Cantiques</h1>
+        <div class="subtitle">Interface professionnelle pour la modification des cantiques</div>
+        
+        <div id="message" class="message"></div>
+        
+        <form id="correctionForm">
+            <div class="form-row">
+                <div class="form-group small">
+                    <label for="database"><span class="icon">🗄️</span>Base:</label>
+                    <select id="database" required>
+                        <option value="">Chargement...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group small">
+                    <label for="searchType"><span class="icon">🔍</span>Recherche:</label>
+                    <select id="searchType" required>
+                        <option value="number">Par numéro</option>
+                        <option value="title">Par titre</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row" id="searchRow">
+                <div class="form-group small" id="numberSearchGroup">
+                    <label for="cantiqueNumber"><span class="icon">🔢</span>Numéro:</label>
+                    <input type="number" id="cantiqueNumber" min="1" placeholder="Ex: 182">
+                </div>
+                
+                <div class="form-group small" style="display: none;" id="titleSearchGroup">
+                    <label for="cantiqueTitle"><span class="icon">📝</span>Titre:</label>
+                    <input type="text" id="cantiqueTitle" placeholder="Rechercher un titre...">
+                </div>
+            </div>
+            
+            <div id="searchResults" style="display: none; margin: 15px 0;">
+                <!-- Résultats de recherche AJAX -->
+            </div>
+            
+            <button type="button" id="loadBtn" class="btn-primary" disabled><span class="icon">📂</span>Charger</button>
+            
+            <div id="fieldsContainer" style="display: none;">
+                <div class="form-group small">
+                    <label for="title"><span class="icon">📝</span>Titre:</label>
+                    <input type="text" id="title" placeholder="Titre du cantique...">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group small">
+                        <label for="key"><span class="icon">🎵</span>Clé:</label>
+                        <input type="text" id="key" placeholder="Ton...">
+                    </div>
+                    
+                    <div class="form-group small">
+                        <label for="author"><span class="icon">✍️</span>Auteur:</label>
+                        <input type="text" id="author" placeholder="Auteur...">
+                    </div>
+                </div>
+                
+                <div class="form-group small">
+                    <label for="categories"><span class="icon">🏷️</span>Catégories:</label>
+                    <input type="text" id="categories" placeholder="Catégories...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="content"><span class="icon">📖</span>Contenu:</label>
+                    <textarea id="content" placeholder="Contenu du cantique..."></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn-success"><span class="icon">💾</span>Enregistrer</button>
+                    <button type="button" id="resetBtn" class="btn-secondary"><span class="icon">🔄</span>Réinitialiser</button>
+                    <button type="button" id="selectBtn" class="btn-primary"><span class="icon">📋</span>Nouveau</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        class CantiqueEditor {
+            constructor() {
+                this.currentData = null;
+                this.databases = [];
+                this.searchTimeout = null;
+                this.initEventListeners();
+                this.loadDatabases();
+            }
+            
+            initEventListeners() {
+                const database = document.getElementById('database');
+                const searchType = document.getElementById('searchType');
+                const cantiqueNumber = document.getElementById('cantiqueNumber');
+                const cantiqueTitle = document.getElementById('cantiqueTitle');
+                const loadBtn = document.getElementById('loadBtn');
+                const form = document.getElementById('correctionForm');
+                const resetBtn = document.getElementById('resetBtn');
+                const selectBtn = document.getElementById('selectBtn');
+                
+                database.addEventListener('change', () => this.checkFormValidity());
+                searchType.addEventListener('change', () => this.toggleSearchType());
+                cantiqueNumber.addEventListener('input', () => this.checkFormValidity());
+                cantiqueTitle.addEventListener('input', () => {
+                    this.checkFormValidity();
+                    this.debounceSearch();
+                });
+                loadBtn.addEventListener('click', () => this.loadCantique());
+                form.addEventListener('submit', (e) => this.handleSubmit(e));
+                resetBtn.addEventListener('click', () => this.resetForm());
+                selectBtn.addEventListener('click', () => this.goToSelection());
+            }
+            
+            async loadDatabases() {
+                try {
+                    const response = await fetch('/api/databases');
+                    const databases = await response.json();
+                    this.databases = databases;
+                    this.populateDatabaseSelect();
+                } catch (error) {
+                    console.error('Erreur chargement bases:', error);
+                    // Fallback: bases par défaut
+                    this.databases = [
+                        {file: 'cantique.db', name: 'Cantiques MG', id: 'cantique_mg'},
+                        {file: 'humnes&louanges.db', name: 'Hymnes FR', id: 'cantique_fr'}
+                    ];
+                    this.populateDatabaseSelect();
+                }
+            }
+            
+            populateDatabaseSelect() {
+                const select = document.getElementById('database');
+                select.innerHTML = '<option value="">Sélectionner...</option>';
+                
+                this.databases.forEach(db => {
+                    const option = document.createElement('option');
+                    option.value = db.file;
+                    option.textContent = db.name;
+                    select.appendChild(option);
+                });
+            }
+            
+            toggleSearchType() {
+                const searchType = document.getElementById('searchType').value;
+                const numberGroup = document.getElementById('numberSearchGroup');
+                const titleGroup = document.getElementById('titleSearchGroup');
+                const searchRow = document.getElementById('searchRow');
+                const cantiqueNumber = document.getElementById('cantiqueNumber');
+                const cantiqueTitle = document.getElementById('cantiqueTitle');
+                
+                if (searchType === 'number') {
+                    // Mode numéro : une seule colonne
+                    searchRow.style.gridTemplateColumns = '1fr';
+                    numberGroup.style.display = 'block';
+                    titleGroup.style.display = 'none';
+                    cantiqueNumber.required = true;
+                    cantiqueTitle.required = false;
+                    cantiqueTitle.value = '';
+                } else {
+                    // Mode titre : deux colonnes pour les résultats
+                    searchRow.style.gridTemplateColumns = '1fr 1fr';
+                    numberGroup.style.display = 'none';
+                    titleGroup.style.display = 'block';
+                    titleGroup.style.gridColumn = '1 / -1'; // Le champ titre prend toute la largeur
+                    cantiqueNumber.required = false;
+                    cantiqueTitle.required = true;
+                    cantiqueNumber.value = '';
+                }
+                
+                this.checkFormValidity();
+            }
+            
+            checkFormValidity() {
+                const database = document.getElementById('database').value;
+                const searchType = document.getElementById('searchType').value;
+                const cantiqueNumber = document.getElementById('cantiqueNumber').value;
+                const cantiqueTitle = document.getElementById('cantiqueTitle').value;
+                const loadBtn = document.getElementById('loadBtn');
+                
+                let isValid = database;
+                if (searchType === 'number') {
+                    isValid = isValid && cantiqueNumber;
+                } else {
+                    isValid = isValid && cantiqueTitle;
+                }
+                
+                loadBtn.disabled = !isValid;
+            }
+            
+            debounceSearch() {
+                const searchType = document.getElementById('searchType').value;
+                if (searchType !== 'title') return;
+                
+                // Annuler le timeout précédent
+                if (this.searchTimeout) {
+                    clearTimeout(this.searchTimeout);
+                }
+                
+                const cantiqueTitle = document.getElementById('cantiqueTitle').value;
+                const database = document.getElementById('database').value;
+                
+                if (!database || cantiqueTitle.length < 2) {
+                    this.hideSearchResults();
+                    return;
+                }
+                
+                // Nouveau timeout après 300ms
+                this.searchTimeout = setTimeout(() => {
+                    this.performAjaxSearch(database, cantiqueTitle);
+                }, 300);
+            }
+            
+            async performAjaxSearch(database, titleQuery) {
+                try {
+                    console.log('Recherche AJAX:', database, titleQuery);
+                    const response = await fetch(`/api/cantique/${database}/search?title=${encodeURIComponent(titleQuery)}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de la recherche');
+                    }
+                    
+                    const results = await response.json();
+                    console.log('Résultats reçus:', results);
+                    this.displaySearchResults(results, database);
+                    
+                } catch (error) {
+                    console.error('Erreur recherche AJAX:', error);
+                    const resultsDiv = document.getElementById('searchResults');
+                    resultsDiv.innerHTML = '<div style="color: #f87171; font-size: 0.9rem; padding: 10px;">Erreur de recherche</div>';
+                    resultsDiv.style.display = 'block';
+                }
+            }
+            
+            displaySearchResults(results, database) {
+                const resultsDiv = document.getElementById('searchResults');
+                
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<div style="color: #9ca3af; font-size: 0.9rem; padding: 10px;">Aucun résultat trouvé</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+                
+                let html = '<div style="background: rgba(25, 25, 40, 0.8); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 15px; max-height: 300px; overflow-y: auto;">';
+                html += '<h4 style="color: #60a5fa; margin-bottom: 12px; font-size: 0.95rem;">Résultats trouvés:</h4>';
+                html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">';
+                html += '<div style="grid-column: 1 / -1; color: #9ca3af; font-size: 0.8rem; margin-bottom: 8px;">';
+                html += `${results.length} résultat(s) trouvé(s) - cliquez pour sélectionner`;
+                html += '</div>';
+                
+                results.forEach(result => {
+                    const title = result.c_title || 'Sans titre';
+                    const truncatedTitle = title.length > 35 ? title.substring(0, 35) + '...' : title;
+                    
+                    html += `
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 6px; cursor: pointer; transition: all 0.2s ease; min-height: 50px; display: flex; align-items: center;" 
+                             onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'"
+                             onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'"
+                             onclick="editor.selectCantique(${result.c_num}, '${database}')">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <strong style="color: #60a5fa; font-size: 0.8rem;">#${result.c_num}</strong>
+                                    <div style="color: #d1d5db; font-size: 0.75rem; margin-top: 2px; word-break: break-word; line-height: 1.2;">${truncatedTitle}</div>
+                                </div>
+                                <span style="color: #9ca3af; font-size: 0.6rem; margin-left: 4px; flex-shrink: 0;">📝</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+                
+                console.log('Résultats affichés:', results.length, 'cantiques trouvés');
+            }
+            
+            hideSearchResults() {
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.style.display = 'none';
+                resultsDiv.innerHTML = '';
+            }
+            
+            hideSearchSection() {
+                // Cacher toute la section de recherche quand on édite
+                const searchSection = document.querySelector('#correctionForm > div:first-of-type');
+                const searchRow = document.getElementById('searchRow');
+                const loadBtn = document.getElementById('loadBtn');
+                
+                if (searchSection) searchSection.style.display = 'none';
+                if (searchRow) searchRow.style.display = 'none';
+                if (loadBtn) loadBtn.style.display = 'none';
+            }
+            
+            showSearchSection() {
+                // Réafficher la section de recherche
+                const searchSection = document.querySelector('#correctionForm > div:first-of-type');
+                const searchRow = document.getElementById('searchRow');
+                const loadBtn = document.getElementById('loadBtn');
+                
+                if (searchSection) searchSection.style.display = 'block';
+                if (searchRow) searchRow.style.display = 'grid';
+                if (loadBtn) loadBtn.style.display = 'block';
+            }
+            
+            async loadCantique() {
+                const database = document.getElementById('database').value;
+                const searchType = document.getElementById('searchType').value;
+                const cantiqueNumber = document.getElementById('cantiqueNumber').value;
+                
+                if (!database) {
+                    this.showMessage('Veuillez sélectionner une base de données', 'error');
+                    return;
+                }
+                
+                if (searchType === 'number' && !cantiqueNumber) {
+                    this.showMessage('Veuillez entrer un numéro de cantique', 'error');
+                    return;
+                }
+                
+                // Pour la recherche par titre, on utilise déjà l'AJAX donc pas besoin de cette fonction
+                if (searchType === 'title') {
+                    this.showMessage('Utilisez les résultats de recherche ci-dessus', 'info');
+                    return;
+                }
+                
+                try {
+                    this.showMessage('Chargement du cantique...', 'info');
+                    
+                    const url = `/api/cantique/${database}/${cantiqueNumber}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            throw new Error('Cantique non trouvé');
+                        }
+                        throw new Error('Erreur lors du chargement');
+                    }
+                    
+                    const data = await response.json();
+                    this.currentData = data;
+                    this.populateFields(data);
+                    document.getElementById('fieldsContainer').style.display = 'block';
+                    this.hideSearchResults(); // Cacher les résultats de recherche
+                    this.hideSearchSection(); // Cacher la section de recherche
+                    this.showMessage('Cantique chargé avec succès', 'success');
+                    
+                } catch (error) {
+                    this.showMessage(error.message, 'error');
+                }
+            }
+            
+            showSearchResults(results, database) {
+                if (results.length === 0) {
+                    this.showMessage('Aucun cantique trouvé pour cette recherche', 'error');
+                    return;
+                }
+                
+                if (results.length === 1) {
+                    // Si un seul résultat, charger directement
+                    this.currentData = results[0];
+                    this.populateFields(results[0]);
+                    document.getElementById('fieldsContainer').style.display = 'block';
+                    this.showMessage('Cantique chargé avec succès', 'success');
+                    return;
+                }
+                
+                // Afficher une liste pour sélectionner
+                let resultHtml = '<div style="margin-top: 20px;"><h4 style="color: #d1d5db; margin-bottom: 15px;">Résultats de recherche:</h4>';
+                resultHtml += '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                
+                results.forEach(result => {
+                    resultHtml += `
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; cursor: pointer;" 
+                             onclick="editor.selectCantique(${result.c_num}, '${database}')">
+                            <strong style="color: #60a5fa;">#${result.c_num}</strong> - ${result.c_title || 'Sans titre'}
+                        </div>
+                    `;
+                });
+                
+                resultHtml += '</div></div>';
+                
+                // Créer une div pour les résultats
+                let resultsDiv = document.getElementById('searchResults');
+                if (!resultsDiv) {
+                    resultsDiv = document.createElement('div');
+                    resultsDiv.id = 'searchResults';
+                    document.getElementById('loadBtn').after(resultsDiv);
+                }
+                resultsDiv.innerHTML = resultHtml;
+                
+                this.showMessage(`${results.length} cantique(s) trouvé(s) - cliquez pour sélectionner`, 'info');
+            }
+            
+            selectCantique(cantiqueNumber, database) {
+                // Charger le cantique sélectionné
+                fetch(`/api/cantique/${database}/${cantiqueNumber}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        this.currentData = data;
+                        this.populateFields(data);
+                        document.getElementById('fieldsContainer').style.display = 'block';
+                        
+                        // Cacher les résultats de recherche ET la section de recherche
+                        this.hideSearchResults();
+                        this.hideSearchSection();
+                        
+                        this.showMessage('Cantique chargé avec succès', 'success');
+                    })
+                    .catch(error => {
+                        this.showMessage('Erreur lors du chargement', 'error');
+                    });
+            }
+            
+            populateFields(data) {
+                document.getElementById('title').value = data.c_title || '';
+                document.getElementById('key').value = data.c_key || '';
+                document.getElementById('content').value = data.c_content || '';
+                document.getElementById('author').value = data.C_author || '';
+                document.getElementById('categories').value = data.c_categories || '';
+            }
+            
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                if (!this.currentData) {
+                    this.showMessage('Veuillez d\'abord charger un cantique', 'error');
+                    return;
+                }
+                
+                const database = document.getElementById('database').value;
+                const cantiqueNumber = this.currentData.c_num; // Utiliser le numéro du cantique chargé
+                
+                const updatedData = {
+                    c_title: document.getElementById('title').value,
+                    c_key: document.getElementById('key').value,
+                    c_content: document.getElementById('content').value,
+                    C_author: document.getElementById('author').value,
+                    c_categories: document.getElementById('categories').value
+                };
+                
+                try {
+                    this.showMessage('Enregistrement en cours...', 'info');
+                    
+                    const response = await fetch(`/api/cantique/${database}/${cantiqueNumber}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de l\'enregistrement');
+                    }
+                    
+                    this.showMessage('✅ Cantique mis à jour avec succès!', 'success');
+                    
+                    // Réinitialiser le formulaire après 2 secondes
+                    setTimeout(() => {
+                        this.resetForm();
+                        this.hideMessage();
+                    }, 2000);
+                    
+                } catch (error) {
+                    this.showMessage(error.message, 'error');
+                }
+            }
+            
+            resetForm() {
+                document.getElementById('correctionForm').reset();
+                document.getElementById('fieldsContainer').style.display = 'none';
+                this.currentData = null;
+                this.hideMessage();
+                this.hideSearchResults();
+                this.showSearchSection(); // Réafficher la section de recherche
+                this.checkFormValidity();
+            }
+            
+            goToSelection() {
+                window.location.href = '/correction_cantique.html';
+            }
+            
+            showMessage(text, type) {
+                const messageEl = document.getElementById('message');
+                messageEl.textContent = text;
+                messageEl.className = `message ${type}`;
+                messageEl.style.display = 'block';
+                
+                if (type === 'info') {
+                    setTimeout(() => this.hideMessage(), 3000);
+                }
+            }
+            
+            hideMessage() {
+                const messageEl = document.getElementById('message');
+                messageEl.style.display = 'none';
+            }
+        }
+        
+        // Initialiser l'application
+        let editor;
+        document.addEventListener('DOMContentLoaded', () => {
+            editor = new CantiqueEditor();
+        });
+    </script>
+</body>
+</html>
