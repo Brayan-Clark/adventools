@@ -13,8 +13,8 @@
       "id": "cantique_fr",
       "name": "Hymnes et Louanges",
       "language": "Français",
-      "file": "hymnes&louanges.db",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/hymnes&louanges.db",
+      "file": "humnes&louanges.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/humnes&louanges.db",
       "size": "1 Mo",
       "isDefault": false
     }
