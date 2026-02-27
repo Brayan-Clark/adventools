@@ -153,6 +153,18 @@
       ]
     },
     {
+      "id": "etb_003",
+      "title": "TARA-PAHAZAVANA",
+      "fileName": "Tara-pahazavana.pdf",
+      "categoryId": "etudes_bibliques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/Tara-pahazavana.pdf",
+      "size": "33.1 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
       "id": "aja_001",
       "title": "SAKAIZA",
       "fileName": "SAKAIZA.pdf",
