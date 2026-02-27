@@ -17,6 +17,33 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/humnes&louanges.db",
       "size": "1 Mo",
       "isDefault": false
+    },
+    {
+      "id": "cantique_ffpm",
+      "name": "Fihirana FFPM",
+      "language": "Malagasy",
+      "file": "fihirana_ffpm.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_ffpm.db",
+      "size": "1 Mo",
+      "isDefault": false
+    },
+    {
+      "id": "cantique_fanampiny",
+      "name": "Fihirana Fanampiny",
+      "language": "Malagasy",
+      "file": "fihirana_fanampiny.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_fanampiny.db",
+      "size": "1 Mo",
+      "isDefault": false
+    },
+    {
+      "id": "cantique_antema",
+      "name": "Fihirana Antema",
+      "language": "Malagasy",
+      "file": "fihirana_antema.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_antema.db",
+      "size": "1 Mo",
+      "isDefault": false
     }
   ]
 }
