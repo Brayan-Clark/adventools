@@ -1,4 +1,4 @@
-import { exportAllAppData, exportUserModifications, importAllAppData, importUserModifications, resetHymnCorrections } from '@/lib/backup-utils';
+import { exportAllAppData, exportUserModifications, importAllAppData, readBackupFile, resetHymnCorrections } from '@/lib/backup-utils';
 import { BIBLE_CONFIGS } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +42,12 @@ export default function Settings() {
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
+
+  // Import states
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importData, setImportData] = useState<any>(null);
+  const [importSummary, setImportSummary] = useState<any[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   const EDS_CLASSES = [
     "Lesona Zaza minono (0-12 volana)",
@@ -159,6 +165,71 @@ export default function Settings() {
         }
       ]
     );
+  };
+
+  const handleStartImport = async () => {
+    const data = await readBackupFile();
+    if (!data) return;
+
+    // The backup could be full backup (with a .data property) or just modifications
+    const actualData = data.data || data;
+    setImportData(actualData);
+
+    // Categorize
+    const summaryMap: Record<string, { label: string, keys: string[] }> = {
+      hymnes: { label: "Fanitsiana Cantiques", keys: [] },
+      etude: { label: "Série d'Études Bibliques", keys: [] },
+      themes: { label: "Thèmes Divers & Versets", keys: [] },
+      notes: { label: "Mes Notes Personnelles", keys: [] },
+      profile: { label: "Profil & Paramètres", keys: [] },
+      others: { label: "Autres données", keys: [] }
+    };
+
+    Object.keys(actualData).forEach(key => {
+      if (key.startsWith('hymne_edit_')) summaryMap.hymnes.keys.push(key);
+      else if (key === 'utiles_etude_serie') summaryMap.etude.keys.push(key);
+      else if (key === 'utiles_themes_divers') summaryMap.themes.keys.push(key);
+      else if (key === 'adventools_notes') summaryMap.notes.keys.push(key);
+      else if (key.startsWith('profile_') || key === 'app_settings') summaryMap.profile.keys.push(key);
+      else summaryMap.others.keys.push(key);
+    });
+
+    const finalSummary = Object.entries(summaryMap)
+      .filter(([_, val]) => val.keys.length > 0)
+      .map(([id, val]) => ({ id, ...val }));
+
+    setImportSummary(finalSummary);
+    // Select all by default
+    setSelectedKeys(finalSummary.map(s => s.id));
+    setIsImportModalVisible(true);
+  };
+
+  const confirmImport = async () => {
+    try {
+      if (!importData) return;
+
+      const keysToImport: string[] = [];
+      importSummary.forEach(group => {
+        if (selectedKeys.includes(group.id)) {
+          keysToImport.push(...group.keys);
+        }
+      });
+
+      if (keysToImport.length === 0) {
+        Alert.alert("Information", "Tsy misy sokajy voafidy.");
+        return;
+      }
+
+      const pairs: [string, string][] = keysToImport.map(k => [k, String(importData[k])]);
+      await AsyncStorage.multiSet(pairs);
+
+      setIsImportModalVisible(false);
+      Alert.alert("Vita", "Tontolo soa aman-tsara ny fanafarana ny fanovana.");
+      loadSettings(); // Refresh UI
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Hadisoana", "Tsy tontolo ny fanafarana.");
+    }
   };
 
   return (
@@ -316,7 +387,7 @@ export default function Settings() {
           <SettingItem
             icon={<Download size={18} color="#64748b" />}
             label="Importer des modifications"
-            onPress={importUserModifications}
+            onPress={handleStartImport}
           />
           <SettingItem
             icon={<RefreshCcw size={18} color="#f87171" />}
@@ -459,6 +530,59 @@ export default function Settings() {
           </View>
         </View>
       </Modal>
+      {/* Import Selection Modal */}
+      <Modal visible={isImportModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[85%] border-t border-slate-800">
+            <View className="flex-row justify-between items-center mb-6 px-2">
+              <View>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Hafarana ny fanovana</Text>
+                <Text className="text-slate-500 mt-1">Safidio izay tianao halaina ao anatin'ilay rakitra</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsImportModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+              <View className="gap-3">
+                {importSummary.map((group) => {
+                  const isSelected = selectedKeys.includes(group.id);
+                  return (
+                    <TouchableOpacity
+                      key={group.id}
+                      onPress={() => {
+                        if (isSelected) setSelectedKeys(selectedKeys.filter(k => k !== group.id));
+                        else setSelectedKeys([...selectedKeys, group.id]);
+                      }}
+                      className={`p-5 rounded-3xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View>
+                          <Text className={`text-base font-bold ${isSelected ? 'text-primary' : 'text-slate-300'}`}>{group.label}</Text>
+                          <Text className="text-xs text-slate-500 mt-1">{group.keys.length} singa ho hafarana</Text>
+                        </View>
+                        <View className={`w-6 h-6 rounded-lg border-2 items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-slate-700'}`}>
+                          {isSelected && <Check size={14} color="white" />}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={confirmImport}
+              className="bg-primary p-5 rounded-[24px] items-center shadow-lg shadow-primary/20 flex-row justify-center"
+            >
+              <Check size={20} color="white" className="mr-2" />
+              <Text className="text-white font-bold text-lg">Hanafatra izao</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }

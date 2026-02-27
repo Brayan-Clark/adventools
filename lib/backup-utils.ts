@@ -38,51 +38,58 @@ export async function exportUserModifications() {
   }
 }
 
-export async function importUserModifications() {
+export async function readBackupFile() {
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/json',
       copyToCacheDirectory: true
     });
 
-    if (result.canceled) return;
+    if (result.canceled) return null;
 
     const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
-    const data = JSON.parse(fileContent);
+    return JSON.parse(fileContent);
+  } catch (error) {
+    console.error("Read Backup Error", error);
+    Alert.alert("Erreur", "Impossible de lire le fichier.");
+    return null;
+  }
+}
 
-    const entries = Object.entries(data);
-    const validPairs: [string, string][] = entries
-      .map(([key, value]) => [key, String(value)]);
+export async function importUserModifications() {
+  // We will now handle this in the UI (modal.tsx) for a better experience with summary
+  // This old version is kept for compatibility or can be removed if fully replaced.
+  const data = await readBackupFile();
+  if (!data) return;
 
-    if (validPairs.length === 0) {
-      Alert.alert("Erreur", "Le fichier est vide ou invalide.");
-      return;
-    }
+  const entries = Object.entries(data);
+  const validPairs: [string, string][] = entries
+    .map(([key, value]) => [key, String(value)]);
 
-    Alert.alert(
-      "Confirmation",
-      `Voulez-vous importer ${validPairs.length} éléments ? Cela pourrait écraser vos modifications actuelles.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Importer",
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiSet(validPairs);
-              Alert.alert("Succès", "Importation terminée avec succès !");
-            } catch (e) {
-              console.error(e);
-              Alert.alert("Erreur", "Échec de l'écriture dans le stockage.");
-            }
+  if (validPairs.length === 0) {
+    Alert.alert("Erreur", "Le fichier est vide ou invalide.");
+    return;
+  }
+
+  Alert.alert(
+    "Confirmation",
+    `Voulez-vous importer ${validPairs.length} éléments ? Cela pourrait écraser vos modifications actuelles.`,
+    [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Importer",
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiSet(validPairs);
+            Alert.alert("Succès", "Importation terminée avec succès !");
+          } catch (e) {
+            console.error(e);
+            Alert.alert("Erreur", "Échec de l'écriture dans le stockage.");
           }
         }
-      ]
-    );
-
-  } catch (error) {
-    console.error("Import Error", error);
-    Alert.alert("Erreur", "Impossible d'importer le fichier. Vérifiez le format.");
-  }
+      }
+    ]
+  );
 }
 export async function resetHymnCorrections() {
   try {

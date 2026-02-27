@@ -10,6 +10,7 @@ import {
   Download,
   RefreshCw,
   Share,
+  Trash2,
   X
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -110,6 +111,7 @@ export default function LesonaSekolySabata() {
   const [readingLesson, setReadingLesson] = useState<WeeklyLesson | null>(null);
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [activeCategory, setActiveCategory] = useState("Lesona Lehibe (+ 35 taona)");
+  const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
 
   // Offline state
   const [downloadedQuarterlies, setDownloadedQuarterlies] = useState<string[]>([]);
@@ -206,11 +208,54 @@ export default function LesonaSekolySabata() {
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const json = await response.json();
       setSelectedQuarterly(json);
+
+      // Try to load lesson titles
+      loadLessonTitles(json);
     } catch (e: any) {
       console.error(e);
       Alert.alert("Hadisoana", `Tsy nahitana ny antsipiriany: ${e.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLessonTitles = async (q: Quarterly) => {
+    try {
+      // 1. Check Offline first
+      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${q.id}`);
+      let titles = { ...lessonTitlesMap };
+      if (offlineDataStr) {
+        const offlineData = JSON.parse(offlineDataStr);
+        Object.keys(offlineData).forEach(id => {
+          if (offlineData[id].title) titles[id] = offlineData[id].title;
+        });
+        setLessonTitlesMap(titles);
+      }
+
+      // 2. Fetch missing titles in the background if needed
+      // For now, let's at least try the current lesson if not available
+      const qId = q.id.replace('mg-ss-', '');
+      const subdomain = q.id.includes('-cq') ? 'inverse' : 'absg';
+
+      // We only fetch a few if they are missing to avoid too many requests
+      const lessonsToFetch = (q.lessons || Array.from({ length: 13 }, (_, i) => ({
+        id: (i + 1).toString().padStart(2, '0')
+      }))).slice(0, 14);
+
+      for (const lesson of lessonsToFetch) {
+        const lId = lesson.id.includes('-') ? lesson.id.split('-').pop()! : lesson.id;
+        if (!titles[lId]) {
+          // Fetch title in background
+          const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/${lId}/index.json`;
+          fetch(lUrl).then(res => res.json()).then(lJson => {
+            if (lJson.title) {
+              setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
+            }
+          }).catch(() => { });
+        }
+      }
+    } catch (e) {
+      console.error("Error loading titles", e);
     }
   };
 
@@ -246,6 +291,30 @@ export default function LesonaSekolySabata() {
     } finally {
       setDownloadingAll(false);
     }
+  };
+
+  const deleteQuarterly = async (qId: string) => {
+    Alert.alert(
+      "Hamafa lesona",
+      "Tena hovonoina ve ny lesona rehetra voasintona ho an'ity telovolana ity?",
+      [
+        { text: "Hanafoana", style: "cancel" },
+        {
+          text: "Eny, fafao",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem(`${OFFLINE_LESSONS_PREFIX}${qId}`);
+              setDownloadedQuarterlies(prev => prev.filter(id => id !== qId));
+              Alert.alert("Vita", "Voafafa ny lesona voasintona.");
+            } catch (e) {
+              console.error(e);
+              Alert.alert("Hadisoana", "Tsy voafafa ny lesona.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const fetchWeeklyLesson = async (quarterlyId: string, lessonId: string) => {
@@ -548,22 +617,24 @@ export default function LesonaSekolySabata() {
             >
               {readingLesson.segments?.map((s, idx) => {
                 const isActive = activeSegmentIdx === idx;
-                // Get shorthand day name if possible or just faha-X
-                const dayTitle = s.title?.split(' ').slice(-1)[0] || `Andro ${idx + 1}`;
+                // Use full title but with ellipsis if needed
+                const dayTitle = s.title || `Andro ${idx + 1}`;
 
                 return (
                   <TouchableOpacity
                     key={s.id}
                     onPress={() => setActiveSegmentIdx(idx)}
-                    className={`px-6 py-4 rounded-[20px] mr-3 border-2 items-center justify-center min-w-[100px] ${isActive ? 'bg-primary border-primary shadow-lg shadow-primary/30' : 'bg-slate-800 border-slate-700'}`}
+                    className={`px-4 py-4 rounded-[20px] mr-3 border-2 items-center justify-center min-w-[120px] max-w-[200px] ${isActive ? 'bg-primary border-primary shadow-lg shadow-primary/30' : 'bg-slate-800 border-slate-700'}`}
                   >
                     <Text
-                      className={`text-xs font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-400'}`}
+                      className={`text-[10px] font-bold uppercase tracking-widest text-center ${isActive ? 'text-white' : 'text-slate-400'}`}
                       style={{ fontFamily: 'Lexend_600SemiBold' }}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
                       {dayTitle}
                     </Text>
-                    <Text className={`text-[10px] mt-1 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>{s.date || ""}</Text>
+                    <Text className={`text-[9px] mt-1 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>{s.date || ""}</Text>
                   </TouchableOpacity>
                 );
               }) || null}
@@ -620,22 +691,33 @@ export default function LesonaSekolySabata() {
               <Text className="text-white font-bold text-lg mb-1">{selectedQuarterly.title}</Text>
               <Text className="text-slate-500 text-xs leading-5" numberOfLines={3}>{selectedQuarterly.description}</Text>
 
-              <TouchableOpacity
-                onPress={() => downloadFullQuarterly(selectedQuarterly)}
-                disabled={downloadingAll || (isDownloaded && !isCurrent)}
-                className={`flex-row items-center mt-4 px-4 py-2 rounded-full self-start ${isDownloaded ? 'bg-emerald-500/10' : 'bg-primary/10'}`}
-              >
-                {downloadingAll ? (
-                  <ActivityIndicator size="small" color="#3b82f6" />
-                ) : isDownloaded ? (
-                  <CheckCircle size={14} color="#10b981" />
-                ) : (
-                  <Download size={14} color="#3b82f6" />
+              <View className="flex-row items-center mt-4">
+                <TouchableOpacity
+                  onPress={() => downloadFullQuarterly(selectedQuarterly)}
+                  disabled={downloadingAll || (isDownloaded && !isCurrent)}
+                  className={`flex-row items-center px-4 py-2 rounded-full self-start ${isDownloaded ? 'bg-emerald-500/10' : 'bg-primary/10'}`}
+                >
+                  {downloadingAll ? (
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  ) : isDownloaded ? (
+                    <CheckCircle size={14} color="#10b981" />
+                  ) : (
+                    <Download size={14} color="#3b82f6" />
+                  )}
+                  <Text className={`ml-2 text-[10px] font-bold ${isDownloaded ? 'text-emerald-500' : 'text-primary'}`}>
+                    {isDownloaded ? (isCurrent ? "Havaozina" : "Eny an-toerana") : "Sintony ny rehetra"}
+                  </Text>
+                </TouchableOpacity>
+
+                {isDownloaded && (
+                  <TouchableOpacity
+                    onPress={() => deleteQuarterly(selectedQuarterly.id)}
+                    className="ml-3 w-8 h-8 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20"
+                  >
+                    <Trash2 size={14} color="#ef4444" />
+                  </TouchableOpacity>
                 )}
-                <Text className={`ml-2 text-[10px] font-bold ${isDownloaded ? 'text-emerald-500' : 'text-primary'}`}>
-                  {isDownloaded ? (isCurrent ? "Havaozina" : "Eny an-toerana") : "Sintony ny rehetra"}
-                </Text>
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -667,16 +749,19 @@ export default function LesonaSekolySabata() {
               startDate: "", endDate: "", index: "",
               name: (i + 1).toString().padStart(2, '0')
             }))).map((lesson, index) => {
-              const isToday = isLessonToday(lesson);
+              const lessonNum = lesson.id.split('-').pop() || (index + 1).toString().padStart(2, '0');
+              const isToday = lesson.startDate ? isLessonToday(lesson) : lessonNum === getTodayLessonId(selectedQuarterly);
+              const actualTitle = lessonTitlesMap[lessonNum] || lesson.title;
+
               return (
                 <TouchableOpacity
                   key={lesson.id}
-                  onPress={() => fetchWeeklyLesson(selectedQuarterly.id, lesson.id.split('-').pop() || (index + 1).toString().padStart(2, '0'))}
-                  className={`mb-4 rounded-[28px] border overflow-hidden p-[1px] ${isToday ? 'bg-primary/40' : 'bg-slate-800/30'}`}
+                  onPress={() => fetchWeeklyLesson(selectedQuarterly.id, lessonNum)}
+                  className={`mb-4 rounded-[28px] border overflow-hidden p-[1px] ${isToday ? 'bg-primary border-primary' : 'bg-slate-800/30'}`}
                 >
-                  <View className={`rounded-[27px] p-5 flex-row items-center bg-slate-900`}>
-                    <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${isToday ? 'bg-primary/20 border border-primary/20' : 'bg-slate-800'}`}>
-                      <Text className={`text-lg font-bold ${isToday ? 'text-primary' : 'text-slate-400'}`}>{index + 1}</Text>
+                  <View className={`rounded-[27px] p-5 flex-row items-center ${isToday ? 'bg-primary/10' : 'bg-slate-900'}`}>
+                    <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${isToday ? 'bg-primary' : 'bg-slate-800'}`}>
+                      <Text className={`text-lg font-bold ${isToday ? 'text-white' : 'text-slate-400'}`}>{index + 1}</Text>
                     </View>
 
                     <View className="flex-1">
@@ -686,17 +771,17 @@ export default function LesonaSekolySabata() {
                           numberOfLines={1}
                           style={{ fontFamily: isToday ? 'Lexend_700Bold' : 'Lexend_600SemiBold' }}
                         >
-                          {lesson.title}
+                          {actualTitle}
                         </Text>
                       </View>
-                      <Text className={`text-[10px] uppercase tracking-tighter ${isToday ? 'text-primary' : 'text-slate-500'}`}>
+                      <Text className={`text-[10px] uppercase tracking-tighter ${isToday ? 'text-blue-400' : 'text-slate-500'}`}>
                         {lesson.startDate ? `${lesson.startDate} — ${lesson.endDate}` : `Herinandro faha ${index + 1}`}
                       </Text>
                     </View>
 
                     {isToday ? (
-                      <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center">
-                        <ChevronRight size={18} color="#3b82f6" />
+                      <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                        <ChevronRight size={18} color="white" />
                       </View>
                     ) : (
                       <ChevronRight size={18} color="#475569" />

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { BookOpen, ChevronRight, Music, Plus, Trash2 } from 'lucide-react-native';
+import { BookOpen, ChevronRight, Music, Plus } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -199,17 +199,6 @@ export default function HymneManager() {
                 <ChevronRight size={16} color="#475569" className="ml-2" />
               </TouchableOpacity>
 
-              {!item.isDefault && (
-                <View className="flex-row items-center pr-2">
-                  <View className="w-[1px] h-8 bg-slate-800 mr-2" />
-                  <TouchableOpacity
-                    onPress={() => deleteHymnSource(item)}
-                    className="w-10 h-10 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20"
-                  >
-                    <Trash2 size={16} color="#f87171" />
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
           ))}
 
