@@ -46,6 +46,15 @@
       "isDefault": false
     },
     {
+      "id": "DIEM_SQLite3",
+      "name": "DIEM",
+      "file": "DIEM.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/DIEM.SQLite3",
+      "isDefault": false,
+      "language": "Malagasy",
+      "size": "24.0 MB"
+    },
+    {
       "id": "ESS_SQLite3",
       "name": "ESS",
       "language": "German",
