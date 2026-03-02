@@ -136,8 +136,8 @@ export default function ThemesDivers() {
     if (matches.length > 0) {
       const [match, book, chapter, verses] = matches[0];
       try {
-        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1");
-        if (res && res.bookId) {
+        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1", true);
+        if (res && res.text && res.bookId) {
           router.push({
             pathname: "/bible/reader",
             params: {
@@ -150,7 +150,8 @@ export default function ThemesDivers() {
             }
           });
         } else {
-          Alert.alert("Erreur", "Impossible de trouver ce verset dans la Bible.");
+          const bibleName = res?.bibleName || globalSettings.bibleVersion;
+          Alert.alert("Tsy hita", `Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Verset introuvable)`);
           router.push("/bible");
         }
       } catch (e) {

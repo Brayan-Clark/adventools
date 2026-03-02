@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Adventools",
-    "slug": "adventools-mobile",
+    "slug": "adventools",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "adventoolsmobile",
+    "scheme": "adventools",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -21,7 +21,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#111621"
       },
-      "package": "com.adventools.mobile",
+      "package": "com.adventools",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

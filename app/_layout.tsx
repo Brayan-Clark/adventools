@@ -25,6 +25,7 @@ SplashScreen.preventAutoHideAsync();
 
 import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
 
+import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider } from '@/lib/settings-context';
 
 export default function RootLayout() {
@@ -46,6 +47,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  useEffect(() => {
+    initBibleMetadata();
+  }, []);
 
   useEffect(() => {
     if (loaded) {

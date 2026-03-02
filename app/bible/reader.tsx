@@ -13,7 +13,7 @@ import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } fr
 
 export default function BibleReader() {
   const router = useRouter();
-  const { bookId, bookName, testament, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
+  const { bookId, bookName, testament, testamentName, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
   const [chapter, setChapter] = useState(Number(chapterParam) || 1);
   const [chaptersCount, setChaptersCount] = useState(0);
   const [verses, setVerses] = useState<any[]>([]);
@@ -35,6 +35,7 @@ export default function BibleReader() {
   const [wordSelectMode, setWordSelectMode] = useState(false);
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
   const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
+  const [highlightVerse, setHighlightVerse] = useState<number | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -188,6 +189,14 @@ export default function BibleReader() {
         // Find index of the verse
         const verseIndex = verses.findIndex(v => Number(v.verse) === targetVerse);
         if (verseIndex !== -1) {
+          // Trigger highlight
+          setHighlightVerse(targetVerse);
+
+          // Clear highlight after 3 seconds
+          const timer = setTimeout(() => {
+            setHighlightVerse(null);
+          }, 3000);
+
           // Delay to ensure FlatList is rendered
           setTimeout(() => {
             flatListRef.current?.scrollToIndex({
@@ -196,6 +205,8 @@ export default function BibleReader() {
               viewPosition: 0.2 // Position at 20% from top
             });
           }, 300);
+
+          return () => clearTimeout(timer);
         }
       }
     }
@@ -348,7 +359,7 @@ export default function BibleReader() {
               {/* 3. Section Headers */}
               <View className="items-center mb-10 pt-2">
                 <Text className="text-[10px] font-bold uppercase text-[#195de6] tracking-[0.3em] mb-3">
-                  {Number(testament) === 2 ? 'Nouvel Testament' : 'Ancien Testament'}
+                  {testamentName || (Number(testament) === 2 ? 'Nouvel Testament' : 'Ancien Testament')}
                 </Text>
                 <Text className="text-[26px] font-bold text-white text-center mb-6 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
                   {currentBookName} {chapter}
@@ -385,9 +396,10 @@ export default function BibleReader() {
                 activeOpacity={0.7}
                 className={cn(
                   "mb-4 rounded-xl px-2 py-1 relative",
-                  wordSelectMode && Number(selectedVerse?.verse) === Number(v.verse) ? "border-2 border-blue-500/50 bg-blue-500/5" : ""
+                  wordSelectMode && Number(selectedVerse?.verse) === Number(v.verse) ? "border-2 border-blue-500/50 bg-blue-500/5" : "",
+                  highlightVerse === Number(v.verse) ? "bg-blue-500/20 shadow-lg shadow-blue-500/30" : ""
                 )}
-                style={bg ? { backgroundColor: bg } : {}}
+                style={bg && highlightVerse !== Number(v.verse) ? { backgroundColor: bg } : {}}
               >
                 {isBookmarked && (
                   <View className="absolute -left-5 top-1">

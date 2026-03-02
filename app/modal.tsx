@@ -1,5 +1,5 @@
 import { exportAllAppData, exportUserModifications, importAllAppData, readBackupFile, resetHymnCorrections } from '@/lib/backup-utils';
-import { BIBLE_CONFIGS } from '@/lib/bible';
+import { getAvailableBibles } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,6 +48,7 @@ export default function Settings() {
   const [importData, setImportData] = useState<any>(null);
   const [importSummary, setImportSummary] = useState<any[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [installedBibles, setInstalledBibles] = useState<any[]>([]);
 
   const EDS_CLASSES = [
     "Lesona Zaza minono (0-12 volana)",
@@ -65,7 +66,18 @@ export default function Settings() {
   useEffect(() => {
     loadSettings();
     syncDepartments();
+    loadBibles();
   }, []);
+
+  const loadBibles = async () => {
+    try {
+      const list = await getAvailableBibles();
+      setInstalledBibles(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error("Failed to load available bibles:", error);
+      setInstalledBibles([]);
+    }
+  };
 
   const syncDepartments = async () => {
     try {
@@ -101,7 +113,10 @@ export default function Settings() {
 
       if (name !== null) setUserName(name);
       if (image !== null) setUserImage(image);
-      if (depts !== null) setUserDepartments(JSON.parse(depts));
+      if (depts !== null) {
+        const parsed = JSON.parse(depts);
+        if (Array.isArray(parsed)) setUserDepartments(parsed);
+      }
       if (eds !== null) setUserEDS(eds);
     } catch (e) {
       console.error('Failed to load settings', e);
@@ -345,14 +360,18 @@ export default function Settings() {
           <SettingItem
             icon={<FileText size={18} color="#64748b" />}
             label="Version de Bible par défaut"
-            value={BIBLE_CONFIGS[globalSettings.bibleVersion]?.name || globalSettings.bibleVersion}
+            value={(installedBibles || []).find(b => b?.id === globalSettings?.bibleVersion)?.name || globalSettings?.bibleVersion || "MG65"}
             onPress={() => {
+              if (!installedBibles || installedBibles.length === 0) {
+                Alert.alert("Info", "Chargement des versions...");
+                return;
+              }
               Alert.alert(
                 "Version par défaut",
                 "Choisissez la version de la Bible à ouvrir par défaut",
-                Object.entries(BIBLE_CONFIGS).map(([code, config]) => ({
-                  text: `${config.name} (${code})`,
-                  onPress: () => updateSettings({ bibleVersion: code })
+                installedBibles.map((config) => ({
+                  text: `${config.name || config.id} (${config.id})`,
+                  onPress: () => updateSettings({ bibleVersion: config.id })
                 }))
               )
             }}

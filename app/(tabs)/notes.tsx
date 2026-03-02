@@ -1,17 +1,14 @@
-import { loadDatabase } from '@/lib/database';
+import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Bold, BookOpen, Check, Code, Edit, Eye, Heading, Italic, List, Plus, Quote, Search, StickyNote, Trash2, X, FolderPlus, Folder, Highlighter, Palette, Share2, ListOrdered } from 'lucide-react-native';
+import { ArrowLeft, Bold, BookOpen, Check, Code, Edit, Folder, FolderPlus, Heading, Highlighter, Italic, List, Plus, Quote, Search, Share2, StickyNote, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActionSheetIOS, ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchVerseContent, BIBLE_REGEX } from '@/lib/bible';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 
 const HIGHLIGHT_COLORS = [
   { id: 'yellow', bg: 'rgba(253, 224, 71, 0.3)', text: '#fde047', border: 'rgba(253, 224, 71, 0.4)' },
@@ -20,7 +17,7 @@ const HIGHLIGHT_COLORS = [
   { id: 'red', bg: 'rgba(248, 113, 113, 0.3)', text: '#f87171', border: 'rgba(248, 113, 113, 0.4)' },
 ];
 
-const TEXT_COLORS = []; // Désactivé temporairement
+const TEXT_COLORS: any[] = []; // Désactivé temporairement
 
 const NOTE_COLORS = [
   { label: 'Slate', value: '#1e293b', border: '#334155' },
@@ -206,8 +203,13 @@ export default function Notes() {
       if (!detectedVerse) return;
       setVerseLoading(true);
       try {
-        const r = await fetchVerseContent(globalSettings.bibleVersion, detectedVerse.book, detectedVerse.chapter, detectedVerse.verses);
-        setVerseContent(r ? r.text : "Introuvable");
+        const r = await fetchVerseContent(globalSettings.bibleVersion, detectedVerse.book, detectedVerse.chapter, detectedVerse.verses, true);
+        if (r && r.text) {
+          setVerseContent(r.text);
+        } else {
+          const bibleName = r?.bibleName || globalSettings.bibleVersion;
+          setVerseContent(`Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Non trouvé dans votre version choisie)`);
+        }
         if (r?.bookId) {
           setDetectedVerse(prev => prev ? { ...prev, bookId: r.bookId } : null);
         }

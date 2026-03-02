@@ -45,7 +45,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = await AsyncStorage.getItem('app_global_settings');
       if (stored) {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        }
       }
     } catch (e) {
       console.error('Failed to load global settings', e);

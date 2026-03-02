@@ -1,4 +1,4 @@
-import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
+import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -381,14 +381,33 @@ export default function CroyancesPage() {
 
       const [match, book, chapter, verses] = matches[0];
       try {
-        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1", true);
-        if (res) {
+        const bibles = await getAvailableBibles();
+        // Priority logic:
+        // 1. Bible in the matching language (French if lang === 'FR')
+        // 2. Default Bible from settings
+        // 3. Any available Bible (usually MG65)
+        const uiLang = lang === 'FR' ? 'french' : 'malagasy';
+        const bestBible = bibles.find(b => b.language.toLowerCase() === uiLang)
+          || bibles.find(b => b.id === globalSettings.bibleVersion)
+          || bibles[0];
+
+        const res = await fetchVerseContent(bestBible.id, book, chapter, verses || "1", true);
+        if (res && res.text) {
           setVerseContent(res.text);
+          // Update title with the version name if it's not the default one to be clear
+          if (bestBible.id !== 'MG') {
+            setVerseTitle(`${ref} (${bestBible.id})`);
+          }
         } else {
-          setVerseContent("Tsy hita ity andininy ity.");
+          const bibleName = res?.bibleName || bestBible.name;
+          if (lang === 'FR') {
+            setVerseContent(`Ce verset n'est pas disponible dans votre version choisie : ${bibleName}.`);
+          } else {
+            setVerseContent(`Tsy hita ity andininy ity ao amin'ny Baiboly ${bibleName} ampiasainao.`);
+          }
         }
       } catch (e) {
-        setVerseContent("Hadisoana teo am-pamakiana ny Baiboly.");
+        setVerseContent(lang === 'FR' ? "Hadisoana teo am-pamakiana ny Baiboly frantsay." : "Hadisoana teo am-pamakiana ny Baiboly.");
       } finally {
         setLoadingVerse(false);
       }

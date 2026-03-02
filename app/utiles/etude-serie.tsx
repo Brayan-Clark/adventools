@@ -113,8 +113,8 @@ export default function EtudeSerie() {
     if (matches.length > 0) {
       const [match, book, chapter, verses] = matches[0];
       try {
-        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1");
-        if (res && res.bookId) {
+        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1", true);
+        if (res && res.text && res.bookId) {
           router.push({
             pathname: "/bible/reader",
             params: {
@@ -127,7 +127,8 @@ export default function EtudeSerie() {
             }
           });
         } else {
-          Alert.alert("Erreur", "Verset introuvable.");
+          const bibleName = res?.bibleName || globalSettings.bibleVersion;
+          Alert.alert("Tsy hita", `Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Verset introuvable)`);
         }
       } catch (e) { console.error(e); }
     } else {

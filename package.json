@@ -7,7 +7,9 @@
     "android": "npx expo run:android",
     "ios": "npx expo run:ios",
     "web": "npx expo start --web",
-    "release:a": "npx expo run:android --variant release"
+    "release:a": "npx expo run:android --variant release",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:final": "eas build --platform android --profile production"
   },
   "dependencies": {
     "@expo-google-fonts/lexend": "^0.4.1",

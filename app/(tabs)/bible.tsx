@@ -56,53 +56,69 @@ export default function Bible() {
         // Cloud Schema?
         const isCloudSchema = tables.some((t: any) => t.name === 'books');
 
-        if (isCloudSchema) {
-          // Fetch Testaments
-          let testamentData: any[] = [];
-          if (tables.some((t: any) => t.name === 'testaments')) {
-            testamentData = await db.getAllAsync(`SELECT id, name FROM testaments ORDER BY id ASC`);
-          } else {
-            testamentData = [
-              { id: 1, name: "Testamenta Taloha" },
-              { id: 2, name: "Testamenta Vaovao" }
-            ];
-          }
-          setTestaments(testamentData);
+        let bookData: any[] = [];
+        let testamentData: any[] = [];
 
+        if (isCloudSchema) {
           // Fetch Books from cloud schema using testament_id
-          const bookData: any = await db.getAllAsync(`
+          bookData = await db.getAllAsync(`
             SELECT book_number as id, long_name as name, testament_id as testamentId
             FROM books 
             ORDER BY book_number ASC
           `);
-          setBooks(bookData || []);
+
+          // Fetch Testaments
+          if (tables.some((t: any) => t.name === 'testaments')) {
+            testamentData = await db.getAllAsync(`SELECT id, name FROM testaments ORDER BY id ASC`);
+          }
         } else {
           // Legacy Schema
           const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
           const testamentTable = tables.find((t: any) => t.name.endsWith("_testamenta"))?.name;
 
-          // Fetch Testaments
-          let testamentData = [];
-          if (testamentTable) {
-            testamentData = await db.getAllAsync(`SELECT id, test_name as name FROM ${testamentTable} ORDER BY id ASC`) as any[];
-          } else {
-            testamentData = [
-              { id: 1, name: "Ancien Testament" },
-              { id: 2, name: "Nouveau Testament" }
-            ];
-          }
-          setTestaments(testamentData);
-
           // Fetch Books
           if (bookTable) {
-            const result: any = await db.getAllAsync(`
+            bookData = await db.getAllAsync(`
               SELECT id, b_name as name, b_testid as testamentId 
               FROM ${bookTable} 
               ORDER BY id ASC
             `);
-            setBooks(result || []);
+          }
+
+          // Fetch Testaments
+          if (testamentTable) {
+            testamentData = await db.getAllAsync(`SELECT id, test_name as name FROM ${testamentTable} ORDER BY id ASC`) as any[];
           }
         }
+
+        setBooks(bookData || []);
+
+        // Dynamic Testament Logic:
+        // Ensure ALL testament IDs present in books are also in the testaments list
+        const uniqueTestamentIds = [...new Set((bookData || []).map((b: any) => b.testamentId))].filter(id => id !== null && id !== undefined);
+
+        const finalTestaments: any[] = [...testamentData];
+
+        uniqueTestamentIds.forEach(id => {
+          if (!finalTestaments.find(t => t.id === id)) {
+            let name = "";
+            if (id === 1) name = isCloudSchema ? "Testamenta Taloha" : "Ancien Testament";
+            else if (id === 2) name = isCloudSchema ? "Testamenta Vaovao" : "Nouveau Testament";
+            else if (id === 3) name = "Deutérocanonique / Autres";
+            else name = `Autre (${id})`;
+
+            finalTestaments.push({ id, name });
+          }
+        });
+
+        // Ensure we at least have 1 and 2 if nothing found (fallback)
+        if (finalTestaments.length === 0) {
+          finalTestaments.push({ id: 1, name: isCloudSchema ? "Testamenta Taloha" : "Ancien Testament" });
+          finalTestaments.push({ id: 2, name: isCloudSchema ? "Testamenta Vaovao" : "Nouveau Testament" });
+        }
+
+        finalTestaments.sort((a, b) => a.id - b.id);
+        setTestaments(finalTestaments);
       } catch (e) {
         console.error(e);
       } finally {
@@ -268,7 +284,7 @@ export default function Bible() {
                 <SectionHeader title={testament.name} />
                 <View className="flex-row flex-wrap justify-between pb-6">
                   {booksInSection.map((book) => (
-                    <BookGridItem key={book.id} book={book} lang={lang} />
+                    <BookGridItem key={book.id} book={book} lang={lang} testamentName={testament.name} />
                   ))}
                 </View>
               </View>
@@ -301,6 +317,7 @@ export default function Bible() {
                         bookId: v.bookId,
                         bookName: v.bookName,
                         testament: v.testament,
+                        testamentName: testaments.find(t => t.id === v.testament)?.name || "",
                         chapter: v.chapter,
                         verse: v.verse,
                         lang: lang
@@ -384,14 +401,20 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function BookGridItem({ book, lang }: any) {
+function BookGridItem({ book, lang, testamentName }: any) {
   const router = useRouter();
 
   return (
     <TouchableOpacity
       onPress={() => router.push({
         pathname: "/bible/reader",
-        params: { bookId: book.id, bookName: book.name, testament: book.testamentId, lang: lang }
+        params: {
+          bookId: book.id,
+          bookName: book.name,
+          testament: book.testamentId,
+          lang: lang,
+          testamentName: testamentName
+        }
       })}
       activeOpacity={0.7}
       className="w-[48%] bg-[#0f172a] border border-slate-800 py-5 px-3 rounded-2xl mb-3 items-center justify-center shadow-sm"

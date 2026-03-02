@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import { loadDatabase } from './database';
 
 export interface BibleConfig {
@@ -25,6 +26,7 @@ export const DB_SOURCES: Record<string, any> = {
 };
 
 export const BOOK_MAP: Record<string, string> = {
+  // Malagasy
   'gen': 'Genesisy', 'eks': 'Eksodosy', 'lev': 'Levitikosy', 'nom': 'Nomery', 'deo': 'Deotoronomia',
   'jos': 'Josoa', 'mpits': 'Mpitsara', 'rota': 'Rota', '1sam': '1 Samoela', '2sam': '2 Samoela',
   '1mpanj': '1 Mpanjaka', '2mpanj': '2 Mpanjaka', '1tant': '1 Tantara', '2tant': '2 Tantara',
@@ -39,14 +41,101 @@ export const BOOK_MAP: Record<string, string> = {
   '1tes': '1 Tesaloniana', '2tes': '2 Tesaloniana', '1tim': '1 Timoty', '2tim': '2 Timoty',
   'tit': 'Titosy', 'file': 'Filemona', 'heb': 'Hebreo', 'jak': 'Jakoba',
   '1pet': '1 Petera', '2pet': '2 Petera', '1jao': '1 Jaona', '2jao': '2 Jaona', '3jao': '3 Jaona',
-  'jod': 'Joda', 'apok': 'Apokalypsy'
+  'jod': 'Joda', 'apok': 'Apokalypsy',
+  // French
+  'genèse': 'Genesisy', 'exode': 'Eksodosy', 'lévitique': 'Levitikosy', 'nombres': 'Nomery', 'deutéronome': 'Deotoronomia',
+  'josué': 'Josoa', 'juges': 'Mpitsara', 'ruth': 'Rota', 'samuel': '1 Samoela', 'rois': '1 Mpanjaka',
+  'chroniques': '1 Tantara', 'esdras': 'Ezra', 'néhémie': 'Nehemia', 'esther': 'Estera', 'psaumes': 'Salamo',
+  'proverbes': 'Ohabolana', 'ecclésiaste': 'Mpitoriteny', 'cantique': "Tonon-kiran'i Solomona", 'ésaïe': 'Isaia',
+  'jérémie': 'Jeremia', 'lamentations': 'Fitomaniana', 'ézéchiel': 'Ezekiela', 'daniel': 'Daniela',
+  'osée': 'Hosea', 'joël': 'Joela', 'michée': 'Mika', 'habacuc': 'Habakoka', 'sophonie': 'Zefania',
+  'aggée': 'Hagay', 'zacharie': 'Zakaria', 'malachie': 'Malakia', 'matthieu': 'Matio', 'marc': 'Marka',
+  'luc': 'Lioka', 'jean': 'Jaona', 'actes': "Asan'ny Apostoly", 'romains': 'Romana', 'corinthiens': '1 Korintiana',
+  'galates': 'Galatiana', 'éphésiens': 'Efesiana', 'philippiens': 'Filipiana', 'colossiens': 'Kolosiana',
+  'thessaloniciens': '1 Tesaloniana', 'timothée': '1 Timoty', 'tite': 'Titosy', 'philémon': 'Filemona',
+  'hébreux': 'Hebreo', 'jacques': 'Jakoba', 'pierre': '1 Petera', 'jude': 'Joda', 'apocalypse': 'Apokalypsy',
+  // English (Short & Common)
+  'genesis': 'Genesisy', 'exodus': 'Eksodosy', 'leviticus': 'Levitikosy', 'numbers': 'Nomery', 'deuteronomy': 'Deotoronomia',
+  'joshua': 'Josoa', 'judges': 'Mpitsara', 'psalms': 'Salamo', 'proverbs': 'Ohabolana', 'ecclesiastes': 'Mpitoriteny',
+  'song': "Tonon-kiran'i Solomona", 'isaiah': 'Isaia', 'jeremiah': 'Jeremia', 'ezekiel': 'Ezekiela', 'hosea': 'Hosea',
+  'micah': 'Mika', 'habakkuk': 'Habakoka', 'zephaniah': 'Zefania', 'haggai': 'Hagay', 'zechariah': 'Zakaria',
+  'malachi': 'Malakia', 'matthew': 'Matio', 'mark': 'Marka', 'luke': 'Lioka', 'john': 'Jaona', 'acts': "Asan'ny Apostoly",
+  'romans': 'Romana', 'corinthians': '1 Korintiana', 'galatians': 'Galatiana', 'ephesians': 'Efesiana',
+  'philippians': 'Philippiana', 'colossians': 'Kolosiana', 'thessalonians': '1 Tesaloniana', 'timothy': '1 Timoty',
+  'titus': 'Titosy', 'philemon': 'Filemona', 'hebrews': 'Hebreo', 'james': 'Jakoba', 'peter': '1 Petera', 'revelation': 'Apokalypsy'
 };
 
-const BIBLE_BOOKS = Object.keys(BOOK_MAP).join('|') + '|' + Object.values(BOOK_MAP).join('|') + '|Genesisy|Eksodosy|Levitikosy|Nomery|Deoteronomia|Josoa|Mpitsara|Rota|1Samoela|2Samoela|1Mpanjaka|2Mpanjaka|1Tantara|2Tantara|Ezra|Nehemia|Estera|Joba|Salamo|Ohabolana|Mpitoriteny|Tonon-kiran\'i Solomona|Isaia|Jeremia|Fitomaniana|Ezekiela|Daniela|Hosea|Joela|Amosa|Obadia|Jona|Mika|Nahoma|Habakoka|Zefania|Hagay|Zakaria|Malakia|Matio|Marka|Lioka|Jaona|Asan\'ny Apostoly|Romana|Romanina|1Korintiana|2Korintiana|Galatiana|Efesiana|Filipiana|Kolosiana|1Tesaloniana|2Tesaloniana|1Timoty|2Timoty|Titosy|Filemona|Hebreo|Jakoba|1Petera|2Petera|1Jaona|2Jaona|3Jaona|Joda|Apokalypsy|Zak';
+const BIBLE_BOOKS_ARRAY = [
+  ...Object.keys(BOOK_MAP),
+  ...Object.values(BOOK_MAP),
+  'Genesisy', 'Eksodosy', 'Levitikosy', 'Nomery', 'Deotoronomia', 'Josoa', 'Mpitsara', 'Rota', '1 Samoela', '2 Samoela', '1 Mpanjaka', '2 Mpanjaka', '1 Tantara', '2 Tantara', 'Ezra', 'Nehemia', 'Estera', 'Joba', 'Salamo', 'Ohabolana', 'Mpitoriteny', "Tonon-kiran'i Solomona", 'Isaia', 'Jeremia', 'Fitomaniana', 'Ezekiela', 'Daniela', 'Hosea', 'Joela', 'Amosa', 'Obadia', 'Jona', 'Mika', 'Nahoma', 'Habakoka', 'Zefania', 'Hagay', 'Zakaria', 'Malakia', 'Matio', 'Marka', 'Lioka', 'Jaona', "Asan'ny Apostoly", 'Romana', '1 Korintiana', '2 Korintiana', 'Galatiana', 'Efesiana', 'Filipiana', 'Kolosiana', '1 Tesaloniana', '2 Tesaloniana', '1 Timoty', '2 Timoty', 'Titosy', 'Filemona', 'Hebreo', 'Jakoba', '1 Petera', '2 Petera', '1 Jaona', '2 Jaona', '3 Jaona', 'Joda', 'Apokalypsy',
+  'Genèse', 'Exode', 'Lévitique', 'Nombres', 'Deutéronome', 'Josué', 'Juges', 'Ruth', '1 Samuel', '2 Samuel', '1 Rois', '2 Rois', '1 Chroniques', '2 Chroniques', 'Esdras', 'Néhémie', 'Esther', 'Psaumes', 'Proverbes', 'Ésaïe', 'Jérémie', 'Ézéchiel', 'Osée', 'Michée', 'Habacuc', 'Sophonie', 'Aggée', 'Zacharie', 'Malachie', 'Matthieu', 'Marc', 'Jean', 'Actes', 'Apocalypse', 'Timothée', 'Hébreux'
+];
 
-export const BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
+let DYNAMIC_BOOK_NAMES = new Set<string>();
 
-import * as FileSystem from 'expo-file-system/legacy';
+export const updateBibleRegex = () => {
+  const allNames = [
+    ...BIBLE_BOOKS_ARRAY,
+    ...DYNAMIC_BOOK_NAMES
+  ];
+
+  const pattern = [...new Set(allNames)]
+    .filter(n => n && n.length > 2) // avoid too short matches like "No" or "Jo" if accidentally picked
+    .sort((a, b) => b.length - a.length) // Longest first for regex matching
+    .join('|')
+    .replace(/\+/g, '\\+')
+    .replace(/\?/g, '\\?')
+    .replace(/\//g, '\\/')
+    .replace(/\./g, '\\.');
+
+  BIBLE_REGEX = new RegExp(`\\b(${pattern})\\.?\\s{0,2}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
+};
+
+const BIBLE_BOOKS = BIBLE_BOOKS_ARRAY.join('|');
+export let BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
+
+/**
+ * Initializes Bible metadata by crawling all installed Bible databases.
+ */
+export async function initBibleMetadata() {
+  try {
+    const bibles = await getAvailableBibles();
+    const newNames = new Set<string>();
+
+    for (const config of bibles) {
+      try {
+        const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+        const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
+        const isNewSchema = tables.some(t => t.name === 'books');
+
+        if (isNewSchema) {
+          const books: any[] = await db.getAllAsync("SELECT long_name, short_name FROM books");
+          books.forEach(b => {
+            if (b.long_name) newNames.add(b.long_name);
+            if (b.short_name) newNames.add(b.short_name);
+          });
+        } else {
+          const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
+          if (bookTable) {
+            const books: any[] = await db.getAllAsync(`SELECT b_name FROM ${bookTable}`);
+            books.forEach(b => {
+              if (b.b_name) newNames.add(b.b_name);
+            });
+          }
+        }
+      } catch (e) { }
+    }
+
+    if (newNames.size > 0) {
+      DYNAMIC_BOOK_NAMES = newNames;
+      updateBibleRegex();
+      console.log(`[Bible] Detected ${newNames.size} dynamic book names.`);
+    }
+  } catch (error) {
+    console.error('[Bible] Init error:', error);
+  }
+}
 
 /**
  * Ensures a bible file is available locally, downloads it if missing and URL is provided.
@@ -90,9 +179,10 @@ export async function getAvailableBibles(): Promise<BibleConfig[]> {
   try {
     const stored = await AsyncStorage.getItem('adventools_bibles_installed');
     if (stored) {
-      const downloaded = JSON.parse(stored) as BibleConfig[];
-      // Filter out those that are "Malagasy" if we want to avoid duplicates or enforce our DEFAULT_BIBLE
-      list.push(...downloaded.filter(b => b.id !== DEFAULT_BIBLE.id));
+      const downloaded = JSON.parse(stored);
+      if (Array.isArray(downloaded)) {
+        list.push(...downloaded.filter(b => b.id !== DEFAULT_BIBLE.id));
+      }
     }
   } catch (e) { console.error(e); }
   return list;
@@ -141,7 +231,13 @@ async function getBibleSchema(db: any) {
 export async function fetchVerseContent(lang: string, bookName: string, chapter: string, verses: string, stripNotes = false) {
   try {
     const bibles = await getAvailableBibles();
-    const config = bibles.find(b => b.id === lang) || bibles.find(b => b.id === 'MG') || DEFAULT_BIBLE;
+
+    // 1. Try to find the specifically requested bible
+    // 2. If not found, try to find ANY bible that is NOT the default if it exists (user's preferred installed)
+    // 3. Fallback to DEFAULT_BIBLE
+    const config = bibles.find(b => b.id === lang)
+      || bibles.find(b => b.id !== DEFAULT_BIBLE.id)
+      || DEFAULT_BIBLE;
 
     // Cloud bibles are in 'bibles/' subfolder, built-in is in 'bibles' (passed to loadDatabase)
     // Actually loadDatabase adds 'SQLite/' prefix automatically.
@@ -204,12 +300,18 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
     if (versesRes && versesRes.length > 0) {
       const text = versesRes.map(v => versesRes.length > 1 ? `${v.a_and}. ${v.a_text}` : v.a_text).join('\n\n');
       return {
-        text: stripNotes ? text.replace(/<n>.*?<\/n>/g, '') : text,
+        text: stripNotes ? text.replace(/<n>[\s\S]*?<\/n>/gi, '') : text,
         bookId: bookRes.id,
-        bookName: bookRes.name
+        bookName: bookRes.name,
+        bibleId: config.id,
+        bibleName: config.name
       };
     }
-    return null;
+    return {
+      text: null,
+      bibleId: config.id,
+      bibleName: config.name
+    };
   } catch (e) {
     console.error(e);
     return null;
@@ -234,7 +336,7 @@ export async function fetchVerseContentById(lang: string, bookId: number, chapte
     if (!result) return null;
 
     return {
-      text: stripNotes ? result.text.replace(/<n>.*?<\/n>/g, '') : result.text,
+      text: stripNotes ? result.text.replace(/<n>[\s\S]*?<\/n>/gi, '') : result.text,
       book: result.book,
       bookId: bookId,
       chapter: parseInt(chapter),
