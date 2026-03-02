@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, RefreshCw, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,7 +44,15 @@ export default function PDFLibrary() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const router = useRouter();
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
 
   useEffect(() => {
     loadManifest();
@@ -411,19 +419,10 @@ export default function PDFLibrary() {
             {manifest?.documents
               .filter((d: any) => d.categoryId === selectedCategory.id && localFiles.includes(d.fileName))
               .map((doc: any) => (
-                <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden flex-row items-center">
-                  <TouchableOpacity
-                    onPress={() => deleteFile(doc.fileName, doc.title)}
-                    className="p-4 pr-1 active:bg-red-500/10"
-                  >
-                    <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
-                      <Trash2 size={14} color="#f87171" />
-                    </View>
-                  </TouchableOpacity>
-
+                <View key={doc.id} className="mb-3 bg-slate-900/40 border border-slate-800/50 rounded-2xl overflow-hidden shadow-sm">
                   <TouchableOpacity
                     onPress={() => openPdf(doc.fileName, doc.title)}
-                    className="flex-1 flex-row items-center p-4 pl-2"
+                    className="flex-row items-center p-4"
                   >
                     <View className="w-12 h-16 bg-slate-800 rounded-lg items-center justify-center mr-4 border border-slate-700/50">
                       <FileText size={24} color={selectedCategory.color} />
@@ -468,43 +467,75 @@ export default function PDFLibrary() {
             {manifest?.categories.map((cat: any) => {
               const cloudDocs = manifest?.documents.filter((d: any) => d.categoryId === cat.id && isDocVisible(d));
               if (cloudDocs.length === 0) return null;
+              const isExpanded = !!expandedCategories[cat.id];
+
               return (
-                <View key={cat.id} className="mb-8">
-                  <View className="flex-row items-center mb-4">
-                    <View className="w-6 h-6 rounded bg-slate-800 items-center justify-center mr-2">
-                      <FolderOpen size={14} color={cat.color} />
+                <View key={cat.id} className="mb-4">
+                  <TouchableOpacity
+                    onPress={() => toggleCategory(cat.id)}
+                    className="flex-row items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-slate-800/50 mb-2"
+                  >
+                    <View className="flex-row items-center">
+                      <View className="w-8 h-8 rounded-lg bg-slate-800 items-center justify-center mr-3">
+                        <FolderOpen size={16} color={cat.color} />
+                      </View>
+                      <Text className="text-sm font-bold text-slate-300 uppercase tracking-widest">{cat.title}</Text>
                     </View>
-                    <Text className="text-sm font-bold text-slate-300 uppercase tracking-widest">{cat.title}</Text>
-                  </View>
-                  {cloudDocs.map((doc: any) => {
+                    <ChevronDown size={20} color="#475569" style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} />
+                  </TouchableOpacity>
+
+                  {isExpanded && cloudDocs.map((doc: any) => {
                     const isDownloaded = localFiles.includes(doc.fileName);
                     const isDownloading = downloading[doc.id] !== undefined;
                     return (
-                      <View key={doc.id} className="mb-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-row items-center">
-                        <View className="w-10 h-12 bg-slate-800 rounded items-center justify-center mr-4">
-                          <FileText size={20} color={isDownloaded ? "#10b981" : "#475569"} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-white font-bold" numberOfLines={1}>{doc.title}</Text>
-                          <Text className="text-[10px] text-slate-500">{doc.size} • {isDownloaded ? 'Déjà sur le téléphone' : 'Disponible au téléchargement'}</Text>
-                        </View>
-                        {isDownloaded ? (
-                          <View className="w-8 h-8 rounded-full bg-green-500/10 items-center justify-center">
-                            <CheckCircle2 size={18} color="#10b981" />
+                      <View key={doc.id} className="mb-2 ml-4 bg-slate-950/50 border border-slate-900 rounded-2xl p-4 flex-row items-center">
+                        <TouchableOpacity
+                          onPress={() => openPdf(doc.fileName, doc.title)}
+                          disabled={!isDownloaded}
+                          className="flex-row items-center flex-1"
+                        >
+                          <View className="w-10 h-12 bg-slate-900 rounded items-center justify-center mr-4">
+                            <FileText size={20} color={isDownloaded ? "#10b981" : "#475569"} />
                           </View>
-                        ) : isDownloading ? (
-                          <View className="items-end">
-                            <Text className="text-[10px] text-blue-500 font-bold mb-1">{Math.round(downloading[doc.id] * 100)}%</Text>
-                            <ActivityIndicator size="small" color="#3b82f6" />
+                          <View className="flex-1">
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{doc.title}</Text>
+                            <Text className="text-[10px] text-slate-500">{doc.size} • {isDownloaded ? 'Sur l\'appareil' : 'Cloud'}</Text>
                           </View>
-                        ) : (
-                          <TouchableOpacity
-                            onPress={() => downloadFile(doc)}
-                            className="w-10 h-10 bg-blue-600 rounded-xl items-center justify-center shadow-lg"
-                          >
-                            <CloudDownload size={20} color="white" />
-                          </TouchableOpacity>
-                        )}
+                        </TouchableOpacity>
+
+                        <View className="flex-row items-center gap-2">
+                          {isDownloading ? (
+                            <View className="items-end">
+                              <Text className="text-[10px] text-blue-500 font-bold mb-1">{Math.round(downloading[doc.id] * 100)}%</Text>
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                            </View>
+                          ) : isDownloaded ? (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => downloadFile(doc)}
+                                className="w-9 h-9 rounded-xl bg-blue-600/10 items-center justify-center border border-blue-500/20"
+                              >
+                                <RefreshCw size={16} color="#3b82f6" />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => deleteFile(doc.fileName, doc.title)}
+                                className="w-9 h-9 rounded-xl bg-red-500/10 items-center justify-center border border-red-500/20"
+                              >
+                                <Trash2 size={16} color="#ef4444" />
+                              </TouchableOpacity>
+                              <View className="w-6 h-6 rounded-full bg-green-500/10 items-center justify-center">
+                                <CheckCircle2 size={16} color="#10b981" />
+                              </View>
+                            </>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => downloadFile(doc)}
+                              className="w-10 h-10 bg-blue-600 rounded-xl items-center justify-center shadow-lg"
+                            >
+                              <CloudDownload size={20} color="white" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     );
                   })}

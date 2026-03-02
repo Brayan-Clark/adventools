@@ -199,21 +199,40 @@ export default function LesonaSekolySabata() {
 
   const fetchQuarterlyDetail = async (id: string) => {
     setLoading(true);
+    // Clear previous titles to avoid showing titles from another quarterly
+    setLessonTitlesMap({});
+
     try {
+      const cacheKey = `adventools_ss_q_detail_${id}`;
+
+      // Try to load from cache first for better offline experience
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) {
+        const json = JSON.parse(cached);
+        setSelectedQuarterly(json);
+        loadLessonTitles(json);
+      }
+
       const qId = id.replace('mg-ss-', '');
       const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
       const url = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/index.json`;
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Server error: ${response.status}`);
-      const json = await response.json();
-      setSelectedQuarterly(json);
-
-      // Try to load lesson titles
-      loadLessonTitles(json);
+      const response = await fetch(url).catch(() => null);
+      if (response && response.ok) {
+        const json = await response.json();
+        setSelectedQuarterly(json);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
+        // Try to load lesson titles
+        loadLessonTitles(json);
+      } else if (!cached) {
+        throw new Error("Impossible de charger les données et aucun cache disponible.");
+      }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Hadisoana", `Tsy nahitana ny antsipiriany: ${e.message}`);
+      // If we already have cached data, don't alert unless it's a critical failure
+      if (!selectedQuarterly) {
+        Alert.alert("Hors connexion", "Vérifiez votre connexion internet pour voir les détails de ce trimestre.");
+      }
     } finally {
       setLoading(false);
     }
@@ -223,7 +242,7 @@ export default function LesonaSekolySabata() {
     try {
       // 1. Check Offline first
       const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${q.id}`);
-      let titles = { ...lessonTitlesMap };
+      let titles: Record<string, string> = {};
       if (offlineDataStr) {
         const offlineData = JSON.parse(offlineDataStr);
         Object.keys(offlineData).forEach(id => {
@@ -283,6 +302,10 @@ export default function LesonaSekolySabata() {
       }
 
       await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${q.id}`, JSON.stringify(lessonsData));
+
+      // Also cache the quarterly detail (index) to ensure offline access to the list
+      await AsyncStorage.setItem(`adventools_ss_q_detail_${q.id}`, JSON.stringify(q));
+
       setDownloadedQuarterlies(prev => [...prev, q.id]);
       Alert.alert("Vita", "Voasintona manontolo ny lesona ho an'ity telovolana ity.");
     } catch (e) {
@@ -357,6 +380,16 @@ export default function LesonaSekolySabata() {
 
       setReadingLesson(normalizedData);
       autoSelectSegment(normalizedData);
+
+      // Sauvegarde automatique pour accès hors-ligne (Auto-cache)
+      try {
+        const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${quarterlyId}`);
+        let offlineData = offlineDataStr ? JSON.parse(offlineDataStr) : {};
+        offlineData[lessonId] = normalizedData;
+        await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${quarterlyId}`, JSON.stringify(offlineData));
+      } catch (e) {
+        console.error("Auto-cache error", e);
+      }
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
       Alert.alert("Hadisoana", `Tsy nahitana ny votoatiny: ${e.message}`);
