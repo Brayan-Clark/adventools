@@ -33,7 +33,7 @@
       "language": "Swahili",
       "file": "BHN.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/BHN.SQLite3",
-      "size": "4.9 MB",
+      "size": "5.0 MB",
       "isDefault": false
     },
     {
@@ -42,7 +42,7 @@
       "language": "Danish",
       "file": "D'1871.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/D'1871.SQLite3",
-      "size": "4.8 MB",
+      "size": "4.9 MB",
       "isDefault": false
     },
     {
@@ -51,25 +51,25 @@
       "language": "German",
       "file": "ESS.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/ESS.SQLite3",
-      "size": "5.2 MB",
+      "size": "5.3 MB",
       "isDefault": false
     },
     {
       "id": "FB_SQLite3",
-      "name": "Louis Segond (FB)",
-      "language": "Français",
+      "name": "Farsi Bible (FB)",
+      "language": "Persian (Farsi)",
       "file": "FB.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/FB.SQLite3",
-      "size": "6.7 MB",
+      "size": "6.8 MB",
       "isDefault": false
     },
     {
       "id": "HTB_SQLite3",
       "name": "HTB",
-      "language": "Nederlandse",
+      "language": "Dutch",
       "file": "HTB.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/HTB.SQLite3",
-      "size": "4.9 MB",
+      "size": "5.0 MB",
       "isDefault": false
     },
     {
@@ -78,7 +78,7 @@
       "language": "Icelandic",
       "file": "IceB.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/IceB.SQLite3",
-      "size": "5.3 MB",
+      "size": "5.4 MB",
       "isDefault": false
     },
     {
@@ -87,7 +87,7 @@
       "language": "Korean",
       "file": "KNRSV.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/KNRSV.SQLite3",
-      "size": "6.5 MB",
+      "size": "6.6 MB",
       "isDefault": false
     },
     {
@@ -96,7 +96,7 @@
       "language": "Croatian",
       "file": "KS.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/KS.SQLite3",
-      "size": "4.8 MB",
+      "size": "4.9 MB",
       "isDefault": false
     },
     {
@@ -105,17 +105,17 @@
       "language": "Vietnamese",
       "file": "LCCMN.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/LCCMN.SQLite3",
-      "size": "5.9 MB",
+      "size": "6.0 MB",
       "isDefault": false
     },
     {
-      "id": "MG_65_db",
-      "name": "Malagasy 1965",
+      "id": "MG65_v2_db",
+      "name": "MG65_v2",
+      "file": "MG65_v2.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG65_v2.db",
+      "isDefault": false,
       "language": "Malagasy",
-      "file": "MG'65.db",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG'65.db",
-      "size": "5.6 MB",
-      "isDefault": true
+      "size": "5.7 MB"
     },
     {
       "id": "MHB_SQLite3",
@@ -123,7 +123,7 @@
       "language": "Hebrew",
       "file": "MHB.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MHB.SQLite3",
-      "size": "7.6 MB",
+      "size": "7.7 MB",
       "isDefault": false
     },
     {
@@ -150,8 +150,17 @@
       "language": "French",
       "file": "SBF.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.SQLite3",
-      "size": "5.9 MB",
+      "size": "6.0 MB",
       "isDefault": false
+    },
+    {
+      "id": "SBF_db",
+      "name": "SBF (Sainte Bible Fillion)",
+      "file": "SBF.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.db",
+      "isDefault": false,
+      "language": "French",
+      "size": "6.0 MB"
     },
     {
       "id": "SMOV_SQLite3",
@@ -168,7 +177,7 @@
       "language": "Somali",
       "file": "SOM.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SOM.SQLite3",
-      "size": "5.6 MB",
+      "size": "5.7 MB",
       "isDefault": false
     },
     {
@@ -195,7 +204,7 @@
       "language": "Ukrainian",
       "file": "UBIO'62.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/UBIO'62.SQLite3",
-      "size": "7.1 MB",
+      "size": "7.2 MB",
       "isDefault": false
     }
   ]
