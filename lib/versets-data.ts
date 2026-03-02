@@ -14,7 +14,7 @@ export const versesData: VerseReference[] = [
     "id": 1,
     "reference": "Zak. 10:1",
     "category": "Fanahy Masina",
-    "bookId": 38,
+    "bookId": 450,
     "bookName": "Zakaria",
     "chapter": 10,
     "verse": 1
@@ -23,7 +23,7 @@ export const versesData: VerseReference[] = [
     "id": 2,
     "reference": "Lio. 11:13",
     "category": "Fanahy Masina",
-    "bookId": 42,
+    "bookId": 490,
     "bookName": "Lioka",
     "chapter": 11,
     "verse": 13
@@ -32,7 +32,7 @@ export const versesData: VerseReference[] = [
     "id": 3,
     "reference": "Jao. 14:26",
     "category": "Fanahy Masina",
-    "bookId": 43,
+    "bookId": 500,
     "bookName": "Jaona",
     "chapter": 14,
     "verse": 26
@@ -41,7 +41,7 @@ export const versesData: VerseReference[] = [
     "id": 4,
     "reference": "Jao. 14:12",
     "category": "Fanahy Masina",
-    "bookId": 43,
+    "bookId": 500,
     "bookName": "Jaona",
     "chapter": 14,
     "verse": 12
@@ -50,7 +50,7 @@ export const versesData: VerseReference[] = [
     "id": 5,
     "reference": "Zak. 4:6",
     "category": "Fanahy Masina",
-    "bookId": 38,
+    "bookId": 450,
     "bookName": "Zakaria",
     "chapter": 4,
     "verse": 6
@@ -59,7 +59,7 @@ export const versesData: VerseReference[] = [
     "id": 6,
     "reference": "Jao. 15:7",
     "category": "Vavaka",
-    "bookId": 43,
+    "bookId": 500,
     "bookName": "Jaona",
     "chapter": 15,
     "verse": 7
@@ -68,7 +68,7 @@ export const versesData: VerseReference[] = [
     "id": 7,
     "reference": "Heb. 4:16",
     "category": "Vavaka",
-    "bookId": 58,
+    "bookId": 650,
     "bookName": "Hebreo",
     "chapter": 4,
     "verse": 16
@@ -77,7 +77,7 @@ export const versesData: VerseReference[] = [
     "id": 8,
     "reference": "Mar. 11:24",
     "category": "Vavaka",
-    "bookId": 41,
+    "bookId": 480,
     "bookName": "Marka",
     "chapter": 11,
     "verse": 24
@@ -86,7 +86,7 @@ export const versesData: VerseReference[] = [
     "id": 9,
     "reference": "Sal. 50:15",
     "category": "Vavaka",
-    "bookId": 19,
+    "bookId": 230,
     "bookName": "Salamo",
     "chapter": 50,
     "verse": 15
@@ -95,7 +95,7 @@ export const versesData: VerseReference[] = [
     "id": 10,
     "reference": "Mat. 18:19",
     "category": "Vavaka",
-    "bookId": 40,
+    "bookId": 470,
     "bookName": "Matio",
     "chapter": 18,
     "verse": 19
@@ -104,7 +104,7 @@ export const versesData: VerseReference[] = [
     "id": 11,
     "reference": "Mat. 21:22",
     "category": "Vavaka",
-    "bookId": 40,
+    "bookId": 470,
     "bookName": "Matio",
     "chapter": 21,
     "verse": 22
@@ -113,7 +113,7 @@ export const versesData: VerseReference[] = [
     "id": 12,
     "reference": "Jao. 14:13",
     "category": "Vavaka",
-    "bookId": 43,
+    "bookId": 500,
     "bookName": "Jaona",
     "chapter": 14,
     "verse": 13
@@ -122,7 +122,7 @@ export const versesData: VerseReference[] = [
     "id": 13,
     "reference": "Jao. 16:23",
     "category": "Vavaka",
-    "bookId": 43,
+    "bookId": 500,
     "bookName": "Jaona",
     "chapter": 16,
     "verse": 23
@@ -131,7 +131,7 @@ export const versesData: VerseReference[] = [
     "id": 14,
     "reference": "1 Jao. 5:14",
     "category": "Vavaka",
-    "bookId": 62,
+    "bookId": 690,
     "bookName": "1 Jaona",
     "chapter": 5,
     "verse": 14
@@ -140,7 +140,7 @@ export const versesData: VerseReference[] = [
     "id": 15,
     "reference": "Gen. 18:14",
     "category": "Herin'Andriamanitra",
-    "bookId": 1,
+    "bookId": 10,
     "bookName": "Genesisy",
     "chapter": 18,
     "verse": 14
@@ -149,7 +149,7 @@ export const versesData: VerseReference[] = [
     "id": 16,
     "reference": "Eks. 14:14",
     "category": "Herin'Andriamanitra",
-    "bookId": 2,
+    "bookId": 20,
     "bookName": "Eksodosy",
     "chapter": 14,
     "verse": 14
@@ -158,7 +158,7 @@ export const versesData: VerseReference[] = [
     "id": 17,
     "reference": "Mar. 10:27",
     "category": "Herin'Andriamanitra",
-    "bookId": 41,
+    "bookId": 480,
     "bookName": "Marka",
     "chapter": 10,
     "verse": 27
@@ -167,7 +167,7 @@ export const versesData: VerseReference[] = [
     "id": 18,
     "reference": "1 Tes. 5:24",
     "category": "Herin'Andriamanitra",
-    "bookId": 52,
+    "bookId": 590,
     "bookName": "1 Tesaloniana",
     "chapter": 5,
     "verse": 24
@@ -176,7 +176,7 @@ export const versesData: VerseReference[] = [
     "id": 19,
     "reference": "Jôba 42:2",
     "category": "Herin'Andriamanitra",
-    "bookId": 18,
+    "bookId": 220,
     "bookName": "Joba",
     "chapter": 42,
     "verse": 2
@@ -185,7 +185,7 @@ export const versesData: VerseReference[] = [
     "id": 20,
     "reference": "Rôm. 8:31",
     "category": "Herin'Andriamanitra",
-    "bookId": 45,
+    "bookId": 520,
     "bookName": "Romana",
     "chapter": 8,
     "verse": 31
@@ -194,7 +194,7 @@ export const versesData: VerseReference[] = [
     "id": 21,
     "reference": "Nom. 23:19",
     "category": "Herin'Andriamanitra",
-    "bookId": 4,
+    "bookId": 40,
     "bookName": "Nomery",
     "chapter": 23,
     "verse": 19
@@ -203,7 +203,7 @@ export const versesData: VerseReference[] = [
     "id": 22,
     "reference": "Isa. 40:28",
     "category": "Herin'Andriamanitra",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 40,
     "verse": 28
@@ -212,7 +212,7 @@ export const versesData: VerseReference[] = [
     "id": 23,
     "reference": "Jos. 1:9",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 6,
+    "bookId": 60,
     "bookName": "Josoa",
     "chapter": 1,
     "verse": 9
@@ -221,7 +221,7 @@ export const versesData: VerseReference[] = [
     "id": 24,
     "reference": "Gen. 28:15",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 1,
+    "bookId": 10,
     "bookName": "Genesisy",
     "chapter": 28,
     "verse": 15
@@ -230,7 +230,7 @@ export const versesData: VerseReference[] = [
     "id": 25,
     "reference": "Eks. 23:20",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 2,
+    "bookId": 20,
     "bookName": "Eksodosy",
     "chapter": 23,
     "verse": 20
@@ -239,7 +239,7 @@ export const versesData: VerseReference[] = [
     "id": 26,
     "reference": "Deo. 4:29",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 5,
+    "bookId": 50,
     "bookName": "Deotoronomia",
     "chapter": 4,
     "verse": 29
@@ -248,7 +248,7 @@ export const versesData: VerseReference[] = [
     "id": 27,
     "reference": "Jer. 33:3",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 33,
     "verse": 3
@@ -257,7 +257,7 @@ export const versesData: VerseReference[] = [
     "id": 28,
     "reference": "Isa. 40:4",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 40,
     "verse": 4
@@ -266,7 +266,7 @@ export const versesData: VerseReference[] = [
     "id": 29,
     "reference": "Sal. 32:8",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 19,
+    "bookId": 230,
     "bookName": "Salamo",
     "chapter": 32,
     "verse": 8
@@ -275,7 +275,7 @@ export const versesData: VerseReference[] = [
     "id": 30,
     "reference": "Deo. 31:8",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 5,
+    "bookId": 50,
     "bookName": "Deotoronomia",
     "chapter": 31,
     "verse": 8
@@ -284,7 +284,7 @@ export const versesData: VerseReference[] = [
     "id": 31,
     "reference": "Sal. 25:12",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 19,
+    "bookId": 230,
     "bookName": "Salamo",
     "chapter": 25,
     "verse": 12
@@ -293,7 +293,7 @@ export const versesData: VerseReference[] = [
     "id": 32,
     "reference": "Ohab. 3:5",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 20,
+    "bookId": 240,
     "bookName": "Ohabolana",
     "chapter": 3,
     "verse": 5
@@ -302,7 +302,7 @@ export const versesData: VerseReference[] = [
     "id": 33,
     "reference": "Isa. 58:10",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 58,
     "verse": 10
@@ -311,7 +311,7 @@ export const versesData: VerseReference[] = [
     "id": 34,
     "reference": "Isa. 65:24",
     "category": "Fitarihan'Andriamanitra",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 65,
     "verse": 24
@@ -320,7 +320,7 @@ export const versesData: VerseReference[] = [
     "id": 35,
     "reference": "Jer. 24:7",
     "category": "Fiovam-po",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 24,
     "verse": 7
@@ -329,7 +329,7 @@ export const versesData: VerseReference[] = [
     "id": 36,
     "reference": "Deo. 30:6",
     "category": "Fiovam-po",
-    "bookId": 5,
+    "bookId": 50,
     "bookName": "Deotoronomia",
     "chapter": 30,
     "verse": 6
@@ -338,7 +338,7 @@ export const versesData: VerseReference[] = [
     "id": 37,
     "reference": "Ezek. 36:26",
     "category": "Fiovam-po",
-    "bookId": 26,
+    "bookId": 330,
     "bookName": "Ezekiela",
     "chapter": 36,
     "verse": 26
@@ -347,7 +347,7 @@ export const versesData: VerseReference[] = [
     "id": 38,
     "reference": "Fil. 1:6",
     "category": "Fiovam-po",
-    "bookId": 50,
+    "bookId": 570,
     "bookName": "Filipiana",
     "chapter": 1,
     "verse": 6
@@ -356,7 +356,7 @@ export const versesData: VerseReference[] = [
     "id": 39,
     "reference": "2 Kôr. 5:17",
     "category": "Fiovam-po",
-    "bookId": 47,
+    "bookId": 540,
     "bookName": "2 Korintiana",
     "chapter": 5,
     "verse": 17
@@ -365,7 +365,7 @@ export const versesData: VerseReference[] = [
     "id": 40,
     "reference": "Gal. 2:20",
     "category": "Fiovam-po",
-    "bookId": 48,
+    "bookId": 550,
     "bookName": "Galatiana",
     "chapter": 2,
     "verse": 20
@@ -374,7 +374,7 @@ export const versesData: VerseReference[] = [
     "id": 41,
     "reference": "1 Tes. 5:23",
     "category": "Fiovam-po",
-    "bookId": 52,
+    "bookId": 590,
     "bookName": "1 Tesaloniana",
     "chapter": 5,
     "verse": 23
@@ -383,7 +383,7 @@ export const versesData: VerseReference[] = [
     "id": 42,
     "reference": "2 Tant. 7:14",
     "category": "Famela-keloka",
-    "bookId": 14,
+    "bookId": 140,
     "bookName": "2 Tantara",
     "chapter": 7,
     "verse": 14
@@ -392,7 +392,7 @@ export const versesData: VerseReference[] = [
     "id": 43,
     "reference": "Sal. 86:5",
     "category": "Famela-keloka",
-    "bookId": 19,
+    "bookId": 230,
     "bookName": "Salamo",
     "chapter": 86,
     "verse": 5
@@ -401,7 +401,7 @@ export const versesData: VerseReference[] = [
     "id": 44,
     "reference": "Mar. 11:25",
     "category": "Famela-keloka",
-    "bookId": 41,
+    "bookId": 480,
     "bookName": "Marka",
     "chapter": 11,
     "verse": 25
@@ -410,7 +410,7 @@ export const versesData: VerseReference[] = [
     "id": 45,
     "reference": "Efes. 4:32",
     "category": "Famela-keloka",
-    "bookId": 49,
+    "bookId": 560,
     "bookName": "Efesiana",
     "chapter": 4,
     "verse": 32
@@ -419,7 +419,7 @@ export const versesData: VerseReference[] = [
     "id": 46,
     "reference": "1 Jao. 1:9",
     "category": "Famela-keloka",
-    "bookId": 62,
+    "bookId": 690,
     "bookName": "1 Jaona",
     "chapter": 1,
     "verse": 9
@@ -428,7 +428,7 @@ export const versesData: VerseReference[] = [
     "id": 47,
     "reference": "Isa. 1:18",
     "category": "Famela-keloka",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 1,
     "verse": 18
@@ -437,7 +437,7 @@ export const versesData: VerseReference[] = [
     "id": 48,
     "reference": "Isa. 43:25",
     "category": "Famela-keloka",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 43,
     "verse": 25
@@ -446,7 +446,7 @@ export const versesData: VerseReference[] = [
     "id": 49,
     "reference": "Jer. 31:34",
     "category": "Famela-keloka",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 31,
     "verse": 34
@@ -455,7 +455,7 @@ export const versesData: VerseReference[] = [
     "id": 50,
     "reference": "Efes. 1:7",
     "category": "Famela-keloka",
-    "bookId": 49,
+    "bookId": 560,
     "bookName": "Efesiana",
     "chapter": 1,
     "verse": 7
@@ -464,7 +464,7 @@ export const versesData: VerseReference[] = [
     "id": 51,
     "reference": "1 Jao. 5:4",
     "category": "Fandresena ny fahotana",
-    "bookId": 62,
+    "bookId": 690,
     "bookName": "1 Jaona",
     "chapter": 5,
     "verse": 4
@@ -473,7 +473,7 @@ export const versesData: VerseReference[] = [
     "id": 52,
     "reference": "Rôm. 8:37",
     "category": "Fandresena ny fahotana",
-    "bookId": 45,
+    "bookId": 520,
     "bookName": "Romana",
     "chapter": 8,
     "verse": 37
@@ -482,7 +482,7 @@ export const versesData: VerseReference[] = [
     "id": 53,
     "reference": "1 Kôr. 15:57",
     "category": "Fandresena ny fahotana",
-    "bookId": 46,
+    "bookId": 530,
     "bookName": "1 Korintiana",
     "chapter": 15,
     "verse": 57
@@ -491,7 +491,7 @@ export const versesData: VerseReference[] = [
     "id": 54,
     "reference": "Isa. 41:10",
     "category": "Fandresena ny fahotana",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 41,
     "verse": 10
@@ -500,7 +500,7 @@ export const versesData: VerseReference[] = [
     "id": 55,
     "reference": "Efes. 6:16",
     "category": "Fandresena ny fahotana",
-    "bookId": 49,
+    "bookId": 560,
     "bookName": "Efesiana",
     "chapter": 6,
     "verse": 16
@@ -509,7 +509,7 @@ export const versesData: VerseReference[] = [
     "id": 56,
     "reference": "Fil. 2:13",
     "category": "Fandresena ny fahotana",
-    "bookId": 50,
+    "bookId": 570,
     "bookName": "Filipiana",
     "chapter": 2,
     "verse": 13
@@ -518,7 +518,7 @@ export const versesData: VerseReference[] = [
     "id": 57,
     "reference": "Gal. 5:16",
     "category": "Fandresena ny fahotana",
-    "bookId": 48,
+    "bookId": 550,
     "bookName": "Galatiana",
     "chapter": 5,
     "verse": 16
@@ -527,7 +527,7 @@ export const versesData: VerseReference[] = [
     "id": 58,
     "reference": "Rôm. 16:20",
     "category": "Fandresena ny fahotana",
-    "bookId": 45,
+    "bookId": 520,
     "bookName": "Romana",
     "chapter": 16,
     "verse": 20
@@ -536,7 +536,7 @@ export const versesData: VerseReference[] = [
     "id": 59,
     "reference": "Rôm. 12:2",
     "category": "Fandresena ny fahotana",
-    "bookId": 45,
+    "bookId": 520,
     "bookName": "Romana",
     "chapter": 12,
     "verse": 2
@@ -545,7 +545,7 @@ export const versesData: VerseReference[] = [
     "id": 60,
     "reference": "1 Jao. 2:15",
     "category": "Fandresena ny fahotana",
-    "bookId": 62,
+    "bookId": 690,
     "bookName": "1 Jaona",
     "chapter": 2,
     "verse": 15
@@ -554,7 +554,7 @@ export const versesData: VerseReference[] = [
     "id": 61,
     "reference": "Eks. 15:26",
     "category": "Fahasitranana",
-    "bookId": 2,
+    "bookId": 20,
     "bookName": "Eksodosy",
     "chapter": 15,
     "verse": 26
@@ -563,7 +563,7 @@ export const versesData: VerseReference[] = [
     "id": 62,
     "reference": "Deo. 33:25",
     "category": "Fahasitranana",
-    "bookId": 5,
+    "bookId": 50,
     "bookName": "Deotoronomia",
     "chapter": 33,
     "verse": 25
@@ -572,7 +572,7 @@ export const versesData: VerseReference[] = [
     "id": 63,
     "reference": "Sal. 103:2",
     "category": "Fahasitranana",
-    "bookId": 19,
+    "bookId": 230,
     "bookName": "Salamo",
     "chapter": 103,
     "verse": 2
@@ -581,7 +581,7 @@ export const versesData: VerseReference[] = [
     "id": 64,
     "reference": "Isa. 53:3",
     "category": "Fahasitranana",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 53,
     "verse": 3
@@ -590,7 +590,7 @@ export const versesData: VerseReference[] = [
     "id": 65,
     "reference": "Jer. 17:14",
     "category": "Fahasitranana",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 17,
     "verse": 14
@@ -599,7 +599,7 @@ export const versesData: VerseReference[] = [
     "id": 66,
     "reference": "Jer. 30:17",
     "category": "Fahasitranana",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 30,
     "verse": 17
@@ -608,7 +608,7 @@ export const versesData: VerseReference[] = [
     "id": 67,
     "reference": "Jer. 33:6",
     "category": "Fahasitranana",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 33,
     "verse": 6
@@ -617,7 +617,7 @@ export const versesData: VerseReference[] = [
     "id": 68,
     "reference": "Mal. 3:20",
     "category": "Fahasitranana",
-    "bookId": 39,
+    "bookId": 460,
     "bookName": "Malakia",
     "chapter": 3,
     "verse": 20
@@ -626,7 +626,7 @@ export const versesData: VerseReference[] = [
     "id": 69,
     "reference": "Jak. 5:14",
     "category": "Fahasitranana",
-    "bookId": 59,
+    "bookId": 660,
     "bookName": "Jakoba",
     "chapter": 5,
     "verse": 14
@@ -635,7 +635,7 @@ export const versesData: VerseReference[] = [
     "id": 70,
     "reference": "2 Kôr. 4:16",
     "category": "Hery hanaovana ny sitrapony",
-    "bookId": 47,
+    "bookId": 540,
     "bookName": "2 Korintiana",
     "chapter": 4,
     "verse": 16
@@ -644,7 +644,7 @@ export const versesData: VerseReference[] = [
     "id": 71,
     "reference": "Gal. 6:9",
     "category": "Hery hanaovana ny sitrapony",
-    "bookId": 48,
+    "bookId": 550,
     "bookName": "Galatiana",
     "chapter": 6,
     "verse": 9
@@ -653,7 +653,7 @@ export const versesData: VerseReference[] = [
     "id": 72,
     "reference": "Fil. 4:13",
     "category": "Hery hanaovana ny sitrapony",
-    "bookId": 50,
+    "bookId": 570,
     "bookName": "Filipiana",
     "chapter": 4,
     "verse": 13
@@ -662,7 +662,7 @@ export const versesData: VerseReference[] = [
     "id": 73,
     "reference": "2 Kôr. 12:9",
     "category": "Hery hanaovana ny sitrapony",
-    "bookId": 47,
+    "bookId": 540,
     "bookName": "2 Korintiana",
     "chapter": 12,
     "verse": 9
@@ -671,7 +671,7 @@ export const versesData: VerseReference[] = [
     "id": 74,
     "reference": "Isa. 44:8",
     "category": "Maha-vavolombelona",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 44,
     "verse": 8
@@ -680,7 +680,7 @@ export const versesData: VerseReference[] = [
     "id": 75,
     "reference": "Isa. 60:1",
     "category": "Maha-vavolombelona",
-    "bookId": 23,
+    "bookId": 290,
     "bookName": "Isaia",
     "chapter": 60,
     "verse": 1
@@ -689,7 +689,7 @@ export const versesData: VerseReference[] = [
     "id": 76,
     "reference": "2 Kôr. 5:18",
     "category": "Maha-vavolombelona",
-    "bookId": 47,
+    "bookId": 540,
     "bookName": "2 Korintiana",
     "chapter": 5,
     "verse": 18
@@ -698,7 +698,7 @@ export const versesData: VerseReference[] = [
     "id": 77,
     "reference": "Jer. 1:7",
     "category": "Maha-vavolombelona",
-    "bookId": 24,
+    "bookId": 300,
     "bookName": "Jeremia",
     "chapter": 1,
     "verse": 7
@@ -707,7 +707,7 @@ export const versesData: VerseReference[] = [
     "id": 78,
     "reference": "Asa. 1:8",
     "category": "Maha-vavolombelona",
-    "bookId": 44,
+    "bookId": 510,
     "bookName": "Asan'ny Apostoly",
     "chapter": 1,
     "verse": 8
@@ -716,7 +716,7 @@ export const versesData: VerseReference[] = [
     "id": 79,
     "reference": "1 Pet. 2:9",
     "category": "Maha-vavolombelona",
-    "bookId": 60,
+    "bookId": 670,
     "bookName": "1 Petera",
     "chapter": 2,
     "verse": 9
@@ -725,7 +725,7 @@ export const versesData: VerseReference[] = [
     "id": 80,
     "reference": "1 Pet. 3:15",
     "category": "Maha-vavolombelona",
-    "bookId": 60,
+    "bookId": 670,
     "bookName": "1 Petera",
     "chapter": 3,
     "verse": 15

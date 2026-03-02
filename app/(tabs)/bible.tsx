@@ -1,14 +1,14 @@
 import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, ChevronDown, ChevronRight, Globe, Search, X } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, ChevronRight, Globe, PlusCircle, Search, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BIBLE_CONFIGS, DB_SOURCES } from '@/lib/bible';
+import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
 
 export default function Bible() {
   const router = useRouter();
@@ -20,40 +20,88 @@ export default function Bible() {
   const [searchMode, setSearchMode] = useState<'books' | 'verses'>('books');
   const [verseResults, setVerseResults] = useState<any[]>([]);
   const [isSearchingVerses, setIsSearchingVerses] = useState(false);
+  const [availableBibles, setAvailableBibles] = useState<BibleConfig[]>([]);
   const [lang, setLang] = useState<string>(globalSettings.bibleVersion || 'MG');
   const [showLangPicker, setShowLangPicker] = useState(false);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      async function init() {
+        const bibles = await getAvailableBibles();
+        setAvailableBibles(bibles);
+
+        // If current lang is not in bibles, fallback to MG
+        if (!bibles.find(b => b.id === lang)) {
+          setLang('MG');
+        }
+      }
+      init();
+    }, [lang])
+  );
+
   useEffect(() => {
     async function fetchData() {
+      if (availableBibles.length === 0) return;
       setLoading(true);
       try {
-        const config = BIBLE_CONFIGS[lang];
+        const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
+
+        // Ensure file exists (for cloud-only default)
+        await checkAndDownloadBible(config);
+
         const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+
         const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-        const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-        const testamentTable = tables.find((t: any) => t.name.endsWith("_testamenta"))?.name;
 
-        // Fetch Testaments
-        let testamentData = [];
-        if (testamentTable) {
-          testamentData = await db.getAllAsync(`SELECT id, test_name as name FROM ${testamentTable} ORDER BY id ASC`) as any[];
-        } else {
-          // Fallback
-          testamentData = [
-            { id: 1, name: "Ancien Testament" },
-            { id: 2, name: "Nouveau Testament" }
-          ];
-        }
-        setTestaments(testamentData);
+        // Cloud Schema?
+        const isCloudSchema = tables.some((t: any) => t.name === 'books');
 
-        // Fetch Books
-        if (bookTable) {
-          const result: any = await db.getAllAsync(`
-            SELECT id, b_name as name, b_testid as testamentId 
-            FROM ${bookTable} 
-            ORDER BY id ASC
+        if (isCloudSchema) {
+          // Fetch Testaments
+          let testamentData: any[] = [];
+          if (tables.some((t: any) => t.name === 'testaments')) {
+            testamentData = await db.getAllAsync(`SELECT id, name FROM testaments ORDER BY id ASC`);
+          } else {
+            testamentData = [
+              { id: 1, name: "Testamenta Taloha" },
+              { id: 2, name: "Testamenta Vaovao" }
+            ];
+          }
+          setTestaments(testamentData);
+
+          // Fetch Books from cloud schema using testament_id
+          const bookData: any = await db.getAllAsync(`
+            SELECT book_number as id, long_name as name, testament_id as testamentId
+            FROM books 
+            ORDER BY book_number ASC
           `);
-          setBooks(result || []);
+          setBooks(bookData || []);
+        } else {
+          // Legacy Schema
+          const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
+          const testamentTable = tables.find((t: any) => t.name.endsWith("_testamenta"))?.name;
+
+          // Fetch Testaments
+          let testamentData = [];
+          if (testamentTable) {
+            testamentData = await db.getAllAsync(`SELECT id, test_name as name FROM ${testamentTable} ORDER BY id ASC`) as any[];
+          } else {
+            testamentData = [
+              { id: 1, name: "Ancien Testament" },
+              { id: 2, name: "Nouveau Testament" }
+            ];
+          }
+          setTestaments(testamentData);
+
+          // Fetch Books
+          if (bookTable) {
+            const result: any = await db.getAllAsync(`
+              SELECT id, b_name as name, b_testid as testamentId 
+              FROM ${bookTable} 
+              ORDER BY id ASC
+            `);
+            setBooks(result || []);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -62,7 +110,7 @@ export default function Bible() {
       }
     }
     fetchData();
-  }, [lang]);
+  }, [lang, availableBibles]);
 
   // Search Verses Function
   const handleVerseSearch = async (text: string) => {
@@ -73,23 +121,44 @@ export default function Bible() {
 
     setIsSearchingVerses(true);
     try {
-      const config = BIBLE_CONFIGS[lang];
+      const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
       const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
       const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-      const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-      const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+      const isCloud = tables.some((t: any) => t.name === 'books');
 
-      if (bookTable && verseTable) {
+      if (isCloud) {
         const query = `
-          SELECT CAST(v.a_toko AS INTEGER) as chapter, v.a_and as verse, v.a_text as text, b.b_name as bookName, b.id as bookId, b.b_testid as testament
-          FROM ${verseTable} v
-          JOIN ${bookTable} b ON v.a_bid = b.id
-          WHERE v.a_text LIKE ?
+          SELECT book_number as bookId, chapter, verse, text, 
+                 (SELECT long_name FROM books WHERE book_number = verses.book_number) as bookName
+          FROM verses
+          WHERE text LIKE ?
           LIMIT 50
         `;
         const results = await db.getAllAsync(query, [`%${text}%`]);
-        setVerseResults(results || []);
+        setVerseResults(results.map((r: any) => ({
+          bookId: r.bookId,
+          bookName: r.bookName,
+          chapter: r.chapter,
+          verse: r.verse,
+          text: r.text,
+          testament: r.bookId <= 39 ? 1 : 2
+        })));
+      } else {
+        const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
+        const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+
+        if (bookTable && verseTable) {
+          const query = `
+            SELECT CAST(v.a_toko AS INTEGER) as chapter, v.a_and as verse, v.a_text as text, b.b_name as bookName, b.id as bookId, b.b_testid as testament
+            FROM ${verseTable} v
+            JOIN ${bookTable} b ON v.a_bid = b.id
+            WHERE v.a_text LIKE ?
+            LIMIT 50
+          `;
+          const results = await db.getAllAsync(query, [`%${text}%`]);
+          setVerseResults(results || []);
+        }
       }
     } catch (e) {
       console.error("Verse Search Error:", e);
@@ -137,7 +206,9 @@ export default function Bible() {
           className="flex-row items-center bg-slate-900 px-4 py-2 rounded-full border border-slate-800"
         >
           <Globe size={16} color="#94a3b8" />
-          <Text className="text-white font-bold text-xs ml-2 tracking-wider">{lang}</Text>
+          <Text className="text-white font-bold text-xs ml-2 tracking-wider">
+            {availableBibles.find(b => b.id === lang)?.language || lang}
+          </Text>
           <ChevronDown size={14} color="#64748b" className="ml-1" />
         </TouchableOpacity>
       </View>
@@ -262,25 +333,34 @@ export default function Bible() {
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
             <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
+
+            <TouchableOpacity
+              onPress={() => { setShowLangPicker(false); router.push({ pathname: '/bible/store' as any }); }}
+              className="flex-row items-center bg-blue-600/20 border border-blue-600 p-4 rounded-2xl mb-6"
+            >
+              <PlusCircle size={20} color="#3b82f6" className="mr-3" />
+              <Text className="text-blue-400 font-bold">Installer d'autres versions</Text>
+            </TouchableOpacity>
+
             <ScrollView showsVerticalScrollIndicator={false}>
-              {Object.entries(BIBLE_CONFIGS).map(([code, config]) => (
+              {availableBibles.map((config) => (
                 <TouchableOpacity
-                  key={code}
-                  onPress={() => { setLang(code); setShowLangPicker(false); }}
+                  key={config.id}
+                  onPress={() => { setLang(config.id); setShowLangPicker(false); }}
                   className={cn(
                     "flex-row items-center justify-between p-4 rounded-2xl mb-3 border",
-                    lang === code ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                    lang === config.id ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
                   )}
                 >
                   <View>
-                    <Text className={cn("font-bold text-base", lang === code ? "text-white" : "text-slate-300")}>
+                    <Text className={cn("font-bold text-base", lang === config.id ? "text-white" : "text-slate-300")}>
+                      {config.language}
+                    </Text>
+                    <Text className={cn("text-xs mt-1", lang === config.id ? "text-blue-100" : "text-slate-500")}>
                       {config.name}
                     </Text>
-                    <Text className={cn("text-xs mt-1", lang === code ? "text-blue-100" : "text-slate-500")}>
-                      {code}
-                    </Text>
                   </View>
-                  {lang === code && (
+                  {lang === config.id && (
                     <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
                       <Text className="text-[#195de6] font-bold text-xs">✓</Text>
                     </View>

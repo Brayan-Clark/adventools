@@ -1,27 +1,27 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadDatabase } from './database';
 
-export const DB_SOURCES: Record<string, any> = {
-  'protestant.db': require('../assets/bibles/protestant.db'),
-  'king_james.db': require('../assets/bibles/king_james.db'),
-  'le_bible.db': require('../assets/bibles/le_bible.db'),
-  'arabic.db': require('../assets/bibles/arabic.db'),
-  'basic_english.db': require('../assets/bibles/basic_english.db'),
-  'esperanto.db': require('../assets/bibles/esperanto.db'),
-  'greek.db': require('../assets/bibles/greek.db'),
-  'schlachter.db': require('../assets/bibles/schlachter.db'),
-  'diem.db': require('../assets/bibles/diem.db'),
+export interface BibleConfig {
+  id: string;
+  name: string;
+  language: string;
+  file: string;
+  url?: string;
+  isDefault?: boolean;
+}
+
+// Default Malagasy version (Built-in)
+export const DEFAULT_BIBLE: BibleConfig = {
+  id: 'MG',
+  name: 'Malagasy MG65',
+  language: 'Malagasy',
+  file: "MG65_v2.db",
+  isDefault: true
 };
 
-export const BIBLE_CONFIGS: Record<string, { file: string; prefix: string; name: string }> = {
-  'MG': { file: 'protestant.db', prefix: 'protestant', name: 'Malagasy' },
-  'FR': { file: 'le_bible.db', prefix: 'fr', name: 'Français' },
-  'EN': { file: 'king_james.db', prefix: 'en', name: 'English (KJV)' },
-  'AR': { file: 'arabic.db', prefix: 'ar', name: 'العربية' },
-  'BE': { file: 'basic_english.db', prefix: 'en', name: 'Basic English' },
-  'ES': { file: 'esperanto.db', prefix: 'es', name: 'Esperanto' },
-  'GR': { file: 'greek.db', prefix: 'gr', name: 'Ελληνικά' },
-  'DE': { file: 'schlachter.db', prefix: 'sc', name: 'Deutsch' },
-  'CI': { file: 'diem.db', prefix: 'ci_diem', name: 'Diem' },
+// Built-in assets mapping
+export const DB_SOURCES: Record<string, any> = {
+  "MG65_v2.db": require("../assets/bibles/MG65_v2.db"),
 };
 
 export const BOOK_MAP: Record<string, string> = {
@@ -31,6 +31,8 @@ export const BOOK_MAP: Record<string, string> = {
   'ezra': 'Ezra', 'neh': 'Nehemia', 'est': 'Estera', 'joba': 'Joba', 'sal': 'Salamo', 'ohab': 'Ohabolana',
   'mpito': 'Mpitoriteny', 'tonon': "Tonon-kiran'i Solomona", 'isa': 'Isaia', 'jer': 'Jeremia',
   'fitom': 'Fitomaniana', 'ezek': 'Ezekiela', 'dan': 'Daniela',
+  'hos': 'Hosea', 'joel': 'Joela', 'amos': 'Amosa', 'obad': 'Obadia', 'jona': 'Jona', 'mika': 'Mika',
+  'nah': 'Nahoma', 'hab': 'Habakoka', 'zef': 'Zefania', 'hag': 'Hagay', 'zak': 'Zakaria', 'mal': 'Malakia',
   'mat': 'Matio', 'mar': 'Marka', 'lio': 'Lioka', 'jao': 'Jaona', 'asa': "Asan'ny Apostoly",
   'rom': 'Romana', '1kor': '1 Korintiana', '2kor': '2 Korintiana', 'gal': 'Galatiana',
   'efe': 'Efesiana', 'filip': 'Filipiana', 'kol': 'Kolosiana',
@@ -44,16 +46,108 @@ const BIBLE_BOOKS = Object.keys(BOOK_MAP).join('|') + '|' + Object.values(BOOK_M
 
 export const BIBLE_REGEX = new RegExp(`\\b(${BIBLE_BOOKS})\\.?\\s{0,1}(\\d+)\\s{0,1}(?::\\s{0,1}([\\d\\s\\-,]+))?(?:\\.?\\s{0,1})\\b`, 'gi');
 
-export async function fetchVerseContent(lang: string, bookName: string, chapter: string, verses: string) {
+import * as FileSystem from 'expo-file-system/legacy';
+
+/**
+ * Ensures a bible file is available locally, downloads it if missing and URL is provided.
+ */
+export async function checkAndDownloadBible(config: BibleConfig): Promise<boolean> {
   try {
-    const config = BIBLE_CONFIGS[lang || 'MG'];
-    const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+    const docDir = FileSystem.documentDirectory;
+    const dbDir = `${docDir}SQLite/bibles`;
+    const dbPath = `${dbDir}/${config.file}`;
 
-    const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-    const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
-    const verseTable = tables.find(t => t.name.endsWith("_andininy"))?.name;
+    const info = await FileSystem.getInfoAsync(dbPath);
+    if (info.exists) return true;
 
-    if (!bookTable || !verseTable) return null;
+    if (!config.url) return false;
+
+    console.log(`Downloading missing bible: ${config.name}...`);
+
+    // Ensure directory exists
+    const dirInfo = await FileSystem.getInfoAsync(dbDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+    }
+
+    const downloadRes = await FileSystem.downloadAsync(config.url, dbPath);
+    return downloadRes.status === 200;
+  } catch (e) {
+    console.error(`Error downloading bible ${config.name}:`, e);
+    return false;
+  }
+}
+
+/**
+ * Gets all available bibles (built-in + downloaded).
+ */
+export async function getAvailableBibles(): Promise<BibleConfig[]> {
+  const list = [DEFAULT_BIBLE];
+
+  // Try to ensure default bible is there (silent check)
+  checkAndDownloadBible(DEFAULT_BIBLE).catch(() => { });
+
+  try {
+    const stored = await AsyncStorage.getItem('adventools_bibles_installed');
+    if (stored) {
+      const downloaded = JSON.parse(stored) as BibleConfig[];
+      // Filter out those that are "Malagasy" if we want to avoid duplicates or enforce our DEFAULT_BIBLE
+      list.push(...downloaded.filter(b => b.id !== DEFAULT_BIBLE.id));
+    }
+  } catch (e) { console.error(e); }
+  return list;
+}
+
+/**
+ * Helper to get the correct table names and column names based on the database schema.
+ */
+async function getBibleSchema(db: any) {
+  const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
+
+  // New schema check (Cloud)
+  const isNewSchema = tables.some(t => t.name === 'books') && tables.some(t => t.name === 'verses');
+
+  if (isNewSchema) {
+    return {
+      bookTable: 'books',
+      verseTable: 'verses',
+      bookIdCol: 'book_number',
+      bookNameCol: 'long_name',
+      chapterCol: 'chapter',
+      verseNumCol: 'verse',
+      textCol: 'text'
+    };
+  }
+
+  // Legacy / Malagasy schema check
+  const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
+  const verseTable = tables.find(t => t.name.endsWith("_andininy"))?.name;
+
+  if (bookTable && verseTable) {
+    return {
+      bookTable,
+      verseTable,
+      bookIdCol: 'id',
+      bookNameCol: 'b_name',
+      chapterCol: 'a_toko',
+      verseNumCol: 'a_and',
+      textCol: 'a_text'
+    };
+  }
+
+  throw new Error("Unknown Bible database schema");
+}
+
+export async function fetchVerseContent(lang: string, bookName: string, chapter: string, verses: string, stripNotes = false) {
+  try {
+    const bibles = await getAvailableBibles();
+    const config = bibles.find(b => b.id === lang) || bibles.find(b => b.id === 'MG') || DEFAULT_BIBLE;
+
+    // Cloud bibles are in 'bibles/' subfolder, built-in is in 'bibles' (passed to loadDatabase)
+    // Actually loadDatabase adds 'SQLite/' prefix automatically.
+    const subfolder = 'bibles';
+    const db = await loadDatabase(config.file, DB_SOURCES[config.file], subfolder);
+    const schema = await getBibleSchema(db);
 
     const cleanDetectedBook = bookName.replace(/[\.\s]/g, '').toLowerCase();
     let searchBookName = BOOK_MAP[cleanDetectedBook];
@@ -68,10 +162,10 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
     }
 
     const bookQuery = `
-      SELECT id, b_name 
-      FROM ${bookTable} 
-      WHERE REPLACE(REPLACE(REPLACE(LOWER(b_name), ' ', ''), '-', ''), "'", '') LIKE ? 
-      OR REPLACE(REPLACE(REPLACE(LOWER(b_name), ' ', ''), '-', ''), "'", '') LIKE ?
+      SELECT ${schema.bookIdCol} as id, ${schema.bookNameCol} as name 
+      FROM ${schema.bookTable} 
+      WHERE REPLACE(REPLACE(REPLACE(LOWER(${schema.bookNameCol}), ' ', ''), '-', ''), "'", '') LIKE ? 
+      OR REPLACE(REPLACE(REPLACE(LOWER(${schema.bookNameCol}), ' ', ''), '-', ''), "'", '') LIKE ?
       LIMIT 1
     `;
     const searchPattern = `%${searchBookName.toLowerCase().replace(/[\s\-\']/g, '')}%`;
@@ -81,7 +175,7 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
 
     if (!bookRes) return null;
 
-    let query = `SELECT a_and, a_text FROM ${verseTable} WHERE a_bid = ? AND a_toko = ?`;
+    let query = `SELECT ${schema.verseNumCol} as a_and, ${schema.textCol} as a_text FROM ${schema.verseTable} WHERE ${schema.bookIdCol} = ? AND CAST(${schema.chapterCol} AS INTEGER) = ?`;
     let params: any[] = [bookRes.id, chapter];
 
     if (verses) {
@@ -89,18 +183,18 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
       if (cleanVerses.includes('-')) {
         const parts = cleanVerses.split('-');
         if (parts.length === 2 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
-          query += ` AND a_and BETWEEN ? AND ?`;
+          query += ` AND ${schema.verseNumCol} BETWEEN ? AND ?`;
           params.push(parseInt(parts[0]), parseInt(parts[1]));
         }
       } else if (cleanVerses.includes(',')) {
         const nums = cleanVerses.split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
         if (nums.length > 0) {
-          query += ` AND a_and IN (${nums.join(',')})`;
+          query += ` AND ${schema.verseNumCol} IN (${nums.join(',')})`;
         }
       } else {
         const num = parseInt(cleanVerses);
         if (!isNaN(num)) {
-          query += ` AND a_and = ?`;
+          query += ` AND ${schema.verseNumCol} = ?`;
           params.push(num);
         }
       }
@@ -108,10 +202,11 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
 
     const versesRes: any[] = await db.getAllAsync(query, params);
     if (versesRes && versesRes.length > 0) {
+      const text = versesRes.map(v => versesRes.length > 1 ? `${v.a_and}. ${v.a_text}` : v.a_text).join('\n\n');
       return {
-        text: versesRes.map(v => versesRes.length > 1 ? `${v.a_and}. ${v.a_text}` : v.a_text).join('\n\n'),
+        text: stripNotes ? text.replace(/<n>.*?<\/n>/g, '') : text,
         bookId: bookRes.id,
-        bookName: bookRes.b_name
+        bookName: bookRes.name
       };
     }
     return null;
@@ -121,29 +216,25 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
   }
 }
 
-export async function fetchVerseContentById(lang: string, bookId: number, chapter: string, verse: string) {
+export async function fetchVerseContentById(lang: string, bookId: number, chapter: string, verse: string, stripNotes = true) {
   try {
-    const config = BIBLE_CONFIGS[lang || 'MG'];
+    const bibles = await getAvailableBibles();
+    const config = bibles.find(b => b.id === lang) || bibles.find(b => b.id === 'MG') || DEFAULT_BIBLE;
     const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
-
-    const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-    const bookTable = tables.find(t => t.name.endsWith("_boky"))?.name;
-    const verseTable = tables.find(t => t.name.endsWith("_andininy"))?.name;
-
-    if (!bookTable || !verseTable) return null;
+    const schema = await getBibleSchema(db);
 
     const verseQuery = `
-      SELECT a_and as verse, a_text as text, b_name as book, a_toko as chapter
-      FROM ${verseTable}
-      JOIN ${bookTable} ON ${verseTable}.a_bid = ${bookTable}.id
-      WHERE ${verseTable}.a_bid = ? AND a_toko = ? AND a_and = ?
+      SELECT ${schema.verseNumCol} as verse, ${schema.textCol} as text, ${schema.bookNameCol} as book, ${schema.chapterCol} as chapter
+      FROM ${schema.verseTable}
+      JOIN ${schema.bookTable} ON ${schema.verseTable}.${schema.bookIdCol} = ${schema.bookTable}.${schema.bookIdCol}
+      WHERE ${schema.verseTable}.${schema.bookIdCol} = ? AND CAST(${schema.chapterCol} AS INTEGER) = ? AND ${schema.verseNumCol} = ?
     `;
 
     const result: any = await db.getFirstAsync(verseQuery, [bookId, parseInt(chapter), parseInt(verse)]);
     if (!result) return null;
 
     return {
-      text: result.text,
+      text: stripNotes ? result.text.replace(/<n>.*?<\/n>/g, '') : result.text,
       book: result.book,
       bookId: bookId,
       chapter: parseInt(chapter),

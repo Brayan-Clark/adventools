@@ -4,13 +4,15 @@ import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 
 const dbConnections: Record<string, SQLite.SQLiteDatabase> = {};
+const dbLoadingPromises: Record<string, Promise<SQLite.SQLiteDatabase> | undefined> = {};
 
 /**
  * Sanitizes parameters for SQLite queries to prevent NullPointerException on Android.
  */
 function sanitizeParams(params: any[]): any[] {
-  if (!params || params.length === 0) return [];
+  if (!params) return [];
 
+  // If params is an array containing ONE array, it's the old style: getAllAsync(query, [p1, p2])
   if (params.length === 1 && Array.isArray(params[0])) {
     return params[0].map(p => {
       if (p === undefined || p === null) return null;
@@ -19,6 +21,7 @@ function sanitizeParams(params: any[]): any[] {
     });
   }
 
+  // New style: getAllAsync(query, p1, p2)
   return params.map(p => {
     if (p === undefined || p === null) return null;
     if (typeof p === 'number' && isNaN(p)) return null;
@@ -48,81 +51,94 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
     return dbConnections[cacheKey];
   }
 
-  const docDir = FileSystem.documentDirectory;
-  if (Platform.OS === 'web' || !docDir) {
-    const db = await SQLite.openDatabaseAsync(finalDbName);
-    dbConnections[cacheKey] = wrapDatabase(db);
-    return dbConnections[cacheKey];
+  // If already loading, wait for that promise
+  if (dbLoadingPromises[cacheKey]) {
+    return dbLoadingPromises[cacheKey];
   }
 
-  const dbDir = finalSubfolder ? `${docDir}SQLite/${finalSubfolder}` : `${docDir}SQLite`;
-  const dbPath = `${dbDir}/${finalDbName}`;
-  const rootDbPath = `${docDir}SQLite/${finalDbName}`;
-
-  try {
-    // 1. Ensure the target directory exists
-    const dirInfo = await FileSystem.getInfoAsync(dbDir);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
+  // Start new loading promise
+  dbLoadingPromises[cacheKey] = (async () => {
+    const docDir = FileSystem.documentDirectory;
+    if (Platform.OS === 'web' || !docDir) {
+      const db = await SQLite.openDatabaseAsync(finalDbName);
+      const wrapped = wrapDatabase(db);
+      dbConnections[cacheKey] = wrapped;
+      return wrapped;
     }
 
-    const info = await FileSystem.getInfoAsync(dbPath);
+    const dbDir = finalSubfolder ? `${docDir}SQLite/${finalSubfolder}` : `${docDir}SQLite`;
+    const dbPath = `${dbDir}/${finalDbName}`;
+    const rootDbPath = `${docDir}SQLite/${finalDbName}`;
 
-    // 2. Migration: If not in subfolder but exists in root, move it
-    if (!info.exists && finalSubfolder) {
-      const rootInfo = await FileSystem.getInfoAsync(rootDbPath);
-      if (rootInfo.exists) {
-        console.log(`Migrating ${finalDbName} from root to ${finalSubfolder}...`);
-        await FileSystem.moveAsync({
-          from: rootDbPath,
-          to: dbPath
-        });
+    try {
+      // 1. Ensure the target directory exists
+      const dirInfo = await FileSystem.getInfoAsync(dbDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
       }
-    }
 
-    const finalInfo = await FileSystem.getInfoAsync(dbPath);
+      const info = await FileSystem.getInfoAsync(dbPath);
 
-    // 3. Initial Copy from Assets if needed
-    if (!finalInfo.exists && assetSource) {
-      console.log(`Database ${finalDbName} not found, copying from assets...`);
-      const asset = await Asset.fromModule(assetSource).downloadAsync();
-      if (asset.localUri) {
-        await FileSystem.copyAsync({
-          from: asset.localUri,
-          to: dbPath,
-        });
+      // 2. Migration: If not in subfolder but exists in root, move it
+      if (!info.exists && finalSubfolder) {
+        const rootInfo = await FileSystem.getInfoAsync(rootDbPath);
+        if (rootInfo.exists) {
+          console.log(`Migrating ${finalDbName} from root to ${finalSubfolder}...`);
+          await FileSystem.moveAsync({
+            from: rootDbPath,
+            to: dbPath
+          });
+        }
       }
-    } else if (!info.exists && !assetSource) {
-      console.error(`Database ${finalDbName} not found and no asset source provided.`);
-      throw new Error(`Database ${finalDbName} not found`);
+
+      const finalInfo = await FileSystem.getInfoAsync(dbPath);
+
+      // 3. Initial Copy from Assets if needed
+      if (!finalInfo.exists && assetSource) {
+        console.log(`Database ${finalDbName} not found, copying from assets...`);
+        const asset = await Asset.fromModule(assetSource).downloadAsync();
+        if (asset.localUri) {
+          await FileSystem.copyAsync({
+            from: asset.localUri,
+            to: dbPath,
+          });
+        }
+      } else if (!info.exists && !assetSource) {
+        console.error(`Database ${finalDbName} not found and no asset source provided.`);
+        throw new Error(`Database ${finalDbName} not found`);
+      }
+    } catch (error) {
+      console.error(`Error preparing database ${finalDbName}:`, error);
+      throw error;
     }
-  } catch (error) {
-    console.error(`Error preparing database ${finalDbName}:`, error);
-    throw error;
-  }
 
-  let db;
-  try {
-    // expo-sqlite openDatabaseAsync expects a relative path from the SQLite folder
-    const openPath = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
-    db = await SQLite.openDatabaseAsync(openPath);
+    let db;
+    try {
+      // expo-sqlite openDatabaseAsync expects a relative path from the SQLite folder
+      const openPath = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
+      db = await SQLite.openDatabaseAsync(openPath);
 
-    // Verify database integrity
-    await db.execAsync("PRAGMA user_version;");
+      // Verify database integrity
+      await db.execAsync("PRAGMA user_version;");
 
-    dbConnections[cacheKey] = wrapDatabase(db);
-    return dbConnections[cacheKey];
-  } catch (error: any) {
-    console.error(`Error opening/verifying database ${finalDbName}:`, error);
+      const wrapped = wrapDatabase(db);
+      dbConnections[cacheKey] = wrapped;
+      return wrapped;
+    } catch (error: any) {
+      console.error(`Error opening/verifying database ${finalDbName}:`, error);
 
-    // Cleanup corrupted file
-    const msg = error.message?.toLowerCase() || "";
-    if (msg.includes("not a database") || msg.includes("code 26") || msg.includes("malformed")) {
-      await FileSystem.deleteAsync(dbPath, { idempotent: true }).catch(() => { });
+      // Cleanup corrupted file
+      const msg = error.message?.toLowerCase() || "";
+      if (msg.includes("not a database") || msg.includes("code 26") || msg.includes("malformed")) {
+        await FileSystem.deleteAsync(dbPath, { idempotent: true }).catch(() => { });
+      }
+      delete dbConnections[cacheKey];
+      delete dbLoadingPromises[cacheKey];
+      throw error;
     }
-    delete dbConnections[cacheKey];
-    throw error;
-  }
+  })();
+
+  return dbLoadingPromises[cacheKey];
 }
 
 function wrapDatabase(db: SQLite.SQLiteDatabase) {

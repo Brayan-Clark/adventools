@@ -1,6 +1,6 @@
 import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Quote, Sparkles, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -354,7 +354,6 @@ const BELIEFS_MG = [
 ];
 
 export default function CroyancesPage() {
-  const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const [lang, setLang] = useState<'FR' | 'MG'>('FR');
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -382,7 +381,7 @@ export default function CroyancesPage() {
 
       const [match, book, chapter, verses] = matches[0];
       try {
-        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1");
+        const res = await fetchVerseContent(globalSettings.bibleVersion, book, chapter, verses || "1", true);
         if (res) {
           setVerseContent(res.text);
         } else {

@@ -1,4 +1,4 @@
-import { loadDatabase } from '@/lib/database';
+import { fetchVerseContentById } from '@/lib/bible';
 import { useSettings } from '@/lib/settings-context';
 import { getAllVerseReferences, getVerseReferencesByCategory, VerseReference } from '@/lib/versets-data';
 import { useRouter } from 'expo-router';
@@ -7,38 +7,6 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const loadVerseContent = async (lang: string, bookId: number, chapter: string, verse: string) => {
-  try {
-    const db = await loadDatabase('protestant.db', require('@/assets/bibles/protestant.db'), 'bibles');
-
-    const tables: any[] = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-    const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-    const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
-
-    if (!bookTable || !verseTable) return null;
-
-    const verseQuery = `
-      SELECT a_and as verse, a_text as text, b_name as book, a_toko as chapter
-      FROM ${verseTable}
-      JOIN ${bookTable} ON ${verseTable}.a_bid = ${bookTable}.id
-      WHERE ${verseTable}.a_bid = ? AND a_toko = ? AND a_and = ?
-    `;
-
-    const result: any = await db.getFirstAsync(verseQuery, [bookId, parseInt(chapter), parseInt(verse)]);
-    if (!result) return null;
-
-    return {
-      text: result.text,
-      book: result.book,
-      bookId: bookId,
-      chapter: parseInt(chapter),
-      verses: verse
-    };
-  } catch (error) {
-    console.error('Error loading verse content:', error);
-    return null;
-  }
-};
 
 const CATEGORIES = [
   { id: 'all', name: 'Toutes', color: 'bg-slate-500' },
@@ -81,7 +49,7 @@ export default function VersetsCategoriesPage() {
         references.map(async (reference: VerseReference) => {
           if (reference.bookId && reference.chapter && reference.verse) {
             try {
-              const verseContent = await loadVerseContent(
+              const verseContent = await fetchVerseContentById(
                 globalSettings.bibleVersion,
                 reference.bookId,
                 reference.chapter.toString(),

@@ -3,13 +3,13 @@ import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-import { BIBLE_CONFIGS, DB_SOURCES } from '@/lib/bible';
+import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
 
 export default function BibleReader() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function BibleReader() {
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
   const { settings: globalSettings } = useSettings();
+  const [availableBibles, setAvailableBibles] = useState<BibleConfig[]>([]);
   const [lang, setLang] = useState<string>((langParam as string) || globalSettings.bibleVersion || 'MG');
   const [currentBookName, setCurrentBookName] = useState(bookName);
   const flatListRef = React.useRef<FlatList>(null);
@@ -34,6 +35,16 @@ export default function BibleReader() {
   const [wordSelectMode, setWordSelectMode] = useState(false);
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
   const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
+
+  useFocusEffect(
+    React.useCallback(() => {
+      async function init() {
+        const bibles = await getAvailableBibles();
+        setAvailableBibles(bibles);
+      }
+      init();
+    }, [])
+  );
 
   useEffect(() => {
     loadHighlights();
@@ -192,58 +203,60 @@ export default function BibleReader() {
 
   useEffect(() => {
     async function loadData() {
-      if (!bookId) return;
+      if (!bookId || availableBibles.length === 0) return;
       setLoading(true);
       try {
-        const config = BIBLE_CONFIGS[lang];
+        const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
         console.log(`[BibleReader] Loading ${lang} - Book: ${bookId}, Chapter: ${chapter}`);
+
+        // Ensure file exists
+        await checkAndDownloadBible(config);
 
         const db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
 
         // Dynamically discover table names
         const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-        const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
-        const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
-
-        if (!bookTable || !verseTable) {
-          console.error("[BibleReader] Tables not found");
-          setLoading(false);
-          return;
-        }
+        const isCloud = tables.some((t: any) => t.name === 'books');
 
         const bookIdNum = Number(bookId);
+        let bookInfo: any;
+        let countResult: any;
+        let versesResult: any;
 
-        // Get book name in selected language
-        const bookInfo: any = await db.getFirstAsync(`
-          SELECT b_name as name FROM ${bookTable} WHERE id = ?
-        `, [bookIdNum]);
+        if (isCloud) {
+          // New Cloud Schema
+          bookInfo = await db.getFirstAsync(`SELECT long_name as name FROM books WHERE book_number = ?`, [bookIdNum]);
+          countResult = await db.getFirstAsync(`SELECT COUNT(DISTINCT chapter) as count FROM verses WHERE book_number = ?`, [bookIdNum]);
 
-        if (bookInfo) {
-          setCurrentBookName(bookInfo.name);
+          versesResult = await db.getAllAsync(`
+            SELECT verse as verse, text as text 
+            FROM verses 
+            WHERE book_number = ? AND CAST(chapter AS INTEGER) = ?
+            ORDER BY CAST(verse AS INTEGER) ASC
+          `, [bookIdNum, chapter]);
+        } else {
+          // Legacy Schema
+          const bookTable = tables.find((t: any) => t.name.endsWith("_boky"))?.name;
+          const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+
+          if (bookTable && verseTable) {
+            bookInfo = await db.getFirstAsync(`SELECT b_name as name FROM ${bookTable} WHERE id = ?`, [bookIdNum]);
+            countResult = await db.getFirstAsync(`SELECT COUNT(DISTINCT a_toko) as count FROM ${verseTable} WHERE a_bid = ?`, [bookIdNum]);
+
+            versesResult = await db.getAllAsync(`
+              SELECT a_and as verse, a_text as text 
+              FROM ${verseTable} 
+              WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?
+              ORDER BY CAST(a_and AS INTEGER) ASC
+            `, [bookIdNum, chapter]);
+          }
         }
 
-        // Get total chapters for this book
-        const countResult: any = await db.getFirstAsync(`
-          SELECT COUNT(DISTINCT a_toko) as count FROM ${verseTable} WHERE a_bid = ?
-        `, [bookIdNum]);
-
-        if (countResult) {
-          setChaptersCount(countResult.count);
-        }
-
-        // Get verses
-        const chapterNum = Number(chapter);
-        const versesResult: any = await db.getAllAsync(`
-          SELECT a_and as verse, a_text as text 
-          FROM ${verseTable} 
-          WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?
-            ORDER BY CAST(a_and AS INTEGER) ASC
-        `, [bookIdNum, isNaN(chapterNum) ? 1 : chapterNum]);
-
+        if (bookInfo) setCurrentBookName(bookInfo.name);
+        if (countResult) setChaptersCount(countResult.count);
         setVerses(versesResult || []);
-        console.log(`[BibleReader] Loaded ${versesResult?.length || 0} verses in ${lang}`);
 
-        // Save to History (inside try block to access bookInfo)
+        // Save to History
         try {
           const historyItem = {
             type: 'bible',
@@ -255,18 +268,10 @@ export default function BibleReader() {
 
           const existingHistory = await AsyncStorage.getItem('app_history');
           let history = existingHistory ? JSON.parse(existingHistory) : [];
-
-          // Remove duplicates (same title)
           history = history.filter((h: any) => h.title !== historyItem.title);
-
-          // Add to top
           history.unshift(historyItem);
-
-          // Keep only top 5
           await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 5)));
-        } catch (e) {
-          console.error("Failed to save history", e);
-        }
+        } catch (e) { }
       } catch (e) {
         console.error("[BibleReader] Load Error:", e);
       } finally {
@@ -274,7 +279,7 @@ export default function BibleReader() {
       }
     }
     loadData();
-  }, [bookId, chapter, lang]);
+  }, [bookId, chapter, lang, availableBibles]);
 
   const shareVerse = (verseNum: number, verseText: string) => {
     router.push({
@@ -301,7 +306,9 @@ export default function BibleReader() {
           className="flex-row items-center bg-[#1a2233] px-4 py-2 rounded-full border border-slate-800"
         >
           <Globe size={16} color="#94a3b8" />
-          <Text className="text-white font-bold text-xs ml-2 tracking-wider">{lang}</Text>
+          <Text className="text-white font-bold text-xs ml-2 tracking-wider">
+            {availableBibles.find(b => b.id === lang)?.language || lang}
+          </Text>
           <ChevronDown size={14} color="#64748b" className="ml-1" />
         </TouchableOpacity>
 
@@ -361,19 +368,24 @@ export default function BibleReader() {
           const h = highlights[v.verse.toString()];
           const bg = typeof h === 'string' ? h : h?.bg;
           const userTextColor = typeof h === 'object' ? h?.text : undefined;
-          const isBookmarked = bookmarks[v.verse.toString()];
+          const isBookmarked = !!bookmarks[v.verse.toString()];
           const vWh = wordHighlights[v.verse.toString()] || {};
           const words = v.text.split(' ');
+
+          const handleSelectVerse = () => {
+            setSelectedVerse({ verse: Number(v.verse), text: v.text });
+          };
 
           return (
             <View className="px-7">
               <TouchableOpacity
-                onLongPress={() => setSelectedVerse(v)}
+                onPress={() => !wordSelectMode && handleSelectVerse()}
+                onLongPress={handleSelectVerse}
                 delayLongPress={300}
                 activeOpacity={0.7}
                 className={cn(
                   "mb-4 rounded-xl px-2 py-1 relative",
-                  wordSelectMode && selectedVerse?.verse === v.verse ? "border-2 border-blue-500/50 bg-blue-500/5" : ""
+                  wordSelectMode && Number(selectedVerse?.verse) === Number(v.verse) ? "border-2 border-blue-500/50 bg-blue-500/5" : ""
                 )}
                 style={bg ? { backgroundColor: bg } : {}}
               >
@@ -396,14 +408,42 @@ export default function BibleReader() {
                     {v.verse}
                   </Text>
                   {" "}
-                  {words.map((word: string, idx: number) => (
-                    <Text
-                      key={idx}
-                      style={{ color: vWh[idx] || userTextColor || '#cbd5e1' }}
-                    >
-                      {word}{" "}
-                    </Text>
-                  ))}
+                  {(() => {
+                    let inTag = false;
+                    return words.map((word: string, idx: number) => {
+                      const segments = word.split(/(<n>|<\/n>)/g);
+                      return (
+                        <React.Fragment key={idx}>
+                          {segments.map((seg, sIdx) => {
+                            if (seg === '<n>') {
+                              inTag = true;
+                              return <Text key={sIdx}>{"\n"}</Text>;
+                            }
+                            if (seg === '</n>') {
+                              inTag = false;
+                              return <Text key={sIdx}>{"\n"}</Text>;
+                            }
+                            if (!seg) return null;
+
+                            return (
+                              <Text
+                                key={sIdx}
+                                style={{
+                                  color: vWh[idx] || userTextColor || (inTag ? '#93c5fd' : '#cbd5e1'),
+                                  fontWeight: inTag ? 'bold' : 'normal',
+                                  fontStyle: inTag ? 'italic' : 'normal',
+                                  fontSize: inTag ? globalSettings.fontSize * 0.85 : globalSettings.fontSize
+                                }}
+                              >
+                                {seg}
+                              </Text>
+                            );
+                          })}
+                          <Text>{" "}</Text>
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -620,25 +660,50 @@ export default function BibleReader() {
                 fontFamily: 'Lexend_400Regular',
                 textAlign: 'center'
               }}>
-                {(selectedVerse?.text.split(' ') || []).map((word, idx) => (
-                  <Text
-                    key={idx}
-                    onPress={() => {
-                      const newTemp = { ...tempWordHighlights };
-                      if (newTemp[idx] === selectedWordColor) {
-                        delete newTemp[idx];
-                      } else {
-                        newTemp[idx] = selectedWordColor;
-                      }
-                      setTempWordHighlights(newTemp);
-                    }}
-                    style={{
-                      color: tempWordHighlights[idx] || '#cbd5e1'
-                    }}
-                  >
-                    {word}{" "}
-                  </Text>
-                ))}
+                {(() => {
+                  let inTag = false;
+                  return (selectedVerse?.text.split(' ') || []).map((word, idx) => {
+                    const segments = word.split(/(<n>|<\/n>)/g);
+                    return (
+                      <React.Fragment key={idx}>
+                        {segments.map((seg, sIdx) => {
+                          if (seg === '<n>') {
+                            inTag = true;
+                            return <Text key={sIdx}>{"\n"}</Text>;
+                          }
+                          if (seg === '</n>') {
+                            inTag = false;
+                            return <Text key={sIdx}>{"\n"}</Text>;
+                          }
+                          if (!seg) return null;
+
+                          return (
+                            <Text
+                              key={sIdx}
+                              onPress={() => {
+                                const newTemp = { ...tempWordHighlights };
+                                if (newTemp[idx] === selectedWordColor) {
+                                  delete newTemp[idx];
+                                } else {
+                                  newTemp[idx] = selectedWordColor;
+                                }
+                                setTempWordHighlights(newTemp);
+                              }}
+                              className={inTag ? "text-blue-300 font-bold italic" : ""}
+                              style={{
+                                color: tempWordHighlights[idx] || (inTag ? '#93c5fd' : '#cbd5e1'),
+                                fontSize: inTag ? 20 : 22
+                              }}
+                            >
+                              {seg}
+                            </Text>
+                          );
+                        })}
+                        <Text>{" "}</Text>
+                      </React.Fragment>
+                    );
+                  });
+                })()}
               </Text>
             </View>
 
@@ -733,25 +798,34 @@ export default function BibleReader() {
             <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
               <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
               <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
+
+              <TouchableOpacity
+                onPress={() => { setShowLangPicker(false); router.push({ pathname: '/bible/store' as any }); }}
+                className="flex-row items-center bg-blue-600/20 border border-blue-600 p-4 rounded-2xl mb-6"
+              >
+                <Globe size={20} color="#3b82f6" className="mr-3" />
+                <Text className="text-blue-400 font-bold">Gérer les versions (Store)</Text>
+              </TouchableOpacity>
+
               <ScrollView showsVerticalScrollIndicator={false}>
-                {Object.entries(BIBLE_CONFIGS).map(([code, config]) => (
+                {availableBibles.map((config) => (
                   <TouchableOpacity
-                    key={code}
-                    onPress={() => { setLang(code); setShowLangPicker(false); }}
+                    key={config.id}
+                    onPress={() => { setLang(config.id); setShowLangPicker(false); }}
                     className={cn(
                       "flex-row items-center justify-between p-4 rounded-2xl mb-3 border",
-                      lang === code ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                      lang === config.id ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
                     )}
                   >
                     <View>
-                      <Text className={cn("font-bold text-base", lang === code ? "text-white" : "text-slate-300")}>
+                      <Text className={cn("font-bold text-base", lang === config.id ? "text-white" : "text-slate-300")}>
+                        {config.language}
+                      </Text>
+                      <Text className={cn("text-xs mt-1", lang === config.id ? "text-blue-100" : "text-slate-500")}>
                         {config.name}
                       </Text>
-                      <Text className={cn("text-xs mt-1", lang === code ? "text-blue-100" : "text-slate-500")}>
-                        {code}
-                      </Text>
                     </View>
-                    {lang === code && (
+                    {lang === config.id && (
                       <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
                         <Text className="text-[#195de6] font-bold text-xs">✓</Text>
                       </View>
