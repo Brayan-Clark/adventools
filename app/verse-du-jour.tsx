@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchVerseContentById } from '@/lib/bible';
 
 export default function VerDuJourPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const { bookId, chapter, verse, reference, category } = useLocalSearchParams();
@@ -39,10 +41,10 @@ export default function VerDuJourPage() {
         if (verseContent) {
           setVerseText(verseContent.text);
         } else {
-          setVerseText('Verset non trouvé dans la base de données.');
+          setVerseText(t('verse_not_found_db'));
         }
       } else {
-        setVerseText('Référence incomplète.');
+        setVerseText(t('verse_incomplete'));
       }
 
       // Reset favorite/bookmark status for new verse
@@ -83,7 +85,7 @@ export default function VerDuJourPage() {
         if (verseContent) {
           setVerseText(verseContent.text);
         } else {
-          setVerseText('Verset non trouvé.');
+          setVerseText(t('verse_not_found'));
         }
         setIsLoading(false);
       } else {
@@ -242,14 +244,14 @@ export default function VerDuJourPage() {
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-bold flex-1" style={{ fontFamily: 'Lexend_700Bold' }}>
-          Verset du Jour
+          {t('verse_of_the_day')}
         </Text>
         <TouchableOpacity
           onPress={() => router.push('/versets-categories')}
           className="ml-4 px-3 py-2 bg-slate-700 rounded-lg"
         >
           <Text className="text-white text-sm font-medium" style={{ fontFamily: 'Lexend_500Medium' }}>
-            Catégories
+            {t('categories')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -301,7 +303,7 @@ export default function VerDuJourPage() {
               </View>
             ) : (
               <View className="py-12 items-center">
-                <Text className="text-white/60 font-bold">Chargement de la versé...</Text>
+                <Text className="text-white/60 font-bold">{t('verse_loading')}</Text>
               </View>
             )}
 
@@ -344,19 +346,18 @@ export default function VerDuJourPage() {
             className={`mr-3 ${isRefreshing ? 'animate-spin' : ''}`}
           />
           <Text className="text-slate-300 font-bold text-base">
-            {isRefreshing ? 'Chargement...' : 'Nouveau Verset'}
+            {isRefreshing ? t('loading') : t('new_verse')}
           </Text>
         </TouchableOpacity>
 
         {/* Inspiration Section */}
         <View className="mb-8">
           <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">
-            Méditation
+            {t('meditation')}
           </Text>
           <View className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
             <Text className="text-slate-300 leading-6" style={{ fontSize: 16 }}>
-              Prenez un moment pour réfléchir à cette parole. Comment peut-elle s'appliquer à votre vie aujourd'hui ?
-              Laissez cette vérité transformer votre cœur et vos pensées.
+              {t('meditation_intro')}
             </Text>
           </View>
         </View>
@@ -364,7 +365,7 @@ export default function VerDuJourPage() {
         {/* Footer */}
         <View className="items-center mb-8">
           <Text className="text-slate-600 text-sm">
-            Versé du Jour • Adventools
+            {t('verse_of_day_footer')}
           </Text>
         </View>
       </ScrollView>

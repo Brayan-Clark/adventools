@@ -300,7 +300,7 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
     if (versesRes && versesRes.length > 0) {
       const text = versesRes.map(v => versesRes.length > 1 ? `${v.a_and}. ${v.a_text}` : v.a_text).join('\n\n');
       return {
-        text: stripNotes ? text.replace(/<n>[\s\S]*?<\/n>/gi, '') : text,
+        text: stripNotes ? text.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : text,
         bookId: bookRes.id,
         bookName: bookRes.name,
         bibleId: config.id,
@@ -336,7 +336,7 @@ export async function fetchVerseContentById(lang: string, bookId: number, chapte
     if (!result) return null;
 
     return {
-      text: stripNotes ? result.text.replace(/<n>[\s\S]*?<\/n>/gi, '') : result.text,
+      text: stripNotes ? result.text.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : result.text,
       book: result.book,
       bookId: bookId,
       chapter: parseInt(chapter),

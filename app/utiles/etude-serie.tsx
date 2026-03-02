@@ -1,4 +1,5 @@
 import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
@@ -70,6 +71,7 @@ const DEFAULT_STUDIES = [
 ];
 
 export default function EtudeSerie() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const [studies, setStudies] = useState<StudySection[]>([]);
@@ -128,7 +130,7 @@ export default function EtudeSerie() {
           });
         } else {
           const bibleName = res?.bibleName || globalSettings.bibleVersion;
-          Alert.alert("Tsy hita", `Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Verset introuvable)`);
+          Alert.alert(t('verse_not_found'), `${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`);
         }
       } catch (e) { console.error(e); }
     } else {
@@ -190,10 +192,10 @@ export default function EtudeSerie() {
   };
 
   const deleteVerse = (sIdx: number, vIdx: number) => {
-    Alert.alert("Supprimer", "Voulez-vous supprimer ce verset ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t('delete'), t('delete_note_confirm'), [
+      { text: t('cancel'), style: "cancel" },
       {
-        text: "Supprimer", style: "destructive", onPress: () => {
+        text: t('delete'), style: "destructive", onPress: () => {
           const updated = [...studies];
           updated[sIdx].verses.splice(vIdx, 1);
           if (updated[sIdx].verses.length === 0) updated.splice(sIdx, 1);
@@ -213,7 +215,7 @@ export default function EtudeSerie() {
 
   const copyToClipboard = async (text: string) => {
     await Clipboard.setStringAsync(text);
-    Alert.alert("Copié", "Verset copié.");
+    Alert.alert(t('copy'), t('verse_copied'));
   };
 
   return (
@@ -226,8 +228,8 @@ export default function EtudeSerie() {
           <ArrowLeft size={20} color="#94a3b8" />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Série d'Études</Text>
-          <Text className="text-slate-500 text-xs">Notes d'étude biblique</Text>
+          <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('study_series')}</Text>
+          <Text className="text-slate-500 text-xs">{t('bible_study_notes')}</Text>
         </View>
         <TouchableOpacity onPress={() => setIsModalVisible(true)} className="w-10 h-10 rounded-full bg-blue-500/10 items-center justify-center border border-blue-500/20">
           <Plus size={20} color="#3b82f6" />
@@ -278,13 +280,12 @@ export default function EtudeSerie() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10">
             <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white">{editingVerseIdx !== null ? "Modifier le Verset" : "Ajouter un Verset"}</Text>
+              <Text className="text-xl font-bold text-white">{editingVerseIdx !== null ? t('edit_verse') : t('add_verse')}</Text>
               <TouchableOpacity onPress={() => { setIsModalVisible(false); resetForm(); }}>
                 <X size={24} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">Catégorie (Sélect. ou Saisir)</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('category_selection')}</Text>
             <View className="flex-row flex-wrap gap-2 mb-4">
               {CATEGORIES_LIST.map((cat) => (
                 <TouchableOpacity
@@ -300,25 +301,25 @@ export default function EtudeSerie() {
             </View>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
-              placeholder="Ou saisir une nouvelle catégorie..."
+              placeholder={t('new_category_placeholder')}
               placeholderTextColor="#475569"
               value={categoryName}
               onChangeText={setCategoryName}
             />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">Référence</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('ref_copied')}</Text>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
-              placeholder="Ex: Matio 24:14"
+              placeholder={t('verse_ref_placeholder')}
               placeholderTextColor="#475569"
               value={verseRef}
               onChangeText={setVerseRef}
             />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">Texte (Facultatif)</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('verse_text_placeholder')}</Text>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 min-h-[80px]"
-              placeholder="Contenu du verset..."
+              placeholder={t('verse_text_placeholder')}
               placeholderTextColor="#475569"
               multiline
               value={verseText}
@@ -326,7 +327,7 @@ export default function EtudeSerie() {
             />
 
             <TouchableOpacity onPress={saveVerse} className="bg-blue-600 py-5 rounded-2xl items-center">
-              <Text className="text-white font-bold text-lg">Enregistrer</Text>
+              <Text className="text-white font-bold text-lg">{t('save')}</Text>
             </TouchableOpacity>
           </View>
         </View>

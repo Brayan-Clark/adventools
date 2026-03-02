@@ -1,4 +1,5 @@
 import { loadDatabase } from '@/lib/database';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -13,6 +14,7 @@ import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } fr
 export default function Bible() {
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
+  const { t } = useTranslation();
   const [books, setBooks] = useState<any[]>([]);
   const [testaments, setTestaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,10 +104,10 @@ export default function Bible() {
         uniqueTestamentIds.forEach(id => {
           if (!finalTestaments.find(t => t.id === id)) {
             let name = "";
-            if (id === 1) name = isCloudSchema ? "Testamenta Taloha" : "Ancien Testament";
-            else if (id === 2) name = isCloudSchema ? "Testamenta Vaovao" : "Nouveau Testament";
-            else if (id === 3) name = "Deutérocanonique / Autres";
-            else name = `Autre (${id})`;
+            if (id === 1) name = isCloudSchema ? t('old_testament_malagasy') : t('old_testament_french');
+            else if (id === 2) name = isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french');
+            else if (id === 3) name = t('deuterocanonical_other');
+            else name = `${t('other_testament')} (${id})`;
 
             finalTestaments.push({ id, name });
           }
@@ -113,8 +115,8 @@ export default function Bible() {
 
         // Ensure we at least have 1 and 2 if nothing found (fallback)
         if (finalTestaments.length === 0) {
-          finalTestaments.push({ id: 1, name: isCloudSchema ? "Testamenta Taloha" : "Ancien Testament" });
-          finalTestaments.push({ id: 2, name: isCloudSchema ? "Testamenta Vaovao" : "Nouveau Testament" });
+          finalTestaments.push({ id: 1, name: isCloudSchema ? t('old_testament_malagasy') : t('old_testament_french') });
+          finalTestaments.push({ id: 2, name: isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french') });
         }
 
         finalTestaments.sort((a, b) => a.id - b.id);
@@ -214,7 +216,7 @@ export default function Bible() {
           <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Sainte Bible</Text>
+          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('holy_bible')}</Text>
         </View>
 
         <TouchableOpacity
@@ -233,7 +235,7 @@ export default function Bible() {
         <View className="relative flex-row items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-1 shadow-inner">
           <Search size={18} color="#64748b" />
           <TextInput
-            placeholder={searchMode === 'books' ? "Rechercher un livre..." : "Rechercher un texte..."}
+            placeholder={searchMode === 'books' ? t('search_book') : t('search_text')}
             placeholderTextColor="#475569"
             className="flex-1 h-12 ml-3 text-white font-medium"
             value={search}
@@ -257,7 +259,7 @@ export default function Bible() {
             searchMode === 'books' ? "bg-[#195de6] border-[#195de6]" : "bg-slate-900 border-slate-800"
           )}
         >
-          <Text className={cn("font-bold text-xs", searchMode === 'books' ? "text-white" : "text-slate-500")}>LIVRES</Text>
+          <Text className={cn("font-bold text-xs", searchMode === 'books' ? "text-white" : "text-slate-500")}>{t('books').toUpperCase()}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => {
@@ -269,7 +271,7 @@ export default function Bible() {
             searchMode === 'verses' ? "bg-[#195de6] border-[#195de6]" : "bg-slate-900 border-slate-800"
           )}
         >
-          <Text className={cn("font-bold text-xs", searchMode === 'verses' ? "text-white" : "text-slate-500")}>VERSETS</Text>
+          <Text className={cn("font-bold text-xs", searchMode === 'verses' ? "text-white" : "text-slate-500")}>{t('verses_tab').toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
@@ -295,19 +297,19 @@ export default function Bible() {
             {isSearchingVerses ? (
               <View className="py-20 items-center">
                 <ActivityIndicator color="#195de6" />
-                <Text className="text-slate-500 mt-4">Recherche dans la Bible...</Text>
+                <Text className="text-slate-500 mt-4">{t('searching_bible')}</Text>
               </View>
             ) : search.length < 3 ? (
               <View className="py-20 items-center">
-                <Text className="text-slate-500 text-center px-10">Entrez au moins 3 caractères pour rechercher dans les textes.</Text>
+                <Text className="text-slate-500 text-center px-10">{t('min_search_chars')}</Text>
               </View>
             ) : verseResults.length === 0 ? (
               <View className="py-20 items-center">
-                <Text className="text-slate-500">Aucun verset trouvé pour "{search}"</Text>
+                <Text className="text-slate-500">{t('no_verse_found')} "{search}"</Text>
               </View>
             ) : (
               <>
-                <Text className="text-slate-500 text-xs font-bold mb-4 ml-2">{verseResults.length} RÉSULTATS TROUVÉS</Text>
+                <Text className="text-slate-500 text-xs font-bold mb-4 ml-2">{verseResults.length} {t('results_found')}</Text>
                 {verseResults.map((v, i) => (
                   <TouchableOpacity
                     key={i}
@@ -349,14 +351,14 @@ export default function Bible() {
           <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-            <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
+            <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>{t('choose_language')}</Text>
 
             <TouchableOpacity
               onPress={() => { setShowLangPicker(false); router.push({ pathname: '/bible/store' as any }); }}
               className="flex-row items-center bg-blue-600/20 border border-blue-600 p-4 rounded-2xl mb-6"
             >
               <PlusCircle size={20} color="#3b82f6" className="mr-3" />
-              <Text className="text-blue-400 font-bold">Installer d'autres versions</Text>
+              <Text className="text-blue-400 font-bold">{t('install_other_versions')}</Text>
             </TouchableOpacity>
 
             <ScrollView showsVerticalScrollIndicator={false}>

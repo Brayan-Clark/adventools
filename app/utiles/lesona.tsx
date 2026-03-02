@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -101,6 +102,7 @@ interface WeeklyLesson {
 }
 
 export default function LesonaSekolySabata() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { settings: globalSettings } = useSettings();
@@ -231,7 +233,7 @@ export default function LesonaSekolySabata() {
       console.error(e);
       // If we already have cached data, don't alert unless it's a critical failure
       if (!selectedQuarterly) {
-        Alert.alert("Hors connexion", "Vérifiez votre connexion internet pour voir les détails de ce trimestre.");
+        Alert.alert(t('connection_error'), t('check_connection'));
       }
     } finally {
       setLoading(false);
@@ -307,10 +309,10 @@ export default function LesonaSekolySabata() {
       await AsyncStorage.setItem(`adventools_ss_q_detail_${q.id}`, JSON.stringify(q));
 
       setDownloadedQuarterlies(prev => [...prev, q.id]);
-      Alert.alert("Vita", "Voasintona manontolo ny lesona ho an'ity telovolana ity.");
+      Alert.alert(t('success'), t('download_success'));
     } catch (e) {
       console.error(e);
-      Alert.alert("Hadisoana", "Tsy voasintona ny lesona rehetra.");
+      Alert.alert(t('error'), t('download_failed'));
     } finally {
       setDownloadingAll(false);
     }
@@ -318,21 +320,21 @@ export default function LesonaSekolySabata() {
 
   const deleteQuarterly = async (qId: string) => {
     Alert.alert(
-      "Hamafa lesona",
-      "Tena hovonoina ve ny lesona rehetra voasintona ho an'ity telovolana ity?",
+      t('delete_offline'),
+      t('confirm_delete_all'),
       [
-        { text: "Hanafoana", style: "cancel" },
+        { text: t('cancel'), style: "cancel" },
         {
-          text: "Eny, fafao",
+          text: t('ok'),
           style: "destructive",
           onPress: async () => {
             try {
               await AsyncStorage.removeItem(`${OFFLINE_LESSONS_PREFIX}${qId}`);
               setDownloadedQuarterlies(prev => prev.filter(id => id !== qId));
-              Alert.alert("Vita", "Voafafa ny lesona voasintona.");
+              Alert.alert(t('success'), t('delete_success'));
             } catch (e) {
               console.error(e);
-              Alert.alert("Hadisoana", "Tsy voafafa ny lesona.");
+              Alert.alert(t('error'), t('delete_doc_error'));
             }
           }
         }
@@ -392,7 +394,7 @@ export default function LesonaSekolySabata() {
       }
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
-      Alert.alert("Hadisoana", `Tsy nahitana ny votoatiny: ${e.message}`);
+      Alert.alert(t('error'), `${t('no_content')}: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -620,7 +622,7 @@ export default function LesonaSekolySabata() {
           }
         }
       }
-      Alert.alert("Verset", `Mikatsaka ny andinin-tsoratra masina: ${ref}`);
+      Alert.alert(t('bible'), `${t('searching_bible')}: ${ref}`);
     } else {
       Linking.openURL(url);
     }
@@ -651,7 +653,7 @@ export default function LesonaSekolySabata() {
               {readingLesson.segments?.map((s, idx) => {
                 const isActive = activeSegmentIdx === idx;
                 // Use full title but with ellipsis if needed
-                const dayTitle = s.title || `Andro ${idx + 1}`;
+                const dayTitle = s.title || `${t('day')} ${idx + 1}`;
 
                 return (
                   <TouchableOpacity
@@ -704,7 +706,7 @@ export default function LesonaSekolySabata() {
               </>
             ) : (
               <View className="flex-1 items-center justify-center py-20">
-                <Text className="text-slate-500">Tsy misy votoatiny azo aseho.</Text>
+                <Text className="text-slate-500">{t('no_content')}</Text>
               </View>
             )}
           </ScrollView>
@@ -738,7 +740,7 @@ export default function LesonaSekolySabata() {
                     <Download size={14} color="#3b82f6" />
                   )}
                   <Text className={`ml-2 text-[10px] font-bold ${isDownloaded ? 'text-emerald-500' : 'text-primary'}`}>
-                    {isDownloaded ? (isCurrent ? "Havaozina" : "Eny an-toerana") : "Sintony ny rehetra"}
+                    {isDownloaded ? (isCurrent ? t('updated') : t('offline_available')) : t('download_all')}
                   </Text>
                 </TouchableOpacity>
 
@@ -755,7 +757,7 @@ export default function LesonaSekolySabata() {
           </View>
 
           <View className="flex-row items-center justify-between mt-8 mb-6 ml-1">
-            <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Programam-pianarana</Text>
+            <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t('program_of_study')}</Text>
 
             {isQuarterlyCurrent(selectedQuarterly) && (
               <TouchableOpacity
@@ -764,13 +766,13 @@ export default function LesonaSekolySabata() {
                   if (lessonId) {
                     fetchWeeklyLesson(selectedQuarterly.id, lessonId);
                   } else {
-                    Alert.alert("Sekoly Sabata", "Tsy misy lesona ho an'ny androany.");
+                    Alert.alert(t('sabbath_school_lessons'), t('no_content'));
                   }
                 }}
                 className="px-5 py-2 rounded-2xl bg-primary border shadow-lg shadow-primary/20 border-primary/20 flex-row items-center"
               >
                 <BookOpen size={14} color="white" />
-                <Text className="text-white font-bold text-[11px] ml-2">Hamaky ny androany</Text>
+                <Text className="text-white font-bold text-[11px] ml-2">{t('read_today')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -778,7 +780,7 @@ export default function LesonaSekolySabata() {
           <View className="pb-10">
             {(selectedQuarterly.lessons || Array.from({ length: 13 }, (_, i) => ({
               id: `${selectedQuarterly.id}-${(i + 1).toString().padStart(2, '0')}`,
-              title: `Lesona faha ${i + 1}`,
+              title: `${t('lesson_number')} ${i + 1}`,
               startDate: "", endDate: "", index: "",
               name: (i + 1).toString().padStart(2, '0')
             }))).map((lesson, index) => {

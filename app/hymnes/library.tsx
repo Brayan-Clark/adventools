@@ -1,4 +1,5 @@
 import { loadDatabase } from '@/lib/database';
+import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,6 +11,7 @@ import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Hymnes() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { db: dbNameParam, title: pageTitle } = useLocalSearchParams<{ db: string, title?: string }>();
   const dbName = dbNameParam || 'cantique.db';
@@ -61,7 +63,7 @@ export default function Hymnes() {
     } catch (e) {
       console.error(e);
       // If DB not found, redirect back to selector
-      Alert.alert("Erreur", "Base de données introuvable. Veuillez la télécharger.");
+      Alert.alert(t('error'), t('db_not_found' as any));
       router.back();
     }
   };
@@ -144,7 +146,7 @@ export default function Hymnes() {
           <TouchableOpacity onPress={handleBack} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{pageTitle || "Hymnes"}</Text>
+          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{pageTitle || t('hymns')}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/hymnes/store')}
@@ -158,7 +160,7 @@ export default function Hymnes() {
         <View className="relative flex-row items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-1 shadow-inner">
           <SearchIcon size={18} color="#64748b" />
           <TextInput
-            placeholder={totalHymns > 0 ? `Rechercher parmi ${totalHymns} cantiques...` : "Numéro ou titre..."}
+            placeholder={totalHymns > 0 ? t('search_hymns_placeholder').replace('{{count}}', totalHymns.toString()) : t('search_hymns_basic')}
             placeholderTextColor="#475569"
             className="flex-1 h-12 ml-3 text-white font-medium"
             value={search}
@@ -181,7 +183,7 @@ export default function Hymnes() {
               (!selectedCategory && !showFavorites) ? "bg-pink-500 border-pink-500" : "bg-slate-900 border-slate-800"
             )}
           >
-            <Text className={cn("font-bold text-xs", (!selectedCategory && !showFavorites) ? "text-white" : "text-slate-400")}>TOUS</Text>
+            <Text className={cn("font-bold text-xs", (!selectedCategory && !showFavorites) ? "text-white" : "text-slate-400")}>{t('all_notes')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -192,7 +194,7 @@ export default function Hymnes() {
             )}
           >
             <Bookmark size={12} color={showFavorites ? "white" : "#ef4444"} fill={showFavorites ? "white" : "transparent"} className="mr-1.5" />
-            <Text className={cn("font-bold text-xs", showFavorites ? "text-white" : "text-slate-400")}>FAVORIS</Text>
+            <Text className={cn("font-bold text-xs", showFavorites ? "text-white" : "text-slate-400")}>{t('favorites').toUpperCase()}</Text>
           </TouchableOpacity>
 
           {categories.map((cat) => (
@@ -227,7 +229,7 @@ export default function Hymnes() {
           ) : (
             <View className="py-20 items-center">
               <MusicIcon size={48} color="#1e293b" />
-              <Text className="text-slate-500 mt-4">Aucun cantique trouvé</Text>
+              <Text className="text-slate-500 mt-4">{t('no_hymn_found')}</Text>
             </View>
           )
         }
@@ -256,7 +258,7 @@ export default function Hymnes() {
                 </View>
                 <View className="flex-1">
                   <Text className="font-bold text-white text-base" style={{ fontFamily: 'Lexend_600SemiBold' }} numberOfLines={1}>{item.c_title}</Text>
-                  <Text className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{item.c_categories?.split(' - ')[1] || item.c_categories || "Louange"}</Text>
+                  <Text className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{item.c_categories?.split(' - ')[1] || item.c_categories || t('praise')}</Text>
                 </View>
                 <ChevronRightIcon size={16} color="#475569" />
               </TouchableOpacity>
@@ -278,14 +280,14 @@ export default function Hymnes() {
         <View className="flex-1 bg-black/70 justify-center items-center px-8">
           <View className="bg-[#1a2233] rounded-3xl p-8 w-full max-w-sm border border-slate-700">
             <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Recherche rapide</Text>
+              <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('quick_search')}</Text>
               <TouchableOpacity onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
                 <X size={18} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
             <Text className="text-slate-400 text-sm mb-4">
-              Entrez le numéro du cantique {maxHymnNumber > 0 ? `(1-${maxHymnNumber})` : ""}
+              {t('enter_hymn_number')} {maxHymnNumber > 0 ? `(1-${maxHymnNumber})` : ""}
             </Text>
 
             <TextInput
@@ -304,7 +306,7 @@ export default function Hymnes() {
               onPress={goToHymnByNumber}
               className="bg-pink-500 rounded-2xl py-4 items-center shadow-lg shadow-pink-500/30"
             >
-              <Text className="text-white font-bold text-base">Aller au cantique</Text>
+              <Text className="text-white font-bold text-base">{t('go_to_hymn')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HymneManager() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,18 +29,15 @@ export default function HymneManager() {
       const rootDbDir = `${docDir}SQLite`;
       const hymnDbDir = `${docDir}SQLite/hymnes`;
 
-      // Ensure hymn directory exists
       if (!(await FileSystem.getInfoAsync(hymnDbDir)).exists) {
         await FileSystem.makeDirectoryAsync(hymnDbDir, { intermediates: true });
       }
 
-      // Load manifest to know which files are actually hymns
       let manifestData: any = null;
       try {
         const cached = await AsyncStorage.getItem('hymn_manifest_cache');
         if (cached) manifestData = JSON.parse(cached);
 
-        // Try to refresh manifest if possible
         const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
         const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`).catch(() => null);
         if (response && response.ok) {
@@ -53,7 +52,6 @@ export default function HymneManager() {
 
       let presentFiles: any[] = [];
 
-      // Check both directories during transition
       const scanDirs = [rootDbDir, hymnDbDir];
       const foundFilesSet = new Set<string>();
 
@@ -72,10 +70,9 @@ export default function HymneManager() {
                 const fileInfo = await FileSystem.getInfoAsync(`${dir}/${file}`);
                 if (fileInfo.exists && fileInfo.size > 0) {
                   foundFilesSet.add(fileNameLower);
-                  // Migration logic is in loadDatabase, but we still want to show them here
                   let displayName = file.replace('.db', '').replace(/_/g, ' ');
                   if (isDefault) {
-                    displayName = "Fihirana Advantista";
+                    displayName = t('default_hymnal_name');
                   } else if (isInManifest && manifestData) {
                     const version = manifestData.versions.find((v: any) => v.file.toLowerCase() === fileNameLower);
                     if (version) displayName = version.name;
@@ -105,20 +102,19 @@ export default function HymneManager() {
 
   const deleteHymnSource = async (version: any) => {
     if (version.isDefault) {
-      Alert.alert("Action impossible", "Ce recueil est essentiel au fonctionnement de l'application et ne peut pas être supprimé.");
+      Alert.alert(t('action_impossible'), t('cannot_delete_default_hymnal'));
       return;
     }
 
     Alert.alert(
-      "Suppression : " + version.name,
-      "Voulez-vous également supprimer définitivement vos favoris et corrections associés à ce recueil ?",
+      t('delete_hymnal') + ' : ' + version.name,
+      t('delete_hymnal_data_warning'),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t('cancel'), style: "cancel" },
         {
-          text: "Garder mes données",
+          text: t('keep_my_data'),
           onPress: async () => {
             try {
-              // Try deleting from both locations if they exist
               const rootPath = `${FileSystem.documentDirectory}SQLite/${version.file}`;
               const hymnPath = `${FileSystem.documentDirectory}SQLite/hymnes/${version.file}`;
               await FileSystem.deleteAsync(rootPath, { idempotent: true });
@@ -128,7 +124,7 @@ export default function HymneManager() {
           }
         },
         {
-          text: "Tout supprimer",
+          text: t('delete_all'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -166,15 +162,15 @@ export default function HymneManager() {
 
       <View className="px-6 py-6 flex-row items-center justify-between border-b border-slate-800/50">
         <View>
-          <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Mes Recueils</Text>
-          <Text className="text-slate-500 text-xs mt-1">Gérez vos chants locaux</Text>
+          <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_hymnals')}</Text>
+          <Text className="text-slate-500 text-xs mt-1">{t('manage_local_songs')}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/hymnes/store')}
           className="bg-pink-600 px-4 py-2 rounded-full flex-row items-center"
         >
           <Plus size={16} color="white" className="mr-1" />
-          <Text className="text-white font-bold text-xs uppercase">Boutique</Text>
+          <Text className="text-white font-bold text-xs uppercase">{t('store')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -194,7 +190,7 @@ export default function HymneManager() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>{item.name}</Text>
-                  <Text className="text-[10px] text-slate-500 mt-0.5">{item.isDefault ? 'Recueil Intégré' : item.size}</Text>
+                  <Text className="text-[10px] text-slate-500 mt-0.5">{item.isDefault ? t('integrated_hymnal') : item.size}</Text>
                 </View>
                 <ChevronRight size={16} color="#475569" className="ml-2" />
               </TouchableOpacity>
@@ -205,9 +201,9 @@ export default function HymneManager() {
           {localFiles.length === 0 && !loading && (
             <View className="py-20 items-center opacity-50">
               <BookOpen size={64} color="#475569" />
-              <Text className="text-slate-400 mt-4 font-bold">Aucun recueil trouvé</Text>
+              <Text className="text-slate-400 mt-4 font-bold">{t('no_hymnal_found')}</Text>
               <TouchableOpacity onPress={() => router.push('/hymnes/store')} className="mt-4">
-                <Text className="text-pink-500 font-bold uppercase text-xs">Aller à la boutique</Text>
+                <Text className="text-pink-500 font-bold uppercase text-xs">{t('go_to_store')}</Text>
               </TouchableOpacity>
             </View>
           )}

@@ -7,12 +7,14 @@ import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVerseContentById } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 
 export default function Home() {
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
+  const { t, currentLang } = useTranslation();
   const [currentReference, setCurrentReference] = useState<VerseReference | null>(null);
   const [verseText, setVerseText] = useState<string>('');
   const [history, setHistory] = useState<any[]>([]);
@@ -36,14 +38,14 @@ export default function Home() {
           if (verseContent) {
             setVerseText(verseContent.text);
           } else {
-            setVerseText('Verset non trouvé dans la base de données.');
+            setVerseText(t('loading'));
           }
         } else {
-          setVerseText('Référence incomplète.');
+          setVerseText('...');
         }
       } catch (e) {
         console.error("Error loading verse:", e);
-        setVerseText('Erreur lors du chargement du verset.');
+        setVerseText('...');
       }
     }
     init();
@@ -75,19 +77,25 @@ export default function Home() {
         if (verseContent) {
           setVerseText(verseContent.text);
         } else {
-          setVerseText('Verset non trouvé dans la base de données.');
+          setVerseText(t('loading'));
         }
       } else {
-        setVerseText('Référence incomplète.');
+        setVerseText('...');
       }
     } catch (e) {
       console.error("Error refreshing verse:", e);
-      setVerseText('Erreur lors du chargement du verset.');
+      setVerseText('...');
     }
   };
 
   const hour = new Date().getHours();
-  const greeting = hour < 17 ? "Bonjour ☀️" : "Bonsoir 🌙";
+  const getGreeting = () => {
+    if (hour < 12) return t('greeting_morning');
+    if (hour < 18) return t('greeting_afternoon');
+    return t('greeting_evening');
+  };
+
+  const greeting = getGreeting();
 
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
@@ -103,7 +111,7 @@ export default function Home() {
             />
             <View>
               <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{greeting}</Text>
-              <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Bienvenue !</Text>
+              <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('welcome')} !</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -141,7 +149,7 @@ export default function Home() {
           <View className="p-8">
             <View className="flex-row items-center justify-between mb-6">
               <View className="bg-white/20 px-3 py-1.5 rounded-full">
-                <Text className="text-[10px] font-bold uppercase text-white tracking-widest">Verset du Jour</Text>
+                <Text className="text-[10px] font-bold uppercase text-white tracking-widest">{t('verse_of_the_day')}</Text>
               </View>
               <View className="flex-row items-center gap-2">
                 <TouchableOpacity
@@ -188,54 +196,54 @@ export default function Home() {
               </View>
             ) : (
               <View className="py-10 items-center">
-                <Text className="text-white/60 font-bold uppercase tracking-tighter">Éveil des écritures...</Text>
+                <Text className="text-white/60 font-bold uppercase tracking-tighter">{t('loading')}</Text>
               </View>
             )}
           </View>
         </TouchableOpacity>
 
         {/* Feature Grid */}
-        <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">Outils Principaux</Text>
+        <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">{t('tools')}</Text>
         <View className="flex-row flex-wrap justify-between gap-y-5 mb-12">
           <FeatureCard
             href="/bible"
-            title="Bible"
-            subtitle="Les Écritures"
+            title={t('bible')}
+            subtitle={t('bible_subtitle')}
             icon={<BookOpen color="#195de6" size={28} />}
             bgColor="bg-blue-500/10"
           />
           <FeatureCard
             href="/hymnes"
-            title="Chants"
-            subtitle="Louanges"
+            title={t('hymns')}
+            subtitle={t('hymns_subtitle')}
             icon={<Music color="#ec4899" size={28} />}
             bgColor="bg-pink-500/10"
           />
           <FeatureCard
             href="/pdf"
-            title="Livres"
-            subtitle="Documents"
+            title={t('pdf_reader')}
+            subtitle={t('pdf_subtitle')}
             icon={<FileText color="#f59e0b" size={28} />}
             bgColor="bg-amber-500/10"
           />
           <FeatureCard
             href="/notes"
-            title="Notes"
-            subtitle="Réflexions"
+            title={t('notes')}
+            subtitle={t('notes_subtitle')}
             icon={<StickyNote color="#10b981" size={28} />}
             bgColor="bg-emerald-500/10"
           />
           <FeatureCard
             href="/croyances"
-            title="Croyances"
-            subtitle="Les 28 piliers"
+            title={t('beliefs')}
+            subtitle={t('beliefs_subtitle')}
             icon={<Heart color="#ef4444" size={28} />}
             bgColor="bg-red-500/10"
           />
           <FeatureCard
             href="/utiles"
-            title="Utiles"
-            subtitle="Ressources"
+            title={t('useful')}
+            subtitle={t('useful_subtitle')}
             icon={<LayoutGrid color="#8b5cf6" size={28} />}
             bgColor="bg-violet-500/10"
           />
@@ -244,12 +252,12 @@ export default function Home() {
         {/* Recent Section - Dynamic */}
         <View className="mb-20">
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-lg font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Récemment lu</Text>
+            <Text className="text-lg font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('recent_read')}</Text>
             <TouchableOpacity onPress={async () => {
               setHistory([]);
               await AsyncStorage.removeItem('app_history');
             }}>
-              <Text className="text-xs text-primary font-bold">Effacer</Text>
+              <Text className="text-xs text-primary font-bold">{t('reset_history')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -282,7 +290,7 @@ export default function Home() {
           ) : (
             <View className="py-8 bg-slate-900/50 rounded-3xl items-center border border-slate-800/50">
               <History size={24} color="#475569" className="mb-2" />
-              <Text className="text-slate-500 text-xs">Aucun historique récent</Text>
+              <Text className="text-slate-500 text-xs">{t('empty_history')}</Text>
             </View>
           )}
         </View>

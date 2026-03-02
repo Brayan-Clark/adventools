@@ -1,5 +1,6 @@
-import { exportAllAppData, exportUserModifications, importAllAppData, readBackupFile, resetHymnCorrections } from '@/lib/backup-utils';
+import { exportAllAppData, exportUserModifications, importAllAppData, readBackupFile } from '@/lib/backup-utils';
 import { getAvailableBibles } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,23 +17,35 @@ import {
   Download,
   FileText,
   Globe,
-  Heart, Info,
+  Heart,
+  Info,
+  Languages,
   Moon,
   RefreshCcw,
   Save,
   Shield,
+  Trash2,
   Type,
   User,
-  X,
+  X
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function Settings() {
   const router = useRouter();
   const { settings: globalSettings, updateSettings } = useSettings();
+  const {
+    t,
+    syncRemoteManifest,
+    getLanguageStatus,
+    downloadLanguage,
+    removeLanguage,
+    getInstalledLanguages,
+    getRemoteAvailableLanguages
+  } = useTranslation();
   const [userName, setUserName] = useState('Fianatra Baiboly');
   const [userImage, setUserImage] = useState<string | null>(null);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
@@ -42,6 +55,12 @@ export default function Settings() {
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
+
+  // Tabs state
+  const [activeTab, setActiveTab] = useState<'general' | 'reading' | 'system' | 'support'>('general');
+  const [isLangModalVisible, setIsLangModalVisible] = useState(false);
+  const [remoteLangs, setRemoteLangs] = useState<any[]>([]);
+  const [isSyncingLangs, setIsSyncingLangs] = useState(false);
 
   // Import states
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
@@ -81,21 +100,18 @@ export default function Settings() {
 
   const syncDepartments = async () => {
     try {
-      // 1. Charger depuis le cache local (AsyncStorage) s'il existe
       const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
       if (cachedManifest) {
         const data = JSON.parse(cachedManifest);
         if (data.departments) setAvailableDepartments(data.departments);
       }
 
-      // 2. Tentative de synchronisation avec GitHub (branche 'data')
       const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
       const response = await fetch(GITHUB_MANIFEST_URL);
       if (response.ok) {
         const remoteData = await response.json();
         if (remoteData.departments) {
           setAvailableDepartments(remoteData.departments);
-          // Mettre à jour le cache
           await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
         }
       }
@@ -166,16 +182,16 @@ export default function Settings() {
 
   const handleClearHistory = async () => {
     Alert.alert(
-      'Effacer l\'historique',
-      'Voulez-vous effacer tout l\'historique de lecture ?',
+      t('reset_history'),
+      t('clear_history_confirm'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Effacer',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.removeItem('app_history');
-            Alert.alert('Succès', 'Historique effacé');
+            Alert.alert(t('success'), t('history_cleared'));
           }
         }
       ]
@@ -186,11 +202,9 @@ export default function Settings() {
     const data = await readBackupFile();
     if (!data) return;
 
-    // The backup could be full backup (with a .data property) or just modifications
     const actualData = data.data || data;
     setImportData(actualData);
 
-    // Categorize
     const summaryMap: Record<string, { label: string, keys: string[] }> = {
       hymnes: { label: "Fanitsiana Cantiques", keys: [] },
       etude: { label: "Série d'Études Bibliques", keys: [] },
@@ -214,7 +228,6 @@ export default function Settings() {
       .map(([id, val]) => ({ id, ...val }));
 
     setImportSummary(finalSummary);
-    // Select all by default
     setSelectedKeys(finalSummary.map(s => s.id));
     setIsImportModalVisible(true);
   };
@@ -231,7 +244,7 @@ export default function Settings() {
       });
 
       if (keysToImport.length === 0) {
-        Alert.alert("Information", "Tsy misy sokajy voafidy.");
+        Alert.alert(t('info'), t('no_category_selected'));
         return;
       }
 
@@ -239,11 +252,11 @@ export default function Settings() {
       await AsyncStorage.multiSet(pairs);
 
       setIsImportModalVisible(false);
-      Alert.alert("Vita", "Tontolo soa aman-tsara ny fanafarana ny fanovana.");
-      loadSettings(); // Refresh UI
+      Alert.alert(t('success'), t('import_success'));
+      loadSettings();
     } catch (e) {
       console.error(e);
-      Alert.alert("Hadisoana", "Tsy tontolo ny fanafarana.");
+      Alert.alert(t('error'), t('import_error'));
     }
   };
 
@@ -256,216 +269,288 @@ export default function Settings() {
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center">
           <ChevronLeft size={20} color="#cbd5e1" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Paramètres</Text>
+        <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{t('settings')}</Text>
         <View className="w-10" />
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
-        {/* Profile Card */}
-        <View className="items-center mb-10">
-          <View className="relative mb-4">
-            <TouchableOpacity onPress={pickImage} activeOpacity={0.8} className="w-28 h-28 rounded-full bg-slate-900 border-4 border-slate-800 items-center justify-center overflow-hidden">
-              {userImage ? (
-                <Image source={{ uri: userImage }} className="w-full h-full" />
-              ) : (
-                <User size={56} color="#475569" />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={pickImage}
-              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary items-center justify-center border-4 border-background-dark shadow-lg"
-            >
-              <Camera size={14} color="white" />
-            </TouchableOpacity>
+        {/* Modern Profile Header */}
+        <View className="px-6 pt-8 pb-10 bg-slate-900/30">
+          <View className="flex-row items-center">
+            <View className="relative">
+              <TouchableOpacity onPress={pickImage} activeOpacity={0.8} className="w-20 h-20 rounded-3xl bg-slate-800 border-2 border-slate-700 items-center justify-center overflow-hidden">
+                {userImage ? (
+                  <Image source={{ uri: userImage }} className="w-full h-full" />
+                ) : (
+                  <User size={40} color="#475569" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={pickImage}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-primary items-center justify-center border-2 border-background-dark shadow-lg"
+              >
+                <Camera size={12} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="ml-5 flex-1">
+              <TouchableOpacity
+                onPress={() => {
+                  setTempName(userName);
+                  setIsNameEditVisible(true);
+                }}
+              >
+                <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{userName}</Text>
+                <View className="flex-row items-center flex-wrap gap-x-2">
+                  <Text className="text-slate-500 text-xs">{userEDS}</Text>
+                  {userDepartments.length > 0 && (
+                    <>
+                      <View className="w-1 h-1 rounded-full bg-slate-700" />
+                      <TouchableOpacity onPress={() => setIsDeptModalVisible(true)}>
+                        <Text className="text-primary/80 text-xs font-medium">
+                          {userDepartments.length > 2
+                            ? `${userDepartments.slice(0, 2).join(', ')} +${userDepartments.length - 2}`
+                            : userDepartments.join(', ')}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {userDepartments.length === 0 && (
+                    <>
+                      <View className="w-1 h-1 rounded-full bg-slate-700" />
+                      <TouchableOpacity onPress={() => setIsDeptModalVisible(true)}>
+                        <Text className="text-slate-600 text-xs italic">{t('add_department' as any)}</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              setTempName(userName);
-              setIsNameEditVisible(true);
-            }}
-            className="items-center"
-          >
-            <Text className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{userName}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setIsDeptModalVisible(true)}
-            className="bg-white/5 border border-white/10 px-4 py-2 rounded-full flex-row items-center"
-          >
-            <Text className="text-slate-400 text-xs font-medium mr-2">
-              {userDepartments.length > 0 ? userDepartments.slice(0, 2).join(', ') + (userDepartments.length > 2 ? '...' : '') : 'Ajouter mon département'}
-            </Text>
-            <ChevronRight size={14} color="#64748b" />
-          </TouchableOpacity>
         </View>
 
-        {/* Categories */}
-        <SettingsGroup title="Mon Compte">
-          <SettingItem
-            icon={<User size={18} color="#64748b" />}
-            label="Modifier mon nom"
-            value={userName}
-            onPress={() => {
-              setTempName(userName);
-              setIsNameEditVisible(true);
-            }}
-          />
-          <SettingItem
-            icon={<BookOpen size={18} color="#64748b" />}
-            label="Classe EDS"
-            value={userEDS}
-            onPress={() => setIsEDSModalVisible(true)}
-          />
-          <SettingItem
-            icon={<Shield size={18} color="#64748b" />}
-            label="Mes Départements"
-            value={`${userDepartments.length} sélectionnés`}
-            onPress={() => setIsDeptModalVisible(true)}
-            isLast
-          />
-        </SettingsGroup>
+        {/* Tab Switcher */}
+        <View className="px-6 mb-8 mt-4">
+          <View className="flex-row bg-slate-900 p-1 rounded-2xl border border-slate-800/50">
+            <TabButton
+              active={activeTab === 'general'}
+              label={t('tab_general')}
+              icon={<User size={14} />}
+              onPress={() => setActiveTab('general')}
+            />
+            <TabButton
+              active={activeTab === 'reading'}
+              label={t('tab_reading')}
+              icon={<BookOpen size={14} />}
+              onPress={() => setActiveTab('reading')}
+            />
+            <TabButton
+              active={activeTab === 'system'}
+              label={t('tab_system')}
+              icon={<Save size={14} />}
+              onPress={() => setActiveTab('system')}
+            />
+            <TabButton
+              active={activeTab === 'support'}
+              label={t('tab_support')}
+              icon={<CircleHelp size={14} />}
+              onPress={() => setActiveTab('support')}
+            />
+          </View>
+        </View>
 
-        <SettingsGroup title="Préférences">
-          <SettingItem
-            icon={<Moon size={18} color="#64748b" />}
-            label="Mode Sombre"
-            rightElement={<Switch value={globalSettings.darkMode ?? true} onValueChange={(v) => updateSettings({ darkMode: v })} trackColor={{ false: '#334155', true: '#195de6' }} />}
-          />
-          <SettingItem
-            icon={<Bell size={18} color="#64748b" />}
-            label="Notifications"
-            rightElement={<Switch value={globalSettings.notifications ?? true} onValueChange={(v) => updateSettings({ notifications: v })} trackColor={{ false: '#334155', true: '#195de6' }} />}
-          />
-          <SettingItem
-            icon={<Globe size={18} color="#64748b" />}
-            label="Langue"
-            value={globalSettings.language}
-            onPress={() => {
-              Alert.alert(
-                'Langue',
-                'Choisissez votre langue',
-                [
-                  { text: 'Français', onPress: () => updateSettings({ language: 'Français' }) },
-                  { text: 'English', onPress: () => updateSettings({ language: 'English' }) },
-                ]
-              )
-            }}
-            isLast
-          />
-        </SettingsGroup>
+        <View className="px-6 pb-20">
+          {activeTab === 'general' && (
+            <>
+              <SettingsGroup title={t('account_group')}>
+                <SettingItem
+                  icon={<User size={18} color="#64748b" />}
+                  label={t('edit_name')}
+                  value={userName}
+                  onPress={() => {
+                    setTempName(userName);
+                    setIsNameEditVisible(true);
+                  }}
+                />
+                <SettingItem
+                  icon={<Globe size={18} color="#64748b" />}
+                  label={t('language')}
+                  value={globalSettings.language}
+                  onPress={() => setIsLangModalVisible(true)}
+                  isLast
+                />
+              </SettingsGroup>
 
-        <SettingsGroup title="Contenu">
-          <SettingItem
-            icon={<FileText size={18} color="#64748b" />}
-            label="Version de Bible par défaut"
-            value={(installedBibles || []).find(b => b?.id === globalSettings?.bibleVersion)?.name || globalSettings?.bibleVersion || "MG65"}
-            onPress={() => {
-              if (!installedBibles || installedBibles.length === 0) {
-                Alert.alert("Info", "Chargement des versions...");
-                return;
-              }
-              Alert.alert(
-                "Version par défaut",
-                "Choisissez la version de la Bible à ouvrir par défaut",
-                installedBibles.map((config) => ({
-                  text: `${config.name || config.id} (${config.id})`,
-                  onPress: () => updateSettings({ bibleVersion: config.id })
-                }))
-              )
-            }}
-          />
-          <SettingItem
-            icon={<Type size={18} color="#64748b" />}
-            label="Paramètres de lecture"
-            onPress={() => router.push('/bible/settings' as any)}
-            isLast
-          />
-        </SettingsGroup>
+              <SettingsGroup title={t('pref_group')}>
+                <SettingItem
+                  icon={<Moon size={18} color="#64748b" />}
+                  label={t('dark_mode')}
+                  rightElement={
+                    <Switch
+                      value={globalSettings.darkMode ?? true}
+                      onValueChange={(v) => updateSettings({ darkMode: v })}
+                      trackColor={{ false: '#334155', true: '#195de6' }}
+                    />
+                  }
+                />
+                <SettingItem
+                  icon={<Bell size={18} color="#64748b" />}
+                  label={t('notifications')}
+                  rightElement={
+                    <Switch
+                      value={globalSettings.notifications ?? true}
+                      onValueChange={(v) => updateSettings({ notifications: v })}
+                      trackColor={{ false: '#334155', true: '#195de6' }}
+                    />
+                  }
+                  isLast
+                />
+              </SettingsGroup>
+            </>
+          )}
 
-        <SettingsGroup title="Données & Sauvegarde">
-          <SettingItem
-            icon={<Save size={18} color="#3b82f6" />}
-            label="Sauvegarde complète"
-            value="Notes, Bible, Profil..."
-            onPress={exportAllAppData}
-          />
-          <SettingItem
-            icon={<Download size={18} color="#3b82f6" />}
-            label="Restaurer une sauvegarde"
-            onPress={importAllAppData}
-          />
-          <View className="h-4" />
-          <SettingItem
-            icon={<Save size={18} color="#64748b" />}
-            label="Exporter les modifications"
-            value="Tout exporter"
-            onPress={exportUserModifications}
-          />
-          <SettingItem
-            icon={<Download size={18} color="#64748b" />}
-            label="Importer des modifications"
-            onPress={handleStartImport}
-          />
-          <SettingItem
-            icon={<RefreshCcw size={18} color="#f87171" />}
-            label="Réinitialiser les corrections"
-            onPress={resetHymnCorrections}
-          />
-          <SettingItem
-            icon={<RefreshCcw size={18} color="#f87171" />}
-            label="Réinitialiser l'historique"
-            onPress={handleClearHistory}
-            isLast
-          />
-        </SettingsGroup>
+          {activeTab === 'reading' && (
+            <>
+              <SettingsGroup title={t('content_group')}>
+                <SettingItem
+                  icon={<FileText size={18} color="#64748b" />}
+                  label={t('default_bible')}
+                  value={(installedBibles || []).find(b => b?.id === globalSettings?.bibleVersion)?.name || globalSettings?.bibleVersion || "MG65"}
+                  onPress={() => {
+                    if (!installedBibles || installedBibles.length === 0) {
+                      Alert.alert(t('info'), t('loading'));
+                      return;
+                    }
+                    Alert.alert(
+                      t('default_bible'),
+                      t('choose_bible_version' as any),
+                      installedBibles.map((config) => ({
+                        text: `${config.name || config.id} (${config.id})`,
+                        onPress: () => updateSettings({ bibleVersion: config.id })
+                      }))
+                    )
+                  }}
+                />
+                <SettingItem
+                  icon={<Type size={18} color="#64748b" />}
+                  label={t('reading_settings')}
+                  onPress={() => router.push('/bible/settings' as any)}
+                  isLast
+                />
+              </SettingsGroup>
 
-        <SettingsGroup title="Support">
-          <SettingItem
-            icon={<Info size={18} color="#64748b" />}
-            label="À Propos d'Adventools"
-            onPress={() => router.push('/settings/about' as any)}
-          />
-          <SettingItem
-            icon={<Shield size={18} color="#64748b" />}
-            label="Politique de confidentialité"
-            onPress={() => router.push('/settings/privacy' as any)}
-          />
-          <SettingItem
-            icon={<Heart size={18} color="#ef4444" />}
-            label="Faire un Don"
-            onPress={() => router.push('/settings/don' as any)}
-          />
-          <SettingItem
-            icon={<CircleHelp size={18} color="#64748b" />}
-            label="Centre d'aide"
-            value="Par Email"
-            onPress={() => Alert.alert('Aide', 'Pour toute assistance, contactez-nous à : brayanraherinandrasana@gmail.com')}
-            isLast
-          />
-        </SettingsGroup>
+              <SettingsGroup title={t('account_group')}>
+                <SettingItem
+                  icon={<BookOpen size={18} color="#64748b" />}
+                  label={t('eds_class')}
+                  value={userEDS}
+                  onPress={() => setIsEDSModalVisible(true)}
+                />
+                <SettingItem
+                  icon={<Shield size={18} color="#64748b" />}
+                  label={t('my_departments')}
+                  value={`${userDepartments.length} sélectionnés`}
+                  onPress={() => setIsDeptModalVisible(true)}
+                  isLast
+                />
+              </SettingsGroup>
+            </>
+          )}
+
+          {activeTab === 'system' && (
+            <>
+              <SettingsGroup title={t('data_group')}>
+                <SettingItem
+                  icon={<Save size={18} color="#3b82f6" />}
+                  label={t('full_backup')}
+                  value="Notes, Bible, Profil..."
+                  onPress={exportAllAppData}
+                />
+                <SettingItem
+                  icon={<Download size={18} color="#3b82f6" />}
+                  label={t('restore_backup')}
+                  onPress={importAllAppData}
+                  isLast
+                />
+              </SettingsGroup>
+
+              <SettingsGroup title={t('maintenance')}>
+                <SettingItem
+                  icon={<Save size={18} color="#64748b" />}
+                  label={t('export_mods')}
+                  onPress={exportUserModifications}
+                />
+                <SettingItem
+                  icon={<Download size={18} color="#64748b" />}
+                  label={t('import_mods')}
+                  onPress={handleStartImport}
+                />
+                <SettingItem
+                  icon={<RefreshCcw size={18} color="#f87171" />}
+                  label={t('reset_history')}
+                  onPress={handleClearHistory}
+                />
+                <SettingItem
+                  icon={<Languages size={18} color="#3b82f6" />}
+                  label="Gestion des langues"
+                  onPress={() => setIsLangModalVisible(true)}
+                  isLast
+                />
+              </SettingsGroup>
+            </>
+          )}
+
+          {activeTab === 'support' && (
+            <>
+              <SettingsGroup title={t('support_group')}>
+                <SettingItem
+                  icon={<Info size={18} color="#64748b" />}
+                  label={t('about')}
+                  onPress={() => router.push('/settings/about' as any)}
+                />
+                <SettingItem
+                  icon={<Shield size={18} color="#64748b" />}
+                  label={t('privacy')}
+                  onPress={() => router.push('/settings/privacy' as any)}
+                />
+                <SettingItem
+                  icon={<Heart size={18} color="#ef4444" />}
+                  label={t('donation')}
+                  onPress={() => router.push('/settings/don' as any)}
+                />
+                <SettingItem
+                  icon={<CircleHelp size={18} color="#64748b" />}
+                  label={t('help')}
+                  value="Email"
+                  onPress={() => Alert.alert(t('help'), t('contact_help_msg' as any))}
+                  isLast
+                />
+              </SettingsGroup>
+            </>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Name Edit Modal */}
+      {/* Modals are unchanged but kept for functionality */}
       <Modal visible={isNameEditVisible} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center px-6">
           <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
-            <Text className="text-white font-bold text-lg mb-4" style={{ fontFamily: 'Lexend_700Bold' }}>Modifier votre nom</Text>
+            <Text className="text-white font-bold text-lg mb-4" style={{ fontFamily: 'Lexend_700Bold' }}>{t('modify_name')}</Text>
             <TextInput
               className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white mb-6"
               value={tempName}
               onChangeText={setTempName}
-              placeholder="Votre nom"
+              placeholder={t('your_name')}
               placeholderTextColor="#64748b"
               autoFocus
             />
             <View className="flex-row gap-3">
               <TouchableOpacity onPress={() => setIsNameEditVisible(false)} className="flex-1 p-4 rounded-2xl border border-slate-700 items-center">
-                <Text className="text-slate-400 font-medium">Annuler</Text>
+                <Text className="text-slate-400 font-medium">{t('cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={saveName} className="flex-1 p-4 rounded-2xl bg-primary items-center">
-                <Text className="text-white font-bold">Enregistrer</Text>
+                <Text className="text-white font-bold">{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -478,8 +563,8 @@ export default function Settings() {
           <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%] border-t border-slate-800">
             <View className="flex-row justify-between items-center mb-6 px-2">
               <View>
-                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Classe EDS</Text>
-                <Text className="text-slate-500 mt-1">Safidio ny kilasinao amin'ny Sekoly Sabata</Text>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('eds_class')}</Text>
+                <Text className="text-slate-500 mt-1">{t('select_class_ss')}</Text>
               </View>
               <TouchableOpacity onPress={() => setIsEDSModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
                 <X size={20} color="#94a3b8" />
@@ -509,14 +594,14 @@ export default function Settings() {
         </View>
       </Modal>
 
-      {/* Department Selection Modal */}
+      {/* Department Modal */}
       <Modal visible={isDeptModalVisible} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%] border-t border-slate-800">
             <View className="flex-row justify-between items-center mb-6 px-2">
               <View>
-                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Départements</Text>
-                <Text className="text-slate-500 mt-1">Sélectionnez vos activités à l'église</Text>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_departments')}</Text>
+                <Text className="text-slate-500 mt-1">{t('select_church_depts')}</Text>
               </View>
               <TouchableOpacity onPress={() => setIsDeptModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
                 <Check size={20} color="#3b82f6" />
@@ -543,20 +628,21 @@ export default function Settings() {
               </View>
             </ScrollView>
 
-            <TouchableOpacity onPress={() => setIsDeptModalVisible(false)} className="bg-primary p-5 rounded-3xl items-center shadow-lg shadow-primary/20">
-              <Text className="text-white font-bold">Terminer</Text>
+            <TouchableOpacity onPress={() => setIsDeptModalVisible(false)} className="bg-primary p-5 rounded-3xl items-center">
+              <Text className="text-white font-bold">{t('finish')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-      {/* Import Selection Modal */}
+
+      {/* Import Modal */}
       <Modal visible={isImportModalVisible} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[85%] border-t border-slate-800">
             <View className="flex-row justify-between items-center mb-6 px-2">
               <View>
-                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Hafarana ny fanovana</Text>
-                <Text className="text-slate-500 mt-1">Safidio izay tianao halaina ao anatin'ilay rakitra</Text>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('import_mods')}</Text>
+                <Text className="text-slate-500 mt-1">{t('import_file_selection')}</Text>
               </View>
               <TouchableOpacity onPress={() => setIsImportModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
                 <X size={20} color="#94a3b8" />
@@ -579,7 +665,7 @@ export default function Settings() {
                       <View className="flex-row items-center justify-between">
                         <View>
                           <Text className={`text-base font-bold ${isSelected ? 'text-primary' : 'text-slate-300'}`}>{group.label}</Text>
-                          <Text className="text-xs text-slate-500 mt-1">{group.keys.length} singa ho hafarana</Text>
+                          <Text className="text-xs text-slate-500 mt-1">{group.keys.length} {t('items_to_import')}</Text>
                         </View>
                         <View className={`w-6 h-6 rounded-lg border-2 items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-slate-700'}`}>
                           {isSelected && <Check size={14} color="white" />}
@@ -593,11 +679,125 @@ export default function Settings() {
 
             <TouchableOpacity
               onPress={confirmImport}
-              className="bg-primary p-5 rounded-[24px] items-center shadow-lg shadow-primary/20 flex-row justify-center"
+              className="bg-primary p-5 rounded-[24px] items-center flex-row justify-center"
             >
               <Check size={20} color="white" className="mr-2" />
-              <Text className="text-white font-bold text-lg">Hanafatra izao</Text>
+              <Text className="text-white font-bold text-lg">{t('apply')}</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Manager Modal */}
+      <Modal visible={isLangModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[90%] border-t border-slate-800">
+            <View className="flex-row justify-between items-center mb-6 px-2">
+              <View>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('language')}</Text>
+                <Text className="text-slate-500 mt-1">Gérez vos langues et téléchargements</Text>
+              </View>
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity
+                  onPress={async () => {
+                    setIsSyncingLangs(true);
+                    const manifest = await syncRemoteManifest();
+                    if (manifest) {
+                      setRemoteLangs(manifest.languages);
+                    }
+                    setIsSyncingLangs(false);
+                  }}
+                  className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center"
+                  disabled={isSyncingLangs}
+                >
+                  {isSyncingLangs ? <ActivityIndicator size="small" color="#3b82f6" /> : <RefreshCcw size={18} color="#94a3b8" />}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsLangModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="gap-3 mb-10">
+                <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mb-1">Installées</Text>
+                {getInstalledLanguages().map((lang) => {
+                  const isSelected = globalSettings.language === lang.id;
+                  const status = getLanguageStatus(lang.id);
+
+                  return (
+                    <View key={lang.id} className="bg-slate-800/50 rounded-3xl border border-slate-800 p-4">
+                      <View className="flex-row items-center justify-between">
+                        <TouchableOpacity
+                          onPress={() => updateSettings({ language: lang.id as any })}
+                          className="flex-1 flex-row items-center"
+                        >
+                          <View className={`w-10 h-10 rounded-2xl items-center justify-center mr-4 ${isSelected ? 'bg-primary' : 'bg-slate-800'}`}>
+                            <Globe size={18} color={isSelected ? 'white' : '#64748b'} />
+                          </View>
+                          <View>
+                            <Text className={`text-white font-bold ${isSelected ? 'text-primary' : ''}`}>{lang.name}</Text>
+                            <Text className="text-slate-500 text-[10px] uppercase">
+                              {lang.isBuiltIn ? 'Intégrée' : 'Téléchargée'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+
+                        <View className="flex-row items-center gap-2">
+                          {status === 'update-available' && (
+                            <TouchableOpacity
+                              onPress={() => downloadLanguage(lang.id)}
+                              className="bg-primary/20 p-2 rounded-xl"
+                            >
+                              <RefreshCcw size={16} color="#3b82f6" />
+                            </TouchableOpacity>
+                          )}
+                          {!lang.isBuiltIn && (
+                            <TouchableOpacity
+                              onPress={() => removeLanguage(lang.id)}
+                              className="bg-red-500/10 p-2 rounded-xl"
+                            >
+                              <Trash2 size={16} color="#ef4444" />
+                            </TouchableOpacity>
+                          )}
+                          {isSelected && <Check size={20} color="#3b82f6" />}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {getRemoteAvailableLanguages().filter(rl => !getInstalledLanguages().find(il => il.id === rl.id)).length > 0 && (
+                  <>
+                    <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mt-4 mb-1">Disponibles sur le cloud</Text>
+                    {getRemoteAvailableLanguages()
+                      .filter(rl => !getInstalledLanguages().find(il => il.id === rl.id))
+                      .map((rl) => (
+                        <View key={rl.id} className="bg-slate-900 border border-slate-800 p-4 rounded-3xl">
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-row items-center">
+                              <View className="w-10 h-10 rounded-2xl bg-slate-800 items-center justify-center mr-4">
+                                <Globe size={18} color="#475569" />
+                              </View>
+                              <View>
+                                <Text className="text-white font-bold">{rl.name}</Text>
+                                <Text className="text-slate-500 text-[10px]">Version {rl.version}</Text>
+                              </View>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => downloadLanguage(rl.id)}
+                              className="bg-primary px-4 py-2 rounded-xl"
+                            >
+                              <Text className="text-white text-xs font-bold">Télécharger</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    }
+                  </>
+                )}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -606,11 +806,25 @@ export default function Settings() {
   );
 }
 
+function TabButton({ active, label, icon, onPress }: any) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${active ? 'bg-primary' : ''}`}
+    >
+      <View className={`${active ? 'text-white' : 'text-slate-500'} mr-1.5`}>
+        {React.cloneElement(icon, { color: active ? 'white' : '#64748b' })}
+      </View>
+      {active && <Text className="text-white text-[10px] font-bold uppercase tracking-widest">{label}</Text>}
+    </TouchableOpacity>
+  );
+}
+
 function SettingsGroup({ title, children }: { title: string, children: React.ReactNode }) {
   return (
-    <View className="mb-8">
+    <View className="mb-6">
       <Text className="text-[10px] font-bold uppercase text-slate-500 mb-3 ml-2 tracking-widest">{title}</Text>
-      <View className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+      <View className="bg-slate-900 border border-slate-800/50 rounded-3xl overflow-hidden shadow-sm">
         {children}
       </View>
     </View>
@@ -624,7 +838,7 @@ function SettingItem({ icon, label, onPress, rightElement, value, isLast }: any)
   return (
     <Container
       onPress={onPress}
-      className={`flex-row items-center p-4 pl-5 ${!isLast ? 'border-b border-slate-800/50' : ''} bg-slate-900 active:bg-slate-800`}
+      className={`flex-row items-center p-4 pl-5 ${!isLast ? 'border-b border-slate-800/20' : ''} bg-slate-900 active:bg-slate-800`}
     >
       <View className="w-8 items-center mr-3">{icon}</View>
       <Text className="flex-1 text-slate-200 font-medium text-sm" style={{
@@ -635,3 +849,4 @@ function SettingItem({ icon, label, onPress, rightElement, value, isLast }: any)
     </Container>
   );
 }
+

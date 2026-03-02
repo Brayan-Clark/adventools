@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
@@ -14,8 +15,6 @@ const ICON_MAP: Record<string, any> = {
   FolderOpen,
   Clock
 };
-
-// Documents are exclusively downloadable from the 'data' branch
 
 const getMimeType = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
@@ -34,6 +33,7 @@ const getMimeType = (fileName: string) => {
 };
 
 export default function PDFLibrary() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [manifest, setManifest] = useState<any>(null);
   const [downloading, setDownloading] = useState<Record<string, number>>({});
@@ -87,14 +87,12 @@ export default function PDFLibrary() {
     try {
       if (force) setRefreshing(true);
 
-      // 1. Initial load from cache
       const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
       if (cachedManifest && !manifest) {
         const parsed = JSON.parse(cachedManifest);
         setManifest(parsed);
       }
 
-      // 2. Sync with GitHub
       const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json?t=${Date.now()}`;
       const response = await fetch(GITHUB_MANIFEST_URL).catch(() => null);
 
@@ -140,9 +138,9 @@ export default function PDFLibrary() {
       }
     } catch (e: any) {
       console.error(e);
-      let errorMsg = "Le téléchargement a échoué.";
+      let errorMsg = t('download_failed');
       if (e.message?.includes("Network request failed") || e.message?.includes("network")) {
-        errorMsg = "Impossible de se connecter au serveur. Vérifiez votre connexion internet.";
+        errorMsg = t('connection_error');
       }
       Alert.alert("Erreur", errorMsg);
     } finally {
@@ -156,12 +154,12 @@ export default function PDFLibrary() {
 
   const deleteFile = async (fileName: string, title: string) => {
     Alert.alert(
-      "Suppression : " + title,
-      "Voulez-vous également supprimer définitivement vos notes et marque-pages associés à ce livre ?",
+      t('delete_hymnal') + " : " + title,
+      t('delete_doc_warning'),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t('cancel'), style: "cancel" },
         {
-          text: "Garder mes notes",
+          text: t('keep_my_notes'),
           onPress: async () => {
             try {
               await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
@@ -172,22 +170,18 @@ export default function PDFLibrary() {
           }
         },
         {
-          text: "Tout supprimer",
+          text: t('delete_all'),
           style: "destructive",
           onPress: async () => {
             try {
-              // Supprimer le fichier physique
               await FileSystem.deleteAsync(FileSystem.documentDirectory + fileName);
-
-              // Supprimer les données d'étude associées dans AsyncStorage
               await AsyncStorage.removeItem(`pdf_bookmarks_${fileName}`);
               await AsyncStorage.removeItem(`pdf_notes_${fileName}`);
-
               setLocalFiles(prev => prev.filter(f => f !== fileName));
-              Alert.alert("Succès", "Le document et ses données liées ont été supprimés.");
+              Alert.alert("Succès", t('delete_doc_success'));
             } catch (e) {
               console.error(e);
-              Alert.alert("Erreur", "Une erreur est survenue lors de la suppression totale.");
+              Alert.alert("Erreur", t('delete_doc_error'));
             }
           }
         }
@@ -202,22 +196,17 @@ export default function PDFLibrary() {
     const finalUri = localPath;
 
     if (!isPdf) {
-      // If it's not a PDF, use system intent (Android) or sharing/preview (iOS)
       const mimeType = getMimeType(file);
       try {
         if (Platform.OS === 'android') {
-          // Sur Android, on utilise ReactNativeBlobUtil pour envoyer un intent ACTION_VIEW 
-          // au lieu de ACTION_SEND (partage), pour que l'Outil s'ouvre directement.
           const ReactNativeBlobUtil = require('react-native-blob-util').default;
           const cleanPath = finalUri.replace('file://', '');
           await ReactNativeBlobUtil.android.actionViewIntent(cleanPath, mimeType);
         } else {
-          // Sur iOS, Sharing.shareAsync gère très bien le "Open In"
           await Sharing.shareAsync(finalUri, { UTI: 'public.data', mimeType });
         }
       } catch (e) {
         console.error("Erreur d'ouverture externe:", e);
-        // Fallback sur le partage classique si l'intent échoue
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
           await Sharing.shareAsync(finalUri, { mimeType });
@@ -228,7 +217,6 @@ export default function PDFLibrary() {
       return;
     }
 
-    // For PDFs, use our internal viewer
     try {
       const historyItem = {
         type: 'pdf',
@@ -241,11 +229,9 @@ export default function PDFLibrary() {
       const existingHistory = await AsyncStorage.getItem('app_history');
       let history = existingHistory ? JSON.parse(existingHistory) : [];
 
-      // Strict deduplication by fileName (more reliable than title)
       history = history.filter((h: any) => !(h.type === 'pdf' && h.params?.fileName === file));
 
       history.unshift(historyItem);
-      // Keep only 20 items in background storage, but we only show 5 in UI
       await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 20)));
       loadRecentPdfs();
     } catch (e) {
@@ -259,16 +245,9 @@ export default function PDFLibrary() {
   };
 
   const isDocVisible = (doc: any) => {
-    // Les Pasteurs et les Anciens voient absolument tout
     if (userDepartments.includes("Pasteur") || userDepartments.includes("Ancien")) return true;
-
-    // Si pas de tags définis, on considère le document comme public
     if (!doc.tags || doc.tags.length === 0) return true;
-
-    // "Tous" est un tag spécial pour la visibilité globale
     if (doc.tags.includes("Tous")) return true;
-
-    // Vérifier si un des tags du livre correspond à un département de l'utilisateur
     return doc.tags.some((tag: string) => userDepartments.includes(tag));
   };
 
@@ -312,10 +291,10 @@ export default function PDFLibrary() {
           )}
           <View>
             <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
-              {selectedCategory ? selectedCategory.title : "Bibliothèque"}
+              {selectedCategory ? selectedCategory.title : t('library')}
             </Text>
             <Text className="text-slate-400 text-sm mt-1">
-              {selectedCategory ? `${manifest?.documents.filter((d: any) => d.categoryId === selectedCategory.id && localFiles.includes(d.fileName)).length} documents` : "Gérez vos ressources d'étude"}
+              {selectedCategory ? `${manifest?.documents.filter((d: any) => d.categoryId === selectedCategory.id && localFiles.includes(d.fileName)).length} documents` : t('manage_study_resources')}
             </Text>
           </View>
         </View>
@@ -335,7 +314,7 @@ export default function PDFLibrary() {
                 <View className="flex-row items-center gap-3">
                   <ActivityIndicator size="small" color="#3b82f6" />
                   <View>
-                    <Text className="text-xs font-bold text-white">Téléchargement...</Text>
+                    <Text className="text-xs font-bold text-white">{t('loading')}</Text>
                     <Text className="text-[10px] text-slate-400" numberOfLines={1}>{doc?.title}</Text>
                   </View>
                 </View>
@@ -353,9 +332,9 @@ export default function PDFLibrary() {
             {recentPdfs.length > 0 && (
               <View className="mb-8 mt-4">
                 <View className="flex-row justify-between items-center mb-4">
-                  <Text className="text-lg font-bold text-white">Récents</Text>
+                  <Text className="text-lg font-bold text-white">{t('recents')}</Text>
                   <TouchableOpacity onPress={() => { }}>
-                    <Text className="text-blue-500 text-xs font-bold">Historique</Text>
+                    <Text className="text-blue-500 text-xs font-bold">{t('history')}</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-6 px-6">
@@ -378,7 +357,7 @@ export default function PDFLibrary() {
             )}
 
             <View className="mb-8 mt-4">
-              <Text className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Mes Dossiers</Text>
+              <Text className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">{t('my_folders')}</Text>
               <View className="gap-3">
                 {manifest?.categories.map((cat: any) => {
                   const Icon = ICON_MAP[cat.icon] || FolderOpen;
@@ -407,8 +386,8 @@ export default function PDFLibrary() {
                   manifest?.documents.filter((d: any) => d.categoryId === cat.id && localFiles.includes(d.fileName)).length === 0) && (
                     <View className="items-center py-10 opacity-50">
                       <BookOpen size={48} color="#475569" className="mb-4" />
-                      <Text className="text-slate-400 text-center font-medium">Votre bibliothèque est vide.</Text>
-                      <Text className="text-slate-500 text-center text-xs mt-1">Utilisez le bouton + pour explorer le catalogue.</Text>
+                      <Text className="text-slate-400 text-center font-medium">{t('empty_library')}</Text>
+                      <Text className="text-slate-500 text-center text-xs mt-1">{t('explore_catalog')}</Text>
                     </View>
                   )}
               </View>
@@ -429,7 +408,7 @@ export default function PDFLibrary() {
                     </View>
                     <View className="flex-1">
                       <Text className="font-bold text-white text-base" numberOfLines={1}>{doc.title}</Text>
-                      <Text className="text-xs text-slate-500">{doc.size} • Prêt à lire</Text>
+                      <Text className="text-xs text-slate-500">{doc.size} • {t('ready_to_read')}</Text>
                     </View>
                     <ChevronRight size={20} color="#334155" />
                   </TouchableOpacity>
@@ -443,8 +422,8 @@ export default function PDFLibrary() {
         <SafeAreaView className="flex-1 bg-slate-950">
           <View className="px-6 py-4 flex-row justify-between items-center border-b border-slate-800">
             <View className="flex-1">
-              <Text className="text-xl font-bold text-white">Ressources Cloud</Text>
-              <Text className="text-xs text-slate-400">Bibliothèque Adventiste en ligne</Text>
+              <Text className="text-xl font-bold text-white">{t('cloud_resources')}</Text>
+              <Text className="text-xs text-slate-400">{t('online_library')}</Text>
             </View>
             <View className="flex-row items-center gap-2">
               <TouchableOpacity
@@ -499,7 +478,7 @@ export default function PDFLibrary() {
                           </View>
                           <View className="flex-1">
                             <Text className="text-white font-bold text-xs" numberOfLines={1}>{doc.title}</Text>
-                            <Text className="text-[10px] text-slate-500">{doc.size} • {isDownloaded ? 'Sur l\'appareil' : 'Cloud'}</Text>
+                            <Text className="text-[10px] text-slate-500">{doc.size} • {isDownloaded ? t('on_device') : t('cloud')}</Text>
                           </View>
                         </TouchableOpacity>
 

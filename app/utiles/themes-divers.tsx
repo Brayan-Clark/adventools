@@ -1,4 +1,5 @@
 import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
@@ -90,6 +91,7 @@ const DEFAULT_THEMES = [
 ];
 
 export default function ThemesDivers() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -127,7 +129,7 @@ export default function ThemesDivers() {
 
   const copyToClipboard = async (text: string) => {
     await Clipboard.setStringAsync(text);
-    Alert.alert("Copié", "Référence copiée.");
+    Alert.alert(t('copy'), t('ref_copied'));
   };
 
   const handleOpenBible = async (ref: string) => {
@@ -151,7 +153,7 @@ export default function ThemesDivers() {
           });
         } else {
           const bibleName = res?.bibleName || globalSettings.bibleVersion;
-          Alert.alert("Tsy hita", `Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Verset introuvable)`);
+          Alert.alert(t('verse_not_found'), `${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`);
           router.push("/bible");
         }
       } catch (e) {
@@ -180,10 +182,10 @@ export default function ThemesDivers() {
   };
 
   const deleteTheme = (index: number) => {
-    Alert.alert("Supprimer", "Voulez-vous supprimer ce thème ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t('delete'), t('delete_note_confirm'), [
+      { text: t('cancel'), style: "cancel" },
       {
-        text: "Supprimer",
+        text: t('delete'),
         style: "destructive",
         onPress: () => {
           const updated = themes.filter((_, i) => i !== index);
@@ -223,8 +225,8 @@ export default function ThemesDivers() {
           <ArrowLeft size={20} color="#94a3b8" />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Thèmes Divers</Text>
-          <Text className="text-slate-500 text-xs">Notes et références</Text>
+          <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('themes_divers')}</Text>
+          <Text className="text-slate-500 text-xs">{t('notes_and_refs')}</Text>
         </View>
         <TouchableOpacity onPress={() => openModal()} className="w-10 h-10 rounded-full bg-emerald-500/10 items-center justify-center border border-emerald-500/20">
           <Plus size={20} color="#10b981" />
@@ -241,7 +243,7 @@ export default function ThemesDivers() {
               <View className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500/50" />
 
               <View className="flex-row justify-between items-start mb-4">
-                <Text className="text-emerald-500 font-bold text-[10px] uppercase tracking-[0.2em]">Thème Biblique</Text>
+                <Text className="text-emerald-500 font-bold text-[10px] uppercase tracking-[0.2em]">{t('category_biblical_theme')}</Text>
                 <View className="flex-row gap-4">
                   <TouchableOpacity onPress={() => openModal(idx)}>
                     <Edit2 size={16} color="#475569" />
@@ -278,27 +280,26 @@ export default function ThemesDivers() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
             <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white">{editingIndex !== null ? "Modifier le Thème" : "Nouveau Thème"}</Text>
+              <Text className="text-xl font-bold text-white">{editingIndex !== null ? t('edit_theme') : t('new_theme')}</Text>
               <TouchableOpacity onPress={closeModal} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-
-            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">Titre du Thème</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_title_placeholder')}</Text>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6 text-lg"
-              placeholder="Ex: LA FOI"
+              placeholder={t('theme_title_placeholder')}
               placeholderTextColor="#475569"
               value={newThemeTitle}
               onChangeText={setNewThemeTitle}
             />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">Versets (séparés par une virgule)</Text>
+            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_verses_placeholder')}</Text>
             <TextInput
               className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 text-base min-h-[100px]"
               multiline
               textAlignVertical="top"
-              placeholder="Ex: Matio 24:14, Jaona 3:16"
+              placeholder={t('theme_verses_placeholder')}
               placeholderTextColor="#475569"
               value={newThemeVerses}
               onChangeText={setNewThemeVerses}
@@ -308,14 +309,14 @@ export default function ThemesDivers() {
               onPress={handleAddOrEdit}
               className="bg-emerald-500 py-5 rounded-2xl items-center shadow-lg shadow-emerald-500/40"
             >
-              <Text className="text-white font-bold text-lg">{editingIndex !== null ? "Sauvegarder" : "Ajouter"}</Text>
+              <Text className="text-white font-bold text-lg">{editingIndex !== null ? t('save') : t('add_verse')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
       <View className="absolute bottom-6 self-center bg-slate-800/90 px-6 py-3 rounded-full border border-slate-700 backdrop-blur-md">
-        <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest text-center">Appui court : Bible • Appui long : Copier</Text>
+        <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest text-center">{t('bible_long_press_hint')}</Text>
       </View>
     </SafeAreaView>
   );

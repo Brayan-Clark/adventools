@@ -1,4 +1,5 @@
 import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -354,6 +355,7 @@ const BELIEFS_MG = [
 ];
 
 export default function CroyancesPage() {
+  const { t } = useTranslation();
   const { settings: globalSettings } = useSettings();
   const [lang, setLang] = useState<'FR' | 'MG'>('FR');
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -400,19 +402,15 @@ export default function CroyancesPage() {
           }
         } else {
           const bibleName = res?.bibleName || bestBible.name;
-          if (lang === 'FR') {
-            setVerseContent(`Ce verset n'est pas disponible dans votre version choisie : ${bibleName}.`);
-          } else {
-            setVerseContent(`Tsy hita ity andininy ity ao amin'ny Baiboly ${bibleName} ampiasainao.`);
-          }
+          setVerseContent(`${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`);
         }
       } catch (e) {
-        setVerseContent(lang === 'FR' ? "Hadisoana teo am-pamakiana ny Baiboly frantsay." : "Hadisoana teo am-pamakiana ny Baiboly.");
+        setVerseContent(t('delete_doc_error')); // Fallback error
       } finally {
         setLoadingVerse(false);
       }
     } else {
-      Alert.alert("Info", `Reference: ${ref}`);
+      Alert.alert(t('info'), `Reference: ${ref}`);
     }
   };
 
@@ -428,10 +426,10 @@ export default function CroyancesPage() {
           </TouchableOpacity>
           <View>
             <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>
-              {lang === 'FR' ? "28 Croyances" : "Finoana Fototra 28"}
+              {t('beliefs_28')}
             </Text>
             <Text className="text-slate-500 text-xs">
-              {lang === 'FR' ? "Fondements de la foi" : "Foto-piorenan'ny finoana"}
+              {t('faith_foundations')}
             </Text>
           </View>
         </View>
@@ -461,12 +459,10 @@ export default function CroyancesPage() {
           </View>
           <View className="flex-1">
             <Text className="text-white font-bold mb-1">
-              {lang === 'FR' ? "Notre Seul Crédo" : "Ny hany Finoanay"}
+              {t('our_only_credo')}
             </Text>
             <Text className="text-slate-400 text-xs leading-5">
-              {lang === 'FR'
-                ? "Les Adventistes n'ont d'autre crédo que la Bible seule."
-                : "Ny Baiboly irery ihany no hany foto-pampianaran'ny Advantista."}
+              {t('credo_description')}
             </Text>
           </View>
         </View>
@@ -506,7 +502,7 @@ export default function CroyancesPage() {
                       <View className="flex-row items-center mb-4">
                         <Quote size={12} color="#3b82f6" className="mr-2" />
                         <Text className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-                          {lang === 'FR' ? "RÉFÉRENCES BIBLIQUES" : "ANDININY ARAKA NY BAIBOLY"}
+                          {t('bible_references')}
                         </Text>
                       </View>
                       <View className="flex-row flex-wrap gap-2">

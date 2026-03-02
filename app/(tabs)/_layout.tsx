@@ -1,10 +1,13 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { Home, BookOpen, Music, FileText, StickyNote } from 'lucide-react-native';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useTranslation } from '@/lib/i18n';
+import { Tabs } from 'expo-router';
+import { BookOpen, FileText, Home, Music, StickyNote } from 'lucide-react-native';
+import React from 'react';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -26,35 +29,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
+          title: t('home'),
           tabBarIcon: ({ color }) => <Home size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="bible"
         options={{
-          title: 'Bible',
+          title: t('bible'),
           tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="hymnes"
         options={{
-          title: 'Hymnes',
+          title: t('hymns'),
           tabBarIcon: ({ color }) => <Music size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="pdf"
         options={{
-          title: 'Livres',
+          title: t('books'),
           tabBarIcon: ({ color }) => <FileText size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
-          title: 'Notes',
+          title: t('notes'),
           tabBarIcon: ({ color }) => <StickyNote size={24} color={color} />,
         }}
       />

@@ -1,4 +1,5 @@
 import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,9 +39,10 @@ interface Note {
 }
 
 export default function Notes() {
+  const { t } = useTranslation();
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string>("Toutes");
+  const [selectedFolder, setSelectedFolder] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -86,7 +88,7 @@ export default function Notes() {
   const createFolder = () => {
     const trimmed = newFolderName.trim();
     if (!trimmed) return;
-    if (folders.includes(trimmed)) { Alert.alert("Erreur", "Ce dossier existe déjà"); return; }
+    if (folders.includes(trimmed)) { Alert.alert(t('error'), t('folder_exists_error')); return; }
     const updated = [...folders, trimmed];
     saveFolders(updated);
     setNewFolderName("");
@@ -95,16 +97,16 @@ export default function Notes() {
   };
 
   const deleteFolder = (folderName: string) => {
-    Alert.alert("Supprimer le dossier", `Voulez-vous supprimer le dossier "${folderName}" ? Les notes ne seront pas supprimées mais n'auront plus de dossier.`, [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t('delete_folder_confirm'), `${t('delete_folder_confirm')} "${folderName}" ?`, [
+      { text: t('cancel'), style: "cancel" },
       {
-        text: "Supprimer", style: "destructive", onPress: async () => {
+        text: t('delete'), style: "destructive", onPress: async () => {
           const updatedFolders = folders.filter(f => f !== folderName);
           saveFolders(updatedFolders);
           const updatedNotes = notes.map(n => n.folder === folderName ? { ...n, folder: undefined } : n);
           setNotes(updatedNotes);
           await AsyncStorage.setItem("adventools_notes", JSON.stringify(updatedNotes));
-          if (selectedFolder === folderName) setSelectedFolder("Toutes");
+          if (selectedFolder === folderName) setSelectedFolder("all");
         }
       }
     ]);
@@ -114,8 +116,8 @@ export default function Notes() {
     try {
       const historyItem = {
         type: 'note',
-        title: note.title || "Note sans titre",
-        subtitle: new Date(note.date).toLocaleDateString("fr-FR"),
+        title: note.title || t('untitled_note'),
+        subtitle: new Date(note.date).toLocaleDateString(),
         timestamp: Date.now(),
         params: { noteId: note.id }
       };
@@ -140,17 +142,17 @@ export default function Notes() {
       title: "",
       content: "",
       date: Date.now(),
-      folder: selectedFolder !== "Toutes" ? selectedFolder : undefined,
+      folder: selectedFolder !== "all" ? selectedFolder : undefined,
     };
     setEditingNote(newNote);
     setIsPreviewMode(false);
   };
 
   const deleteNote = (id: string) => {
-    Alert.alert("Supprimer", "Voulez-vous supprimer cette note ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t('delete'), t('delete_note_confirm'), [
+      { text: t('cancel'), style: "cancel" },
       {
-        text: "Supprimer", style: "destructive", onPress: async () => {
+        text: t('delete'), style: "destructive", onPress: async () => {
           const updated = notes.filter(n => n.id !== id);
           setNotes(updated);
           await AsyncStorage.setItem("adventools_notes", JSON.stringify(updated));
@@ -195,7 +197,7 @@ export default function Notes() {
 
   const filteredNotes = notes.filter(n => {
     const matchesSearch = n.title.toLowerCase().includes(search.toLowerCase()) || n.content.toLowerCase().includes(search.toLowerCase());
-    return selectedFolder === "Toutes" ? matchesSearch : matchesSearch && n.folder === selectedFolder;
+    return selectedFolder === "all" ? matchesSearch : matchesSearch && n.folder === selectedFolder;
   });
 
   useEffect(() => {
@@ -208,7 +210,7 @@ export default function Notes() {
           setVerseContent(r.text);
         } else {
           const bibleName = r?.bibleName || globalSettings.bibleVersion;
-          setVerseContent(`Tsy hita ao amin'ny Baiboly ${bibleName} ity andininy ity. (Non trouvé dans votre version choisie)`);
+          setVerseContent(`${t('no_verse_found')} ${detectedVerse.book} ${detectedVerse.chapter}:${detectedVerse.verses} ${t('not_found_in_bible')} (${bibleName})`);
         }
         if (r?.bookId) {
           setDetectedVerse(prev => prev ? { ...prev, bookId: r.bookId } : null);
@@ -242,7 +244,7 @@ export default function Notes() {
             <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
               <ArrowLeft size={20} color="#94a3b8" />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Mon Journal</Text>
+            <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_journal')}</Text>
           </View>
           <TouchableOpacity onPress={addNote} className="w-12 h-12 rounded-2xl bg-primary items-center justify-center shadow-2xl shadow-primary/50">
             <Plus size={24} color="white" />
@@ -253,7 +255,7 @@ export default function Notes() {
         <View className="relative flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 py-1 mb-6">
           <Search size={18} color="#475569" />
           <TextInput
-            placeholder="Rechercher une note..."
+            placeholder={t('search_note_placeholder')}
             placeholderTextColor="#475569"
             className="flex-1 h-12 ml-3 text-white font-medium"
             value={search}
@@ -264,10 +266,10 @@ export default function Notes() {
         {/* DOSSIERS */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-2">
           <TouchableOpacity
-            onPress={() => setSelectedFolder("Toutes")}
-            className={cn("px-5 py-2.5 rounded-2xl mr-3 border-2 transition-all", selectedFolder === "Toutes" ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
+            onPress={() => setSelectedFolder("all")}
+            className={cn("px-5 py-2.5 rounded-2xl mr-3 border-2 transition-all", selectedFolder === "all" ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
           >
-            <Text className={cn("font-bold text-xs tracking-tight", selectedFolder === "Toutes" ? "text-primary" : "text-slate-500")}>TOUT</Text>
+            <Text className={cn("font-bold text-xs tracking-tight", selectedFolder === "all" ? "text-primary" : "text-slate-500")}>{t('all_notes')}</Text>
           </TouchableOpacity>
           {folders.map(f => (
             <TouchableOpacity
@@ -281,7 +283,7 @@ export default function Notes() {
           ))}
           <TouchableOpacity onPress={() => setShowFolderModal(true)} className="px-5 py-2.5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/20 flex-row items-center">
             <FolderPlus size={16} color="#10b981" className="mr-2" />
-            <Text className="text-emerald-500 font-bold text-xs uppercase tracking-tight">Nouveau</Text>
+            <Text className="text-emerald-500 font-bold text-xs uppercase tracking-tight">{t('new_folder')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -297,7 +299,7 @@ export default function Notes() {
           >
             <View className="flex-row justify-between items-start mb-4">
               <View className="flex-1 mr-4">
-                <Text className="font-bold text-white text-xl leading-tight mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{note.title || "Note sans titre"}</Text>
+                <Text className="font-bold text-white text-xl leading-tight mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{note.title || t('untitled_note')}</Text>
                 {note.folder && (
                   <View className="flex-row items-center">
                     <Folder size={10} color="#94a3b8" className="mr-1" />
@@ -307,14 +309,14 @@ export default function Notes() {
               </View>
               <Text className="text-[10px] font-bold text-white/40 uppercase">{new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}</Text>
             </View>
-            <Text className="text-sm text-white/70 mb-6 leading-5" numberOfLines={3}>{note.content.replace(/[#*`]/g, '') || "Aucun contenu..."}</Text>
+            <Text className="text-sm text-white/70 mb-6 leading-5" numberOfLines={3}>{note.content.replace(/[#*`]/g, '') || t('no_content')}</Text>
             <View className="flex-row justify-between items-center">
-              <View className="flex-row items-center"><BookOpen size={14} color="white" opacity={0.4} className="mr-2" /><Text className="text-[10px] text-white/40 font-medium uppercase tracking-widest">Journal d'étude</Text></View>
+              <View className="flex-row items-center"><BookOpen size={14} color="white" opacity={0.4} className="mr-2" /><Text className="text-[10px] text-white/40 font-medium uppercase tracking-widest">{t('study_journal')}</Text></View>
               <TouchableOpacity onPress={() => deleteNote(note.id)} className="w-8 h-8 rounded-full bg-black/20 items-center justify-center border border-white/10"><Trash2 size={14} color="#f87171" /></TouchableOpacity>
             </View>
           </TouchableOpacity>
         ))}
-        {filteredNotes.length === 0 && <View className="w-full items-center py-20"><StickyNote size={40} color="#1e293b" /><Text className="text-slate-500 font-medium mt-4">Aucune note ici</Text></View>}
+        {filteredNotes.length === 0 && <View className="w-full items-center py-20"><StickyNote size={40} color="#1e293b" /><Text className="text-slate-500 font-medium mt-4">{t('no_notes_found')}</Text></View>}
         <View className="h-24" />
       </ScrollView>
 
@@ -339,7 +341,7 @@ export default function Notes() {
               >
                 {isPreviewMode ? <Edit size={16} color="white" /> : <Check size={16} color="#3b82f6" />}
                 <Text className={cn("text-xs font-bold uppercase tracking-tight", isPreviewMode ? "text-white" : "text-primary")}>
-                  {isPreviewMode ? "Éditer" : "Terminer"}
+                  {isPreviewMode ? t('edit') : t('finish')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -351,13 +353,13 @@ export default function Notes() {
                 <>
                   {/* SÉLECTEUR DE DOSSIER DANS L'ÉDITEUR */}
                   <View className="flex-row items-center mb-6">
-                    <Text className="text-[10px] text-white/40 font-bold uppercase tracking-widest mr-4">Dossier :</Text>
+                    <Text className="text-[10px] text-white/40 font-bold uppercase tracking-widest mr-4">{t('folder')} :</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <TouchableOpacity
                         onPress={() => setEditingNote({ ...editingNote, folder: undefined })}
                         className={cn("px-4 py-2 rounded-xl mr-2 border", !editingNote.folder ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
                       >
-                        <Text className={cn("text-[10px] font-bold", !editingNote.folder ? "text-primary" : "text-white/40")}>AUCUN</Text>
+                        <Text className={cn("text-[10px] font-bold", !editingNote.folder ? "text-primary" : "text-white/40")}>{t('none')}</Text>
                       </TouchableOpacity>
                       {folders.map(f => (
                         <TouchableOpacity
@@ -386,7 +388,7 @@ export default function Notes() {
                   </View>
 
                   <TextInput
-                    placeholder="Titre de la note"
+                    placeholder={t('note_title_placeholder')}
                     placeholderTextColor="#475569"
                     className="text-3xl font-bold text-white mb-6"
                     style={{ fontFamily: 'Lexend_700Bold' }}
@@ -423,7 +425,7 @@ export default function Notes() {
                           );
                         }
                       }}>
-                        {processContent(editingNote.content || "*Aucun contenu...*")}
+                        {processContent(editingNote.content || `*${t('no_content')}*`)}
                       </Markdown>
                     </View>
                   ) : (
@@ -431,7 +433,7 @@ export default function Notes() {
                       ref={textInputRef}
                       multiline
                       textAlignVertical="top"
-                      placeholder="Écrivez votre réflexion ici... (Versets détectés automatiquement)"
+                      placeholder={t('note_content_placeholder')}
                       placeholderTextColor="#475569"
                       className="text-lg text-slate-200 leading-7 pb-40 min-h-[300px]"
                       style={{ fontFamily: 'Lexend_400Regular' }}
@@ -491,18 +493,18 @@ export default function Notes() {
       <Modal visible={showFolderModal} animationType="fade" transparent>
         <SafeAreaView className="flex-1 bg-black/70 justify-center px-8">
           <View className="bg-[#1c2128] p-8 rounded-[40px] border border-white/10 shadow-2xl">
-            <Text className="text-xl font-bold text-white mb-6 text-center">Nouveau dossier</Text>
+            <Text className="text-xl font-bold text-white mb-6 text-center">{t('new_folder_title')}</Text>
             <TextInput
               autoFocus
-              placeholder="Nom du dossier..."
+              placeholder={t('folder_name_placeholder')}
               placeholderTextColor="#475569"
               className="bg-white/5 text-white p-5 rounded-2xl border border-white/10 mb-6 text-lg"
               value={newFolderName}
               onChangeText={setNewFolderName}
             />
             <View className="flex-row gap-4">
-              <TouchableOpacity onPress={() => { setShowFolderModal(false); setNewFolderName(""); }} className="flex-1 bg-white/5 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-bold">Annuler</Text></TouchableOpacity>
-              <TouchableOpacity onPress={createFolder} className="flex-1 bg-primary py-4 rounded-2xl items-center shadow-lg shadow-primary/30"><Text className="text-white font-bold">Créer</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setShowFolderModal(false); setNewFolderName(""); }} className="flex-1 bg-white/5 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-bold">{t('cancel')}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={createFolder} className="flex-1 bg-primary py-4 rounded-2xl items-center shadow-lg shadow-primary/30"><Text className="text-white font-bold">{t('create')}</Text></TouchableOpacity>
             </View>
           </View>
         </SafeAreaView>
@@ -543,7 +545,7 @@ export default function Notes() {
               }}
               className="bg-blue-600 py-5 rounded-2xl items-center shadow-lg shadow-blue-500/40"
             >
-              <Text className="text-white font-bold text-lg">Ouvrir dans la Bible</Text>
+              <Text className="text-white font-bold text-lg">{t('open_in_bible')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
