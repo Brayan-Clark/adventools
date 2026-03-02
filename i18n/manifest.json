@@ -1,9 +1,10 @@
 {
   "versionCode": 1,
-  "lastUpdate": "2024-03-02T16:00:00Z",
+  "lastUpdate": "2025-03-02T18:38:00Z",
   "languages": [
     { "id": "Français", "file": "fr.json", "name": "Français", "version": 1 },
     { "id": "English", "file": "en.json", "name": "English", "version": 1 },
-    { "id": "Malagasy", "file": "mg.json", "name": "Malagasy", "version": 1 }
+    { "id": "Malagasy", "file": "mg.json", "name": "Malagasy", "version": 1 },
+    { "id": "Deutsch", "file": "de.json", "name": "Deutsch", "version": 1 }
   ]
 }
