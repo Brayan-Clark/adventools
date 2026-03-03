@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "mg": TranslationSchema = {
-  
+{
   "settings": "Fikirana",
   "ok": "Eny ary",
   "cancel": "Hanafoana",
@@ -14,8 +11,6 @@ export const "mg": TranslationSchema = {
   "info": "Fampahafantarana",
   "copy": "Adika",
   "success": "Vita soa aman-tsara",
-
-  
   "home": "Fandraisana",
   "welcome": "Tonga soa",
   "verse_of_the_day": "Andininy ho an'ny andro",
@@ -42,27 +37,19 @@ export const "mg": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deutérocanonique / Hafa",
   "other_testament": "Hafa",
-
-  
   "greeting_morning": "Manao ahoana ☀️",
   "greeting_afternoon": "Manao ahoana 🌤️",
   "greeting_evening": "Manao ahoana 🌙",
   "greeting_generic": "Manao ahoana 👋",
-
-  
   "bible_subtitle": "Ireo Soratra Masina",
   "hymns_subtitle": "Hira fiderana",
   "pdf_subtitle": "Ireo tahiry",
   "notes_subtitle": "Fandinihana",
   "beliefs_subtitle": "Ireo fototra 28",
   "useful_subtitle": "Ressources",
-
-  
   "search_placeholder": "Laharana na lohateny...",
   "results_count": "valiny hita",
   "no_results": "Tsy misy valiny hita",
-
-  
   "my_hymnals": "Ny Fihirako",
   "manage_local_songs": "Tantano ireo fihiranao",
   "store": "Fivarotana",
@@ -89,8 +76,6 @@ export const "mg": TranslationSchema = {
   "author": "Mpanoratra",
   "save_corrections": "Hatahiry ny fanitsiana",
   "exported_to_clipboard": "Voatandrana ao amin'ny presse-papier ilay fihirana.",
-
-  
   "library": "Tranomboky",
   "manage_study_resources": "Tantano ireo fitaovam-pianaranao",
   "recents": "Vao novakiana",
@@ -109,8 +94,6 @@ export const "mg": TranslationSchema = {
   "keep_my_notes": "Tehirizo ny fanamarihako",
   "delete_doc_success": "Voafafa ny boky sy ny angonany.",
   "delete_doc_error": "Nisy hadisoana teo am-pamafana.",
-
-  
   "my_journal": "Ny diaryko",
   "search_note_placeholder": "Mitady fanamarihana...",
   "all_notes": "REHETRA",
@@ -131,8 +114,6 @@ export const "mg": TranslationSchema = {
   "delete_folder_confirm": "Tianao ho fafana ve ny fampirimana",
   "folder_exists_error": "Efa misy io fampirimana io",
   "verse_not_found_in": "Tsy hita ao amin'ny",
-
-  
   "useful": "Mahasoa",
   "more_apps": "Fampiharana hafa",
   "recent_read": "Vao novakiana",
@@ -156,30 +137,24 @@ export const "mg": TranslationSchema = {
   "new_theme": "Lohahevitra vaovao",
   "category_selection": "Sokajy (Safidio na Soraty)",
   "new_category_placeholder": "Na manorata sokajy vaovao...",
-  "verse_ref_placeholder": ""Ohatra": Matio "24":14",
+  "verse_ref_placeholder": "Ohatra: Matio 24:14",
   "verse_text_placeholder": "Ny vontoatin'ny andininy...",
   "theme_title_placeholder": "Lohatenin'ny lohahevitra",
   "theme_verses_placeholder": "Andininy (sarahina faingo)",
-  "bible_long_press_hint": "Kitihina "kely": Baiboly • Kitihina "ela": Adika",
+  "bible_long_press_hint": "Kitihina kely: Baiboly • Kitihina ela: Adika",
   "category_biblical_theme": "Lohahevitra ara-Baiboly",
   "categories": "Sokajy",
   "new_verse": "Andininy vaovao",
-
-  
   "meditation": "Saintsaino",
   "meditation_intro": "Makà fotoana handinihana ity teny ity. Ahoana no hampiharana izany eo amin'ny fiainanao anio? Avelao ity fahamarinana ity hanova ny fonao sy ny eritreritrao.",
   "verse_loading": "Eo am-pangalana ny andininy...",
   "verse_incomplete": "Tsy ampy ny firesaka.",
   "verse_not_found_db": "Tsy hita tao amin'ny angona ny andininy.",
   "verse_of_day_footer": "Andinin'ny andro • Adventools",
-
-  
   "study_resources": "Harena sy lisitry fandalinana",
   "personal_notes": "Fanamarihana manokana",
   "study_intro": "Eto no hahitanao ireo lohahevitra sy andininy voangona ho an'ny fotoana fianaranao sy fizaranao.",
   "folders_header": "Fampirimana",
-
-  
   "sabbath_school_lessons": "Lesona Sekoly Sabata",
   "daily_study": "Fandalinana isan'andro",
   "study_series_subtitle": "Fitoriana, Fanambinana, sns.",
@@ -210,10 +185,8 @@ export const "mg": TranslationSchema = {
   "updated": "Havaozina",
   "offline_available": "Eny an-toerana",
   "program_of_study": "Programam-pianarana",
-  "source_adventools": ""Loharano": Adventools",
+  "source_adventools": "Loharano: Adventools",
   "no_cache_available": "Tsy afaka maka ny angona ary tsy misy tahiry azo ampiasaina.",
-
-  
   "ss_cat_cradle_roll": "Zaza minono (0-12 volana)",
   "ss_cat_kindergarten": "Zazakely (1-3 taona)",
   "ss_cat_primary": "Kilonga (4-6 taona)",
@@ -223,8 +196,6 @@ export const "mg": TranslationSchema = {
   "ss_cat_real_time": "Zatovo (15-18 taona)",
   "ss_cat_young_adult": "Tanora zokiny (19-35 taona)",
   "ss_cat_adult": "Lehibe (+ 35 taona)",
-
-  
   "tab_general": "Ankapobeny",
   "tab_reading": "Famakiana",
   "tab_system": "Rafitra",
@@ -249,10 +220,45 @@ export const "mg": TranslationSchema = {
   "reset_hymns": "Haverina amin'ny teo aloha ny fihirana",
   "reset_history": "Hamafa the tantara",
   "choose_bible_version": "Safidio ny dikan-teny Baiboly hovakiana foana",
-  "contact_help_msg": "Raha mila fanampiana ianao dia mandefasa mailaka amin'"ny": brayanraherinandrasana@gmail.com",
+  "contact_help_msg": "Raha mila fanampiana ianao dia mandefasa mailaka amin'ny: brayanraherinandrasana@gmail.com",
   "support_group": "Tohana",
   "about": "Momba an'i Adventools",
   "privacy": "Politique de confidentialité",
   "donation": "Hanao Don",
-  "help": "Sokajy fanampiana"
+  "help": "Sokajy fanampiana",
+  "about_title": "Momba an'i Adventools",
+  "privacy_policy": "Politique de confidentialité",
+  "make_donation": "Afaka manao don ianao hanohanana an'i Adventools",
+  "our_mission": "Ny iraka ampanaovina anay",
+  "mission_text": "Adventools dia vokatry ny fitiavana ny Soratra Masina sy ny faniriana hanolotra fitaovana maoderina sy matanjaka ho an'ny mpiara-mivavaka. Ny tanjonay dia ny hanamora ny fandalinana manokana, ny fiderana ary ny fitantanana ny harena ara-baiboly.",
+  "team_contact": "Ny tarika & Fifandraisana",
+  "open_source": "Open Source",
+  "github_contrib": "Mandray anjara ao amin'ny GitHub",
+  "tech_support": "Fanampiana teknika",
+  "privacy_status": "Tsiambaratelo",
+  "privacy_status_text": "Ao anatin'ny findainao ihany ny angonanao",
+  "made_with_love": "Novolavolaina tamim-pitiavana ❤️ ho voninahitr'Andriamanitra e.",
+  "powered_by": "Mandeha amin'ny alalan'ny Expo & React Native.",
+  "privacy_priority": "Laharam-pahamehana ho anay ny tsiambaratelonao.",
+  "local_data": "Angona an-toerana",
+  "local_data_text": "Ny angonao rehetra (fanamarihana, safidy, tantara) dia voatahiry ao anaty findainao ihany.",
+  "zero_collect": "Tsy misy fakana angona",
+  "zero_collect_text": "Tsy maka angona mombamomba anao na ho an'ny dokambarotra i Adventools. Tsy fantatray izay vakianao.",
+  "third_party": "Tolotra hafa",
+  "third_party_text": "Maka ny lisitry ny tahiry ao amin'ny GitHub ny fampiharana, saingy tsy misy mombamomba anao alefa any.",
+  "commitment": "Fanekena",
+  "commitment_text": "Mino izahay fa masina sy manokana ny famakiana ny Tenin'Andriamanitra.",
+  "last_update": "Mise à jour farany : Febroary 2026",
+  "support_project": "Hanohana ny tetikasa",
+  "contribution_diff": "Misy fiovana lehibe ny fandraisanao anjara !",
+  "passion_dedication": "Vokatry ny fitiavana sy ny fandavan-tena ho fanatsarana ny fiainanao ara-panahy ity fampiharana ity.",
+  "small_gesture": "Ny fihetsika bitika rehetra dia manan-danja ! Ny don-tenanao dia hanampy anay hanampy tolotra vaovao.",
+  "support_methods": "Fomba fanohanana",
+  "mobile_money": "Mobile Money",
+  "madagascar_transfer": "Mivantana eto Madagasikara",
+  "online_payment": "Fandoavana an-tambajotra",
+  "payment_methods": "Visa, Mastercard, PayPal",
+  "follow_us": "Hanaraka anay",
+  "thank_you": "Misaotra amin'ny fahalalahan-tananao.",
+  "generosity_future": "Miaraka isika no mamolavola ny ho avy."
 }

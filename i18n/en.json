@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "en": TranslationSchema = {
-  
+{
   "settings": "Settings",
   "ok": "OK",
   "cancel": "Cancel",
@@ -14,8 +11,6 @@ export const "en": TranslationSchema = {
   "info": "Info",
   "copy": "Copy",
   "success": "Success",
-
-  
   "home": "Home",
   "welcome": "Welcome",
   "verse_of_the_day": "Verse of the Day",
@@ -42,27 +37,19 @@ export const "en": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deuterocanonical / Others",
   "other_testament": "Other",
-
-  
   "greeting_morning": "Good Morning ☀️",
   "greeting_afternoon": "Good Afternoon 🌤️",
   "greeting_evening": "Good Evening 🌙",
   "greeting_generic": "Hello 👋",
-
-  
   "bible_subtitle": "Holy Scriptures",
   "hymns_subtitle": "Songs of praise",
   "pdf_subtitle": "PDF Documents",
   "notes_subtitle": "Reflections & Notes",
   "beliefs_subtitle": "28 Foundations",
   "useful_subtitle": "Series & Themes",
-
-  
   "search_placeholder": "Number or title...",
   "results_count": "results found",
   "no_results": "No results found",
-
-  
   "my_hymnals": "My Hymnals",
   "manage_local_songs": "Manage your local songs",
   "store": "Store",
@@ -89,8 +76,6 @@ export const "en": TranslationSchema = {
   "author": "Author",
   "save_corrections": "Save corrections",
   "exported_to_clipboard": "Hymn copied to clipboard.",
-
-  
   "library": "Library",
   "manage_study_resources": "Manage your study resources",
   "recents": "Recents",
@@ -109,8 +94,6 @@ export const "en": TranslationSchema = {
   "keep_my_notes": "Keep my notes",
   "delete_doc_success": "Document and data deleted.",
   "delete_doc_error": "Error during deletion.",
-
-  
   "my_journal": "My Journal",
   "search_note_placeholder": "Search for a note...",
   "all_notes": "ALL",
@@ -131,8 +114,6 @@ export const "en": TranslationSchema = {
   "delete_folder_confirm": "Do you want to delete the folder",
   "folder_exists_error": "This folder already exists",
   "verse_not_found_in": "Not found in",
-
-  
   "useful": "Useful",
   "more_apps": "More Apps",
   "recent_read": "Recently read",
@@ -156,30 +137,24 @@ export const "en": TranslationSchema = {
   "new_theme": "New Theme",
   "category_selection": "Category (Select or Enter)",
   "new_category_placeholder": "Or enter a new category...",
-  "verse_ref_placeholder": ""Ex": Matthew "24":14",
+  "verse_ref_placeholder": "Ex: Matthew 24:14",
   "verse_text_placeholder": "Verse content...",
   "theme_title_placeholder": "Theme Title",
   "theme_verses_placeholder": "Verses (separated by comma)",
-  "bible_long_press_hint": "Short "press": Bible • Long "press": Copy",
+  "bible_long_press_hint": "Short press: Bible • Long press: Copy",
   "category_biblical_theme": "Biblical Theme",
   "categories": "Categories",
   "new_verse": "New Verse",
-
-  
   "meditation": "Meditation",
   "meditation_intro": "Take a moment to reflect on this word. How can it apply to your life today? Let this truth transform your heart and thoughts.",
   "verse_loading": "Loading the verse...",
   "verse_incomplete": "Incomplete reference.",
   "verse_not_found_db": "Verse not found in the database.",
   "verse_of_day_footer": "Verse of the Day • Adventools",
-
-  
   "study_resources": "Study resources and lists",
   "personal_notes": "Personal Notes",
   "study_intro": "Find here the themes and verses grouped for your moments of study and sharing.",
   "folders_header": "Folders",
-
-  
   "sabbath_school_lessons": "Sabbath School Lessons",
   "daily_study": "Daily study",
   "study_series_subtitle": "Preaching, Prosperity, etc.",
@@ -210,10 +185,8 @@ export const "en": TranslationSchema = {
   "updated": "Updated",
   "offline_available": "Offline available",
   "program_of_study": "Study program",
-  "source_adventools": ""Source": Adventools",
+  "source_adventools": "Source: Adventools",
   "no_cache_available": "Unable to load data and no cache available.",
-
-  
   "ss_cat_cradle_roll": "Cradle Roll (0-12 months)",
   "ss_cat_kindergarten": "Kindergarten (1-3 years)",
   "ss_cat_primary": "Primary (4-6 years)",
@@ -223,8 +196,6 @@ export const "en": TranslationSchema = {
   "ss_cat_real_time": "Real Time (15-18 years)",
   "ss_cat_young_adult": "Young Adult (19-35 years)",
   "ss_cat_adult": "Adult Lesson (+ 35 years)",
-
-  
   "tab_general": "General",
   "tab_reading": "Reading",
   "tab_system": "System",
@@ -249,10 +220,45 @@ export const "en": TranslationSchema = {
   "reset_hymns": "Reset corrections",
   "reset_history": "Reset history",
   "choose_bible_version": "Choose the Bible version to open by default",
-  "contact_help_msg": "For any assistance, contact us "at": brayanraherinandrasana@gmail.com",
+  "contact_help_msg": "For any assistance, contact us at: brayanraherinandrasana@gmail.com",
   "support_group": "Support",
   "about": "About Adventools",
   "privacy": "Privacy Policy",
   "donation": "Donate",
-  "help": "Help Center"
+  "help": "Help Center",
+  "about_title": "About Adventools",
+  "privacy_policy": "Privacy Policy",
+  "make_donation": "Make a donation to support",
+  "our_mission": "Our Mission",
+  "mission_text": "Adventools was born from a passion for the Scriptures and the desire to offer the Adventist community a modern, fluid, and powerful tool. Our goal is to facilitate personal study, praise, and the management of biblical resources.",
+  "team_contact": "Team & Contact",
+  "open_source": "Open Source",
+  "github_contrib": "Contribute on GitHub",
+  "tech_support": "Technical Support",
+  "privacy_status": "Privacy",
+  "privacy_status_text": "Your data stays local",
+  "made_with_love": "Developed with ❤️ by the community for the glory of God.",
+  "powered_by": "Powered by Expo & React Native.",
+  "privacy_priority": "Your privacy is our priority.",
+  "local_data": "Local Data",
+  "local_data_text": "All your data (notes, preferences, history, highlights) are stored exclusively on your device.",
+  "zero_collect": "Zero Collection",
+  "zero_collect_text": "Adventools does not collect any analytical or advertising data. We don't know what you read or when.",
+  "third_party": "Third-Party Services",
+  "third_party_text": "The application loads the manifest from GitHub, but no identifiable information is sent to them.",
+  "commitment": "Commitment",
+  "commitment_text": "We believe that reading the Word of God is a sacred and private moment.",
+  "last_update": "Last update: February 2026",
+  "support_project": "Support the Project",
+  "contribution_diff": "Your contribution makes the difference!",
+  "passion_dedication": "This application is the result of our passion and dedication to improving your spiritual experience.",
+  "small_gesture": "Every small gesture counts! Your donation will help us add new features.",
+  "support_methods": "Support Methods",
+  "mobile_money": "Mobile Money",
+  "madagascar_transfer": "Direct transfer in Madagascar",
+  "online_payment": "Online Payment",
+  "payment_methods": "Visa, Mastercard, PayPal",
+  "follow_us": "Follow",
+  "thank_you": "Thank you for your generosity.",
+  "generosity_future": "Together, we shape the future."
 }
