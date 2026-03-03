@@ -484,6 +484,27 @@ export default function Settings() {
                   label={t('help')}
                   value="Email"
                   onPress={() => Alert.alert(t('help'), t('contact_help_msg' as any))}
+                />
+                <SettingItem
+                  icon={<User size={18} color="#8b5cf6" />}
+                  label="Revoir l'introduction"
+                  value="Onboarding"
+                  onPress={() => {
+                    Alert.alert(
+                      "Revoir l'introduction",
+                      "Cela va relancer l'écran de bienvenue au prochain démarrage.",
+                      [
+                        { text: t('cancel'), style: 'cancel' },
+                        {
+                          text: "Relancer maintenant",
+                          onPress: async () => {
+                            await AsyncStorage.removeItem('adventools_onboarding_done');
+                            router.replace('/onboarding' as any);
+                          }
+                        }
+                      ]
+                    );
+                  }}
                   isLast
                 />
               </SettingsGroup>

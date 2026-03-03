@@ -77,27 +77,34 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const router = useRouter();
-  const [checkDone, setCheckDone] = useState(false);
+  const [initialRoute, setInitialRoute] = useState<'(tabs)' | 'onboarding' | null>(null);
 
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
         const done = await AsyncStorage.getItem(ONBOARDING_KEY);
         if (!done) {
-          // First launch: redirect to onboarding
-          router.replace('/onboarding' as any);
+          setInitialRoute('onboarding');
+        } else {
+          setInitialRoute('(tabs)');
         }
       } catch (_) {
-        // On error, skip onboarding
-      } finally {
-        setCheckDone(true);
+        setInitialRoute('(tabs)');
       }
     };
     checkOnboarding();
   }, []);
 
+  // Wait until we know which route to show — avoids flash
+  if (!initialRoute) {
+    return null;
+  }
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{ headerShown: false }}
+      initialRouteName={initialRoute}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
