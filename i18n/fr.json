@@ -260,5 +260,11 @@
   "payment_methods": "Visa, Mastercard, PayPal",
   "follow_us": "Suivre",
   "thank_you": "Merci pour votre générosité.",
-  "generosity_future": "Ensemble, nous façonnons l'avenir."
+  "generosity_future": "Ensemble, nous façonnons l'avenir.",
+  "manage_languages": "Gérez vos langues et téléchargements",
+  "installed_languages": "Installées",
+  "built_in": "Intégrée",
+  "downloaded": "Téléchargée",
+  "available_cloud": "Disponibles sur le cloud",
+  "download": "Télécharger"
 }

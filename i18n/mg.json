@@ -260,5 +260,11 @@
   "payment_methods": "Visa, Mastercard, PayPal",
   "follow_us": "Hanaraka anay",
   "thank_you": "Misaotra amin'ny fahalalahan-tananao.",
-  "generosity_future": "Miaraka isika no mamolavola ny ho avy."
+  "generosity_future": "Miaraka isika no mamolavola ny ho avy.",
+  "manage_languages": "Tantano ny fiteny sy ny fampidinana",
+  "installed_languages": "Efa napetraka",
+  "built_in": "Voarafitra",
+  "downloaded": "Voaray",
+  "available_cloud": "Azo alaina amin'ny cloud",
+  "download": "Hampidina"
 }
