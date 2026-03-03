@@ -6,22 +6,20 @@ import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
 
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
@@ -77,38 +75,45 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const router = useRouter();
-  const [initialRoute, setInitialRoute] = useState<'(tabs)' | 'onboarding' | null>(null);
+  // true = still checking AsyncStorage, overlay shown to prevent flash
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
         const done = await AsyncStorage.getItem(ONBOARDING_KEY);
         if (!done) {
-          setInitialRoute('onboarding');
-        } else {
-          setInitialRoute('(tabs)');
+          // Navigate to onboarding — Stack is already mounted so router works
+          router.replace('/onboarding' as any);
         }
       } catch (_) {
-        setInitialRoute('(tabs)');
+        // On error, just proceed to (tabs) normally
+      } finally {
+        setChecking(false);
       }
     };
     checkOnboarding();
   }, []);
 
-  // Wait until we know which route to show — avoids flash
-  if (!initialRoute) {
-    return null;
-  }
-
   return (
-    <Stack
-      screenOptions={{ headerShown: false }}
-      initialRouteName={initialRoute}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+
+      {/* Black overlay shown while checking — prevents any flash of (tabs) */}
+      {checking && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#060d1f',
+            zIndex: 9999,
+          }}
+        />
+      )}
+    </>
   );
 }
-
