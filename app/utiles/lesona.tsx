@@ -9,6 +9,7 @@ import {
   CheckCircle,
   ChevronRight,
   Download,
+  Globe,
   RefreshCw,
   Share,
   Trash2,
@@ -31,10 +32,18 @@ import {
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_BASE = "https://inverse.sspmadventist.org/api/v3/mg/ss";
-const WEB_BASE = "https://inverse.sspmadventist.org/mg";
-const STORAGE_KEY = "adventools_ss_data";
+const WEB_BASE = "https://inverse.sspmadventist.org";
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
+
+const SS_LANGUAGES = [
+  { code: 'mg', label: 'Malagasy', flag: '🇲🇬' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+];
+
+const getApiBase = (lang: string) => `https://inverse.sspmadventist.org/api/v3/${lang}/ss`;
+const getAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${lang}/ss`;
+const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
 
 const parseDate = (dStr: string) => {
   if (!dStr) return new Date(0);
@@ -114,6 +123,8 @@ export default function LesonaSekolySabata() {
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [activeCategory, setActiveCategory] = useState("Lesona Lehibe (+ 35 taona)");
   const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
+  const [selectedLang, setSelectedLang] = useState<string>('mg');
+  const [showLangPicker, setShowLangPicker] = useState(false);
 
   // Offline state
   const [downloadedQuarterlies, setDownloadedQuarterlies] = useState<string[]>([]);
@@ -126,7 +137,7 @@ export default function LesonaSekolySabata() {
   useEffect(() => {
     loadInitialData();
     checkDownloaded();
-  }, []);
+  }, [selectedLang]);
 
   const checkDownloaded = async () => {
     try {
@@ -143,12 +154,15 @@ export default function LesonaSekolySabata() {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(selectedLang);
+      const stored = await AsyncStorage.getItem(storageKey);
       if (stored) {
         setQuarterlyList(JSON.parse(stored));
+      } else {
+        setQuarterlyList([]);
       }
 
-      const response = await fetch(`${API_BASE}/index.json`);
+      const response = await fetch(`${getApiBase(selectedLang)}/index.json`);
       const json = await response.json();
 
       const items: QuarterlyItem[] = [];
@@ -181,7 +195,7 @@ export default function LesonaSekolySabata() {
       });
 
       setQuarterlyList(items);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(items));
     } catch (e) {
       console.error("Error loading initial data", e);
     } finally {
@@ -201,13 +215,11 @@ export default function LesonaSekolySabata() {
 
   const fetchQuarterlyDetail = async (id: string) => {
     setLoading(true);
-    // Clear previous titles to avoid showing titles from another quarterly
     setLessonTitlesMap({});
 
     try {
-      const cacheKey = `adventools_ss_q_detail_${id}`;
+      const cacheKey = `adventools_ss_q_detail_${selectedLang}_${id}`;
 
-      // Try to load from cache first for better offline experience
       const cached = await AsyncStorage.getItem(cacheKey);
       if (cached) {
         const json = JSON.parse(cached);
@@ -215,23 +227,23 @@ export default function LesonaSekolySabata() {
         loadLessonTitles(json);
       }
 
-      const qId = id.replace('mg-ss-', '');
+      // Remove language prefix from ID for the API path
+      const langPrefix = `${selectedLang}-ss-`;
+      const qId = id.replace(langPrefix, '').replace('mg-ss-', '');
       const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/index.json`;
+      const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/index.json`;
 
       const response = await fetch(url).catch(() => null);
       if (response && response.ok) {
         const json = await response.json();
         setSelectedQuarterly(json);
         await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
-        // Try to load lesson titles
         loadLessonTitles(json);
       } else if (!cached) {
         throw new Error("Impossible de charger les données et aucun cache disponible.");
       }
     } catch (e: any) {
       console.error(e);
-      // If we already have cached data, don't alert unless it's a critical failure
       if (!selectedQuarterly) {
         Alert.alert(t('connection_error'), t('check_connection'));
       }
@@ -242,8 +254,7 @@ export default function LesonaSekolySabata() {
 
   const loadLessonTitles = async (q: Quarterly) => {
     try {
-      // 1. Check Offline first
-      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${q.id}`);
+      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${q.id}`);
       let titles: Record<string, string> = {};
       if (offlineDataStr) {
         const offlineData = JSON.parse(offlineDataStr);
@@ -253,12 +264,10 @@ export default function LesonaSekolySabata() {
         setLessonTitlesMap(titles);
       }
 
-      // 2. Fetch missing titles in the background if needed
-      // For now, let's at least try the current lesson if not available
-      const qId = q.id.replace('mg-ss-', '');
+      const langPrefix = `${selectedLang}-ss-`;
+      const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
       const subdomain = q.id.includes('-cq') ? 'inverse' : 'absg';
 
-      // We only fetch a few if they are missing to avoid too many requests
       const lessonsToFetch = (q.lessons || Array.from({ length: 13 }, (_, i) => ({
         id: (i + 1).toString().padStart(2, '0')
       }))).slice(0, 14);
@@ -266,8 +275,7 @@ export default function LesonaSekolySabata() {
       for (const lesson of lessonsToFetch) {
         const lId = lesson.id.includes('-') ? lesson.id.split('-').pop()! : lesson.id;
         if (!titles[lId]) {
-          // Fetch title in background
-          const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/${lId}/index.json`;
+          const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
           fetch(lUrl).then(res => res.json()).then(lJson => {
             if (lJson.title) {
               setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
@@ -283,7 +291,8 @@ export default function LesonaSekolySabata() {
   const downloadFullQuarterly = async (q: Quarterly) => {
     setDownloadingAll(true);
     try {
-      const qId = q.id.replace('mg-ss-', '');
+      const langPrefix = `${selectedLang}-ss-`;
+      const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
       const subdomain = q.id.includes('-cq') ? 'inverse' : 'absg';
       const lessonsData: Record<string, WeeklyLesson> = {};
 
@@ -293,7 +302,7 @@ export default function LesonaSekolySabata() {
 
       for (const lesson of lessons) {
         const lessonId = lesson.id.split('-').pop();
-        const url = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/${lessonId}/index.json`;
+        const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lessonId}/index.json`;
         const res = await fetch(url);
         if (res.ok) {
           const json = await res.json();
@@ -303,10 +312,8 @@ export default function LesonaSekolySabata() {
         }
       }
 
-      await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${q.id}`, JSON.stringify(lessonsData));
-
-      // Also cache the quarterly detail (index) to ensure offline access to the list
-      await AsyncStorage.setItem(`adventools_ss_q_detail_${q.id}`, JSON.stringify(q));
+      await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${q.id}`, JSON.stringify(lessonsData));
+      await AsyncStorage.setItem(`adventools_ss_q_detail_${selectedLang}_${q.id}`, JSON.stringify(q));
 
       setDownloadedQuarterlies(prev => [...prev, q.id]);
       Alert.alert(t('success'), t('download_success'));
@@ -329,7 +336,7 @@ export default function LesonaSekolySabata() {
           style: "destructive",
           onPress: async () => {
             try {
-              await AsyncStorage.removeItem(`${OFFLINE_LESSONS_PREFIX}${qId}`);
+              await AsyncStorage.removeItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${qId}`);
               setDownloadedQuarterlies(prev => prev.filter(id => id !== qId));
               Alert.alert(t('success'), t('delete_success'));
             } catch (e) {
@@ -344,25 +351,25 @@ export default function LesonaSekolySabata() {
 
   const fetchWeeklyLesson = async (quarterlyId: string, lessonId: string) => {
     setLoading(true);
-    setReadingLesson(null); // Clear previous content
+    setReadingLesson(null);
     try {
       // 1. Check Offline
-      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${quarterlyId}`);
+      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${quarterlyId}`);
       if (offlineDataStr) {
         const offlineData = JSON.parse(offlineDataStr);
         if (offlineData[lessonId]) {
           setReadingLesson(offlineData[lessonId]);
           setLoading(false);
-          // Auto-select segment
           autoSelectSegment(offlineData[lessonId]);
           return;
         }
       }
 
       // 2. Fetch Online
-      const qId = quarterlyId.replace('mg-ss-', '');
+      const langPrefix = `${selectedLang}-ss-`;
+      const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '');
       const subdomain = quarterlyId.includes('-cq') ? 'inverse' : 'absg';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/mg/ss/${qId}/${lessonId}/index.json`;
+      const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lessonId}/index.json`;
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -374,7 +381,6 @@ export default function LesonaSekolySabata() {
         throw new Error("Invalid lesson data format");
       }
 
-      // Some APIs might return differently, let's normalize
       let normalizedData = json;
       if (!json.segments && json.lessons) {
         normalizedData = { ...json, segments: json.lessons };
@@ -383,12 +389,13 @@ export default function LesonaSekolySabata() {
       setReadingLesson(normalizedData);
       autoSelectSegment(normalizedData);
 
-      // Sauvegarde automatique pour accès hors-ligne (Auto-cache)
+      // Auto-cache for offline access
       try {
-        const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${quarterlyId}`);
+        const offlineKey = `${OFFLINE_LESSONS_PREFIX}${selectedLang}_${quarterlyId}`;
+        const offlineDataStr = await AsyncStorage.getItem(offlineKey);
         let offlineData = offlineDataStr ? JSON.parse(offlineDataStr) : {};
         offlineData[lessonId] = normalizedData;
-        await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${quarterlyId}`, JSON.stringify(offlineData));
+        await AsyncStorage.setItem(offlineKey, JSON.stringify(offlineData));
       } catch (e) {
         console.error("Auto-cache error", e);
       }
@@ -923,15 +930,38 @@ export default function LesonaSekolySabata() {
             <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>
               {readingLesson ? readingLesson.title : selectedQuarterly ? selectedQuarterly.title : "Sekoly Sabata"}
             </Text>
-            <Text className="text-slate-500 text-xs">
-              {readingLesson ? "Fandalinana" : "Sekoly Sabata Malagasy"}
-            </Text>
+            <View className="flex-row items-center">
+              <Text className="text-slate-500 text-xs">
+                {readingLesson ? t('daily_study') : 'Sekoly Sabata'}
+              </Text>
+              {!readingLesson && !selectedQuarterly && (
+                <TouchableOpacity
+                  onPress={() => setShowLangPicker(true)}
+                  className="ml-2 flex-row items-center bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700"
+                >
+                  <Text className="text-[10px] font-bold text-slate-300 mr-1">
+                    {SS_LANGUAGES.find(l => l.code === selectedLang)?.flag}
+                  </Text>
+                  <Text className="text-[10px] font-bold text-slate-300">
+                    {SS_LANGUAGES.find(l => l.code === selectedLang)?.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
         <View className="flex-row">
           {readingLesson && (
             <TouchableOpacity onPress={handleShare} className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center border border-primary/20 mr-2">
               <Share size={18} color="#3b82f6" />
+            </TouchableOpacity>
+          )}
+          {!readingLesson && !selectedQuarterly && (
+            <TouchableOpacity
+              onPress={() => setShowLangPicker(true)}
+              className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700 mr-2"
+            >
+              <Globe size={16} color="#94a3b8" />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -945,6 +975,49 @@ export default function LesonaSekolySabata() {
       </View>
 
       {renderContent()}
+
+      {/* Language Picker Modal */}
+      {showLangPicker && (
+        <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
+          <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 border-t border-slate-700">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
+            <Text className="text-xl font-bold text-white mb-2 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>
+              {t('choose_language')}
+            </Text>
+            <Text className="text-slate-500 text-xs text-center mb-6">
+              {t('sabbath_school_lessons')}
+            </Text>
+            {SS_LANGUAGES.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                onPress={() => {
+                  setSelectedLang(lang.code);
+                  setShowLangPicker(false);
+                  setSelectedQuarterly(null);
+                  setReadingLesson(null);
+                  setQuarterlyList([]);
+                }}
+                className={`flex-row items-center p-4 rounded-2xl mb-3 border ${selectedLang === lang.code
+                  ? 'bg-primary border-primary'
+                  : 'bg-[#111621] border-slate-800'
+                  }`}
+              >
+                <Text className="text-2xl mr-4">{lang.flag}</Text>
+                <Text className={`font-bold text-base flex-1 ${selectedLang === lang.code ? 'text-white' : 'text-slate-300'
+                  }`}>
+                  {lang.label}
+                </Text>
+                {selectedLang === lang.code && (
+                  <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
+                    <Text className="text-primary font-bold text-xs">✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Bible Verse Modal */}
       <Modal visible={verseModalVisible} animationType="slide" transparent>
