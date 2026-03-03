@@ -2,12 +2,47 @@
   "versionCode": 1,
   "lastUpdate": "2025-03-02T18:48:00Z",
   "languages": [
-    { "id": "Français", "file": "fr.json", "name": "Français", "version": 1 },
-    { "id": "English", "file": "en.json", "name": "English", "version": 1 },
-    { "id": "Malagasy", "file": "mg.json", "name": "Malagasy", "version": 1 },
-    { "id": "Deutsch", "file": "de.json", "name": "Deutsch", "version": 1 },
-    { "id": "Español", "file": "es.json", "name": "Español", "version": 1 },
-    { "id": "Português", "file": "pt.json", "name": "Português", "version": 1 },
-    { "id": "中文", "file": "zh.json", "name": "中文", "version": 1 }
+    {
+      "id": "Français",
+      "file": "fr.json",
+      "name": "Français",
+      "version": 2
+    },
+    {
+      "id": "English",
+      "file": "en.json",
+      "name": "English",
+      "version": 2
+    },
+    {
+      "id": "Malagasy",
+      "file": "mg.json",
+      "name": "Malagasy",
+      "version": 2
+    },
+    {
+      "id": "Deutsch",
+      "file": "de.json",
+      "name": "Deutsch",
+      "version": 1
+    },
+    {
+      "id": "Español",
+      "file": "es.json",
+      "name": "Español",
+      "version": 1
+    },
+    {
+      "id": "Português",
+      "file": "pt.json",
+      "name": "Português",
+      "version": 1
+    },
+    {
+      "id": "中文",
+      "file": "zh.json",
+      "name": "中文",
+      "version": 1
+    }
   ]
 }
