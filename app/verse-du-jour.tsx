@@ -3,9 +3,9 @@ import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, BookmarkPlus, Heart, RefreshCw, Share2 } from 'lucide-react-native';
+import { ArrowLeft, BookmarkPlus, Heart, MessageSquare, RefreshCw, Share2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVerseContentById } from '@/lib/bible';
@@ -22,6 +22,11 @@ export default function VerDuJourPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkComment, setBookmarkComment] = useState('');
+
+  // Bookmark modal
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [commentText, setCommentText] = useState('');
 
   const loadNewVerse = async () => {
     try {
@@ -47,9 +52,10 @@ export default function VerDuJourPage() {
         setVerseText(t('verse_incomplete'));
       }
 
-      // Reset favorite/bookmark status for new verse
+      // Reset status for new verse
       setIsFavorite(false);
       setIsBookmarked(false);
+      setBookmarkComment('');
     } catch (error) {
       console.error('Error loading verse:', error);
       setVerseText('Erreur lors du chargement du verset.');
@@ -100,8 +106,10 @@ export default function VerDuJourPage() {
   const checkStatus = async () => {
     if (!currentReference) return;
     try {
-      const favs = await AsyncStorage.getItem('bible_favorites');
-      const marks = await AsyncStorage.getItem('bible_bookmarks');
+      const [favs, marks] = await Promise.all([
+        AsyncStorage.getItem('bible_favorites'),
+        AsyncStorage.getItem('bible_bookmarks')
+      ]);
 
       const favorites = favs ? JSON.parse(favs) : [];
       const bookmarks = marks ? JSON.parse(marks) : [];
@@ -109,7 +117,10 @@ export default function VerDuJourPage() {
       const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
 
       setIsFavorite(favorites.some((f: any) => f.key === key));
-      setIsBookmarked(bookmarks.some((b: any) => b.key === key));
+
+      const bookmark = bookmarks.find((b: any) => b.key === key);
+      setIsBookmarked(!!bookmark);
+      setBookmarkComment(bookmark?.comment || '');
     } catch (e) {
       console.error(e);
     }
@@ -142,6 +153,7 @@ export default function VerDuJourPage() {
           chapter: currentReference.chapter,
           verse: currentReference.verse,
           reference: currentReference.reference,
+          category: currentReference.category || '',
           text: verseText,
           timestamp: Date.now()
         });
@@ -153,29 +165,64 @@ export default function VerDuJourPage() {
     }
   };
 
-  const toggleBookmark = async () => {
+  const openBookmarkModal = async () => {
+    if (!currentReference || !verseText) return;
+    if (isBookmarked) {
+      // Load existing comment
+      const stored = await AsyncStorage.getItem('bible_bookmarks');
+      const bookmarks = stored ? JSON.parse(stored) : [];
+      const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
+      const existing = bookmarks.find((b: any) => b.key === key);
+      setCommentText(existing?.comment || '');
+    } else {
+      setCommentText('');
+    }
+    setCommentModalVisible(true);
+  };
+
+  const saveBookmark = async () => {
     if (!currentReference || !verseText) return;
     try {
       const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
       const stored = await AsyncStorage.getItem('bible_bookmarks');
       let bookmarks = stored ? JSON.parse(stored) : [];
 
-      if (isBookmarked) {
-        bookmarks = bookmarks.filter((b: any) => b.key !== key);
-        setIsBookmarked(false);
-      } else {
-        bookmarks.push({
-          key,
-          bookId: currentReference.bookId,
-          chapter: currentReference.chapter,
-          verse: currentReference.verse,
-          reference: currentReference.reference,
-          text: verseText,
-          timestamp: Date.now()
-        });
-        setIsBookmarked(true);
-      }
+      // Remove existing to update
+      bookmarks = bookmarks.filter((b: any) => b.key !== key);
+
+      bookmarks.push({
+        key,
+        bookId: currentReference.bookId,
+        chapter: currentReference.chapter,
+        verse: currentReference.verse,
+        reference: currentReference.reference,
+        category: currentReference.category || '',
+        text: verseText,
+        comment: commentText.trim(),
+        timestamp: Date.now()
+      });
+
       await AsyncStorage.setItem('bible_bookmarks', JSON.stringify(bookmarks));
+      setIsBookmarked(true);
+      setBookmarkComment(commentText.trim());
+      setCommentModalVisible(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const removeBookmark = async () => {
+    if (!currentReference) return;
+    try {
+      const key = `${currentReference.bookId}-${currentReference.chapter}-${currentReference.verse}`;
+      const stored = await AsyncStorage.getItem('bible_bookmarks');
+      let bookmarks = stored ? JSON.parse(stored) : [];
+      bookmarks = bookmarks.filter((b: any) => b.key !== key);
+
+      await AsyncStorage.setItem('bible_bookmarks', JSON.stringify(bookmarks));
+      setIsBookmarked(false);
+      setBookmarkComment('');
+      setCommentModalVisible(false);
     } catch (e) {
       console.error(e);
     }
@@ -195,28 +242,17 @@ export default function VerDuJourPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Fanahy Masina':
-        return 'bg-purple-500';
-      case 'Vavaka':
-        return 'bg-blue-500';
-      case 'Herin\'Andriamanitra':
-        return 'bg-orange-500';
-      case 'Fitarihan\'Andriamanitra':
-        return 'bg-green-500';
-      case 'Fiovam-po':
-        return 'bg-pink-500';
-      case 'Famela-keloka':
-        return 'bg-indigo-500';
-      case 'Fandresena ny fahotana':
-        return 'bg-red-500';
-      case 'Fahasitranana':
-        return 'bg-emerald-500';
-      case 'Hery hanaovana ny sitrapony':
-        return 'bg-cyan-500';
-      case 'Maha-vavolombelona':
-        return 'bg-yellow-600';
-      default:
-        return 'bg-gray-500';
+      case 'Fanahy Masina': return 'bg-purple-500';
+      case 'Vavaka': return 'bg-blue-500';
+      case "Herin'Andriamanitra": return 'bg-orange-500';
+      case "Fitarihan'Andriamanitra": return 'bg-green-500';
+      case 'Fiovam-po': return 'bg-pink-500';
+      case 'Famela-keloka': return 'bg-indigo-500';
+      case 'Fandresena ny fahotana': return 'bg-red-500';
+      case 'Fahasitranana': return 'bg-emerald-500';
+      case 'Hery hanaovana ny sitrapony': return 'bg-cyan-500';
+      case 'Maha-vavolombelona': return 'bg-yellow-600';
+      default: return 'bg-gray-500';
     }
   };
 
@@ -225,7 +261,7 @@ export default function VerDuJourPage() {
       <SafeAreaView className="flex-1 bg-background-dark">
         <StatusBar barStyle="light-content" />
         <View className="flex-1 items-center justify-center">
-          <Text className="text-white text-lg">Chargement...</Text>
+          <Text className="text-white text-lg">{t('loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -308,7 +344,7 @@ export default function VerDuJourPage() {
             )}
 
             {/* Action Buttons */}
-            <View className="flex-row justify-between mb-4">
+            <View className="flex-row justify-between mt-6">
               <TouchableOpacity
                 onPress={handleShare}
                 className="w-14 h-14 rounded-full bg-white/20 items-center justify-center backdrop-blur-md"
@@ -324,7 +360,7 @@ export default function VerDuJourPage() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={toggleBookmark}
+                onPress={openBookmarkModal}
                 className={`w-14 h-14 rounded-full items-center justify-center backdrop-blur-md ${isBookmarked ? 'bg-blue-600' : 'bg-white/20'}`}
               >
                 <BookmarkPlus size={22} color="white" fill={isBookmarked ? "white" : "transparent"} />
@@ -350,16 +386,38 @@ export default function VerDuJourPage() {
           </Text>
         </TouchableOpacity>
 
-        {/* Inspiration Section */}
+        {/* Meditation / Personal Comment Section */}
         <View className="mb-8">
-          <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">
-            {t('meditation')}
-          </Text>
-          <View className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
-            <Text className="text-slate-300 leading-6" style={{ fontSize: 16 }}>
-              {t('meditation_intro')}
+          <View className="flex-row items-center mb-4">
+            <MessageSquare size={14} color="#64748b" />
+            <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest ml-2">
+              {t('meditation')}
             </Text>
           </View>
+
+          {bookmarkComment ? (
+            // Show personal comment if bookmarked
+            <TouchableOpacity onPress={openBookmarkModal} activeOpacity={0.8}>
+              <View className="bg-blue-500/10 rounded-2xl p-6 border border-blue-500/20">
+                <Text className="text-slate-200 leading-6" style={{ fontSize: 16 }}>
+                  {bookmarkComment}
+                </Text>
+                <Text className="text-blue-400 text-xs mt-3 italic">{t('edit' as any)} →</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            // Show default meditation text
+            <View className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+              <Text className="text-slate-300 leading-6" style={{ fontSize: 16 }}>
+                {t('meditation_intro')}
+              </Text>
+              {/* Hint to bookmark for personal notes */}
+              <TouchableOpacity onPress={openBookmarkModal} className="mt-4 flex-row items-center">
+                <BookmarkPlus size={14} color="#3b82f6" />
+                <Text className="text-blue-400 text-xs ml-2">{t('note_content_placeholder')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Footer */}
@@ -369,6 +427,56 @@ export default function VerDuJourPage() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Bookmark Comment Modal */}
+      <Modal visible={commentModalVisible} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 justify-center px-6">
+          <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
+            <View className="flex-row justify-between items-center mb-4">
+              <View className="flex-row items-center">
+                <BookmarkPlus size={20} color="#3b82f6" />
+                <Text className="text-white font-bold text-lg ml-2" style={{ fontFamily: 'Lexend_700Bold' }}>
+                  {t('meditation')}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setCommentModalVisible(false)} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                <X size={16} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            {currentReference && (
+              <View className="bg-slate-800 rounded-2xl p-3 mb-4">
+                <Text className="text-slate-400 text-xs" style={{ fontFamily: 'Lexend_400Regular' }}>{currentReference.reference}</Text>
+                <Text className="text-slate-300 text-sm mt-1" numberOfLines={2}>{verseText}</Text>
+              </View>
+            )}
+
+            <TextInput
+              className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white mb-4"
+              value={commentText}
+              onChangeText={setCommentText}
+              placeholder={t('note_content_placeholder')}
+              placeholderTextColor="#64748b"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={{ minHeight: 120, fontFamily: 'Lexend_400Regular' }}
+              autoFocus
+            />
+
+            <View className="flex-row gap-3">
+              {isBookmarked && (
+                <TouchableOpacity onPress={removeBookmark} className="flex-1 p-4 rounded-2xl border border-red-500/30 bg-red-500/10 items-center">
+                  <Text className="text-red-400 font-medium">{t('delete')}</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={saveBookmark} className="flex-1 p-4 rounded-2xl bg-primary items-center">
+                <Text className="text-white font-bold">{t('save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
