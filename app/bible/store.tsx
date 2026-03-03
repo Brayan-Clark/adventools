@@ -29,16 +29,40 @@ export default function BibleStore() {
       const available = await getAvailableBibles();
       setInstalled(available);
 
-      // 2. Fetch manifest from GitHub
+      // 2. Load cached manifest if exists
+      const cached = await AsyncStorage.getItem('adventools_bible_manifest_cache');
+      if (cached) setManifest(JSON.parse(cached));
+
+      // 3. Fetch manifest from GitHub
       const response = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
-      const data = await response.json();
-      setManifest(data.versions || []);
+      if (response.ok) {
+        const data = await response.json();
+        const versions = data.versions || [];
+        setManifest(versions);
+        await AsyncStorage.setItem('adventools_bible_manifest_cache', JSON.stringify(versions));
+      }
     } catch (e) {
       console.error(e);
-      Alert.alert("Erreur", "Impossible de récupérer la liste depuis internet.");
+      // No alert here, we just use the cache if possible
     } finally {
       setLoading(false);
     }
+  };
+
+  const getDisplayList = () => {
+    // Merge manifest and installed
+    // Ensure every installed bible that's NOT in manifest is added to manifest for management (deletion)
+    const list = [...manifest];
+    installed.forEach(inst => {
+      if (!list.find(m => m.id === inst.id)) {
+        list.push(inst);
+      }
+    });
+
+    return list.filter(v =>
+      v.name.toLowerCase().includes(search.toLowerCase()) ||
+      v.language.toLowerCase().includes(search.toLowerCase())
+    );
   };
 
   const downloadBible = async (version: BibleConfig) => {
@@ -130,10 +154,7 @@ export default function BibleStore() {
     );
   };
 
-  const filteredManifest = manifest.filter(v =>
-    v.name.toLowerCase().includes(search.toLowerCase()) ||
-    v.language.toLowerCase().includes(search.toLowerCase())
-  );
+  const displayList = getDisplayList();
 
   return (
     <SafeAreaView className="flex-1 bg-[#0f172a]">
@@ -184,12 +205,12 @@ export default function BibleStore() {
             </Text>
           </View>
 
-          {filteredManifest.length === 0 ? (
+          {displayList.length === 0 ? (
             <View className="py-20 items-center">
               <Text className="text-slate-500">Aucun résultat trouvé.</Text>
             </View>
           ) : (
-            filteredManifest.map((item) => {
+            displayList.map((item) => {
               const isInstalled = installed.some(b => b.id === item.id);
               const isDownloading = downloading[item.id] !== undefined;
 

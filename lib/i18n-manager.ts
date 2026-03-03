@@ -91,29 +91,53 @@ export class I18nManager {
   }
 
   getLanguageStatus(id: string): LanguageStatus {
-    if (id === 'Français' || id === 'English' || id === 'Malagasy') return 'built-in';
+    const isBuiltIn = id === 'Français' || id === 'English' || id === 'Malagasy';
 
+    // Check if there is a local copy (downloaded or update)
     const local = this.localManifest?.languages.find(l => l.id === id);
     const remote = this.remoteManifest?.languages.find(l => l.id === id);
 
-    if (!local) return 'not-downloaded';
-    if (remote && remote.version > local.version) return 'update-available';
-    return 'downloaded';
+    // If remote version is greater than local version (or assumed version 1 for built-ins if no local copy)
+    const currentVersion = local ? local.version : (isBuiltIn ? 1 : 0);
+
+    if (remote && remote.version > currentVersion) return 'update-available';
+    if (local) return 'downloaded';
+    if (isBuiltIn) return 'built-in';
+
+    return 'not-downloaded';
   }
 
   async downloadLanguage(id: string): Promise<boolean> {
-    if (!this.remoteManifest) return false;
+    if (!this.remoteManifest) {
+      console.error(`[I18n] Download failed: no remote manifest`);
+      return false;
+    }
     const remoteLang = this.remoteManifest.languages.find(l => l.id === id);
-    if (!remoteLang) return false;
+    if (!remoteLang) {
+      console.error(`[I18n] Download failed: language '${id}' not found in remote manifest`);
+      return false;
+    }
 
     try {
       const filePath = `${I18N_DIR}${remoteLang.file}`;
-      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/i18n/${remoteLang.file}`;
+      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/i18n/${encodeURIComponent(remoteLang.file)}?t=${Date.now()}`;
+      console.log(`[I18n] Downloading '${id}' from: ${url}`);
       const download = await FileSystem.downloadAsync(url, filePath);
 
       if (download.status === 200) {
         const content = await FileSystem.readAsStringAsync(filePath);
-        this.dynamicTranslations[id] = JSON.parse(content);
+
+        // Validate JSON before accepting
+        let parsed: TranslationSchema;
+        try {
+          parsed = JSON.parse(content);
+        } catch (parseError) {
+          console.error(`[I18n] Downloaded file for '${id}' is not valid JSON. First 100 chars:`, content.substring(0, 100));
+          await FileSystem.deleteAsync(filePath, { idempotent: true });
+          return false;
+        }
+
+        this.dynamicTranslations[id] = parsed;
 
         // Update local manifest
         if (!this.localManifest) {
@@ -123,11 +147,13 @@ export class I18nManager {
         this.localManifest.languages = this.localManifest.languages.filter(l => l.id !== id);
         this.localManifest.languages.push(remoteLang);
         await AsyncStorage.setItem(LOCAL_MANIFEST_KEY, JSON.stringify(this.localManifest));
+        console.log(`[I18n] Successfully downloaded '${id}' (${Object.keys(parsed).length} keys)`);
         return true;
       }
+      console.error(`[I18n] Download failed for '${id}': HTTP ${download.status}`);
       return false;
     } catch (e) {
-      console.error(`Download error for ${id}`, e);
+      console.error(`[I18n] Download error for '${id}':`, e);
       return false;
     }
   }

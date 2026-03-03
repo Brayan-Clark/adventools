@@ -255,6 +255,49 @@ export interface TranslationSchema {
   privacy: string;
   donation: string;
   help: string;
+  about_title: string;
+  privacy_policy: string;
+  make_donation: string;
+  our_mission: string;
+  mission_text: string;
+  team_contact: string;
+  open_source: string;
+  github_contrib: string;
+  tech_support: string;
+  privacy_status: string;
+  privacy_status_text: string;
+  made_with_love: string;
+  powered_by: string;
+  privacy_priority: string;
+  local_data: string;
+  local_data_text: string;
+  zero_collect: string;
+  zero_collect_text: string;
+  third_party: string;
+  third_party_text: string;
+  commitment: string;
+  commitment_text: string;
+  last_update: string;
+  support_project: string;
+  contribution_diff: string;
+  passion_dedication: string;
+  small_gesture: string;
+  support_methods: string;
+  mobile_money: string;
+  madagascar_transfer: string;
+  online_payment: string;
+  payment_methods: string;
+  follow_us: string;
+  thank_you: string;
+  generosity_future: string;
+
+  // Language Management
+  manage_languages: string;
+  installed_languages: string;
+  built_in: string;
+  downloaded: string;
+  available_cloud: string;
+  download: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

@@ -7,7 +7,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
-  Bell,
   BookOpen,
   Camera,
   Check,
@@ -15,12 +14,10 @@ import {
   ChevronRight,
   CircleHelp,
   Download,
-  FileText,
   Globe,
   Heart,
   Info,
   Languages,
-  Moon,
   RefreshCcw,
   Save,
   Shield,
@@ -30,7 +27,7 @@ import {
   X
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -68,6 +65,7 @@ export default function Settings() {
   const [importSummary, setImportSummary] = useState<any[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [installedBibles, setInstalledBibles] = useState<any[]>([]);
+  const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
 
   const EDS_CLASSES = [
     "Lesona Zaza minono (0-12 volana)",
@@ -302,27 +300,25 @@ export default function Settings() {
                 }}
               >
                 <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{userName}</Text>
-                <View className="flex-row items-center flex-wrap gap-x-2">
-                  <Text className="text-slate-500 text-xs">{userEDS}</Text>
+                <View className="flex-row items-center flex-wrap gap-2">
+                  <View className="bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
+                    <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{userEDS}</Text>
+                  </View>
+
                   {userDepartments.length > 0 && (
-                    <>
-                      <View className="w-1 h-1 rounded-full bg-slate-700" />
-                      <TouchableOpacity onPress={() => setIsDeptModalVisible(true)}>
-                        <Text className="text-primary/80 text-xs font-medium">
-                          {userDepartments.length > 2
-                            ? `${userDepartments.slice(0, 2).join(', ')} +${userDepartments.length - 2}`
-                            : userDepartments.join(', ')}
-                        </Text>
-                      </TouchableOpacity>
-                    </>
+                    <TouchableOpacity onPress={() => setIsDeptModalVisible(true)} className="bg-primary/20 px-3 py-1 rounded-full border border-primary/30">
+                      <Text className="text-primary text-[10px] font-bold uppercase tracking-wider">
+                        {userDepartments.length > 1
+                          ? `${userDepartments[0]} +${userDepartments.length - 1}`
+                          : userDepartments[0]}
+                      </Text>
+                    </TouchableOpacity>
                   )}
+
                   {userDepartments.length === 0 && (
-                    <>
-                      <View className="w-1 h-1 rounded-full bg-slate-700" />
-                      <TouchableOpacity onPress={() => setIsDeptModalVisible(true)}>
-                        <Text className="text-slate-600 text-xs italic">{t('add_department' as any)}</Text>
-                      </TouchableOpacity>
-                    </>
+                    <TouchableOpacity onPress={() => setIsDeptModalVisible(true)}>
+                      <Text className="text-slate-600 text-xs italic">{t('add_department' as any)}</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </TouchableOpacity>
@@ -381,32 +377,6 @@ export default function Settings() {
                   isLast
                 />
               </SettingsGroup>
-
-              <SettingsGroup title={t('pref_group')}>
-                <SettingItem
-                  icon={<Moon size={18} color="#64748b" />}
-                  label={t('dark_mode')}
-                  rightElement={
-                    <Switch
-                      value={globalSettings.darkMode ?? true}
-                      onValueChange={(v) => updateSettings({ darkMode: v })}
-                      trackColor={{ false: '#334155', true: '#195de6' }}
-                    />
-                  }
-                />
-                <SettingItem
-                  icon={<Bell size={18} color="#64748b" />}
-                  label={t('notifications')}
-                  rightElement={
-                    <Switch
-                      value={globalSettings.notifications ?? true}
-                      onValueChange={(v) => updateSettings({ notifications: v })}
-                      trackColor={{ false: '#334155', true: '#195de6' }}
-                    />
-                  }
-                  isLast
-                />
-              </SettingsGroup>
             </>
           )}
 
@@ -414,22 +384,12 @@ export default function Settings() {
             <>
               <SettingsGroup title={t('content_group')}>
                 <SettingItem
-                  icon={<FileText size={18} color="#64748b" />}
+                  icon={<BookOpen size={18} color="#64748b" />}
                   label={t('default_bible')}
                   value={(installedBibles || []).find(b => b?.id === globalSettings?.bibleVersion)?.name || globalSettings?.bibleVersion || "MG65"}
-                  onPress={() => {
-                    if (!installedBibles || installedBibles.length === 0) {
-                      Alert.alert(t('info'), t('loading'));
-                      return;
-                    }
-                    Alert.alert(
-                      t('default_bible'),
-                      t('choose_bible_version' as any),
-                      installedBibles.map((config) => ({
-                        text: `${config.name || config.id} (${config.id})`,
-                        onPress: () => updateSettings({ bibleVersion: config.id })
-                      }))
-                    )
+                  onPress={async () => {
+                    await loadBibles();
+                    setIsBibleModalVisible(true);
                   }}
                 />
                 <SettingItem
@@ -594,6 +554,49 @@ export default function Settings() {
         </View>
       </Modal>
 
+      {/* Bible Selection Modal */}
+      <Modal visible={isBibleModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%] border-t border-slate-800">
+            <View className="flex-row justify-between items-center mb-6 px-2">
+              <View>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('default_bible')}</Text>
+                <Text className="text-slate-500 mt-1">{t('choose_bible_version' as any)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsBibleModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="gap-2 mb-10">
+                {installedBibles.map((bible) => {
+                  const isSelected = globalSettings.bibleVersion === bible.id;
+                  return (
+                    <TouchableOpacity
+                      key={bible.id}
+                      onPress={() => {
+                        updateSettings({ bibleVersion: bible.id });
+                        setIsBibleModalVisible(false);
+                      }}
+                      className={`px-5 py-4 rounded-2xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View>
+                          <Text className={`text-base font-bold ${isSelected ? 'text-primary' : 'text-white'}`}>{bible.name || bible.id}</Text>
+                          <Text className="text-slate-500 text-xs mt-1">{bible.language || t('unknown' as any)}</Text>
+                        </View>
+                        {isSelected && <Check size={20} color="#3b82f6" />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Department Modal */}
       <Modal visible={isDeptModalVisible} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
@@ -695,7 +698,7 @@ export default function Settings() {
             <View className="flex-row justify-between items-center mb-6 px-2">
               <View>
                 <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{t('language')}</Text>
-                <Text className="text-slate-500 mt-1">Gérez vos langues et téléchargements</Text>
+                <Text className="text-slate-500 mt-1">{t('manage_languages' as any)}</Text>
               </View>
               <View className="flex-row items-center gap-3">
                 <TouchableOpacity
@@ -720,7 +723,7 @@ export default function Settings() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="gap-3 mb-10">
-                <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mb-1">Installées</Text>
+                <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mb-1">{t('installed_languages' as any)}</Text>
                 {getInstalledLanguages().map((lang) => {
                   const isSelected = globalSettings.language === lang.id;
                   const status = getLanguageStatus(lang.id);
@@ -738,7 +741,7 @@ export default function Settings() {
                           <View>
                             <Text className={`text-white font-bold ${isSelected ? 'text-primary' : ''}`}>{lang.name}</Text>
                             <Text className="text-slate-500 text-[10px] uppercase">
-                              {lang.isBuiltIn ? 'Intégrée' : 'Téléchargée'}
+                              {lang.isBuiltIn ? t('built_in' as any) : t('downloaded' as any)}
                             </Text>
                           </View>
                         </TouchableOpacity>
@@ -769,7 +772,7 @@ export default function Settings() {
 
                 {getRemoteAvailableLanguages().filter(rl => !getInstalledLanguages().find(il => il.id === rl.id)).length > 0 && (
                   <>
-                    <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mt-4 mb-1">Disponibles sur le cloud</Text>
+                    <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-2 mt-4 mb-1">{t('available_cloud' as any)}</Text>
                     {getRemoteAvailableLanguages()
                       .filter(rl => !getInstalledLanguages().find(il => il.id === rl.id))
                       .map((rl) => (
@@ -788,7 +791,7 @@ export default function Settings() {
                               onPress={() => downloadLanguage(rl.id)}
                               className="bg-primary px-4 py-2 rounded-xl"
                             >
-                              <Text className="text-white text-xs font-bold">Télécharger</Text>
+                              <Text className="text-white text-xs font-bold">{t('download' as any)}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>

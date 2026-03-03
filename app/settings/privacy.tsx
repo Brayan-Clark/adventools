@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Eye, Lock, Server, Shield } from 'lucide-react-native';
@@ -7,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView className="flex-1 bg-[#111621]">
@@ -17,7 +19,7 @@ export default function PrivacyScreen() {
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
           <ChevronLeft size={20} color="#cbd5e1" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Confidentialité</Text>
+        <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{t('privacy_policy')}</Text>
         <View className="w-10" />
       </View>
 
@@ -29,7 +31,7 @@ export default function PrivacyScreen() {
               <Shield size={40} color="#10b981" />
             </View>
             <Text className="text-2xl font-bold text-white text-center" style={{ fontFamily: 'Lexend_700Bold' }}>
-              Votre vie privée est notre priorité.
+              {t('privacy_priority')}
             </Text>
           </View>
 
@@ -39,10 +41,9 @@ export default function PrivacyScreen() {
                 <Lock size={20} color="#3b82f6" />
               </View>
               <View className="flex-1">
-                <Text className="text-white font-bold mb-2">Données Locales</Text>
+                <Text className="text-white font-bold mb-2">{t('local_data')}</Text>
                 <Text className="text-slate-400 text-sm leading-6">
-                  Toutes vos données (notes, préférences, historique, surbrillages) sont stockées exclusivement sur votre appareil.
-                  Nous n'utilisons aucun serveur centralisé pour stocker vos informations personnelles.
+                  {t('local_data_text')}
                 </Text>
               </View>
             </View>
@@ -52,9 +53,9 @@ export default function PrivacyScreen() {
                 <Eye size={20} color="#a855f7" />
               </View>
               <View className="flex-1">
-                <Text className="text-white font-bold mb-2">Zéro Collecte</Text>
+                <Text className="text-white font-bold mb-2">{t('zero_collect')}</Text>
                 <Text className="text-slate-400 text-sm leading-6">
-                  Adventools ne collecte aucune donnée analytique ou publicitaire. Nous ne savons pas ce que vous lisez ni quand vous l'utilisez.
+                  {t('zero_collect_text')}
                 </Text>
               </View>
             </View>
@@ -64,25 +65,24 @@ export default function PrivacyScreen() {
                 <Server size={20} color="#f59e0b" />
               </View>
               <View className="flex-1">
-                <Text className="text-white font-bold mb-2">Services Tiers</Text>
+                <Text className="text-white font-bold mb-2">{t('third_party')}</Text>
                 <Text className="text-slate-400 text-sm leading-6">
-                  L'application charge le manifeste des documents depuis GitHub pour rester à jour, mais aucune information identifiable ne leur est envoyée.
+                  {t('third_party_text')}
                 </Text>
               </View>
             </View>
           </View>
 
           <View className="bg-white/5 border border-white/10 rounded-[32px] p-8">
-            <Text className="text-white font-bold mb-4">Engagement</Text>
+            <Text className="text-white font-bold mb-4">{t('commitment')}</Text>
             <Text className="text-slate-400 text-sm leading-7">
-              Nous croyons que la lecture de la Parole de Dieu est un moment sacré et privé.
-              Cet outil est conçu pour respecter cette intimité tout en offrant une expérience moderne.
+              {t('commitment_text')}
             </Text>
           </View>
 
           <View className="mt-12 items-center">
             <Text className="text-slate-600 text-[10px] font-bold uppercase tracking-widest text-center">
-              Dernière mise à jour : Février 2026
+              {t('last_update')}
             </Text>
           </View>
 
