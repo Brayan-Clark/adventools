@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "pt": TranslationSchema = {
-  
+{
   "settings": "Configurações",
   "ok": "OK",
   "cancel": "Cancelar",
@@ -14,8 +11,6 @@ export const "pt": TranslationSchema = {
   "info": "Informação",
   "copy": "Copiar",
   "success": "Sucesso",
-
-  
   "home": "Início",
   "welcome": "Bem-vindo",
   "verse_of_the_day": "Versículo do dia",
@@ -42,27 +37,19 @@ export const "pt": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deuterocanônico / Outros",
   "other_testament": "Outro",
-
-  
   "greeting_morning": "Bom dia ☀️",
   "greeting_afternoon": "Boa tarde 🌤️",
   "greeting_evening": "Boa noite 🌙",
   "greeting_generic": "Olá 👋",
-
-  
   "bible_subtitle": "As Santas Escrituras",
   "hymns_subtitle": "Cânticos de Louvor",
   "pdf_subtitle": "Documentos PDF",
   "notes_subtitle": "Reflexões e Notas",
   "beliefs_subtitle": "Os 28 Fundamentos",
   "useful_subtitle": "Séries e Temas",
-
-  
   "search_placeholder": "Número ou título...",
   "results_count": "resultados encontrados",
   "no_results": "Nenhum resultado encontrado",
-
-  
   "my_hymnals": "Meus Hinários",
   "manage_local_songs": "Gerencie suas músicas locais",
   "store": "Loja",
@@ -89,8 +76,6 @@ export const "pt": TranslationSchema = {
   "author": "Autor",
   "save_corrections": "Salvar correções",
   "exported_to_clipboard": "O hino foi copiado para a área de transferência.",
-
-  
   "library": "Biblioteca",
   "manage_study_resources": "Gerencie seus recursos de estudo",
   "recents": "Recentes",
@@ -109,8 +94,6 @@ export const "pt": TranslationSchema = {
   "keep_my_notes": "Manter minhas notas",
   "delete_doc_success": "Documento e dados excluídos.",
   "delete_doc_error": "Erro ao excluir.",
-
-  
   "my_journal": "Meu Diário",
   "search_note_placeholder": "Buscar nota...",
   "all_notes": "TODAS",
@@ -131,8 +114,6 @@ export const "pt": TranslationSchema = {
   "delete_folder_confirm": "Deseja excluir a pasta?",
   "folder_exists_error": "Esta pasta já existe",
   "verse_not_found_in": "Não encontrado em",
-
-  
   "useful": "Útil",
   "more_apps": "Mais aplicativos",
   "recent_read": "Lido recentemente",
@@ -251,7 +232,6 @@ export const "pt": TranslationSchema = {
   "tomorrow": "Amanhã",
   "now": "Agora",
   "soon": "Em breve",
-  "later": "Mais tarde",
   "ago": "Há",
   "from_now": "A partir de agora",
   "seconds": "Segundos",

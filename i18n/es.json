@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "es": TranslationSchema = {
-  
+{
   "settings": "Configuración",
   "ok": "OK",
   "cancel": "Cancelar",
@@ -14,8 +11,6 @@ export const "es": TranslationSchema = {
   "info": "Información",
   "copy": "Copiar",
   "success": "Éxito",
-
-  
   "home": "Inicio",
   "welcome": "Bienvenido",
   "verse_of_the_day": "Versículo del día",
@@ -42,27 +37,19 @@ export const "es": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deuterocanónico / Otros",
   "other_testament": "Otro",
-
-  
   "greeting_morning": "Buenos días ☀️",
   "greeting_afternoon": "Buenas tardes 🌤️",
   "greeting_evening": "Buenas noches 🌙",
   "greeting_generic": "Hola 👋",
-
-  
   "bible_subtitle": "Las Santas Escrituras",
   "hymns_subtitle": "Cantos de alabanza",
   "pdf_subtitle": "Documentos PDF",
   "notes_subtitle": "Reflexiones y Notas",
   "beliefs_subtitle": "Los 28 Fundamentos",
   "useful_subtitle": "Series y Temas",
-
-  
   "search_placeholder": "Número o título...",
   "results_count": "resultados encontrados",
   "no_results": "No se encontraron resultados",
-
-  
   "my_hymnals": "Mis Cancioneros",
   "manage_local_songs": "Gestione sus canciones locales",
   "store": "Tienda",
@@ -89,8 +76,6 @@ export const "es": TranslationSchema = {
   "author": "Autor",
   "save_corrections": "Guardar correcciones",
   "exported_to_clipboard": "El himno ha sido copiado al portapapeles.",
-
-  
   "library": "Biblioteca",
   "manage_study_resources": "Gestione sus recursos de estudio",
   "recents": "Recientes",
@@ -109,8 +94,6 @@ export const "es": TranslationSchema = {
   "keep_my_notes": "Guardar mis notas",
   "delete_doc_success": "Documento y datos eliminados.",
   "delete_doc_error": "Error al eliminar.",
-
-  
   "my_journal": "Mi Diario",
   "search_note_placeholder": "Buscar nota...",
   "all_notes": "TODAS",
@@ -131,8 +114,6 @@ export const "es": TranslationSchema = {
   "delete_folder_confirm": "¿Desea eliminar la carpeta?",
   "folder_exists_error": "Esta carpeta ya existe",
   "verse_not_found_in": "No encontrado en",
-
-  
   "useful": "Útil",
   "more_apps": "Más aplicaciones",
   "recent_read": "Leído recientemente",
@@ -251,7 +232,6 @@ export const "es": TranslationSchema = {
   "tomorrow": "Mañana",
   "now": "Ahora",
   "soon": "Pronto",
-  "later": "Más tarde",
   "ago": "Hace",
   "from_now": "Desde ahora",
   "seconds": "Segundos",

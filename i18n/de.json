@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "de": TranslationSchema = {
-  
+{
   "settings": "Einstellungen",
   "ok": "OK",
   "cancel": "Abbrechen",
@@ -14,8 +11,6 @@ export const "de": TranslationSchema = {
   "info": "Info",
   "copy": "Kopieren",
   "success": "Erfolg",
-
-  
   "home": "Startseite",
   "welcome": "Willkommen",
   "verse_of_the_day": "Vers des Tages",
@@ -42,27 +37,19 @@ export const "de": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deuterokanonisch / Andere",
   "other_testament": "Andere",
-
-  
   "greeting_morning": "Guten Morgen ☀️",
   "greeting_afternoon": "Guten Nachmittag 🌤️",
   "greeting_evening": "Guten Abend 🌙",
   "greeting_generic": "Hallo 👋",
-
-  
   "bible_subtitle": "Die Heiligen Schriften",
   "hymns_subtitle": "Lobgesänge",
   "pdf_subtitle": "PDF-Dokumente",
   "notes_subtitle": "Reflexionen & Notizen",
   "beliefs_subtitle": "Die 28 Grundlagen",
   "useful_subtitle": "Serien & Themen",
-
-  
   "search_placeholder": "Nummer oder Titel...",
   "results_count": "Ergebnisse gefunden",
   "no_results": "Keine Ergebnisse gefunden",
-
-  
   "my_hymnals": "Meine Gesangbücher",
   "manage_local_songs": "Verwalten Sie Ihre lokalen Lieder",
   "store": "Geschäft",
@@ -89,8 +76,6 @@ export const "de": TranslationSchema = {
   "author": "Autor",
   "save_corrections": "Korrekturen speichern",
   "exported_to_clipboard": "Das Lied wurde in die Zwischenablage kopiert.",
-
-  
   "library": "Bibliothek",
   "manage_study_resources": "Verwalten Sie Ihre Studienressourcen",
   "recents": "Kürzlich",
@@ -109,8 +94,6 @@ export const "de": TranslationSchema = {
   "keep_my_notes": "Meine Notizen behalten",
   "delete_doc_success": "Dokument und Daten gelöscht.",
   "delete_doc_error": "Fehler beim Löschen.",
-
-  
   "my_journal": "Mein Tagebuch",
   "search_note_placeholder": "Notiz suchen...",
   "all_notes": "ALLE",
@@ -131,8 +114,6 @@ export const "de": TranslationSchema = {
   "delete_folder_confirm": "Möchten Sie den Ordner löschen",
   "folder_exists_error": "Dieser Ordner existiert bereits",
   "verse_not_found_in": "Nicht gefunden in",
-
-  
   "useful": "Nützlich",
   "more_apps": "Weitere Anwendungen",
   "recent_read": "Kürzlich gelesen",
@@ -251,7 +232,6 @@ export const "de": TranslationSchema = {
   "tomorrow": "Morgen",
   "now": "Jetzt",
   "soon": "Bald",
-  "later": "Später",
   "ago": "Vor",
   "from_now": "Ab jetzt",
   "seconds": "Sekunden",

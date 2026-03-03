@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "zh": TranslationSchema = {
-  
+{
   "settings": "设置",
   "ok": "确定",
   "cancel": "取消",
@@ -14,8 +11,6 @@ export const "zh": TranslationSchema = {
   "info": "信息",
   "copy": "复制",
   "success": "成功",
-
-  
   "home": "首页",
   "welcome": "欢迎",
   "verse_of_the_day": "今日经文",
@@ -42,27 +37,19 @@ export const "zh": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "次经书 / 其他",
   "other_testament": "其他",
-
-  
   "greeting_morning": "早上好 ☀️",
   "greeting_afternoon": "下午好 🌤️",
   "greeting_evening": "晚上好 🌙",
   "greeting_generic": "你好 👋",
-
-  
   "bible_subtitle": "圣经典籍",
   "hymns_subtitle": "赞美歌曲",
   "pdf_subtitle": "PDF文档",
   "notes_subtitle": "反思与笔记",
   "beliefs_subtitle": "28个基础",
   "useful_subtitle": "系列与主题",
-
-  
   "search_placeholder": "编号或标题...",
   "results_count": "找到结果",
   "no_results": "没有找到结果",
-
-  
   "my_hymnals": "我的赞美诗集",
   "manage_local_songs": "管理您的本地歌曲",
   "store": "商店",
@@ -89,8 +76,6 @@ export const "zh": TranslationSchema = {
   "author": "作者",
   "save_corrections": "保存更正",
   "exported_to_clipboard": "赞美诗已复制到剪贴板。",
-
-  
   "library": "图书馆",
   "manage_study_resources": "管理您的研究资源",
   "recents": "最近的",
@@ -109,8 +94,6 @@ export const "zh": TranslationSchema = {
   "keep_my_notes": "保留我的笔记",
   "delete_doc_success": "文档和数据已删除。",
   "delete_doc_error": "删除时出错。",
-
-  
   "my_journal": "我的日记",
   "search_note_placeholder": "搜索笔记...",
   "all_notes": "全部",
@@ -131,8 +114,6 @@ export const "zh": TranslationSchema = {
   "delete_folder_confirm": "您是否要删除此文件夹？",
   "folder_exists_error": "此文件夹已存在",
   "verse_not_found_in": "在...中未找到",
-
-  
   "useful": "有用",
   "more_apps": "更多应用",
   "recent_read": "最近阅读",
@@ -251,7 +232,6 @@ export const "zh": TranslationSchema = {
   "tomorrow": "明天",
   "now": "现在",
   "soon": "很快",
-  "later": "稍后",
   "ago": "前",
   "from_now": "从现在起",
   "seconds": "秒",
