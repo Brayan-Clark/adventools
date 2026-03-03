@@ -298,4 +298,19 @@ export const en: TranslationSchema = {
   downloaded: "Downloaded",
   available_cloud: "Available on cloud",
   download: "Download",
+
+  // Verse Categories (Prayer Promises)
+  cat_fanahy_masina: "Holy Spirit",
+  cat_vavaka: "Prayer",
+  cat_herin_andriamanitra: "Power of God",
+  cat_fitarihan_andriamanitra: "Divine Guidance",
+  cat_fiovam_po: "Conversion",
+  cat_famela_keloka: "Forgiveness",
+  cat_fandresena_ny_fahotana: "Victory over sin",
+  cat_fahasitranana: "Healing",
+  cat_hery_hanaovana: "Strength to act",
+  cat_maha_vavolombelona: "Witnessing",
+
+  // Apocrypha testament
+  apocrypha_testament: "Apocrypha",
 };

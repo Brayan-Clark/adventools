@@ -359,7 +359,7 @@ export default function BibleReader() {
               {/* 3. Section Headers */}
               <View className="items-center mb-10 pt-2">
                 <Text className="text-[10px] font-bold uppercase text-[#195de6] tracking-[0.3em] mb-3">
-                  {testamentName || (Number(testament) === 2 ? 'Nouvel Testament' : 'Ancien Testament')}
+                  {testamentName || (Number(testament) === 3 ? 'Testamenta Vaovao' : Number(testament) === 2 ? 'Apokrif' : 'Testamenta Taloha')}
                 </Text>
                 <Text className="text-[26px] font-bold text-white text-center mb-6 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
                   {currentBookName} {chapter}
@@ -423,7 +423,7 @@ export default function BibleReader() {
                   {(() => {
                     let inTag = false;
                     return words.map((word: string, idx: number) => {
-                      const segments = word.split(/(<n>|<\/n>)/g);
+                      const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>)/g);
                       return (
                         <React.Fragment key={idx}>
                           {segments.map((seg, sIdx) => {
@@ -433,6 +433,10 @@ export default function BibleReader() {
                             }
                             if (seg === '</n>') {
                               inTag = false;
+                              return <Text key={sIdx}>{"\n"}</Text>;
+                            }
+                            if (seg === '<pb>' || seg === '</pb>') {
+                              // page break: just add a line break, no style change
                               return <Text key={sIdx}>{"\n"}</Text>;
                             }
                             if (!seg) return null;
@@ -675,7 +679,7 @@ export default function BibleReader() {
                 {(() => {
                   let inTag = false;
                   return (selectedVerse?.text.split(' ') || []).map((word, idx) => {
-                    const segments = word.split(/(<n>|<\/n>)/g);
+                    const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>)/g);
                     return (
                       <React.Fragment key={idx}>
                         {segments.map((seg, sIdx) => {
@@ -685,6 +689,9 @@ export default function BibleReader() {
                           }
                           if (seg === '</n>') {
                             inTag = false;
+                            return <Text key={sIdx}>{"\n"}</Text>;
+                          }
+                          if (seg === '<pb>' || seg === '</pb>') {
                             return <Text key={sIdx}>{"\n"}</Text>;
                           }
                           if (!seg) return null;

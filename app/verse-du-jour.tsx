@@ -240,20 +240,17 @@ export default function VerDuJourPage() {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Fanahy Masina': return 'bg-purple-500';
-      case 'Vavaka': return 'bg-blue-500';
-      case "Herin'Andriamanitra": return 'bg-orange-500';
-      case "Fitarihan'Andriamanitra": return 'bg-green-500';
-      case 'Fiovam-po': return 'bg-pink-500';
-      case 'Famela-keloka': return 'bg-indigo-500';
-      case 'Fandresena ny fahotana': return 'bg-red-500';
-      case 'Fahasitranana': return 'bg-emerald-500';
-      case 'Hery hanaovana ny sitrapony': return 'bg-cyan-500';
-      case 'Maha-vavolombelona': return 'bg-yellow-600';
-      default: return 'bg-gray-500';
-    }
+  const CATEGORY_MAP: Record<string, { key: string; color: string }> = {
+    'Fanahy Masina': { key: 'cat_fanahy_masina', color: 'bg-purple-500' },
+    'Vavaka': { key: 'cat_vavaka', color: 'bg-blue-500' },
+    "Herin'Andriamanitra": { key: 'cat_herin_andriamanitra', color: 'bg-orange-500' },
+    "Fitarihan'Andriamanitra": { key: 'cat_fitarihan_andriamanitra', color: 'bg-green-500' },
+    'Fiovam-po': { key: 'cat_fiovam_po', color: 'bg-pink-500' },
+    'Famela-keloka': { key: 'cat_famela_keloka', color: 'bg-indigo-500' },
+    'Fandresena ny fahotana': { key: 'cat_fandresena_ny_fahotana', color: 'bg-red-500' },
+    'Fahasitranana': { key: 'cat_fahasitranana', color: 'bg-emerald-500' },
+    'Hery hanaovana ny sitrapony': { key: 'cat_hery_hanaovana', color: 'bg-cyan-500' },
+    'Maha-vavolombelona': { key: 'cat_maha_vavolombelona', color: 'bg-yellow-600' },
   };
 
   if (isLoading) {
@@ -304,9 +301,11 @@ export default function VerDuJourPage() {
             {/* Category Badge */}
             {currentReference && (
               <View className="mb-6">
-                <View className={`${getCategoryColor(currentReference.category)} px-4 py-2 rounded-full self-start`}>
+                <View className={`${CATEGORY_MAP[currentReference.category]?.color || 'bg-gray-500'} px-4 py-2 rounded-full self-start`}>
                   <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                    {currentReference.category}
+                    {CATEGORY_MAP[currentReference.category]
+                      ? t(CATEGORY_MAP[currentReference.category].key as any)
+                      : currentReference.category}
                   </Text>
                 </View>
               </View>

@@ -69,7 +69,7 @@ export default function BibleStore() {
     if (!version.url) return;
 
     try {
-      setDownloading(prev => ({ ...prev, [version.id]: 0.1 }));
+      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
 
       const docDir = FileSystem.documentDirectory;
       const dbDir = `${docDir}SQLite/bibles`;
@@ -81,13 +81,22 @@ export default function BibleStore() {
 
       const fileUri = `${dbDir}/${version.file}`;
 
-      const downloadRes = await FileSystem.downloadAsync(
+      const downloadResumable = FileSystem.createDownloadResumable(
         version.url,
-        fileUri
+        fileUri,
+        {},
+        (downloadProgress) => {
+          const progress = downloadProgress.totalBytesExpectedToWrite > 0
+            ? downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite
+            : 0;
+          setDownloading(prev => ({ ...prev, [version.id]: Math.round(progress * 100) }));
+        }
       );
 
-      if (downloadRes.status !== 200) {
-        throw new Error(`Download failed with status ${downloadRes.status}`);
+      const downloadRes = await downloadResumable.downloadAsync();
+
+      if (!downloadRes || downloadRes.status !== 200) {
+        throw new Error(`Download failed with status ${downloadRes?.status}`);
       }
 
       // Update installed list in AsyncStorage
@@ -234,7 +243,18 @@ export default function BibleStore() {
                     </View>
 
                     {isDownloading ? (
-                      <ActivityIndicator color="#3b82f6" />
+                      <View className="items-center min-w-[70px]">
+                        {/* Progress bar */}
+                        <View className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden mb-1">
+                          <View
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{ width: `${Math.max(5, downloading[item.id] || 0)}%` }}
+                          />
+                        </View>
+                        <Text className="text-blue-400 text-xs font-bold">
+                          {downloading[item.id] !== undefined ? `${downloading[item.id]}%` : '...'}
+                        </Text>
+                      </View>
                     ) : isInstalled ? (
                       <View className="flex-row items-center">
                         <TouchableOpacity

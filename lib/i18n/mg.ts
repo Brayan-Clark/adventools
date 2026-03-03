@@ -298,4 +298,19 @@ export const mg: TranslationSchema = {
   downloaded: "Voaray",
   available_cloud: "Azo alaina amin'ny cloud",
   download: "Hampidina",
+
+  // Verse Categories (Prayer Promises)
+  cat_fanahy_masina: "Fanahy Masina",
+  cat_vavaka: "Vavaka",
+  cat_herin_andriamanitra: "Herin'Andriamanitra",
+  cat_fitarihan_andriamanitra: "Fitarihan'Andriamanitra",
+  cat_fiovam_po: "Fiovam-po",
+  cat_famela_keloka: "Famela-keloka",
+  cat_fandresena_ny_fahotana: "Fandresena ny fahotana",
+  cat_fahasitranana: "Fahasitranana",
+  cat_hery_hanaovana: "Hery hanaovana ny sitrapony",
+  cat_maha_vavolombelona: "Maha-vavolombelona",
+
+  // Apocrypha testament
+  apocrypha_testament: "Apokrif",
 };

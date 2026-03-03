@@ -105,18 +105,19 @@ export default function Bible() {
           if (!finalTestaments.find(t => t.id === id)) {
             let name = "";
             if (id === 1) name = isCloudSchema ? t('old_testament_malagasy') : t('old_testament_french');
-            else if (id === 2) name = isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french');
-            else if (id === 3) name = t('deuterocanonical_other');
+            else if (id === 2) name = t('apocrypha_testament');
+            else if (id === 3) name = isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french');
             else name = `${t('other_testament')} (${id})`;
 
             finalTestaments.push({ id, name });
           }
         });
 
-        // Ensure we at least have 1 and 2 if nothing found (fallback)
+        // Ensure we at least have 1, 2, 3 if nothing found (fallback)
         if (finalTestaments.length === 0) {
           finalTestaments.push({ id: 1, name: isCloudSchema ? t('old_testament_malagasy') : t('old_testament_french') });
-          finalTestaments.push({ id: 2, name: isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french') });
+          finalTestaments.push({ id: 2, name: t('apocrypha_testament') });
+          finalTestaments.push({ id: 3, name: isCloudSchema ? t('new_testament_malagasy') : t('new_testament_french') });
         }
 
         finalTestaments.sort((a, b) => a.id - b.id);

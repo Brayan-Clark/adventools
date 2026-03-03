@@ -10,21 +10,18 @@ import { ActivityIndicator, Modal, ScrollView, StatusBar, Text, TextInput, Touch
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
-const CATEGORIES = [
-  { id: 'all', name: 'Toutes', color: 'bg-slate-500' },
-  { id: 'favorites', name: '❤️ Favoris', color: 'bg-red-500' },
-  { id: 'bookmarks', name: '📌 Marque-pages', color: 'bg-blue-500' },
-  { id: 'Fanahy Masina', name: 'Fanahy Masina', color: 'bg-purple-500' },
-  { id: 'Vavaka', name: 'Vavaka', color: 'bg-blue-500' },
-  { id: "Herin'Andriamanitra", name: "Herin'Andriamanitra", color: 'bg-orange-500' },
-  { id: "Fitarihan'Andriamanitra", name: "Fitarihan'Andriamanitra", color: 'bg-green-500' },
-  { id: 'Fiovam-po', name: 'Fiovam-po', color: 'bg-pink-500' },
-  { id: 'Famela-keloka', name: 'Famela-keloka', color: 'bg-indigo-500' },
-  { id: 'Fandresena ny fahotana', name: 'Fandresena ny fahotana', color: 'bg-red-500' },
-  { id: 'Fahasitranana', name: 'Fahasitranana', color: 'bg-emerald-500' },
-  { id: 'Hery hanaovana ny sitrapony', name: 'Hery hanaovana ny sitrapony', color: 'bg-cyan-500' },
-  { id: 'Maha-vavolombelona', name: 'Maha-vavolombelona', color: 'bg-yellow-600' },
-];
+const CATEGORY_MAP: Record<string, { key: string; color: string }> = {
+  'Fanahy Masina': { key: 'cat_fanahy_masina', color: 'bg-purple-500' },
+  'Vavaka': { key: 'cat_vavaka', color: 'bg-blue-500' },
+  "Herin'Andriamanitra": { key: 'cat_herin_andriamanitra', color: 'bg-orange-500' },
+  "Fitarihan'Andriamanitra": { key: 'cat_fitarihan_andriamanitra', color: 'bg-green-500' },
+  'Fiovam-po': { key: 'cat_fiovam_po', color: 'bg-pink-500' },
+  'Famela-keloka': { key: 'cat_famela_keloka', color: 'bg-indigo-500' },
+  'Fandresena ny fahotana': { key: 'cat_fandresena_ny_fahotana', color: 'bg-red-500' },
+  'Fahasitranana': { key: 'cat_fahasitranana', color: 'bg-emerald-500' },
+  'Hery hanaovana ny sitrapony': { key: 'cat_hery_hanaovana', color: 'bg-cyan-500' },
+  'Maha-vavolombelona': { key: 'cat_maha_vavolombelona', color: 'bg-yellow-600' },
+};
 
 export default function VersetsCategoriesPage() {
   const router = useRouter();
@@ -297,7 +294,12 @@ export default function VersetsCategoriesPage() {
       {/* Categories */}
       <View className="px-1 py-4 border-b border-slate-600">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">
-          {CATEGORIES.map((category) => (
+          {/* Static special categories */}
+          {[
+            { id: 'all', name: t('categories'), color: 'bg-slate-500' },
+            { id: 'favorites', name: `❤️ ${t('favorites')}`, color: 'bg-red-500' },
+            { id: 'bookmarks', name: `📌 ${t('meditation')}`, color: 'bg-blue-500' },
+          ].map((category) => (
             <TouchableOpacity
               key={category.id}
               onPress={() => setSelectedCategory(category.id)}
@@ -308,6 +310,21 @@ export default function VersetsCategoriesPage() {
                 style={{ fontFamily: 'Lexend_500Medium' }}
               >
                 {category.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          {/* Dynamic translated categories */}
+          {Object.entries(CATEGORY_MAP).map(([id, { key, color }]) => (
+            <TouchableOpacity
+              key={id}
+              onPress={() => setSelectedCategory(id)}
+              className={`px-4 py-2 mx-1 rounded-full ${selectedCategory === id ? color : 'bg-slate-600'}`}
+            >
+              <Text
+                className={`text-sm font-medium ${selectedCategory === id ? 'text-white' : 'text-slate-300'}`}
+                style={{ fontFamily: 'Lexend_500Medium' }}
+              >
+                {t(key as any)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -338,9 +355,9 @@ export default function VersetsCategoriesPage() {
                 <View key={`${verse.bookId}-${verse.chapter}-${verse.verse}-${index}`} className="bg-slate-800 rounded-xl p-5 my-2 shadow-sm border border-slate-700">
                   {/* Category Badge */}
                   <View className="flex-row items-center mb-4">
-                    <View className={`px-3 py-1 rounded-full ${CATEGORIES.find(c => c.id === verse.category)?.color || 'bg-slate-500'}`}>
+                    <View className={`px-3 py-1 rounded-full ${CATEGORY_MAP[verse.category]?.color || 'bg-slate-500'}`}>
                       <Text className="text-white text-xs font-medium" style={{ fontFamily: 'Lexend_500Medium' }}>
-                        {verse.category}
+                        {CATEGORY_MAP[verse.category] ? t(CATEGORY_MAP[verse.category].key as any) : verse.category}
                       </Text>
                     </View>
                     <Text className="text-slate-400 text-xs ml-auto" style={{ fontFamily: 'Lexend_400Regular' }}>

@@ -298,6 +298,21 @@ export interface TranslationSchema {
   downloaded: string;
   available_cloud: string;
   download: string;
+
+  // Verse Categories (Prayer Promises)
+  cat_fanahy_masina: string;
+  cat_vavaka: string;
+  cat_herin_andriamanitra: string;
+  cat_fitarihan_andriamanitra: string;
+  cat_fiovam_po: string;
+  cat_famela_keloka: string;
+  cat_fandresena_ny_fahotana: string;
+  cat_fahasitranana: string;
+  cat_hery_hanaovana: string;
+  cat_maha_vavolombelona: string;
+
+  // Apocrypha testament
+  apocrypha_testament: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

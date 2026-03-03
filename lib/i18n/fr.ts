@@ -298,4 +298,19 @@ export const fr: TranslationSchema = {
   downloaded: "Téléchargée",
   available_cloud: "Disponibles sur le cloud",
   download: "Télécharger",
+
+  // Verse Categories (Prayer Promises)
+  cat_fanahy_masina: "Saint-Esprit",
+  cat_vavaka: "Prière",
+  cat_herin_andriamanitra: "Puissance de Dieu",
+  cat_fitarihan_andriamanitra: "Direction divine",
+  cat_fiovam_po: "Conversion",
+  cat_famela_keloka: "Pardon",
+  cat_fandresena_ny_fahotana: "Victoire sur le péché",
+  cat_fahasitranana: "Guérison",
+  cat_hery_hanaovana: "Force pour agir",
+  cat_maha_vavolombelona: "Témoignage",
+
+  // Apocrypha testament
+  apocrypha_testament: "Apocryphes",
 };
