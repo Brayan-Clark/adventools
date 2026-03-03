@@ -213,7 +213,7 @@ export default function LesonaSekolySabata() {
     return now >= start && now <= end;
   };
 
-  const fetchQuarterlyDetail = async (id: string) => {
+  const fetchQuarterlyDetail = async (id: string, indexPath?: string) => {
     setLoading(true);
     setLessonTitlesMap({});
 
@@ -227,11 +227,22 @@ export default function LesonaSekolySabata() {
         loadLessonTitles(json);
       }
 
-      // Remove language prefix from ID for the API path
-      const langPrefix = `${selectedLang}-ss-`;
-      const qId = id.replace(langPrefix, '').replace('mg-ss-', '');
-      const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/index.json`;
+      // Use stored index path if available, otherwise parse from ID
+      const storedItem = quarterlyList.find(q => q.id === id);
+      const itemIndex = indexPath || storedItem?.index || '';
+
+      let url: string;
+      if (itemIndex) {
+        // itemIndex is like "en/ss/2026-01" or "mg/ss/2026-01-cq"
+        const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
+        url = `https://${subdomain}.sspmadventist.org/api/v3/${itemIndex}/index.json`;
+      } else {
+        // Fallback: strip lang prefix
+        const langPrefix = `${selectedLang}-`;
+        const qPath = id.replace(langPrefix, '');
+        const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
+        url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/${qPath}/index.json`;
+      }
 
       const response = await fetch(url).catch(() => null);
       if (response && response.ok) {
@@ -429,48 +440,26 @@ export default function LesonaSekolySabata() {
   };
 
   const categories = useMemo(() => {
-    const standardCats = [
-      "Lesona Zaza minono (0-12 volana)",
-      "Lesona Zazakely (1-3 taona)",
-      "Lesona Kilonga (4-6 taona)",
-      "Lesona Ankizy (7-9 taona)",
-      "Lesona Tanora zandriny (10-12 taona)",
-      "Lesona Mantoanto (13-14 taona)",
-      "Lesona Zatovo (15-18 taona)",
-      "Lesona Tanora zokiny (19-35 taona)",
-      "Lesona Lehibe (+ 35 taona)"
-    ];
-
-    // Filter out API categories that already map to standard ones (case-insensitive)
+    // Categories come entirely from the API for the selected language
+    // No hardcoded Malagasy categories mixed in
     const apiCats = Array.from(new Set(quarterlyList.map(item => item.groupTitle)))
-      .filter(title => {
-        const t = title.toLowerCase();
-        return t !== "tanora zokiny" &&
-          t !== "lesona lehibe" &&
-          t !== "lesona tanora zokiny";
-      });
-    const allCats = Array.from(new Set([...standardCats, ...apiCats]));
-    return allCats;
+      .filter(title => !!title && title.trim() !== '');
+    return apiCats;
   }, [quarterlyList]);
 
   const filteredQuarterlies = useMemo(() => {
-    const activeLower = activeCategory.toLowerCase();
-    return quarterlyList.filter(item => {
-      const groupLower = item.groupTitle.toLowerCase();
-
-      // Smart matching for the two main categories
-      if (activeLower.includes("lehibe (+ 35 taona)") && groupLower === "lesona lehibe") return true;
-      if (activeLower.includes("tanora zokiny (19-35 taona)")) {
-        return groupLower === "lesona tanora zokiny" || groupLower === "tanora zokiny";
-      }
-
-      // Fallback: Exact match for everything else
-      return item.groupTitle === activeCategory;
-    });
+    if (!activeCategory) return quarterlyList;
+    return quarterlyList.filter(item => item.groupTitle === activeCategory);
   }, [quarterlyList, activeCategory]);
 
-  // Load EDS from settings on mount
+  // Reset active category when language changes
   useEffect(() => {
+    setActiveCategory('');
+  }, [selectedLang]);
+
+  // Load EDS from settings on mount (only for Malagasy)
+  useEffect(() => {
+    if (selectedLang !== 'mg') return;
     const loadEDS = async () => {
       try {
         const storedEDS = await AsyncStorage.getItem('profile_eds_class');
@@ -480,7 +469,7 @@ export default function LesonaSekolySabata() {
       }
     };
     loadEDS();
-  }, []);
+  }, [selectedLang]);
 
   const handleShare = async () => {
     if (!selectedQuarterly || !readingLesson) return;
@@ -841,6 +830,15 @@ export default function LesonaSekolySabata() {
       <View className="flex-1 px-6">
         {/* Category Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-4 max-h-16">
+          {/* "All" tab */}
+          <TouchableOpacity
+            onPress={() => setActiveCategory('')}
+            className={`px-6 py-2 rounded-full mr-3 ${!activeCategory ? 'bg-primary' : 'bg-slate-900 border border-slate-800'}`}
+          >
+            <Text className={`font-bold text-xs ${!activeCategory ? 'text-white' : 'text-slate-400'}`}>
+              {t('categories')} ·{quarterlyList.length}
+            </Text>
+          </TouchableOpacity>
           {categories.map(cat => (
             <TouchableOpacity
               key={cat}
@@ -858,7 +856,7 @@ export default function LesonaSekolySabata() {
               {filteredQuarterlies.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  onPress={() => fetchQuarterlyDetail(item.id)}
+                  onPress={() => fetchQuarterlyDetail(item.id, item.index)}
                   style={{ width: (width - 60) / 2 }}
                   className="bg-slate-900 rounded-[24px] overflow-hidden border border-slate-800 mb-6"
                 >
@@ -890,17 +888,21 @@ export default function LesonaSekolySabata() {
               <View className="w-20 h-20 rounded-full bg-slate-900 items-center justify-center mb-6 border border-slate-800">
                 <BookOpen size={32} color="#475569" />
               </View>
-              <Text className="text-white text-xl font-bold mb-3 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Ho avy tsy ho ela</Text>
+              <Text className="text-white text-xl font-bold mb-3 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>
+                {t('no_content')}
+              </Text>
               <Text className="text-slate-500 text-center leading-6">
-                Mbola eo am-panomanana ny votoatiny ho an'ity sokajy ity ny mpandrindra. Miandrasa kely fa ho avy tsy ho ela izany.
+                {t('check_connection_to_view')}
               </Text>
 
-              <TouchableOpacity
-                onPress={() => setActiveCategory("Tanora zokiny")}
-                className="mt-8 bg-primary/10 px-8 py-3 rounded-2xl border border-primary/20"
-              >
-                <Text className="text-primary font-bold">Hiverina amin'ny Tanora</Text>
-              </TouchableOpacity>
+              {categories.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setActiveCategory(categories[0])}
+                  className="mt-8 bg-primary/10 px-8 py-3 rounded-2xl border border-primary/20"
+                >
+                  <Text className="text-primary font-bold">{categories[0]}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
           <View className="h-20" />
@@ -928,11 +930,11 @@ export default function LesonaSekolySabata() {
           </TouchableOpacity>
           <View className="flex-1">
             <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>
-              {readingLesson ? readingLesson.title : selectedQuarterly ? selectedQuarterly.title : "Sekoly Sabata"}
+              {readingLesson ? readingLesson.title : selectedQuarterly ? selectedQuarterly.title : t('sabbath_school_lessons')}
             </Text>
             <View className="flex-row items-center">
               <Text className="text-slate-500 text-xs">
-                {readingLesson ? t('daily_study') : 'Sekoly Sabata'}
+                {readingLesson ? t('daily_study') : SS_LANGUAGES.find(l => l.code === selectedLang)?.label || 'Sekoly Sabata'}
               </Text>
               {!readingLesson && !selectedQuarterly && (
                 <TouchableOpacity
