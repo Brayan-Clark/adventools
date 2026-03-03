@@ -60,6 +60,13 @@
       "icon": "Clock",
       "color": "#8b5cf6",
       "bg": "rgba(139, 92, 246, 0.1)"
+    },
+    {
+      "id": "autres",
+      "title": "Autres",
+      "icon": "File",
+      "color": "#020617",
+      "bg": "rgba(2, 6, 23, 0.1)"
     }
   ],
   "documents": [
@@ -767,7 +774,7 @@
       "fileName": "10_ANDROM-BAVAKA_2026.pdf",
       "categoryId": "semaine_priere",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/10_ANDROM-BAVAKA_2026.pdf",
-      "size": "1,3 KB",
+      "size": "558,9 KB",
       "isAsset": false,
       "tags": [
         "Tous"
@@ -783,6 +790,54 @@
       "isAsset": false,
       "tags": [
         "Tous"
+      ]
+    },
+    {
+      "id": "sem_001",
+      "title": "10 ANDROM-BAVAKA 2025",
+      "fileName": "10_ANDROM-BAVAKA_2025.pdf",
+      "categoryId": "semaine_priere",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/10_ANDROM-BAVAKA_2025.pdf",
+      "size": "16,5 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "sem_001",
+      "title": "10 ANDROM-BAVAKA 2024",
+      "fileName": "10_ANDROM-BAVAKA_2024.pdf",
+      "categoryId": "semaine_priere",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/10_ANDROM-BAVAKA_2024.pdf",
+      "size": "2,7 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "sem_001",
+      "title": "10 ANDROM-BAVAKA 2023",
+      "fileName": "10_ANDROM-BAVAKA_2023.pdf",
+      "categoryId": "semaine_priere",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/10_ANDROM-BAVAKA_2023.pdf",
+      "size": "610,2 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "aut_001",
+      "title": "FIHIRANA-SDA-SOLFA",
+      "fileName": "FIHIRANA-SDA-SOLFA.pdf",
+      "categoryId": "autres",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/FIHIRANA-SDA-SOLFA.pdf",
+      "size": "15,5 MB",
+      "isAsset": false,
+      "tags": [
+        "Musique"
       ]
     }
   ]
