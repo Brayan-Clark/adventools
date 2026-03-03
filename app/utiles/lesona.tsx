@@ -440,17 +440,37 @@ export default function LesonaSekolySabata() {
   };
 
   const categories = useMemo(() => {
-    // Categories come entirely from the API for the selected language
-    // No hardcoded Malagasy categories mixed in
     const apiCats = Array.from(new Set(quarterlyList.map(item => item.groupTitle)))
       .filter(title => !!title && title.trim() !== '');
     return apiCats;
   }, [quarterlyList]);
 
+  // Smart category matching: handle case differences & partial matches
+  // e.g. stored "Lesona Lehibe (+ 35 taona)" matches API "Lesona Lehibe"
+  const matchCategory = (groupTitle: string, active: string): boolean => {
+    if (!active) return true; // "All" tab
+    if (groupTitle === active) return true;
+    const g = groupTitle.toLowerCase();
+    const a = active.toLowerCase();
+    return g.includes(a) || a.includes(g);
+  };
+
   const filteredQuarterlies = useMemo(() => {
     if (!activeCategory) return quarterlyList;
-    return quarterlyList.filter(item => item.groupTitle === activeCategory);
+    return quarterlyList.filter(item => matchCategory(item.groupTitle, activeCategory));
   }, [quarterlyList, activeCategory]);
+
+  // Auto-select first real category from API when data loads
+  // (fixes mismatch between stored EDS class name and actual API group title)
+  useEffect(() => {
+    if (categories.length === 0) return;
+    if (!activeCategory) return; // "All" tab selected intentionally
+    const hasMatch = categories.some(cat => matchCategory(cat, activeCategory));
+    if (!hasMatch) {
+      // activeCategory doesn't match any real API category → pick first
+      setActiveCategory(categories[0]);
+    }
+  }, [categories]);
 
   // Reset active category when language changes
   useEffect(() => {
