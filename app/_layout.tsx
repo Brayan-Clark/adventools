@@ -1,10 +1,11 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
@@ -27,6 +28,8 @@ import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-goo
 
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider } from '@/lib/settings-context';
+
+const ONBOARDING_KEY = 'adventools_onboarding_done';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -65,12 +68,40 @@ export default function RootLayout() {
       <SettingsProvider>
         <ThemeProvider value={DarkTheme}>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          </Stack>
+          <RootNavigator />
         </ThemeProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );
 }
+
+function RootNavigator() {
+  const router = useRouter();
+  const [checkDone, setCheckDone] = useState(false);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const done = await AsyncStorage.getItem(ONBOARDING_KEY);
+        if (!done) {
+          // First launch: redirect to onboarding
+          router.replace('/onboarding' as any);
+        }
+      } catch (_) {
+        // On error, skip onboarding
+      } finally {
+        setCheckDone(true);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    </Stack>
+  );
+}
+
