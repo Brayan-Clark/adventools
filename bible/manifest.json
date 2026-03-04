@@ -118,10 +118,10 @@
       "isDefault": false
     },
     {
-      "id": "MG65_v2_db",
-      "name": "MG65_v2",
-      "file": "MG65_v2.db",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG65_v2.db",
+      "id": "MG65_SQLite3",
+      "name": "MG65",
+      "file": "MG65.SQLite3",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG65.SQLite3",
       "isDefault": false,
       "language": "Malagasy",
       "size": "5.7 MB"
@@ -155,21 +155,12 @@
     },
     {
       "id": "SBF_SQLite3",
-      "name": "SBF",
+      "name": "SBF (Sainte Bible Fillion)",
       "language": "French",
       "file": "SBF.SQLite3",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.SQLite3",
       "size": "6.0 MB",
       "isDefault": false
-    },
-    {
-      "id": "SBF_db",
-      "name": "SBF (Sainte Bible Fillion)",
-      "file": "SBF.db",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.db",
-      "isDefault": false,
-      "language": "French",
-      "size": "6.0 MB"
     },
     {
       "id": "SMOV_SQLite3",
