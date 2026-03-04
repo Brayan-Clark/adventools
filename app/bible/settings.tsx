@@ -74,12 +74,16 @@ export default function BibleSettings() {
 
   const fonts = [
     { label: 'Système', value: 'System' },
+    { label: 'Arial', value: 'Arial' },
+    { label: 'Serif', value: 'Serif' },
     { label: 'Rosemary', value: 'Rosemary' },
+    { label: 'Alice', value: 'Alice' },
+    { label: 'OpenSans', value: 'OpenSans' },
+    { label: 'Comfortaa', value: 'Comfortaa' },
+    { label: 'Monospace', value: 'Monospace' },
+    { label: 'Comic', value: 'Comic' },
     { label: 'Choco', value: 'Choco' },
     { label: 'Cool', value: 'Cool' },
-    { label: 'OpenSans', value: 'OpenSans' },
-    { label: 'Alice', value: 'Alice' },
-    { label: 'Comfortaa', value: 'Comfortaa' },
   ];
 
   if (isLoading) return null;

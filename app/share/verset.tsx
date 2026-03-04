@@ -27,6 +27,11 @@ const GRADIENT_COLORS = [
 const PRESET_IMAGES = [
   require('../../assets/images/backgrounds/tree.png'),
   require('../../assets/images/backgrounds/sunset.jpg'),
+  require('../../assets/images/backgrounds/bg_01.jpg'),
+  require('../../assets/images/backgrounds/bg_02.jpg'),
+  require('../../assets/images/backgrounds/bg_03.jpg'),
+  require('../../assets/images/backgrounds/bg_04.jpg'),
+  require('../../assets/images/backgrounds/bg_05.jpg'),
 ];
 
 

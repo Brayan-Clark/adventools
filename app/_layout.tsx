@@ -42,6 +42,10 @@ export default function RootLayout() {
     'Cool': require('../assets/fonts/Cooljazz.ttf'),
     'Rosemary': require('../assets/fonts/Rosemary.ttf'),
     'OpenSans': require('../assets/fonts/OpenSans.ttf'),
+    'Arial': require('../assets/fonts/arial.ttf'),
+    'Comic': require('../assets/fonts/comic.ttf'),
+    'Monospace': require('../assets/fonts/Monospace.ttf'),
+    'Serif': require('../assets/fonts/Serif.TTF'),
     ...FontAwesome.font,
   });
 
