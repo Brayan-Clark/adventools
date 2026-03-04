@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ChevronRight,
   Download,
+  FileText,
   Globe,
   RefreshCw,
   Share,
@@ -33,6 +34,14 @@ import {
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Conditional import for PDF
+let Pdf: any;
+try {
+  Pdf = require('react-native-pdf').default;
+} catch (e) {
+  console.log("react-native-pdf not available");
+}
+
 const WEB_BASE = "https://inverse.sspmadventist.org";
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
@@ -49,11 +58,16 @@ const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
 
 const parseDate = (dStr: string) => {
   if (!dStr || typeof dStr !== 'string') return new Date(0);
-  if (dStr.includes('/')) {
-    const [d, m, y] = dStr.split('/');
-    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+  // Handle "DD/MM/YYYY" or "YYYY-MM-DD" or similar
+  const dateStr = dStr.split(' ')[0]; // Take first part if range
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    }
   }
-  return new Date(dStr);
+  return new Date(dateStr);
 };
 
 const formatDateRange = (start: string | undefined, end: string | undefined) => {
@@ -106,25 +120,37 @@ interface QuarterlyItem {
   groupTitle: string;
 }
 
+interface PdfResource {
+  src: string;
+  title: string;
+  id: string;
+}
+
 interface ContentBlock {
   id: string;
   type: string;
   markdown?: string;
   items?: ContentBlock[];
   data?: any;
+  nested?: boolean;
+  image?: string;
+  caption?: string;
 }
 
 interface Segment {
   id: string;
   title: string;
-  date: string;
+  date?: string;
   name?: string;
-  blocks: ContentBlock[];
+  type?: string;
+  blocks?: ContentBlock[];
+  pdf?: PdfResource[];
 }
 
 interface WeeklyLesson {
   title: string;
   segments: Segment[];
+  introduction?: string;
 }
 
 export default function LesonaSekolySabata() {
@@ -379,7 +405,16 @@ export default function LesonaSekolySabata() {
         const lId = lIdStr.split('-').pop();
         if (lId) {
           if (!titles[lId] || titles[lId].includes(t('lesson_number'))) {
-            const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
+            let lUrl: string;
+            if (q.index) {
+              const subdomain = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
+              lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
+            } else {
+              const qId = q.id.replace(`${selectedLang}-ss-`, '').replace('mg-ss-', '').replace(/-/g, '/');
+              const subdomain = (q.id.includes('-cq')) ? 'inverse' : 'absg';
+              lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
+            }
+
             fetch(lUrl).then(res => res.json()).then(lJson => {
               if (lJson.title) {
                 setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
@@ -509,24 +544,59 @@ export default function LesonaSekolySabata() {
       }
 
       let quarterlyPath = selectedQuarterly?.index;
+      const langPrefix = `${selectedLang}-ss-`;
+      const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '').replace('mg-aij-', '');
+
       if (!quarterlyPath) {
-        const langPrefix = `${selectedLang}-ss-`;
-        const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '');
-        quarterlyPath = `${selectedLang}/ss/${qId}`;
+        const section = (quarterlyId.includes('-bb-') || quarterlyId.includes('-aij-')) ? 'aij' : 'ss';
+        quarterlyPath = `${selectedLang}/${section}/${qId}`;
       }
 
       const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/${quarterlyPath}/${lessonId}/index.json`;
+      const shortLessonId = lessonId.split('-').pop();
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+      // Attempt multiple sections if the first fails (ss vs aij vs resources)
+      const sections = ['ss', 'aij'];
+      if (quarterlyPath.includes('/aij/')) sections.reverse();
 
-      const json = await response.json();
-      if (!json || (!json.segments && !json.lessons)) throw new Error("Invalid format");
+      let finalJson = null;
+      let lastError = null;
 
-      let normalizedData = json;
-      if (!json.segments && json.lessons) {
-        normalizedData = { ...json, segments: json.lessons };
+      for (const section of sections) {
+        try {
+          // Adjust quarterlyPath to current section check
+          const pathAttempt = quarterlyPath.replace(/\/(ss|aij)\//, `/${section}/`);
+          const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${shortLessonId}/index.json`;
+
+          const response = await fetch(url);
+          if (response.ok) {
+            const text = await response.text();
+            if (text.trim().startsWith('{')) {
+              finalJson = JSON.parse(text);
+              break;
+            }
+          }
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      if (!finalJson) {
+        // Final fallback: try using lessonId as is or assuming it's a resource hash
+        const resourceUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/resources/${shortLessonId}/index.json`;
+        try {
+          const res = await fetch(resourceUrl);
+          if (res.ok) {
+            finalJson = await res.json();
+          }
+        } catch (e) { }
+      }
+
+      if (!finalJson) throw new Error(lastError?.message || "JSON Parse error: Unexpected character: <");
+
+      let normalizedData = finalJson;
+      if (!finalJson.segments && finalJson.lessons) {
+        normalizedData = { ...finalJson, segments: finalJson.lessons };
       }
 
       setReadingLesson(normalizedData);
@@ -547,13 +617,21 @@ export default function LesonaSekolySabata() {
     if (lesson.segments) {
       foundIdx = lesson.segments.findIndex((s: any) => {
         if (!s.date) return false;
-        const parts = (s.date && typeof s.date === 'string') ? s.date.split('/') : [];
-        if (parts.length === 3) {
-          const [d, m, y] = parts;
-          const sDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-          return sDate.getTime() === today.getTime();
+        const dateStr = (s.date && typeof s.date === 'string') ? s.date.trim() : "";
+
+        // Handle range: "28/12/2024 - 03/01/2025" or with en-dash/em-dash
+        if (dateStr.includes('-') || dateStr.includes('—') || dateStr.includes('–')) {
+          const separator = dateStr.includes(' — ') ? ' — ' : dateStr.includes(' – ') ? ' – ' : ' - ';
+          const parts = dateStr.split(separator);
+          if (parts.length === 2) {
+            const start = parseDate(parts[0].trim());
+            const end = parseDate(parts[1].trim());
+            return today >= start && today <= end;
+          }
         }
-        return false;
+
+        const sDate = parseDate(dateStr);
+        return sDate.getTime() === today.getTime();
       });
     }
     setActiveSegmentIdx(foundIdx >= 0 ? foundIdx : 0);
@@ -606,7 +684,10 @@ export default function LesonaSekolySabata() {
   const cleanSspmMarkdown = (md: string) => {
     if (!md) return "";
     return md
-      .replace(/\^\[(\d+)\]\(\{.*?\}\)/g, '$1') // Clean superscript tags like ^[16]({...})
+      .replace(/\\\\\n/g, '\n')                 // Handle double backslash at end of line
+      .replace(/\\?(\^)?\[([^\]]+)\]\(\{[ \t\n\r\S]*?\}\)/g, '$2') // More aggressive styled tag cleaning
+      .replace(/<span[^>]*>([\s\S]*?)<\/span>/g, '$1') // Strip span tags but keep content
+      .replace(/<[^>]+>/g, '')                  // Strip other HTML tags
       .replace(/\{#.*?\}/g, '')                 // Remove custom ID anchors
       .replace(/\n{3,}/g, '\n\n')               // Normalize multiple newlines
       .trim();
@@ -625,8 +706,14 @@ export default function LesonaSekolySabata() {
     if (!selectedQuarterly || !readingLesson) return;
     try {
       const segment = readingLesson.segments[activeSegmentIdx];
-      const rawMarkdown = segment?.blocks?.map(b => extractTextRecursive(b)).join('\n\n') || "";
-      const cleanContent = cleanSspmMarkdown(rawMarkdown);
+      let cleanContent = "";
+
+      if (segment.blocks && segment.blocks.length > 0) {
+        const rawMarkdown = segment.blocks.map(b => extractTextRecursive(b)).join('\n\n');
+        cleanContent = cleanSspmMarkdown(rawMarkdown);
+      } else if (segment.type === 'pdf' && segment.pdf) {
+        cleanContent = segment.pdf.map(p => `${p.title}: ${p.src}`).join('\n');
+      }
 
       const quarterlyId = selectedQuarterly.id.replace('mg-ss-', '');
       const s0 = readingLesson.segments?.[0];
@@ -698,9 +785,16 @@ export default function LesonaSekolySabata() {
           <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
             {segment ? (
               <>
-                <View className="mb-8 p-6 bg-slate-900 rounded-[32px] border border-white/5 relative overflow-hidden">
-                  <View className="absolute -right-10 -top-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
-                  <Text className="text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-3">{segment.date}</Text>
+                <View className="mb-8 p-6 bg-slate-900 rounded-[32px] border border-white/5 relative overflow-hidden shadow-xl shadow-black/20">
+                  <View className="absolute -right-10 -top-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-50" />
+                  <View className="flex-row items-center mb-3">
+                    <Text className="text-primary font-bold text-[10px] uppercase tracking-[0.2em]">{segment.date || t('daily_study')}</Text>
+                    {segment.type === 'pdf' && (
+                      <View className="ml-3 px-2 py-0.5 bg-blue-500/20 rounded-full border border-blue-500/30">
+                        <Text className="text-blue-400 font-bold text-[8px] uppercase">PDF</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text className="text-white text-2xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{segment.title}</Text>
 
                   <TouchableOpacity
@@ -711,51 +805,123 @@ export default function LesonaSekolySabata() {
                   </TouchableOpacity>
                 </View>
 
-                {segment.blocks?.map((block, bIdx) => {
-                  const renderBlockRecursive = (b: ContentBlock, idx: number, parentData?: any) => {
-                    let content: React.ReactNode[] = [];
-                    const blockData = b.data || parentData;
+                {readingLesson.introduction && activeSegmentIdx === 0 && (
+                  <View className="mb-8 p-6 bg-slate-400/5 rounded-3xl border border-white/5">
+                    <View className="flex-row items-center mb-4">
+                      <View className="w-1 h-4 bg-primary rounded-full mr-3" />
+                      <Text className="text-white font-bold text-sm uppercase tracking-widest">{(t as any)('introduction') || 'Introduction'}</Text>
+                    </View>
+                    <Markdown
+                      style={{
+                        body: { color: '#94a3b8', fontSize: 13, lineHeight: 20, fontFamily: globalSettings.fontFamily },
+                        strong: { color: '#cbd5e1', fontWeight: 'bold' }
+                      }}
+                    >
+                      {readingLesson.introduction}
+                    </Markdown>
+                  </View>
+                )}
 
-                    if (b.markdown) {
-                      content.push(
-                        <Markdown
-                          key={`${b.id || idx}_md`}
-                          onLinkPress={(url) => handleLinkPress(url, blockData)}
-                          style={{
-                            body: { color: '#cbd5e1', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily },
-                            heading1: { color: '#f8fafc', fontWeight: 'bold', marginTop: 30, marginBottom: 15, fontFamily: 'Lexend_700Bold' },
-                            heading2: { color: '#3b82f6', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                            heading3: { color: '#3b82f6', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                            strong: { color: '#f8fafc', fontWeight: 'bold' },
-                            italic: { fontStyle: 'italic' },
-                            blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
-                            link: { color: '#3b82f6', textDecorationLine: 'none' }
-                          }}
-                        >
-                          {b.markdown}
-                        </Markdown>
-                      );
-                    }
-
-                    if (b.items && Array.isArray(b.items)) {
-                      b.items.forEach((item, ii) => {
-                        content.push(renderBlockRecursive(item, ii, blockData));
-                      });
-                    }
-
-                    if (b.type === 'blockquote') {
-                      return (
-                        <View key={b.id || idx} className="bg-slate-900/50 border-l-4 border-primary p-4 my-3 rounded-r-xl">
-                          {content}
+                {segment.type === 'pdf' && segment.pdf ? (
+                  <View className="mt-4 mb-8">
+                    <Text className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Documents disponibles</Text>
+                    {segment.pdf.map((pdf, pIdx) => (
+                      <TouchableOpacity
+                        key={pdf.id || pIdx}
+                        onPress={() => {
+                          const fileName = pdf.src.split('/').pop() || 'document.pdf';
+                          // For now, navigate to viewer or open URL
+                          // Ideally we verify if downloaded or use public URL
+                          router.push({
+                            pathname: '/pdf/viewer',
+                            params: {
+                              uri: pdf.src,
+                              title: pdf.title,
+                              fileName: fileName
+                            }
+                          });
+                        }}
+                        className="bg-slate-900 p-5 rounded-3xl mb-3 flex-row items-center border border-white/5"
+                      >
+                        <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                          <FileText size={24} color="#3b82f6" />
                         </View>
-                      );
-                    }
+                        <View className="flex-1">
+                          <Text className="text-white font-bold text-base">{pdf.title}</Text>
+                          <Text className="text-slate-500 text-xs mt-1">Format PDF • Ouvrir le lecteur</Text>
+                        </View>
+                        <ChevronRight size={20} color="#475569" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : segment.blocks && segment.blocks.length > 0 ? (
+                  segment.blocks.map((block, bIdx) => {
+                    const renderBlockRecursive = (b: ContentBlock, idx: number, parentData?: any) => {
+                      let content: React.ReactNode[] = [];
+                      const blockData = b.data || parentData;
 
-                    return <View key={b.id || idx}>{content}</View>;
-                  };
+                      if (b.markdown) {
+                        content.push(
+                          <Markdown
+                            key={`${b.id || idx}_md`}
+                            onLinkPress={(url) => handleLinkPress(url, blockData)}
+                            style={{
+                              body: { color: '#cbd5e1', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily },
+                              heading1: { color: '#f8fafc', fontWeight: 'bold', marginTop: 30, marginBottom: 15, fontFamily: 'Lexend_700Bold' },
+                              heading2: { color: '#3b82f6', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                              heading3: { color: '#3b82f6', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                              strong: { color: '#f8fafc', fontWeight: 'bold' },
+                              italic: { fontStyle: 'italic' },
+                              blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
+                              link: { color: '#3b82f6', textDecorationLine: 'none' }
+                            }}
+                          >
+                            {b.markdown}
+                          </Markdown>
+                        );
+                      }
 
-                  return renderBlockRecursive(block, bIdx);
-                })}
+                      if (b.image) {
+                        content.push(
+                          <View key={`${b.id || idx}_img`} className="my-6 rounded-3xl overflow-hidden border border-white/5">
+                            <Image
+                              source={{ uri: b.image }}
+                              style={{ width: '100%', height: 200 }}
+                              resizeMode="cover"
+                            />
+                            {b.caption && (
+                              <View className="bg-slate-900 p-4">
+                                <Text className="text-slate-400 text-xs italic text-center">{b.caption}</Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      }
+
+                      if (b.items && Array.isArray(b.items)) {
+                        b.items.forEach((item, ii) => {
+                          content.push(renderBlockRecursive(item, ii, blockData));
+                        });
+                      }
+
+                      if (b.type === 'blockquote') {
+                        return (
+                          <View key={b.id || idx} className="bg-slate-900/50 border-l-4 border-primary p-4 my-3 rounded-r-xl">
+                            {content}
+                          </View>
+                        );
+                      }
+
+                      return <View key={b.id || idx}>{content}</View>;
+                    };
+
+                    return renderBlockRecursive(block, bIdx);
+                  })
+                ) : (
+                  <View className="flex-1 items-center justify-center py-20">
+                    <Text className="text-slate-500">{t('no_content')}</Text>
+                  </View>
+                )}
               </>
             ) : (
               <View className="flex-1 items-center justify-center py-20">
@@ -772,12 +938,18 @@ export default function LesonaSekolySabata() {
       const downloadId = `${selectedLang}_${selectedQuarterly.id}`;
       const isDownloaded = downloadedQuarterlies.includes(downloadId);
       const isCurrent = isQuarterlyCurrent(selectedQuarterly);
-      const lessons = selectedQuarterly.lessons || Array.from({ length: 13 }, (_, i) => ({
+      // Use lessons, or resources as fallback for Mission Spotlight-like resources
+      const rawLessons = selectedQuarterly.lessons || (selectedQuarterly as any).resources || [];
+
+      // Dynamic lesson count for categories that don't specify lessons (e.g. Babies)
+      const isBabies = selectedQuarterly.id.includes('-bb-') || selectedQuarterly.id.includes('babies');
+
+      const lessons = rawLessons.length > 0 ? rawLessons : Array.from({ length: isBabies ? 3 : 13 }, (_, i) => ({
         id: `${selectedQuarterly.id}-${(i + 1).toString().padStart(2, '0')}`,
         title: `${t('lesson_number')} ${i + 1}`,
         startDate: "",
         endDate: "",
-        index: "",
+        index: selectedQuarterly.index ? `${selectedQuarterly.index}/${(i + 1).toString().padStart(2, '0')}` : "",
         name: (i + 1).toString()
       }));
 

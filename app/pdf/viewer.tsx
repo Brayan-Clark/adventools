@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, Platform, Modal, ScrollView, TextInput, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, ZoomIn, ZoomOut, Bookmark, FileText, Menu, X, Save, Edit3, Trash2, ChevronRight, AlertCircle, Hash, Search } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
-import * as FileSystem from 'expo-file-system/legacy';
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { AlertCircle, ArrowLeft, Bookmark, ChevronRight, FileText, Hash, Menu, Save, Search, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Conditional import to avoid crash on Expo Go immediate import
 let Pdf: any;
@@ -19,7 +19,7 @@ try {
 // No bundled documents - everything is downloadable
 
 export default function PdfViewer() {
-  const { fileName, title } = useLocalSearchParams();
+  const { fileName, title, uri } = useLocalSearchParams();
   const router = useRouter();
   const [source, setSource] = useState<{ uri: string, cache: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,13 +120,20 @@ export default function PdfViewer() {
           return;
         }
 
+        // Check for uri first if provided
+        if (uri && typeof uri === 'string') {
+          setSource({ uri: uri, cache: true });
+          setLoading(false);
+          return;
+        }
+
         // Check if it's in document directory (downloaded)
         const localPath = `${FileSystem.documentDirectory}${fileName}`;
         const info = await FileSystem.getInfoAsync(localPath);
         if (info.exists) {
           setSource({ uri: localPath, cache: true });
         } else {
-          setError("Fichier introuvable localement : " + fileName);
+          setError("Document non trouvé. Veuillez le télécharger pour une lecture hors-ligne.");
         }
       } catch (e) {
         console.error("Error loading PDF:", e);
