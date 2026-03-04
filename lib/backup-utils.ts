@@ -132,16 +132,21 @@ export async function exportAllAppData() {
     // Filtrage des clés importantes pour la sauvegarde
     const keysToBackup = allKeys.filter(key =>
       key.startsWith('hymne_edit_') ||
+      key.startsWith('hymn_favorites_') ||
       key.startsWith('highlights_') ||
       key.startsWith('word_highlights_') ||
       key.startsWith('bookmarks_') ||
       key.startsWith('pdf_bookmarks_') ||
       key.startsWith('pdf_notes_') ||
+      key.startsWith('bible_favorites') ||
+      key.startsWith('bible_bookmarks') ||
       key === 'adventools_notes' ||
+      key === 'adventools_folders' ||
       key === 'utiles_etude_serie' ||
       key === 'utiles_themes_divers' ||
       key === 'profile_name' ||
       key === 'profile_image' ||
+      key === 'profile_eds_class' ||
       key === 'profile_departments' ||
       key === 'app_history' ||
       key === 'app_settings'

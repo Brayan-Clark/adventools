@@ -244,6 +244,7 @@ export interface TranslationSchema {
   data_group: string;
   full_backup: string;
   restore_backup: string;
+  restore_summary: string;
   export_mods: string;
   import_mods: string;
   reset_hymns: string;

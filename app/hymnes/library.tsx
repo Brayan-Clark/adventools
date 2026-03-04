@@ -1,4 +1,5 @@
 import { loadDatabase } from '@/lib/database';
+import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,7 +48,7 @@ export default function Hymnes() {
 
   const fetchCategories = async () => {
     try {
-      const db = await loadDatabase(dbName, null, 'hymnes');
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
 
       // Get categories
       const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
@@ -71,7 +72,7 @@ export default function Hymnes() {
   useEffect(() => {
     async function fetchHymns() {
       try {
-        const db = await loadDatabase(dbName, null, 'hymnes');
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
         let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
         let conditions = [];
         let params: any[] = [];
@@ -118,7 +119,7 @@ export default function Hymnes() {
     if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName, null, 'hymnes');
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {

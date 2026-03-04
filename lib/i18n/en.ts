@@ -244,6 +244,7 @@ export const en: TranslationSchema = {
   data_group: "Data & Backup",
   full_backup: "Full Backup",
   restore_backup: "Restore Backup",
+  restore_summary: "Selective Restore",
   export_mods: "Export Modifications",
   import_mods: "Import Modifications",
   reset_hymns: "Reset corrections",

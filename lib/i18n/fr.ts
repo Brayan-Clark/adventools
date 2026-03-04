@@ -180,7 +180,7 @@ export const fr: TranslationSchema = {
   folders_header: "Dossiers",
 
   // Sabbath School Lessons (Lesona)
-  sabbath_school_lessons: "Lesona Sekoly Sabata",
+  sabbath_school_lessons: "Leçons de l'école de Sabbat",
   daily_study: "Fandalinana isan'andro",
   study_series_subtitle: "Fitoriana, Tanambinana, etc.",
   themes_divers_subtitle: "Sabata, Ravaka, Fahendrena...",
@@ -244,6 +244,7 @@ export const fr: TranslationSchema = {
   data_group: "Données & Sauvegarde",
   full_backup: "Sauvegarde complète",
   restore_backup: "Restaurer une sauvegarde",
+  restore_summary: "Restauration sélective",
   export_mods: "Exporter les modifications",
   import_mods: "Importer des modifications",
   reset_hymns: "Réinitialiser les corrections",

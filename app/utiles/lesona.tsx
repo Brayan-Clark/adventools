@@ -1,7 +1,8 @@
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
@@ -34,6 +35,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WEB_BASE = "https://inverse.sspmadventist.org";
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
+const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
 
 const SS_LANGUAGES = [
   { code: 'mg', label: 'Malagasy', flag: '🇲🇬' },
@@ -46,12 +48,24 @@ const getAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${l
 const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
 
 const parseDate = (dStr: string) => {
-  if (!dStr) return new Date(0);
+  if (!dStr || typeof dStr !== 'string') return new Date(0);
   if (dStr.includes('/')) {
     const [d, m, y] = dStr.split('/');
     return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
   }
   return new Date(dStr);
+};
+
+const formatDateRange = (start: string | undefined, end: string | undefined) => {
+  if (!start || !end || typeof start !== 'string' || typeof end !== 'string') return "";
+  try {
+    const sParts = start.split('/');
+    const eParts = end.split('/');
+    if (sParts.length < 3 || eParts.length < 3) return "";
+    return `${sParts.slice(1).join('/')} — ${eParts.slice(1).join('/')}`;
+  } catch (e) {
+    return "";
+  }
 };
 
 interface Lesson {
@@ -70,10 +84,12 @@ interface Quarterly {
   covers: {
     portrait: string;
     landscape: string;
+    square?: string;
   };
   startDate: string;
   endDate: string;
-  lessons: Lesson[];
+  index: string;
+  lessons?: Lesson[];
 }
 
 interface QuarterlyItem {
@@ -93,7 +109,8 @@ interface QuarterlyItem {
 interface ContentBlock {
   id: string;
   type: string;
-  markdown: string;
+  markdown?: string;
+  items?: ContentBlock[];
   data?: any;
 }
 
@@ -126,6 +143,23 @@ export default function LesonaSekolySabata() {
   const [selectedLang, setSelectedLang] = useState<string>('mg');
   const [showLangPicker, setShowLangPicker] = useState(false);
 
+  // Persistence for language across screen re-mounts
+  useEffect(() => {
+    const loadSavedLang = async () => {
+      const saved = await AsyncStorage.getItem('adventools_ss_selected_lang');
+      if (saved) setSelectedLang(saved);
+      else if (globalSettings.language && globalSettings.language.toLowerCase().includes('anglais')) setSelectedLang('en');
+      else if (globalSettings.language && globalSettings.language.toLowerCase().includes('français')) setSelectedLang('fr');
+    };
+    loadSavedLang();
+  }, [globalSettings.language]);
+
+  const changeLang = async (l: string) => {
+    setSelectedLang(l);
+    setShowLangPicker(false);
+    await AsyncStorage.setItem('adventools_ss_selected_lang', l);
+  };
+
   // Offline state
   const [downloadedQuarterlies, setDownloadedQuarterlies] = useState<string[]>([]);
 
@@ -134,17 +168,27 @@ export default function LesonaSekolySabata() {
   const [verseTitle, setVerseTitle] = useState("");
   const [verseContent, setVerseContent] = useState("");
 
+  useFocusEffect(
+    React.useCallback(() => {
+      checkDownloaded();
+    }, [selectedLang])
+  );
+
   useEffect(() => {
     loadInitialData();
-    checkDownloaded();
   }, [selectedLang]);
 
   const checkDownloaded = async () => {
     try {
-      const keys = await AsyncStorage.getAllKeys();
-      const downloaded = keys
-        .filter(k => k.startsWith(OFFLINE_LESSONS_PREFIX))
-        .map(k => k.replace(OFFLINE_LESSONS_PREFIX, ""));
+      const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
+      if (!dirInfo.exists) {
+        setDownloadedQuarterlies([]);
+        return;
+      }
+      const files = await FileSystem.readDirectoryAsync(LESSONS_DIR);
+      const downloaded = files
+        .filter(f => f.endsWith(".json"))
+        .map(f => f.replace(".json", ""));
       setDownloadedQuarterlies(downloaded);
     } catch (e) {
       console.error(e);
@@ -162,12 +206,16 @@ export default function LesonaSekolySabata() {
         setQuarterlyList([]);
       }
 
-      const response = await fetch(`${getApiBase(selectedLang)}/index.json`);
-      const json = await response.json();
+      // Fetch fresh
+      let url = `${getApiBase(selectedLang)}/index.json`;
+      if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json`;
 
-      const items: QuarterlyItem[] = [];
-      if (json.groups) {
-        json.groups.forEach((group: any) => {
+      const response = await fetch(url).catch(() => null);
+      let items: QuarterlyItem[] = [];
+
+      if (response && response.ok) {
+        const data = await response.json();
+        data.groups.forEach((group: any) => {
           if (group.resources) {
             group.resources.forEach((res: any) => {
               items.push({
@@ -185,17 +233,16 @@ export default function LesonaSekolySabata() {
         });
       }
 
-      // Sort: Newest at top
       items.sort((a, b) => {
-        const [da, ma, ya] = a.startDate.split('/');
-        const [db, mb, yb] = b.startDate.split('/');
-        const dateA = new Date(parseInt(ya), parseInt(ma) - 1, parseInt(da));
-        const dateB = new Date(parseInt(yb), parseInt(mb) - 1, parseInt(db));
+        const dateA = parseDate(a.startDate);
+        const dateB = parseDate(b.startDate);
         return dateB.getTime() - dateA.getTime();
       });
 
-      setQuarterlyList(items);
-      await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+      if (items.length > 0) {
+        setQuarterlyList(items);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+      }
     } catch (e) {
       console.error("Error loading initial data", e);
     } finally {
@@ -204,22 +251,70 @@ export default function LesonaSekolySabata() {
   };
 
   const isQuarterlyCurrent = (q: QuarterlyItem | Quarterly) => {
-    if (!q.startDate || !q.endDate) return false;
+    if (!q || !q.startDate || !q.endDate || typeof q.startDate !== 'string') return false;
     const now = new Date();
-    const [sD, sM, sY] = q.startDate.split('/');
-    const [eD, eM, eY] = q.endDate.split('/');
-    const start = new Date(parseInt(sY), parseInt(sM) - 1, parseInt(sD));
-    const end = new Date(parseInt(eY), parseInt(eM) - 1, parseInt(eD));
-    return now >= start && now <= end;
+    try {
+      const start = parseDate(q.startDate);
+      const end = parseDate(q.endDate);
+      return now >= start && now <= end;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const isLessonToday = (lesson: Lesson) => {
+    if (!lesson.startDate || !lesson.endDate || typeof lesson.startDate !== 'string') return false;
+    const now = new Date();
+    // Normalize to midnight for comparison
+    now.setHours(0, 0, 0, 0);
+    try {
+      const start = parseDate(lesson.startDate);
+      const end = parseDate(lesson.endDate);
+      // Lesson usually ends on Friday night, so we include Saturday morning if needed, 
+      // but Sabbath School logic usually follows Saturday-to-Friday.
+      return now >= start && now <= end;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const getTodayLessonId = (q: Quarterly) => {
+    if (!q.startDate) return undefined;
+
+    // 1. Use real lesson dates if available
+    if (q.lessons && q.lessons.length > 0) {
+      const found = q.lessons.find(l => isLessonToday(l));
+      if (found) {
+        const idStr = (found.id && typeof found.id === 'string') ? found.id : "";
+        return idStr.includes('-') ? idStr.split('-').pop() : idStr;
+      }
+    }
+
+    // 2. Fallback: calculate week number based on quarterly start date
+    try {
+      const start = parseDate(q.startDate);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const diffTime = now.getTime() - start.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 0) {
+        const weekNum = Math.floor(diffDays / 7) + 1;
+        if (weekNum >= 1 && weekNum <= 13) {
+          return weekNum.toString().padStart(2, '0');
+        }
+      }
+    } catch (e) { }
+
+    return undefined;
   };
 
   const fetchQuarterlyDetail = async (id: string, indexPath?: string) => {
     setLoading(true);
-    setLessonTitlesMap({});
-
+    setSelectedQuarterly(null);
     try {
       const cacheKey = `adventools_ss_q_detail_${selectedLang}_${id}`;
-
       const cached = await AsyncStorage.getItem(cacheKey);
       if (cached) {
         const json = JSON.parse(cached);
@@ -227,19 +322,15 @@ export default function LesonaSekolySabata() {
         loadLessonTitles(json);
       }
 
-      // Use stored index path if available, otherwise parse from ID
       const storedItem = quarterlyList.find(q => q.id === id);
-      const itemIndex = indexPath || storedItem?.index || '';
+      const itemIndex = indexPath || storedItem?.index;
 
       let url: string;
       if (itemIndex) {
-        // itemIndex is like "en/ss/2026-01" or "mg/ss/2026-01-cq"
-        const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
+        const subdomain = (itemIndex.includes('/mg/') || itemIndex.includes('-cq')) ? 'inverse' : 'absg';
         url = `https://${subdomain}.sspmadventist.org/api/v3/${itemIndex}/index.json`;
       } else {
-        // Fallback: strip lang prefix
-        const langPrefix = `${selectedLang}-`;
-        const qPath = id.replace(langPrefix, '');
+        const qPath = id.replace(`${selectedLang}-`, '').replace(/-/g, '/');
         const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
         url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/${qPath}/index.json`;
       }
@@ -263,71 +354,103 @@ export default function LesonaSekolySabata() {
     }
   };
 
-  const loadLessonTitles = async (q: Quarterly) => {
-    try {
-      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${q.id}`);
-      let titles: Record<string, string> = {};
-      if (offlineDataStr) {
-        const offlineData = JSON.parse(offlineDataStr);
-        Object.keys(offlineData).forEach(id => {
-          if (offlineData[id].title) titles[id] = offlineData[id].title;
-        });
-        setLessonTitlesMap(titles);
-      }
+  const loadLessonTitles = (q: Quarterly) => {
+    const lessons = q.lessons || Array.from({ length: 13 }, (_, i) => ({
+      id: `${q.id}-${(i + 1).toString().padStart(2, '0')}`,
+      title: `${t('lesson_number')} ${i + 1}`
+    }));
 
+    try {
+      const titles: Record<string, string> = {};
       const langPrefix = `${selectedLang}-ss-`;
       const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
-      const subdomain = q.id.includes('-cq') ? 'inverse' : 'absg';
+      const subdomain = (q.index?.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
 
-      const lessonsToFetch = (q.lessons || Array.from({ length: 13 }, (_, i) => ({
-        id: (i + 1).toString().padStart(2, '0')
-      }))).slice(0, 14);
+      lessons.forEach((l: any) => {
+        const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
+        const lId = lIdStr.split('-').pop();
+        if (lId && l.title) titles[lId] = l.title;
+      });
+      setLessonTitlesMap(titles);
 
-      for (const lesson of lessonsToFetch) {
-        const lId = lesson.id.includes('-') ? lesson.id.split('-').pop()! : lesson.id;
-        if (!titles[lId]) {
-          const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
-          fetch(lUrl).then(res => res.json()).then(lJson => {
-            if (lJson.title) {
-              setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
-            }
-          }).catch(() => { });
+      // Async background fetch titles for lessons that lack real titles
+      lessons.forEach((l: any) => {
+        const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
+        const lId = lIdStr.split('-').pop();
+        if (lId) {
+          if (!titles[lId] || titles[lId].includes(t('lesson_number'))) {
+            const lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
+            fetch(lUrl).then(res => res.json()).then(lJson => {
+              if (lJson.title) {
+                setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
+              }
+            }).catch(() => { });
+          }
         }
-      }
+      });
     } catch (e) {
       console.error("Error loading titles", e);
     }
   };
 
   const downloadFullQuarterly = async (q: Quarterly) => {
+    if (downloadingAll) return;
     setDownloadingAll(true);
+    let successCount = 0;
     try {
-      const langPrefix = `${selectedLang}-ss-`;
-      const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
-      const subdomain = q.id.includes('-cq') ? 'inverse' : 'absg';
-      const lessonsData: Record<string, WeeklyLesson> = {};
+      const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true });
+      }
 
+      let quarterlyPath = q.index;
+      if (!quarterlyPath) {
+        const langPrefix = `${selectedLang}-ss-`;
+        const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
+        quarterlyPath = `${selectedLang}/ss/${qId}`;
+      }
+
+      const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
       const lessons = q.lessons || Array.from({ length: 13 }, (_, i) => ({
         id: `${q.id}-${(i + 1).toString().padStart(2, '0')}`
       }));
 
-      for (const lesson of lessons) {
-        const lessonId = lesson.id.split('-').pop();
-        const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lessonId}/index.json`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const json = await res.json();
-          let normalized = json;
-          if (!json.segments && json.lessons) normalized = { ...json, segments: json.lessons };
-          lessonsData[lessonId!] = normalized;
-        }
+      const lessonsData: Record<string, WeeklyLesson> = {};
+      const batchSize = 3;
+      for (let i = 0; i < lessons.length; i += batchSize) {
+        const batch = lessons.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (lesson, idx) => {
+          try {
+            const lessonId = (lesson.id && typeof lesson.id === 'string')
+              ? (lesson.id.includes('-') ? lesson.id.split('-').pop() : lesson.id)
+              : ((i + idx + 1).toString().padStart(2, '0'));
+
+            const url = `https://${subdomain}.sspmadventist.org/api/v3/${quarterlyPath}/${lessonId}/index.json`;
+            const res = await fetch(url).catch(() => null);
+            if (res && res.ok) {
+              const json = await res.json();
+              let normalized = json;
+              if (!json.segments && json.lessons) normalized = { ...json, segments: json.lessons };
+              if (lessonId) {
+                lessonsData[lessonId] = normalized;
+                successCount++;
+              }
+            }
+          } catch (le) { console.error("Lesson DL error", le); }
+        }));
+        await new Promise(r => setTimeout(r, 100));
       }
 
-      await AsyncStorage.setItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${q.id}`, JSON.stringify(lessonsData));
-      await AsyncStorage.setItem(`adventools_ss_q_detail_${selectedLang}_${q.id}`, JSON.stringify(q));
+      if (successCount === 0) throw new Error("Impossible de télécharger le contenu");
 
-      setDownloadedQuarterlies(prev => [...prev, q.id]);
-      Alert.alert(t('success'), t('download_success'));
+      const downloadId = `${selectedLang}_${q.id}`;
+      const filePath = `${LESSONS_DIR}${downloadId}.json`;
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(lessonsData));
+
+      await AsyncStorage.setItem(`adventools_ss_q_detail_${downloadId}`, JSON.stringify(q));
+
+      setDownloadedQuarterlies(prev => prev.includes(downloadId) ? prev : [...prev, downloadId]);
+      Alert.alert(t('success'), `${t('download_success')} (${successCount} leçons)`);
     } catch (e) {
       console.error(e);
       Alert.alert(t('error'), t('download_failed'));
@@ -347,8 +470,14 @@ export default function LesonaSekolySabata() {
           style: "destructive",
           onPress: async () => {
             try {
-              await AsyncStorage.removeItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${qId}`);
-              setDownloadedQuarterlies(prev => prev.filter(id => id !== qId));
+              const downloadId = `${selectedLang}_${qId}`;
+              const filePath = `${LESSONS_DIR}${downloadId}.json`;
+              const info = await FileSystem.getInfoAsync(filePath);
+              if (info.exists) {
+                await FileSystem.deleteAsync(filePath);
+              }
+              await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
+              setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
               Alert.alert(t('success'), t('delete_success'));
             } catch (e) {
               console.error(e);
@@ -364,10 +493,13 @@ export default function LesonaSekolySabata() {
     setLoading(true);
     setReadingLesson(null);
     try {
-      // 1. Check Offline
-      const offlineDataStr = await AsyncStorage.getItem(`${OFFLINE_LESSONS_PREFIX}${selectedLang}_${quarterlyId}`);
-      if (offlineDataStr) {
-        const offlineData = JSON.parse(offlineDataStr);
+      const downloadId = `${selectedLang}_${quarterlyId}`;
+      const filePath = `${LESSONS_DIR}${downloadId}.json`;
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+
+      if (fileInfo.exists) {
+        const content = await FileSystem.readAsStringAsync(filePath);
+        const offlineData = JSON.parse(content);
         if (offlineData[lessonId]) {
           setReadingLesson(offlineData[lessonId]);
           setLoading(false);
@@ -376,21 +508,21 @@ export default function LesonaSekolySabata() {
         }
       }
 
-      // 2. Fetch Online
-      const langPrefix = `${selectedLang}-ss-`;
-      const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '');
-      const subdomain = quarterlyId.includes('-cq') ? 'inverse' : 'absg';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lessonId}/index.json`;
+      let quarterlyPath = selectedQuarterly?.index;
+      if (!quarterlyPath) {
+        const langPrefix = `${selectedLang}-ss-`;
+        const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '');
+        quarterlyPath = `${selectedLang}/ss/${qId}`;
+      }
+
+      const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
+      const url = `https://${subdomain}.sspmadventist.org/api/v3/${quarterlyPath}/${lessonId}/index.json`;
 
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
       const json = await response.json();
-      if (!json || (!json.segments && !json.lessons)) {
-        throw new Error("Invalid lesson data format");
-      }
+      if (!json || (!json.segments && !json.lessons)) throw new Error("Invalid format");
 
       let normalizedData = json;
       if (!json.segments && json.lessons) {
@@ -399,17 +531,6 @@ export default function LesonaSekolySabata() {
 
       setReadingLesson(normalizedData);
       autoSelectSegment(normalizedData);
-
-      // Auto-cache for offline access
-      try {
-        const offlineKey = `${OFFLINE_LESSONS_PREFIX}${selectedLang}_${quarterlyId}`;
-        const offlineDataStr = await AsyncStorage.getItem(offlineKey);
-        let offlineData = offlineDataStr ? JSON.parse(offlineDataStr) : {};
-        offlineData[lessonId] = normalizedData;
-        await AsyncStorage.setItem(offlineKey, JSON.stringify(offlineData));
-      } catch (e) {
-        console.error("Auto-cache error", e);
-      }
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
       Alert.alert(t('error'), `${t('no_content')}: ${e.message}`);
@@ -426,8 +547,7 @@ export default function LesonaSekolySabata() {
     if (lesson.segments) {
       foundIdx = lesson.segments.findIndex((s: any) => {
         if (!s.date) return false;
-        // Format could be DD/MM/YYYY
-        const parts = s.date.split('/');
+        const parts = (s.date && typeof s.date === 'string') ? s.date.split('/') : [];
         if (parts.length === 3) {
           const [d, m, y] = parts;
           const sDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
@@ -445,11 +565,8 @@ export default function LesonaSekolySabata() {
     return apiCats;
   }, [quarterlyList]);
 
-  // Smart category matching: handle case differences & partial matches
-  // e.g. stored "Lesona Lehibe (+ 35 taona)" matches API "Lesona Lehibe"
   const matchCategory = (groupTitle: string, active: string): boolean => {
-    if (!active) return true; // "All" tab
-    if (groupTitle === active) return true;
+    if (!active) return true;
     const g = groupTitle.toLowerCase();
     const a = active.toLowerCase();
     return g.includes(a) || a.includes(g);
@@ -460,24 +577,19 @@ export default function LesonaSekolySabata() {
     return quarterlyList.filter(item => matchCategory(item.groupTitle, activeCategory));
   }, [quarterlyList, activeCategory]);
 
-  // Auto-select first real category from API when data loads
-  // (fixes mismatch between stored EDS class name and actual API group title)
   useEffect(() => {
     if (categories.length === 0) return;
-    if (!activeCategory) return; // "All" tab selected intentionally
+    if (!activeCategory) return;
     const hasMatch = categories.some(cat => matchCategory(cat, activeCategory));
     if (!hasMatch) {
-      // activeCategory doesn't match any real API category → pick first
       setActiveCategory(categories[0]);
     }
   }, [categories]);
 
-  // Reset active category when language changes
   useEffect(() => {
     setActiveCategory('');
   }, [selectedLang]);
 
-  // Load EDS from settings on mount (only for Malagasy)
   useEffect(() => {
     if (selectedLang !== 'mg') return;
     const loadEDS = async () => {
@@ -491,23 +603,35 @@ export default function LesonaSekolySabata() {
     loadEDS();
   }, [selectedLang]);
 
+  const cleanSspmMarkdown = (md: string) => {
+    if (!md) return "";
+    return md
+      .replace(/\^\[(\d+)\]\(\{.*?\}\)/g, '$1') // Clean superscript tags like ^[16]({...})
+      .replace(/\{#.*?\}/g, '')                 // Remove custom ID anchors
+      .replace(/\n{3,}/g, '\n\n')               // Normalize multiple newlines
+      .trim();
+  };
+
+  const extractTextRecursive = (block: ContentBlock): string => {
+    let text = block.markdown || "";
+    if (block.items && Array.isArray(block.items)) {
+      const childrenText = block.items.map(i => extractTextRecursive(i)).filter(t => !!t).join("\n");
+      text += (text && childrenText ? "\n" : "") + childrenText;
+    }
+    return text;
+  };
+
   const handleShare = async () => {
     if (!selectedQuarterly || !readingLesson) return;
     try {
       const segment = readingLesson.segments[activeSegmentIdx];
-      const rawMarkdown = segment?.blocks?.map(b => b.markdown).join('\n\n') || "";
-
-      // Clean the content for human reading
-      const cleanContent = rawMarkdown
-        .replace(/\^\[(\d+)\]\(\{.*?\}\)/g, '[$1]') // Superset markers
-        .replace(/\{#.*?\}/g, '') // Anchor markers
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links (just keep text)
-        .replace(/\n{3,}/g, '\n\n') // Excessive lines
-        .trim();
+      const rawMarkdown = segment?.blocks?.map(b => extractTextRecursive(b)).join('\n\n') || "";
+      const cleanContent = cleanSspmMarkdown(rawMarkdown);
 
       const quarterlyId = selectedQuarterly.id.replace('mg-ss-', '');
-      const lessonId = readingLesson.segments[0].id.split('-').slice(-2, -1)[0];
-      const dayId = segment.name;
+      const s0 = readingLesson.segments?.[0];
+      const lessonId = (s0?.id && typeof s0.id === 'string') ? s0.id.split('-').slice(-2, -1)[0] : undefined;
+      const dayId = (segment.name && typeof segment.name === 'string') ? segment.name : (activeSegmentIdx + 1).toString();
       const url = `${WEB_BASE}/${quarterlyId}/${lessonId}/${dayId}`;
 
       await RNShare.share({
@@ -519,225 +643,157 @@ export default function LesonaSekolySabata() {
     }
   };
 
-  const cleanVerseContent = (text: string) => {
-    // Replace markers like ^[7]({"style":{"text":{"offset":"sup"}}}) with just [7]
-    return text.replace(/\^\[(\d+)\]\(\{.*?\}\)/g, ' [$1] ')
-      .replace(/\n{3,}/g, '\n\n') // Remove excessive empty lines
-      .trim();
-  };
-
-  const formatVerseTitle = (ref: string) => {
-    // Input example: "1Pet315" -> "1 Pet 3:15"
-    // Input example: "Col15-Col16" -> "Col 1:5-6" (Note: some APIs return weird patterns)
-
-    // 1. Add space between book name and numbers
-    let formatted = ref.replace(/(\D+)(\d+)/g, (match, book, numbers) => {
-      // If book is something like "1Pet", it stays "1Pet"
-      // Let's at least ensure there is a space before the chapter
-      return `${book} ${numbers}`;
-    });
-
-    // 2. If it's a technical sequence like "John207-John208", it usually means John 20:7-8
-    // Let's try to detect the common parts
-    if (formatted.includes('-')) {
-      const parts = formatted.split('-');
-      if (parts.length === 2) {
-        // Attempt to extract book, chapter, verse
-        // This is tricky without a full parser, but let's do common sense:
-        // If the second part has the same letters, remove them
-        const letters2 = parts[1].match(/[a-zA-Z]+/);
-        const letters1 = parts[0].match(/[a-zA-Z]+/);
-        if (letters1 && letters2 && letters1[0] === letters2[0]) {
-          parts[1] = parts[1].replace(/[a-zA-Z]+/, '').trim();
-        }
-
-        // Try to insert colon in chapter/verse if it's long digits (e.g. 207 -> 20:7)
-        // Usually last 2 digits are verse
-        const addColon = (s: string) => {
-          if (s.length >= 3) {
-            const verse = s.slice(-2);
-            const chapter = s.slice(0, -2);
-            return `${chapter}:${parseInt(verse).toString()}`; // 207 -> 20:7, 315 -> 3:15
-          }
-          return s;
-        };
-
-        return `${addColon(parts[0])} - ${addColon(parts[1])}`;
-      }
-    }
-
-    // Single ref like 1Pet315
-    const addColon = (s: string) => {
-      const match = s.match(/(.*?)\s*(\d+)$/);
-      if (match) {
-        const book = match[1];
-        const num = match[2];
-        if (num.length >= 2) {
-          const verse = num.slice(-2);
-          const chapter = num.slice(0, -2);
-          return `${book} ${chapter}:${parseInt(verse).toString()}`;
-        }
-      }
-      return s;
-    };
-
-    return addColon(formatted);
-  };
-
-  const isLessonToday = (lesson: Lesson) => {
-    if (!lesson.startDate || !lesson.endDate) return false;
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const start = parseDate(lesson.startDate);
-    const end = parseDate(lesson.endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
-    return now >= start && now <= end;
-  };
-
-  const getTodayLessonId = (q: Quarterly) => {
-    if (q.lessons && q.lessons.length > 0) {
-      const found = q.lessons.find(l => isLessonToday(l));
-      if (found) return found.id.split('-').pop();
-    }
-    if (q.startDate) {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const start = parseDate(q.startDate);
-      const diff = now.getTime() - start.getTime();
-      const weekNum = Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
-      if (weekNum >= 1 && weekNum <= 14) {
-        return weekNum.toString().padStart(2, '0');
-      }
-    }
-    return null;
-  };
-
-  const handleLinkPress = (url: string) => {
+  const handleLinkPress = (url: string, data?: any) => {
     if (url.startsWith('sspmBible://')) {
-      const ref = url.replace('sspmBible://', '');
-      const segment = readingLesson?.segments?.[activeSegmentIdx];
-      if (segment && segment.blocks) {
-        // Find if this reference is in the data.bible
-        for (const block of segment.blocks) {
-          if (block.data?.bible && block.data.bible[ref]) {
-            const bibleData = block.data.bible[ref];
-            // Flatten the bible content
-            let text = "";
-            const processItems = (items: any[]) => {
-              items.forEach(item => {
-                if (item.markdown) text += item.markdown + "\n\n";
-                if (item.items) processItems(item.items);
-              });
-            };
-            if (bibleData.items) processItems(bibleData.items);
+      const bibleKey = url.replace('sspmBible://', '');
+      if (data?.bible?.[bibleKey]) {
+        const verseObj = data.bible[bibleKey];
+        const fullText = extractTextRecursive(verseObj);
 
-            setVerseTitle(formatVerseTitle(ref));
-            setVerseContent(cleanVerseContent(text));
-            setVerseModalVisible(true);
-            return;
-          }
-        }
+        // Clean title: 1Sam19 -> 1 Sam 19
+        const formattedTitle = bibleKey.replace(/([0-9]+)/g, ' $1 ').replace(/\s+/g, ' ').trim();
+        setVerseTitle(formattedTitle);
+        setVerseContent(cleanSspmMarkdown(fullText));
+        setVerseModalVisible(true);
+        return false;
       }
-      Alert.alert(t('bible'), `${t('searching_bible')}: ${ref}`);
-    } else {
-      Linking.openURL(url);
     }
+    Linking.openURL(url).catch(() => { });
+    return true;
   };
 
   const renderContent = () => {
-    if (loading && !readingLesson && !selectedQuarterly) {
+    if (loading) {
       return (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#3b82f6" />
+          <Text className="text-slate-500 mt-4 font-medium">{t('loading')}</Text>
         </View>
       );
     }
 
     if (readingLesson) {
-      const segment = readingLesson.segments?.[activeSegmentIdx];
-      const markdown = segment?.blocks?.map(b => b.markdown).join('\n\n') || "";
-
+      const segment = readingLesson.segments[activeSegmentIdx];
       return (
         <View className="flex-1">
-          {/* Day Selector - Improved & Larger */}
-          <View className="bg-slate-900 border-b border-white/10">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
-            >
-              {readingLesson.segments?.map((s, idx) => {
-                const isActive = activeSegmentIdx === idx;
-                // Use full title but with ellipsis if needed
-                const dayTitle = s.title || `${t('day')} ${idx + 1}`;
-
+          <View className="px-6 py-2 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              {readingLesson.segments.map((s, idx) => {
+                const isSelected = idx === activeSegmentIdx;
                 return (
                   <TouchableOpacity
-                    key={s.id}
+                    key={s.id || idx}
                     onPress={() => setActiveSegmentIdx(idx)}
-                    className={`px-4 py-4 rounded-[20px] mr-3 border-2 items-center justify-center min-w-[120px] max-w-[200px] ${isActive ? 'bg-primary border-primary shadow-lg shadow-primary/30' : 'bg-slate-800 border-slate-700'}`}
+                    className={`px-5 py-2 rounded-2xl mr-2 border ${isSelected ? 'bg-primary border-primary' : 'bg-slate-900 border-slate-800'}`}
                   >
-                    <Text
-                      className={`text-[10px] font-bold uppercase tracking-widest text-center ${isActive ? 'text-white' : 'text-slate-400'}`}
-                      style={{ fontFamily: 'Lexend_600SemiBold' }}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {dayTitle}
+                    <Text className={`font-bold text-[11px] ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                      {s.title.toUpperCase()}
                     </Text>
-                    <Text className={`text-[9px] mt-1 ${isActive ? 'text-white/80' : 'text-slate-500'}`}>{s.date || ""}</Text>
                   </TouchableOpacity>
                 );
-              }) || null}
+              })}
             </ScrollView>
           </View>
 
-          <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+          <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
             {segment ? (
               <>
-                <Text className="text-primary font-bold text-lg mb-2 uppercase tracking-widest" style={{ fontFamily: globalSettings.fontFamily }}>{segment.date}</Text>
-                <Text className="text-white text-4xl font-bold mb-6" style={{ fontFamily: 'Lexend_700Bold' }}>{segment.title}</Text>
-                <Markdown
-                  onLinkPress={(url) => {
-                    handleLinkPress(url);
-                    return false; // Return false to prevent default browser behavior
-                  }}
-                  style={{
-                    body: {
-                      color: '#cbd5e1',
-                      fontSize: globalSettings.fontSize,
-                      fontFamily: globalSettings.fontFamily,
-                      lineHeight: globalSettings.fontSize * globalSettings.lineHeight,
-                      paddingBottom: 100
-                    },
-                    heading3: { color: '#3b82f6', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                    strong: { color: '#f8fafc', fontWeight: 'bold' },
-                    italic: { fontStyle: 'italic' },
-                    blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
-                    link: { color: '#3b82f6', textDecorationLine: 'none' }
-                  }}
-                >
-                  {markdown}
-                </Markdown>
+                <View className="mb-8 p-6 bg-slate-900 rounded-[32px] border border-white/5 relative overflow-hidden">
+                  <View className="absolute -right-10 -top-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
+                  <Text className="text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-3">{segment.date}</Text>
+                  <Text className="text-white text-2xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{segment.title}</Text>
+
+                  <TouchableOpacity
+                    onPress={handleShare}
+                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
+                  >
+                    <Share size={18} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
+
+                {segment.blocks?.map((block, bIdx) => {
+                  const renderBlockRecursive = (b: ContentBlock, idx: number, parentData?: any) => {
+                    let content: React.ReactNode[] = [];
+                    const blockData = b.data || parentData;
+
+                    if (b.markdown) {
+                      content.push(
+                        <Markdown
+                          key={`${b.id || idx}_md`}
+                          onLinkPress={(url) => handleLinkPress(url, blockData)}
+                          style={{
+                            body: { color: '#cbd5e1', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily },
+                            heading1: { color: '#f8fafc', fontWeight: 'bold', marginTop: 30, marginBottom: 15, fontFamily: 'Lexend_700Bold' },
+                            heading2: { color: '#3b82f6', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                            heading3: { color: '#3b82f6', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                            strong: { color: '#f8fafc', fontWeight: 'bold' },
+                            italic: { fontStyle: 'italic' },
+                            blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
+                            link: { color: '#3b82f6', textDecorationLine: 'none' }
+                          }}
+                        >
+                          {b.markdown}
+                        </Markdown>
+                      );
+                    }
+
+                    if (b.items && Array.isArray(b.items)) {
+                      b.items.forEach((item, ii) => {
+                        content.push(renderBlockRecursive(item, ii, blockData));
+                      });
+                    }
+
+                    if (b.type === 'blockquote') {
+                      return (
+                        <View key={b.id || idx} className="bg-slate-900/50 border-l-4 border-primary p-4 my-3 rounded-r-xl">
+                          {content}
+                        </View>
+                      );
+                    }
+
+                    return <View key={b.id || idx}>{content}</View>;
+                  };
+
+                  return renderBlockRecursive(block, bIdx);
+                })}
               </>
             ) : (
               <View className="flex-1 items-center justify-center py-20">
                 <Text className="text-slate-500">{t('no_content')}</Text>
               </View>
             )}
+            <View className="h-20" />
           </ScrollView>
         </View>
       );
     }
 
     if (selectedQuarterly) {
-      const isDownloaded = downloadedQuarterlies.includes(selectedQuarterly.id);
+      const downloadId = `${selectedLang}_${selectedQuarterly.id}`;
+      const isDownloaded = downloadedQuarterlies.includes(downloadId);
       const isCurrent = isQuarterlyCurrent(selectedQuarterly);
+      const lessons = selectedQuarterly.lessons || Array.from({ length: 13 }, (_, i) => ({
+        id: `${selectedQuarterly.id}-${(i + 1).toString().padStart(2, '0')}`,
+        title: `${t('lesson_number')} ${i + 1}`,
+        startDate: "",
+        endDate: "",
+        index: "",
+        name: (i + 1).toString()
+      }));
+
+      const todayLessonId = getTodayLessonId(selectedQuarterly);
 
       return (
         <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+          {/* Quarterly Card */}
           <View className="bg-slate-900 rounded-[32px] overflow-hidden border border-slate-800 mb-8 p-6 flex-row items-center">
-            <Image source={{ uri: selectedQuarterly.covers.portrait }} className="w-20 h-28 rounded-lg mr-4" />
+            {selectedQuarterly.covers?.portrait ? (
+              <Image source={{ uri: selectedQuarterly.covers.portrait }} className="w-20 h-28 rounded-lg mr-4" />
+            ) : (
+              <View className="w-20 h-28 rounded-lg mr-4 bg-slate-800 items-center justify-center">
+                <BookOpen size={24} color="#475569" />
+              </View>
+            )}
             <View className="flex-1">
               <Text className="text-white font-bold text-lg mb-1">{selectedQuarterly.title}</Text>
               <Text className="text-slate-500 text-xs leading-5" numberOfLines={3}>{selectedQuarterly.description}</Text>
@@ -775,16 +831,9 @@ export default function LesonaSekolySabata() {
           <View className="flex-row items-center justify-between mt-8 mb-6 ml-1">
             <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t('program_of_study')}</Text>
 
-            {isQuarterlyCurrent(selectedQuarterly) && (
+            {todayLessonId && (
               <TouchableOpacity
-                onPress={() => {
-                  const lessonId = getTodayLessonId(selectedQuarterly);
-                  if (lessonId) {
-                    fetchWeeklyLesson(selectedQuarterly.id, lessonId);
-                  } else {
-                    Alert.alert(t('sabbath_school_lessons'), t('no_content'));
-                  }
-                }}
+                onPress={() => fetchWeeklyLesson(selectedQuarterly.id, todayLessonId)}
                 className="px-5 py-2 rounded-2xl bg-primary border shadow-lg shadow-primary/20 border-primary/20 flex-row items-center"
               >
                 <BookOpen size={14} color="white" />
@@ -794,24 +843,20 @@ export default function LesonaSekolySabata() {
           </View>
 
           <View className="pb-10">
-            {(selectedQuarterly.lessons || Array.from({ length: 13 }, (_, i) => ({
-              id: `${selectedQuarterly.id}-${(i + 1).toString().padStart(2, '0')}`,
-              title: `${t('lesson_number')} ${i + 1}`,
-              startDate: "", endDate: "", index: "",
-              name: (i + 1).toString().padStart(2, '0')
-            }))).map((lesson, index) => {
-              const lessonNum = lesson.id.split('-').pop() || (index + 1).toString().padStart(2, '0');
-              const isToday = lesson.startDate ? isLessonToday(lesson) : lessonNum === getTodayLessonId(selectedQuarterly);
-              const actualTitle = lessonTitlesMap[lessonNum] || lesson.title;
+            {lessons.map((lesson, index) => {
+              const lessonIdStr = (lesson.id && typeof lesson.id === 'string') ? lesson.id : "";
+              const lessonNum = lessonIdStr.split('-').pop() || "";
+              const isToday = lessonNum === todayLessonId;
+              const actualTitle = lessonTitlesMap[lessonNum] || (lesson as Lesson).title;
 
               return (
                 <TouchableOpacity
                   key={lesson.id}
                   onPress={() => fetchWeeklyLesson(selectedQuarterly.id, lessonNum)}
-                  className={`mb-4 rounded-[28px] border overflow-hidden p-[1px] ${isToday ? 'bg-primary border-primary' : 'bg-slate-800/30'}`}
+                  className={`mb-4 rounded-[32px] overflow-hidden ${isToday ? 'border-2 border-primary' : 'bg-slate-900 border border-slate-800'}`}
                 >
-                  <View className={`rounded-[27px] p-5 flex-row items-center ${isToday ? 'bg-primary/10' : 'bg-slate-900'}`}>
-                    <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${isToday ? 'bg-primary' : 'bg-slate-800'}`}>
+                  <View className={`p-5 flex-row items-center ${isToday ? 'bg-primary' : 'bg-slate-900'}`}>
+                    <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${isToday ? 'bg-white/20' : 'bg-slate-800'}`}>
                       <Text className={`text-lg font-bold ${isToday ? 'text-white' : 'text-slate-400'}`}>{index + 1}</Text>
                     </View>
 
@@ -820,24 +865,32 @@ export default function LesonaSekolySabata() {
                         <Text
                           className={`font-bold text-base ${isToday ? 'text-white' : 'text-slate-300'}`}
                           numberOfLines={1}
-                          style={{ fontFamily: isToday ? 'Lexend_700Bold' : 'Lexend_600SemiBold' }}
+                          style={{ fontFamily: 'Lexend_600SemiBold' }}
                         >
                           {actualTitle}
                         </Text>
+                        {isToday && (
+                          <View className="ml-2 bg-white/20 px-2 py-0.5 rounded-full">
+                            <Text className="text-white text-[8px] font-bold uppercase tracking-tighter">{t('updated')}</Text>
+                          </View>
+                        )}
                       </View>
-                      <Text className={`text-[10px] uppercase tracking-tighter ${isToday ? 'text-blue-400' : 'text-slate-500'}`}>
-                        {lesson.startDate ? `${lesson.startDate} — ${lesson.endDate}` : `Herinandro faha ${index + 1}`}
+                      <Text className={`text-[10px] uppercase tracking-tighter ${isToday ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {(lesson as Lesson).startDate} {(lesson as Lesson).startDate ? "—" : ""} {(lesson as Lesson).endDate}
                       </Text>
                     </View>
 
-                    {isToday ? (
-                      <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
-                        <ChevronRight size={18} color="white" />
-                      </View>
-                    ) : (
-                      <ChevronRight size={18} color="#475569" />
-                    )}
+                    <View className={`w-10 h-10 rounded-full items-center justify-center ${isToday ? 'bg-white/20' : 'bg-slate-800/50'}`}>
+                      <ChevronRight size={18} color={isToday ? "white" : "#475569"} />
+                    </View>
                   </View>
+
+                  {isToday && (
+                    <View className="bg-white/10 px-5 py-3 flex-row items-center justify-between">
+                      <Text className="text-white/80 text-[10px] font-medium">{t('daily_study')}</Text>
+                      <Text className="text-white text-[10px] font-bold uppercase tracking-widest">{t('read_today')} →</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -848,9 +901,7 @@ export default function LesonaSekolySabata() {
 
     return (
       <View className="flex-1 px-6">
-        {/* Category Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-4 max-h-16">
-          {/* "All" tab */}
           <TouchableOpacity
             onPress={() => setActiveCategory('')}
             className={`px-6 py-2 rounded-full mr-3 ${!activeCategory ? 'bg-primary' : 'bg-slate-900 border border-slate-800'}`}
@@ -882,7 +933,7 @@ export default function LesonaSekolySabata() {
                 >
                   <View className="relative">
                     <Image source={{ uri: item.covers.portrait }} className="w-full h-48" resizeMode="cover" />
-                    {downloadedQuarterlies.includes(item.id) && (
+                    {downloadedQuarterlies.includes(`${selectedLang}_${item.id}`) && (
                       <View className="absolute top-2 right-2 w-6 h-6 rounded-full bg-emerald-500 items-center justify-center">
                         <CheckCircle size={14} color="white" />
                       </View>
@@ -890,7 +941,7 @@ export default function LesonaSekolySabata() {
                   </View>
                   <View className="p-4">
                     <Text className="text-primary font-bold text-[8px] uppercase tracking-widest mb-1" numberOfLines={1}>
-                      {item.startDate.split('/').slice(1).join('/')} — {item.endDate.split('/').slice(1).join('/')}
+                      {formatDateRange(item.startDate, item.endDate)}
                     </Text>
                     <Text className="text-white text-sm font-bold mb-1 h-10" numberOfLines={2} style={{ fontFamily: 'Lexend_700Bold' }}>
                       {item.title}
@@ -914,7 +965,6 @@ export default function LesonaSekolySabata() {
               <Text className="text-slate-500 text-center leading-6">
                 {t('check_connection_to_view')}
               </Text>
-
               {categories.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setActiveCategory(categories[0])}
@@ -949,113 +999,101 @@ export default function LesonaSekolySabata() {
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
           <View className="flex-1">
-            <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>
+            <Text className="text-xl font-bold text-white pr-2" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>
               {readingLesson ? readingLesson.title : selectedQuarterly ? selectedQuarterly.title : t('sabbath_school_lessons')}
             </Text>
             <View className="flex-row items-center">
-              <Text className="text-slate-500 text-xs">
+              <Text className="text-slate-500 text-xs mr-2">
                 {readingLesson ? t('daily_study') : SS_LANGUAGES.find(l => l.code === selectedLang)?.label || 'Sekoly Sabata'}
               </Text>
               {!readingLesson && !selectedQuarterly && (
                 <TouchableOpacity
                   onPress={() => setShowLangPicker(true)}
-                  className="ml-2 flex-row items-center bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700"
+                  className="flex-row items-center bg-primary/20 px-3 py-1 rounded-full border border-primary/30"
                 >
-                  <Text className="text-[10px] font-bold text-slate-300 mr-1">
-                    {SS_LANGUAGES.find(l => l.code === selectedLang)?.flag}
-                  </Text>
-                  <Text className="text-[10px] font-bold text-slate-300">
-                    {SS_LANGUAGES.find(l => l.code === selectedLang)?.label}
-                  </Text>
+                  <Globe size={12} color="#3b82f6" />
+                  <Text className="text-primary font-bold text-[10px] ml-1 uppercase">{t('language') || 'Language'}</Text>
+                  <ChevronRight size={10} color="#3b82f6" />
                 </TouchableOpacity>
               )}
             </View>
           </View>
         </View>
-        <View className="flex-row">
-          {readingLesson && (
-            <TouchableOpacity onPress={handleShare} className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center border border-primary/20 mr-2">
-              <Share size={18} color="#3b82f6" />
-            </TouchableOpacity>
-          )}
-          {!readingLesson && !selectedQuarterly && (
-            <TouchableOpacity
-              onPress={() => setShowLangPicker(true)}
-              className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700 mr-2"
-            >
-              <Globe size={16} color="#94a3b8" />
-            </TouchableOpacity>
-          )}
+
+        {!readingLesson && !selectedQuarterly && (
           <TouchableOpacity
             onPress={loadInitialData}
-            disabled={loading}
-            className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700"
+            className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
           >
-            <RefreshCw size={16} color="#94a3b8" />
+            <RefreshCw size={18} color="#94a3b8" />
           </TouchableOpacity>
-        </View>
+        )
+        }
       </View>
 
       {renderContent()}
 
       {/* Language Picker Modal */}
-      {showLangPicker && (
-        <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
-          <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
-          <View className="bg-[#1a2233] rounded-t-[40px] p-8 border-t border-slate-700">
-            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
-            <Text className="text-xl font-bold text-white mb-2 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>
-              {t('choose_language')}
-            </Text>
-            <Text className="text-slate-500 text-xs text-center mb-6">
-              {t('sabbath_school_lessons')}
-            </Text>
-            {SS_LANGUAGES.map((lang) => (
+      <Modal
+        visible={showLangPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLangPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowLangPicker(false)}
+          className="flex-1 bg-black/60 items-center justify-center px-10"
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={e => e.stopPropagation()}
+            className="w-full bg-slate-900 rounded-[32px] border border-slate-800 p-6"
+          >
+            <Text className="text-white text-lg font-bold mb-6 text-center">{t('choose_language')}</Text>
+            {SS_LANGUAGES.map(lang => (
               <TouchableOpacity
                 key={lang.code}
-                onPress={() => {
-                  setSelectedLang(lang.code);
-                  setShowLangPicker(false);
-                  setSelectedQuarterly(null);
-                  setReadingLesson(null);
-                  setQuarterlyList([]);
-                }}
-                className={`flex-row items-center p-4 rounded-2xl mb-3 border ${selectedLang === lang.code
-                  ? 'bg-primary border-primary'
-                  : 'bg-[#111621] border-slate-800'
-                  }`}
+                onPress={() => changeLang(lang.code)}
+                className={`flex-row items-center p-4 rounded-2xl mb-3 border ${selectedLang === lang.code ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5'}`}
               >
                 <Text className="text-2xl mr-4">{lang.flag}</Text>
-                <Text className={`font-bold text-base flex-1 ${selectedLang === lang.code ? 'text-white' : 'text-slate-300'
-                  }`}>
-                  {lang.label}
-                </Text>
-                {selectedLang === lang.code && (
-                  <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
-                    <Text className="text-primary font-bold text-xs">✓</Text>
-                  </View>
-                )}
+                <Text className={`text-base font-bold flex-1 ${selectedLang === lang.code ? 'text-primary' : 'text-white'}`}>{lang.label}</Text>
+                {selectedLang === lang.code && <CheckCircle size={20} color="#3b82f6" />}
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-      )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
-      {/* Bible Verse Modal */}
-      <Modal visible={verseModalVisible} animationType="slide" transparent>
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10" style={{ maxHeight: '80%' }}>
+      {/* Verse Modal */}
+      <Modal
+        visible={verseModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setVerseModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/80 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10">
             <View className="flex-row justify-between items-center mb-6">
-              <View className="flex-row items-center">
-                <BookOpen size={20} color="#3b82f6" className="mr-3" />
-                <Text className="text-xl font-bold text-white">{verseTitle}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setVerseModalVisible(false)} className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
+              <Text className="text-primary font-bold text-xl">{verseTitle}</Text>
+              <TouchableOpacity
+                onPress={() => setVerseModalVisible(false)}
+                className="w-10 h-10 rounded-full bg-white/5 items-center justify-center"
+              >
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text className="text-slate-300 leading-7 italic py-4" style={{ fontSize: globalSettings.fontSize, fontFamily: globalSettings.fontFamily }}>{verseContent}</Text>
+            <ScrollView className="max-h-[60vh]" showsVerticalScrollIndicator={false}>
+              <Markdown
+                style={{
+                  body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily, fontStyle: 'italic' },
+                  strong: { color: '#f8fafc', fontWeight: 'bold' },
+                  heading3: { color: '#3b82f6', marginTop: 15, marginBottom: 5, fontFamily: 'Lexend_600SemiBold' }
+                }}
+              >
+                {verseContent}
+              </Markdown>
             </ScrollView>
           </View>
         </View>

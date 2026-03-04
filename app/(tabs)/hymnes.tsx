@@ -1,3 +1,5 @@
+import { loadDatabase } from '@/lib/database';
+import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useTranslation } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -55,6 +57,18 @@ export default function HymneManager() {
       const scanDirs = [rootDbDir, hymnDbDir];
       const foundFilesSet = new Set<string>();
 
+      // Ensure default exists by trying to copy if missing
+      const defaultFile = 'cantique.db';
+      const defaultHymnPath = `${hymnDbDir}/${defaultFile}`;
+      if (!(await FileSystem.getInfoAsync(defaultHymnPath)).exists) {
+        try {
+          // Trigger copy by loading it
+          await loadDatabase(defaultFile, HYMNE_SOURCES[defaultFile], 'hymnes');
+        } catch (e) {
+          console.log("Failed to copy default hymnal", e);
+        }
+      }
+
       for (const dir of scanDirs) {
         if ((await FileSystem.getInfoAsync(dir)).exists) {
           const files = await FileSystem.readDirectoryAsync(dir);
@@ -67,7 +81,8 @@ export default function HymneManager() {
               const isInManifest = validHymnFiles.includes(fileNameLower);
 
               if (isDefault || isInManifest) {
-                const fileInfo = await FileSystem.getInfoAsync(`${dir}/${file}`);
+                const filePath = `${dir}/${file}`;
+                const fileInfo = await FileSystem.getInfoAsync(filePath);
                 if (fileInfo.exists && fileInfo.size > 0) {
                   foundFilesSet.add(fileNameLower);
                   let displayName = file.replace('.db', '').replace(/_/g, ' ');
@@ -83,13 +98,24 @@ export default function HymneManager() {
                     name: displayName,
                     size: (fileInfo.size / 1024).toFixed(0) + " KB",
                     isDefault,
-                    fullPath: `${dir}/${file}`
+                    fullPath: filePath
                   });
                 }
               }
             }
           }
         }
+      }
+
+      // Final safety: if default still not in list, add it (even if size is 0/unknown)
+      if (!foundFilesSet.has('cantique.db')) {
+        presentFiles.unshift({
+          file: 'cantique.db',
+          name: t('default_hymnal_name'),
+          size: "Built-in",
+          isDefault: true,
+          fullPath: `${hymnDbDir}/cantique.db`
+        });
       }
 
       setLocalFiles(presentFiles);

@@ -244,6 +244,7 @@ export const mg: TranslationSchema = {
   data_group: "Tahiry & Famitohana",
   full_backup: "Famitohana manontolo",
   restore_backup: "Hamerina tahiry",
+  restore_summary: "Safidy famerenana",
   export_mods: "Hamoaka fanovana",
   import_mods: "Hanafatra fanovana",
   reset_hymns: "Haverina amin'ny teo aloha ny fihirana",

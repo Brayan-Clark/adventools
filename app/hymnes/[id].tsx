@@ -1,4 +1,5 @@
 import { loadDatabase } from '@/lib/database';
+import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
@@ -62,7 +63,7 @@ export default function HymneDetail() {
         const hymnId = Number(id);
         if (isNaN(hymnId)) return;
 
-        const db = await loadDatabase(dbName, null, 'hymnes');
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
         const result: any = await db.getFirstAsync("SELECT * FROM adventiste_cantique WHERE id = ?", [hymnId]);
 
         if (result) {
@@ -111,7 +112,7 @@ export default function HymneDetail() {
     if (isNaN(num) || num < 1 || num > 800) return;
 
     try {
-      const db = await loadDatabase(dbName, null, 'hymnes');
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE id = ?", [num]);
 
       if (result) {

@@ -1,7 +1,7 @@
-{ TranslationSchema } from "./types";
+{ TranslationSchema
+} from "./types";
 
 export const "fr": TranslationSchema = {
-  
   "settings": "Paramètres",
   "ok": "D'accord",
   "cancel": "Annuler",
@@ -14,8 +14,6 @@ export const "fr": TranslationSchema = {
   "info": "Info",
   "copy": "Copier",
   "success": "Succès",
-
-  
   "home": "Accueil",
   "welcome": "Bienvenue",
   "verse_of_the_day": "Verset du jour",
@@ -42,27 +40,19 @@ export const "fr": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deutérocanonique / Autres",
   "other_testament": "Autre",
-
-  
   "greeting_morning": "Bonjour ☀️",
   "greeting_afternoon": "Bon après-midi 🌤️",
   "greeting_evening": "Bonsoir 🌙",
   "greeting_generic": "Manao ahoana 👋",
-
-  
   "bible_subtitle": "Les Saintes Écritures",
   "hymns_subtitle": "Chants de louange",
   "pdf_subtitle": "Documents PDF",
   "notes_subtitle": "Réflexions & Notes",
   "beliefs_subtitle": "Les 28 Fondements",
   "useful_subtitle": "Séries & Thèmes",
-
-  
   "search_placeholder": "Numéro ou titre...",
   "results_count": "résultats trouvés",
   "no_results": "Aucun résultat trouvé",
-
-  
   "my_hymnals": "Mes Recueils",
   "manage_local_songs": "Gérez vos chants locaux",
   "store": "Boutique",
@@ -89,8 +79,6 @@ export const "fr": TranslationSchema = {
   "author": "Auteur",
   "save_corrections": "Sauvegarder les corrections",
   "exported_to_clipboard": "Le chant a été copié dans le presse-papier.",
-
-  
   "library": "Bibliothèque",
   "manage_study_resources": "Gérez vos ressources d'étude",
   "recents": "Récents",
@@ -109,8 +97,6 @@ export const "fr": TranslationSchema = {
   "keep_my_notes": "Garder mes notes",
   "delete_doc_success": "Document et données supprimés.",
   "delete_doc_error": "Erreur lors de la suppression.",
-
-  
   "my_journal": "Mon Journal",
   "search_note_placeholder": "Rechercher une note...",
   "all_notes": "TOUT",
@@ -131,8 +117,6 @@ export const "fr": TranslationSchema = {
   "delete_folder_confirm": "Voulez-vous supprimer le dossier",
   "folder_exists_error": "Ce dossier existe déjà",
   "verse_not_found_in": "Non trouvé dans",
-
-  
   "useful": "Utiles",
   "more_apps": "Plus d'applications",
   "recent_read": "Récemment lu",
@@ -164,23 +148,17 @@ export const "fr": TranslationSchema = {
   "category_biblical_theme": "Thème Biblique",
   "categories": "Catégories",
   "new_verse": "Nouveau Verset",
-
-  
   "meditation": "Méditation",
   "meditation_intro": "Prenez un moment pour réfléchir à cette parole. Comment peut-elle s'appliquer à votre vie aujourd'hui ? Laissez cette vérité transformer votre cœur et vos pensées.",
   "verse_loading": "Chargement de la versé...",
   "verse_incomplete": "Référence incomplète.",
   "verse_not_found_db": "Verset non trouvé dans la base de données.",
   "verse_of_day_footer": "Versé du Jour • Adventools",
-
-  
   "study_resources": "Ressources et listes d'étude",
   "personal_notes": "Notes Personnalisées",
   "study_intro": "Retrouvez ici les thèmes et versets regroupés pour vos moments d'étude et de partage.",
   "folders_header": "Dossiers",
-
-  
-  "sabbath_school_lessons": "Lesona Sekoly Sabata",
+  "sabbath_school_lessons": "Leçons de l'école de Sabbat",
   "daily_study": "Fandalinana isan'andro",
   "study_series_subtitle": "Fitoriana, Tanambinana, etc.",
   "themes_divers_subtitle": "Sabata, Ravaka, Fahendrena...",
@@ -212,8 +190,6 @@ export const "fr": TranslationSchema = {
   "program_of_study": "Programme d'étude",
   "source_adventools": ""Source": Adventools",
   "no_cache_available": "Impossible de charger les données et aucun cache disponible.",
-
-  
   "ss_cat_cradle_roll": "Berceau (0-12 mois)",
   "ss_cat_kindergarten": "Jardin d'enfants (1-3 ans)",
   "ss_cat_primary": "Primaire (4-6 ans)",
@@ -223,8 +199,6 @@ export const "fr": TranslationSchema = {
   "ss_cat_real_time": "Temps réel (15-18 ans)",
   "ss_cat_young_adult": "Jeune Adulte (19-35 ans)",
   "ss_cat_adult": "Leçon Adulte (+ 35 ans)",
-
-  
   "tab_general": "Général",
   "tab_reading": "Lecture",
   "tab_system": "Système",

@@ -1,4 +1,4 @@
-import { exportAllAppData, exportUserModifications, importAllAppData, readBackupFile } from '@/lib/backup-utils';
+import { exportAllAppData, readBackupFile } from '@/lib/backup-utils';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
@@ -204,21 +204,42 @@ export default function Settings() {
     setImportData(actualData);
 
     const summaryMap: Record<string, { label: string, keys: string[] }> = {
-      hymnes: { label: "Fanitsiana Cantiques", keys: [] },
-      etude: { label: "Série d'Études Bibliques", keys: [] },
-      themes: { label: "Thèmes Divers & Versets", keys: [] },
-      notes: { label: "Mes Notes Personnelles", keys: [] },
+      hymnes: { label: "Cantiques (Favoris & Éditions)", keys: [] },
+      bible: { label: "Bible (Signets, Favoris & Surlignage)", keys: [] },
+      notes: { label: "Notes & Études Bibliques", keys: [] },
       profile: { label: "Profil & Paramètres", keys: [] },
       others: { label: "Autres données", keys: [] }
     };
 
     Object.keys(actualData).forEach(key => {
-      if (key.startsWith('hymne_edit_')) summaryMap.hymnes.keys.push(key);
-      else if (key === 'utiles_etude_serie') summaryMap.etude.keys.push(key);
-      else if (key === 'utiles_themes_divers') summaryMap.themes.keys.push(key);
-      else if (key === 'adventools_notes') summaryMap.notes.keys.push(key);
-      else if (key.startsWith('profile_') || key === 'app_settings') summaryMap.profile.keys.push(key);
-      else summaryMap.others.keys.push(key);
+      if (key.startsWith('hymne_edit_') || key.startsWith('hymn_favorites_')) {
+        summaryMap.hymnes.keys.push(key);
+      } else if (
+        key.startsWith('highlights_') ||
+        key.startsWith('word_highlights_') ||
+        key.startsWith('bookmarks_') ||
+        key.startsWith('bible_favorites') ||
+        key.startsWith('bible_bookmarks')
+      ) {
+        summaryMap.bible.keys.push(key);
+      } else if (
+        key === 'adventools_notes' ||
+        key === 'adventools_folders' ||
+        key === 'utiles_etude_serie' ||
+        key === 'utiles_themes_divers' ||
+        key.startsWith('pdf_notes_') ||
+        key.startsWith('pdf_bookmarks_')
+      ) {
+        summaryMap.notes.keys.push(key);
+      } else if (
+        key.startsWith('profile_') ||
+        key === 'app_settings' ||
+        key === 'app_history'
+      ) {
+        summaryMap.profile.keys.push(key);
+      } else {
+        summaryMap.others.keys.push(key);
+      }
     });
 
     const finalSummary = Object.entries(summaryMap)
@@ -424,28 +445,18 @@ export default function Settings() {
                 <SettingItem
                   icon={<Save size={18} color="#3b82f6" />}
                   label={t('full_backup')}
-                  value="Notes, Bible, Profil..."
+                  value="Notes, Bible, Profil, Cantiques..."
                   onPress={exportAllAppData}
                 />
                 <SettingItem
                   icon={<Download size={18} color="#3b82f6" />}
-                  label={t('restore_backup')}
-                  onPress={importAllAppData}
+                  label={t('restore_summary')}
+                  onPress={handleStartImport}
                   isLast
                 />
               </SettingsGroup>
 
               <SettingsGroup title={t('maintenance')}>
-                <SettingItem
-                  icon={<Save size={18} color="#64748b" />}
-                  label={t('export_mods')}
-                  onPress={exportUserModifications}
-                />
-                <SettingItem
-                  icon={<Download size={18} color="#64748b" />}
-                  label={t('import_mods')}
-                  onPress={handleStartImport}
-                />
                 <SettingItem
                   icon={<RefreshCcw size={18} color="#f87171" />}
                   label={t('reset_history')}

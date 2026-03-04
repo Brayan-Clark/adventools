@@ -1,3 +1,4 @@
+import { HYMNE_SOURCES } from '@/lib/hymnes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { CheckCircle2, CloudDownload, Music, RefreshCw, Trash2 } from 'lucide-react-native';
@@ -131,7 +132,8 @@ export function HymnDatabaseManager() {
   return (
     <View className="gap-4">
       {manifest?.versions.map((v: any) => {
-        const isLocal = localFiles[v.file.toLowerCase()]?.exists;
+        const isBuiltIn = HYMNE_SOURCES[v.file.toLowerCase()];
+        const isLocal = localFiles[v.file.toLowerCase()]?.exists || isBuiltIn;
         const isDefault = v.isDefault || v.file.toLowerCase() === 'cantique.db';
         const isDownloading = downloading[v.id] !== undefined;
 
