@@ -326,6 +326,17 @@ export default function LesonaSekolySabata() {
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays >= 0) {
+        // 1. Find if a lesson explicitly covers today (best for children/mission)
+        if (q.lessons) {
+          const found = q.lessons.find(l => isLessonToday(l));
+          if (found) {
+            const idStr = (found.id && typeof found.id === 'string') ? found.id : "";
+            const lNum = idStr.split('-').pop();
+            if (lNum) return lNum;
+          }
+        }
+
+        // 2. Fallback to weekly calculation
         const weekNum = Math.floor(diffDays / 7) + 1;
         if (weekNum >= 1 && weekNum <= 13) {
           return weekNum.toString().padStart(2, '0');
@@ -381,17 +392,16 @@ export default function LesonaSekolySabata() {
   };
 
   const loadLessonTitles = (q: Quarterly) => {
-    const lessons = q.lessons || Array.from({ length: 13 }, (_, i) => ({
+    const isBabies = q.id.includes('-bb-') || q.id.includes('babies');
+    const isGuide = q.id.includes('-pb') || q.id.includes('-pth') || q.id.includes('guide');
+    const weekLabel = selectedLang === 'mg' ? 'Herinandro' : (selectedLang === 'fr' ? 'Semaine' : (t('week' as any) || 'Week'));
+    const lessons = q.lessons || Array.from({ length: isBabies ? 3 : 13 }, (_, i) => ({
       id: `${q.id}-${(i + 1).toString().padStart(2, '0')}`,
-      title: `${t('lesson_number')} ${i + 1}`
+      title: isGuide ? `${cleanSspmMarkdown(q.title)} - Part ${i + 1}` : `${weekLabel} ${i + 1}`
     }));
 
     try {
       const titles: Record<string, string> = {};
-      const langPrefix = `${selectedLang}-ss-`;
-      const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
-      const subdomain = (q.index?.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-
       lessons.forEach((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
@@ -399,25 +409,29 @@ export default function LesonaSekolySabata() {
       });
       setLessonTitlesMap(titles);
 
-      // Async background fetch titles for lessons that lack real titles
+      const prefix = `${selectedLang}-`;
       lessons.forEach((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
         if (lId) {
-          if (!titles[lId] || titles[lId].includes(t('lesson_number'))) {
+          if (!titles[lId] || titles[lId].includes(t('lesson_number')) || titles[lId].includes('Herinandro') || titles[lId].includes('Semaine')) {
             let lUrl: string;
             if (q.index) {
-              const subdomain = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-              lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
+              const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
+              lUrl = `https://${sub}/api/v3/${q.index}/${lId}/index.json`;
             } else {
-              const qId = q.id.replace(`${selectedLang}-ss-`, '').replace('mg-ss-', '').replace(/-/g, '/');
-              const subdomain = (q.id.includes('-cq')) ? 'inverse' : 'absg';
-              lUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/${qId}/${lId}/index.json`;
+              const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
+              const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
+              const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
+              lUrl = `https://${sub}/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json`;
             }
 
-            fetch(lUrl).then(res => res.json()).then(lJson => {
-              if (lJson.title) {
-                setLessonTitlesMap(prev => ({ ...prev, [lId]: lJson.title }));
+            fetch(lUrl).then(res => res.text()).then(text => {
+              if (text.trim().startsWith('{')) {
+                const lJson = JSON.parse(text);
+                if (lJson.title) {
+                  setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
+                }
               }
             }).catch(() => { });
           }
@@ -440,9 +454,15 @@ export default function LesonaSekolySabata() {
 
       let quarterlyPath = q.index;
       if (!quarterlyPath) {
-        const langPrefix = `${selectedLang}-ss-`;
-        const qId = q.id.replace(langPrefix, '').replace('mg-ss-', '');
-        quarterlyPath = `${selectedLang}/ss/${qId}`;
+        const langPrefix = `${selectedLang}-`;
+        const qId = q.id.replace(langPrefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '');
+        let section = 'ss';
+        if (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) {
+          section = 'aij';
+        } else if (q.id.includes('mission-spotlight') || q.id.includes('explore')) {
+          section = 'explore';
+        }
+        quarterlyPath = `${selectedLang}/${section}/${qId}`;
       }
 
       const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
@@ -460,12 +480,34 @@ export default function LesonaSekolySabata() {
               ? (lesson.id.includes('-') ? lesson.id.split('-').pop() : lesson.id)
               : ((i + idx + 1).toString().padStart(2, '0'));
 
-            const url = `https://${subdomain}.sspmadventist.org/api/v3/${quarterlyPath}/${lessonId}/index.json`;
-            const res = await fetch(url).catch(() => null);
-            if (res && res.ok) {
-              const json = await res.json();
-              let normalized = json;
-              if (!json.segments && json.lessons) normalized = { ...json, segments: json.lessons };
+            // Try multiple sections (ss, aij, explore)
+            const sections = ['ss', 'aij', 'explore'];
+            if (quarterlyPath.includes('/aij/') || quarterlyPath.includes('/explore/')) {
+              // Move existing section to front
+              const currentSect = quarterlyPath.split('/')[1];
+              if (sections.includes(currentSect)) {
+                sections.splice(sections.indexOf(currentSect), 1);
+                sections.unshift(currentSect);
+              }
+            }
+
+            let lessonJson = null;
+            for (const section of sections) {
+              if (lessonJson) break;
+              const pathAttempt = quarterlyPath.replace(/\/(ss|aij|explore)\//, `/${section}/`);
+              const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${lessonId}/index.json`;
+              const res = await fetch(url).catch(() => null);
+              if (res && res.ok) {
+                const text = await res.text();
+                if (text.trim().startsWith('{')) {
+                  lessonJson = JSON.parse(text);
+                }
+              }
+            }
+
+            if (lessonJson) {
+              let normalized = lessonJson;
+              if (!lessonJson.segments && lessonJson.lessons) normalized = { ...lessonJson, segments: lessonJson.lessons };
               if (lessonId) {
                 lessonsData[lessonId] = normalized;
                 successCount++;
@@ -527,6 +569,7 @@ export default function LesonaSekolySabata() {
   const fetchWeeklyLesson = async (quarterlyId: string, lessonId: string) => {
     setLoading(true);
     setReadingLesson(null);
+    setActiveSegmentIdx(0);
     try {
       const downloadId = `${selectedLang}_${quarterlyId}`;
       const filePath = `${LESSONS_DIR}${downloadId}.json`;
@@ -544,28 +587,41 @@ export default function LesonaSekolySabata() {
       }
 
       let quarterlyPath = selectedQuarterly?.index;
-      const langPrefix = `${selectedLang}-ss-`;
-      const qId = quarterlyId.replace(langPrefix, '').replace('mg-ss-', '').replace('mg-aij-', '');
+      const langPrefix = `${selectedLang}-`;
 
       if (!quarterlyPath) {
-        const section = (quarterlyId.includes('-bb-') || quarterlyId.includes('-aij-')) ? 'aij' : 'ss';
+        let qId = quarterlyId.replace(langPrefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '');
+        let section = 'ss';
+        if (quarterlyId.includes('-bb-') || quarterlyId.includes('-aij-') || quarterlyId.includes('babies')) {
+          section = 'aij';
+        } else if (quarterlyId.includes('mission-spotlight') || quarterlyId.includes('explore')) {
+          section = 'explore';
+        }
         quarterlyPath = `${selectedLang}/${section}/${qId}`;
       }
 
       const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
-      const shortLessonId = lessonId.split('-').pop();
+      let shortLessonId = lessonId.split('-').pop() || "";
+      if (shortLessonId.length === 1) shortLessonId = shortLessonId.padStart(2, '0');
 
-      // Attempt multiple sections if the first fails (ss vs aij vs resources)
-      const sections = ['ss', 'aij'];
-      if (quarterlyPath.includes('/aij/')) sections.reverse();
+      // Attempt multiple sections if the first fails (ss vs aij vs explore vs resources)
+      const sections = ['ss', 'aij', 'explore'];
+      if (quarterlyPath.includes('/aij/') || quarterlyPath.includes('/explore/')) {
+        const sectionsInPath = quarterlyPath.split('/');
+        const currentSect = sectionsInPath.find(s => sections.includes(s));
+        if (currentSect) {
+          sections.splice(sections.indexOf(currentSect), 1);
+          sections.unshift(currentSect);
+        }
+      }
 
-      let finalJson = null;
-      let lastError = null;
+      let finalJson: any = null;
+      let lastError: any = null;
 
       for (const section of sections) {
+        if (finalJson) break;
         try {
-          // Adjust quarterlyPath to current section check
-          const pathAttempt = quarterlyPath.replace(/\/(ss|aij)\//, `/${section}/`);
+          const pathAttempt = quarterlyPath.replace(/\/(ss|aij|explore)\//, `/${section}/`);
           const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${shortLessonId}/index.json`;
 
           const response = await fetch(url);
@@ -581,18 +637,130 @@ export default function LesonaSekolySabata() {
         }
       }
 
+      if (!finalJson && selectedQuarterly) {
+        // Fallback: Check if the quarterly lessons have specific indices (common in explore)
+        const qLessons = selectedQuarterly.lessons || (selectedQuarterly as any).resources || [];
+        const lessonInfo: any = qLessons.find((l: any) => l.id === lessonId || (l.id && l.id.endsWith(`-${shortLessonId}`)) || (l.id && l.id.endsWith(`-${lessonId}`)));
+
+        if (lessonInfo) {
+          if (lessonInfo.index) {
+            try {
+              const url = `https://${subdomain}.sspmadventist.org/api/v3/${lessonInfo.index}/index.json`;
+              const res = await fetch(url);
+              if (res.ok) {
+                const text = await res.text();
+                if (text.trim().startsWith('{')) {
+                  finalJson = JSON.parse(text);
+                }
+              }
+            } catch (e) { }
+          }
+
+          // Fallback: Use lesson description or introduction (common for Mission/Explore)
+          if (!finalJson && (lessonInfo.description || lessonInfo.introduction)) {
+            finalJson = {
+              id: lessonId,
+              title: lessonInfo.title || selectedQuarterly.title,
+              segments: [{
+                id: `${lessonId}-content`,
+                title: lessonInfo.title || selectedQuarterly.title,
+                type: 'markdown',
+                blocks: [{
+                  id: 'content-block',
+                  type: 'markdown',
+                  markdown: lessonInfo.description || lessonInfo.introduction
+                }]
+              }]
+            };
+          }
+
+          // Fallback: Check for PDFs in the lesson itself
+          if (!finalJson && lessonInfo.share?.shareGroups) {
+            const pdfFiles = lessonInfo.share.shareGroups.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+            if (pdfFiles && pdfFiles.length > 0) {
+              finalJson = {
+                id: lessonId,
+                title: lessonInfo.title || selectedQuarterly.title,
+                segments: [{
+                  id: `${lessonId}-pdf`,
+                  title: pdfFiles[0].title || lessonInfo.title,
+                  type: 'pdf',
+                  pdf: pdfFiles
+                }]
+              };
+            }
+          }
+        }
+      }
+
       if (!finalJson) {
-        // Final fallback: try using lessonId as is or assuming it's a resource hash
+        // Fallback: try resource hash
         const resourceUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/resources/${shortLessonId}/index.json`;
         try {
           const res = await fetch(resourceUrl);
           if (res.ok) {
-            finalJson = await res.json();
+            const text = await res.text();
+            if (text.trim().startsWith('{')) {
+              finalJson = JSON.parse(text);
+            }
           }
         } catch (e) { }
       }
 
-      if (!finalJson) throw new Error(lastError?.message || "JSON Parse error: Unexpected character: <");
+      if (!finalJson && selectedQuarterly) {
+        // Fallback 1: Use the quarterly itself as content if it's a single-resource book
+        if ((selectedQuarterly as any).introduction || selectedQuarterly.description) {
+          finalJson = {
+            id: lessonId,
+            title: selectedQuarterly.title,
+            segments: [{
+              id: `${lessonId}-intro`,
+              title: selectedQuarterly.title,
+              type: 'markdown',
+              blocks: [{
+                id: 'intro-block',
+                type: 'markdown',
+                markdown: (selectedQuarterly as any).introduction || selectedQuarterly.description
+              }]
+            }]
+          };
+        }
+
+        // Fallback 2: Check for PDFs in shareGroups (link or file)
+        if (!finalJson) {
+          const pdfFiles = (selectedQuarterly as any).share?.shareGroups?.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+          const pdfLink = (selectedQuarterly as any).share?.shareGroups?.find((g: any) => g.type === 'link')?.links?.find((l: any) => l.src.endsWith('.pdf'));
+
+          if (pdfFiles && pdfFiles.length > 0) {
+            finalJson = {
+              id: lessonId,
+              title: selectedQuarterly.title,
+              segments: [{
+                id: `${lessonId}-pdf`,
+                title: pdfFiles[0].title || selectedQuarterly.title,
+                type: 'pdf',
+                pdf: pdfFiles
+              }]
+            };
+          } else if (pdfLink) {
+            finalJson = {
+              id: lessonId,
+              title: selectedQuarterly.title,
+              segments: [{
+                id: `${lessonId}-pdf`,
+                title: selectedQuarterly.title,
+                type: 'pdf',
+                pdf: [{ id: '1', title: selectedQuarterly.title, src: pdfLink.src }]
+              }]
+            };
+          }
+        }
+      }
+
+      if (!finalJson) {
+        const errorText = (lastError as any)?.message || `Impossible de charger le contenu (${quarterlyPath}/${shortLessonId})`;
+        throw new Error(errorText);
+      }
 
       let normalizedData = finalJson;
       if (!finalJson.segments && finalJson.lessons) {
@@ -685,10 +853,14 @@ export default function LesonaSekolySabata() {
     if (!md) return "";
     return md
       .replace(/\\\\\n/g, '\n')                 // Handle double backslash at end of line
-      .replace(/\\?(\^)?\[([^\]]+)\]\(\{[ \t\n\r\S]*?\}\)/g, '$2') // More aggressive styled tag cleaning
+      // Ultra-robust styled tag cleaning supporting nested braces (up to 3 levels)
+      .replace(/\\?(\^)?\[([^\]]+)\]\(\s*(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})\s*\)/g, '$2')
       .replace(/<span[^>]*>([\s\S]*?)<\/span>/g, '$1') // Strip span tags but keep content
       .replace(/<[^>]+>/g, '')                  // Strip other HTML tags
       .replace(/\{#.*?\}/g, '')                 // Remove custom ID anchors
+      .replace(/Lesona faha/gi, 'Herinandro')   // Malagasy: Lesson -> Week
+      .replace(/Leçon\s*(?=\d)/gi, 'Semaine ')  // French: Leçon -> Semaine
+      .replace(/Lesson\s*(?=\d)/gi, 'Week ')    // English: Lesson -> Week
       .replace(/\n{3,}/g, '\n\n')               // Normalize multiple newlines
       .trim();
   };
@@ -774,7 +946,7 @@ export default function LesonaSekolySabata() {
                     className={`px-5 py-2 rounded-2xl mr-2 border ${isSelected ? 'bg-primary border-primary' : 'bg-slate-900 border-slate-800'}`}
                   >
                     <Text className={`font-bold text-[11px] ${isSelected ? 'text-white' : 'text-slate-400'}`}>
-                      {s.title.toUpperCase()}
+                      {cleanSspmMarkdown(s.title).toUpperCase()}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -795,7 +967,7 @@ export default function LesonaSekolySabata() {
                       </View>
                     )}
                   </View>
-                  <Text className="text-white text-2xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{segment.title}</Text>
+                  <Text className="text-white text-2xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{cleanSspmMarkdown(segment.title)}</Text>
 
                   <TouchableOpacity
                     onPress={handleShare}
@@ -817,7 +989,7 @@ export default function LesonaSekolySabata() {
                         strong: { color: '#cbd5e1', fontWeight: 'bold' }
                       }}
                     >
-                      {readingLesson.introduction}
+                      {cleanSspmMarkdown(readingLesson.introduction)}
                     </Markdown>
                   </View>
                 )}
@@ -876,7 +1048,7 @@ export default function LesonaSekolySabata() {
                               link: { color: '#3b82f6', textDecorationLine: 'none' }
                             }}
                           >
-                            {b.markdown}
+                            {cleanSspmMarkdown(b.markdown)}
                           </Markdown>
                         );
                       }
@@ -943,10 +1115,12 @@ export default function LesonaSekolySabata() {
 
       // Dynamic lesson count for categories that don't specify lessons (e.g. Babies)
       const isBabies = selectedQuarterly.id.includes('-bb-') || selectedQuarterly.id.includes('babies');
+      const isGuide = selectedQuarterly.id.includes('-pb') || selectedQuarterly.id.includes('-pth') || selectedQuarterly.id.includes('guide');
 
+      const weekLabel = selectedLang === 'mg' ? 'Herinandro' : (selectedLang === 'fr' ? 'Semaine' : (t('week' as any) || 'Week'));
       const lessons = rawLessons.length > 0 ? rawLessons : Array.from({ length: isBabies ? 3 : 13 }, (_, i) => ({
         id: `${selectedQuarterly.id}-${(i + 1).toString().padStart(2, '0')}`,
-        title: `${t('lesson_number')} ${i + 1}`,
+        title: isGuide ? `${cleanSspmMarkdown(selectedQuarterly.title)} - Part ${i + 1}` : `${weekLabel} ${i + 1}`,
         startDate: "",
         endDate: "",
         index: selectedQuarterly.index ? `${selectedQuarterly.index}/${(i + 1).toString().padStart(2, '0')}` : "",
@@ -967,7 +1141,7 @@ export default function LesonaSekolySabata() {
               </View>
             )}
             <View className="flex-1">
-              <Text className="text-white font-bold text-lg mb-1">{selectedQuarterly.title}</Text>
+              <Text className="text-white font-bold text-lg mb-1">{cleanSspmMarkdown(selectedQuarterly.title)}</Text>
               <Text className="text-slate-500 text-xs leading-5" numberOfLines={3}>{selectedQuarterly.description}</Text>
 
               <View className="flex-row items-center mt-4">
@@ -1015,11 +1189,11 @@ export default function LesonaSekolySabata() {
           </View>
 
           <View className="pb-10">
-            {lessons.map((lesson, index) => {
+            {lessons.map((lesson: any, index: number) => {
               const lessonIdStr = (lesson.id && typeof lesson.id === 'string') ? lesson.id : "";
               const lessonNum = lessonIdStr.split('-').pop() || "";
               const isToday = lessonNum === todayLessonId;
-              const actualTitle = lessonTitlesMap[lessonNum] || (lesson as Lesson).title;
+              const actualTitle = lessonTitlesMap[lessonNum] || cleanSspmMarkdown((lesson as Lesson).title);
 
               return (
                 <TouchableOpacity
@@ -1039,7 +1213,7 @@ export default function LesonaSekolySabata() {
                           numberOfLines={1}
                           style={{ fontFamily: 'Lexend_600SemiBold' }}
                         >
-                          {actualTitle}
+                          {cleanSspmMarkdown(actualTitle)}
                         </Text>
                         {isToday && (
                           <View className="ml-2 bg-white/20 px-2 py-0.5 rounded-full">
@@ -1116,7 +1290,7 @@ export default function LesonaSekolySabata() {
                       {formatDateRange(item.startDate, item.endDate)}
                     </Text>
                     <Text className="text-white text-sm font-bold mb-1 h-10" numberOfLines={2} style={{ fontFamily: 'Lexend_700Bold' }}>
-                      {item.title}
+                      {cleanSspmMarkdown(item.title)}
                     </Text>
                     <View className="flex-row items-center justify-between mt-1">
                       <Text className="text-slate-500 text-[10px] italic" numberOfLines={1}>{item.groupTitle}</Text>
@@ -1172,7 +1346,7 @@ export default function LesonaSekolySabata() {
           </TouchableOpacity>
           <View className="flex-1">
             <Text className="text-xl font-bold text-white pr-2" style={{ fontFamily: 'Lexend_700Bold' }} numberOfLines={1}>
-              {readingLesson ? readingLesson.title : selectedQuarterly ? selectedQuarterly.title : t('sabbath_school_lessons')}
+              {readingLesson ? cleanSspmMarkdown(readingLesson.title) : selectedQuarterly ? cleanSspmMarkdown(selectedQuarterly.title) : t('sabbath_school_lessons')}
             </Text>
             <View className="flex-row items-center">
               <Text className="text-slate-500 text-xs mr-2">
