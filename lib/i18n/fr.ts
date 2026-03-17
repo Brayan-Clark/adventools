@@ -180,8 +180,8 @@ export const fr: TranslationSchema = {
   folders_header: "Dossiers",
 
   // Sabbath School Lessons (Lesona)
-  sabbath_school_lessons: "Leçons de l'école de Sabbat",
-  daily_study: "Fandalinana isan'andro",
+  sabbath_school_lessons: "Leçons de l'école du Sabbat",
+  daily_study: "Étude quotidienne",
   study_series_subtitle: "Fitoriana, Tanambinana, etc.",
   themes_divers_subtitle: "Sabata, Ravaka, Fahendrena...",
   lesson_number: "Lesona faha",

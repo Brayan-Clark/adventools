@@ -277,16 +277,17 @@ export default function Bible() {
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
         {searchMode === 'books' ? (
-          testaments.map((testament) => {
+          testaments.map((testament, testamentIndex) => {
             const booksInSection = filteredBooks.filter(b => b.testamentId == testament.id);
             if (booksInSection.length === 0) return null;
 
+            const colorIdx = testamentIndex % 3;
+            
             return (
-              <View key={testament.id}>
-                <SectionHeader title={testament.name} />
-                <View className="flex-row flex-wrap justify-between pb-6">
+              <View key={testament.id} className="mb-2">
+                <View className="flex-row flex-wrap justify-between pb-2">
                   {booksInSection.map((book) => (
-                    <BookGridItem key={book.id} book={book} lang={lang} testamentName={testament.name} />
+                    <BookGridItem key={book.id} book={book} lang={lang} testamentName={testament.name} colorIdx={colorIdx} />
                   ))}
                 </View>
               </View>
@@ -403,8 +404,15 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function BookGridItem({ book, lang, testamentName }: any) {
+function BookGridItem({ book, lang, testamentName, colorIdx = 0 }: any) {
   const router = useRouter();
+
+  const colors = [
+    { bg: 'bg-[#0f172a]', border: 'border-slate-800', text: 'text-white' },
+    { bg: 'bg-[#1e1b4b]', border: 'border-indigo-900', text: 'text-indigo-200' },
+    { bg: 'bg-[#064e3b]', border: 'border-emerald-900', text: 'text-emerald-200' },
+  ];
+  const c = colors[colorIdx] || colors[0];
 
   return (
     <TouchableOpacity
@@ -419,10 +427,10 @@ function BookGridItem({ book, lang, testamentName }: any) {
         }
       })}
       activeOpacity={0.7}
-      className="w-[48%] bg-[#0f172a] border border-slate-800 py-5 px-3 rounded-2xl mb-3 items-center justify-center shadow-sm"
+      className={`w-[48%] ${c.bg} border ${c.border} py-5 px-3 rounded-2xl mb-3 items-center justify-center shadow-sm`}
     >
       <Text
-        className="text-white text-[15px] font-medium text-center"
+        className={`${c.text} text-[15px] font-medium text-center`}
         style={{ fontFamily: 'Lexend_600SemiBold' }}
         numberOfLines={1}
         adjustsFontSizeToFit

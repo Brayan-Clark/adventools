@@ -1,7 +1,7 @@
 import { useTranslation } from '@/lib/i18n';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, BookOpen, ChevronRight, List, Star } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, ChevronRight, List, Star, Heart } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,12 +12,12 @@ export default function UtilesIndex() {
 
   const RESOURCES = [
     {
-      id: 'lesona',
-      title: t('sabbath_school_lessons'),
-      subtitle: t('daily_study'),
-      icon: <BookOpen color="#f59e0b" size={24} />,
-      color: "bg-amber-500/10",
-      path: "/utiles/lesona"
+      id: 'croyances',
+      title: t('beliefs'),
+      subtitle: t('beliefs_subtitle'),
+      icon: <Heart color="#ef4444" size={24} />,
+      color: "bg-red-500/10",
+      path: "/croyances"
     },
     {
       id: 'etude-serie',

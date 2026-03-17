@@ -1,7 +1,4 @@
-{ TranslationSchema
-} from "./types";
-
-export const "fr": TranslationSchema = {
+{
   "settings": "Paramètres",
   "ok": "D'accord",
   "cancel": "Annuler",
@@ -140,7 +137,7 @@ export const "fr": TranslationSchema = {
   "new_theme": "Nouveau Thème",
   "category_selection": "Catégorie (Sélect. ou Saisir)",
   "new_category_placeholder": "Ou saisir une nouvelle catégorie...",
-  "verse_ref_placeholder": ""Ex": Matio "24":14",
+  "verse_ref_placeholder": "Ex: Matio 24:14",
   "verse_text_placeholder": "Contenu du verset...",
   "theme_title_placeholder": "Titre du Thème",
   "theme_verses_placeholder": "Versets (séparés par une virgule)",
@@ -158,8 +155,8 @@ export const "fr": TranslationSchema = {
   "personal_notes": "Notes Personnalisées",
   "study_intro": "Retrouvez ici les thèmes et versets regroupés pour vos moments d'étude et de partage.",
   "folders_header": "Dossiers",
-  "sabbath_school_lessons": "Leçons de l'école de Sabbat",
-  "daily_study": "Fandalinana isan'andro",
+  "sabbath_school_lessons": "Leçons de l'école du Sabbat",
+  "daily_study": "Étude quotidienne",
   "study_series_subtitle": "Fitoriana, Tanambinana, etc.",
   "themes_divers_subtitle": "Sabata, Ravaka, Fahendrena...",
   "lesson_number": "Lesona faha",
@@ -188,7 +185,7 @@ export const "fr": TranslationSchema = {
   "updated": "Mis à jour",
   "offline_available": "Disponible hors-ligne",
   "program_of_study": "Programme d'étude",
-  "source_adventools": ""Source": Adventools",
+  "source_adventools": "Source: Adventools",
   "no_cache_available": "Impossible de charger les données et aucun cache disponible.",
   "ss_cat_cradle_roll": "Berceau (0-12 mois)",
   "ss_cat_kindergarten": "Jardin d'enfants (1-3 ans)",

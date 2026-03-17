@@ -2,7 +2,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -78,7 +78,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const router = useRouter();
+  
   // true = still checking AsyncStorage, overlay shown to prevent flash
   const [checking, setChecking] = useState(true);
 

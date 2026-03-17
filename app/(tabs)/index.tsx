@@ -234,10 +234,10 @@ export default function Home() {
             bgColor="bg-emerald-500/10"
           />
           <FeatureCard
-            href="/croyances"
-            title={t('beliefs')}
-            subtitle={t('beliefs_subtitle')}
-            icon={<Heart color="#ef4444" size={28} />}
+            href="/utiles/lesona"
+            title={t('sabbath_school_lessons')}
+            subtitle={t('daily_study')}
+            icon={<BookOpen color="#ef4444" size={28} />}
             bgColor="bg-red-500/10"
           />
           <FeatureCard

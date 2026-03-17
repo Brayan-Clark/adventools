@@ -414,16 +414,18 @@ export default function LesonaSekolySabata() {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
         if (lId) {
-          if (!titles[lId] || titles[lId].includes(t('lesson_number')) || titles[lId].includes('Herinandro') || titles[lId].includes('Semaine')) {
+          // Si le titre par défaut est basé sur le mot semaine, herinandro, etc, on essaye de ramener le vrai
+          const currentTitle = titles[lId] || '';
+          if (currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part')) {
             let lUrl: string;
             if (q.index) {
               const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-              lUrl = `https://${sub}/api/v3/${q.index}/${lId}/index.json`;
+              lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
             } else {
               const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
               const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
               const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
-              lUrl = `https://${sub}/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json`;
+              lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json`;
             }
 
             fetch(lUrl).then(res => res.text()).then(text => {
@@ -501,6 +503,120 @@ export default function LesonaSekolySabata() {
                 const text = await res.text();
                 if (text.trim().startsWith('{')) {
                   lessonJson = JSON.parse(text);
+                }
+              }
+            }
+
+            if (!lessonJson && q) {
+              const qLessons = q.lessons || (q as any).resources || [];
+              const lessonInfo: any = qLessons.find((l: any) => l.id === lesson.id || (l.id && l.id.endsWith(`-${lessonId}`)) || (l.id && l.id.endsWith(`-${lesson.id}`)));
+
+              if (lessonInfo) {
+                if (lessonInfo.index) {
+                  try {
+                    const url = `https://${subdomain}.sspmadventist.org/api/v3/${lessonInfo.index}/index.json`;
+                    const res = await fetch(url).catch(() => null);
+                    if (res && res.ok) {
+                      const text = await res.text();
+                      if (text.trim().startsWith('{')) {
+                        lessonJson = JSON.parse(text);
+                      }
+                    }
+                  } catch (e) { }
+                }
+
+                if (!lessonJson && (lessonInfo.description || lessonInfo.introduction)) {
+                  lessonJson = {
+                    id: lessonId,
+                    title: lessonInfo.title || q.title,
+                    segments: [{
+                      id: `${lessonId}-content`,
+                      title: lessonInfo.title || q.title,
+                      type: 'markdown',
+                      blocks: [{
+                        id: 'content-block',
+                        type: 'markdown',
+                        markdown: lessonInfo.description || lessonInfo.introduction
+                      }]
+                    }]
+                  };
+                }
+
+                if (!lessonJson && lessonInfo.share?.shareGroups) {
+                  const pdfFiles = lessonInfo.share.shareGroups.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+                  if (pdfFiles && pdfFiles.length > 0) {
+                    lessonJson = {
+                      id: lessonId,
+                      title: lessonInfo.title || q.title,
+                      segments: [{
+                        id: `${lessonId}-pdf`,
+                        title: pdfFiles[0].title || lessonInfo.title,
+                        type: 'pdf',
+                        pdf: pdfFiles
+                      }]
+                    };
+                  }
+                }
+              }
+            }
+
+            if (!lessonJson) {
+              const resourceUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/resources/${lessonId}/index.json`;
+              try {
+                const res = await fetch(resourceUrl).catch(() => null);
+                if (res && res.ok) {
+                  const text = await res.text();
+                  if (text.trim().startsWith('{')) {
+                    lessonJson = JSON.parse(text);
+                  }
+                }
+              } catch (e) { }
+            }
+
+            if (!lessonJson && q) {
+              if ((q as any).introduction || q.description) {
+                lessonJson = {
+                  id: lessonId,
+                  title: q.title,
+                  segments: [{
+                    id: `${lessonId}-intro`,
+                    title: q.title,
+                    type: 'markdown',
+                    blocks: [{
+                      id: 'intro-block',
+                      type: 'markdown',
+                      markdown: (q as any).introduction || q.description
+                    }]
+                  }]
+                };
+              }
+
+              if (!lessonJson) {
+                const pdfFiles = (q as any).share?.shareGroups?.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+                const pdfLink = (q as any).share?.shareGroups?.find((g: any) => g.type === 'link')?.links?.find((l: any) => l.src.endsWith('.pdf'));
+
+                if (pdfFiles && pdfFiles.length > 0) {
+                  lessonJson = {
+                    id: lessonId,
+                    title: q.title,
+                    segments: [{
+                      id: `${lessonId}-pdf`,
+                      title: pdfFiles[0].title || q.title,
+                      type: 'pdf',
+                      pdf: pdfFiles
+                    }]
+                  };
+                } else if (pdfLink) {
+                  lessonJson = {
+                    id: lessonId,
+                    title: q.title,
+                    segments: [{
+                      id: `${lessonId}-pdf`,
+                      title: q.title,
+                      type: 'pdf',
+                      pdf: [{ id: '1', title: q.title, src: pdfLink.src }]
+                    }]
+                  };
                 }
               }
             }
