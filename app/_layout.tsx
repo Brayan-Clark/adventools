@@ -26,6 +26,7 @@ import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-goo
 
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider } from '@/lib/settings-context';
+import { useAutoUpdater } from '@/lib/updater';
 
 const ONBOARDING_KEY = 'adventools_onboarding_done';
 
@@ -78,6 +79,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
+  useAutoUpdater();
   
   // true = still checking AsyncStorage, overlay shown to prevent flash
   const [checking, setChecking] = useState(true);

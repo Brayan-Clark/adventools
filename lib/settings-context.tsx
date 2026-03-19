@@ -11,6 +11,8 @@ type AppSettings = {
   language: string;
   darkMode: boolean;
   notifications: boolean;
+  downloadOverWifiOnly: boolean;
+  updateCheckIntervalMonths: number;
 };
 
 type SettingsContextType = {
@@ -29,6 +31,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   language: 'Français',
   darkMode: true,
   notifications: true,
+  downloadOverWifiOnly: true, // Default to Wi-Fi only for safety
+  updateCheckIntervalMonths: 1, // Default to 1 month
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

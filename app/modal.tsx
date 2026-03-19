@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -457,6 +457,36 @@ export default function Settings() {
               </SettingsGroup>
 
               <SettingsGroup title={t('maintenance')}>
+                <SettingItem
+                  icon={<Globe size={18} color="#10b981" />}
+                  label="Mises à jour via Wi-Fi uniquement"
+                  rightElement={
+                    <Switch
+                      value={globalSettings.downloadOverWifiOnly}
+                      onValueChange={(val) => updateSettings({ downloadOverWifiOnly: val })}
+                      trackColor={{ false: '#334155', true: '#3b82f6' }}
+                      thumbColor="#fff"
+                    />
+                  }
+                />
+                <SettingItem
+                  icon={<RefreshCcw size={18} color="#8b5cf6" />}
+                  label="Vérification des mises à jour"
+                  value={`Tous les ${globalSettings.updateCheckIntervalMonths} mois`}
+                  onPress={() => {
+                    Alert.alert(
+                      "Fréquence de vérification",
+                      "Choisissez l'intervalle de vérification des mises à jour :",
+                      [
+                        { text: "1 mois", onPress: () => updateSettings({ updateCheckIntervalMonths: 1 }) },
+                        { text: "2 mois", onPress: () => updateSettings({ updateCheckIntervalMonths: 2 }) },
+                        { text: "3 mois", onPress: () => updateSettings({ updateCheckIntervalMonths: 3 }) },
+                        { text: "6 mois", onPress: () => updateSettings({ updateCheckIntervalMonths: 6 }) },
+                        { text: t('cancel'), style: 'cancel' }
+                      ]
+                    );
+                  }}
+                />
                 <SettingItem
                   icon={<RefreshCcw size={18} color="#f87171" />}
                   label={t('reset_history')}
