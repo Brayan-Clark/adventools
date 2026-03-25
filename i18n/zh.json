@@ -266,5 +266,21 @@
   "built_in": "内置",
   "downloaded": "已下载",
   "available_cloud": "云端可用",
-  "download": "下载"
+  "download": "下载",
+  "restore_summary": "Restauration sélective",
+  "cat_fanahy_masina": "Saint-Esprit",
+  "cat_vavaka": "Prière",
+  "cat_herin_andriamanitra": "Puissance de Dieu",
+  "cat_fitarihan_andriamanitra": "Direction divine",
+  "cat_fiovam_po": "Conversion",
+  "cat_famela_keloka": "Pardon",
+  "cat_fandresena_ny_fahotana": "Victoire sur le péché",
+  "cat_fahasitranana": "Guérison",
+  "cat_hery_hanaovana": "Force pour agir",
+  "cat_maha_vavolombelona": "Témoignage",
+  "apocrypha_testament": "次经",
+  "previous": "上一个",
+  "next": "下一个",
+  "end": "结束",
+  "bible_verse_info": "第 {{current}} 节，共 {{total}} 节"
 }
