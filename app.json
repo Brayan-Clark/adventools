@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "adventools",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
@@ -22,7 +21,7 @@
         "backgroundColor": "#111621"
       },
       "package": "com.adventools",
-      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {

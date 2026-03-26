@@ -1,3 +1,4 @@
+import { FormattedBibleText } from '@/components/bible/formatted-text';
 import { fetchVerseContentById } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
@@ -119,7 +120,8 @@ export default function VersetsCategoriesPage() {
                 globalSettings.bibleVersion,
                 reference.bookId,
                 reference.chapter.toString(),
-                reference.verse.toString()
+                reference.verse.toString(),
+                false
               );
               return {
                 ...reference,
@@ -366,15 +368,16 @@ export default function VersetsCategoriesPage() {
                   </View>
 
                   {/* Verse Text */}
-                  <Text
-                    className="text-slate-200 mb-3 leading-7"
+                  <FormattedBibleText 
+                    text={verse.text || ''}
+                    baseFontSize={16 * (globalSettings.fontSize / 18)}
+                    baseColor="#e2e8f0"
                     style={{
                       fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
-                      fontSize: 16 * (globalSettings.fontSize / 18)
+                      marginBottom: 12,
+                      lineHeight: 28
                     }}
-                  >
-                    "{verse.text}"
-                  </Text>
+                  />
 
                   {/* Comment preview (for bookmarked verses) */}
                   {verse.comment ? (

@@ -1,4 +1,5 @@
 import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '@/lib/bible';
+import { FormattedBibleText } from '@/components/bible/formatted-text';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { router } from 'expo-router';
@@ -393,7 +394,7 @@ export default function CroyancesPage() {
           || bibles.find(b => b.id === globalSettings.bibleVersion)
           || bibles[0];
 
-        const res = await fetchVerseContent(bestBible.id, book, chapter, verses || "1", true);
+        const res = await fetchVerseContent(bestBible.id, book, chapter, verses || "1", false);
         if (res && res.text) {
           setVerseContent(res.text);
           // Update title with the version name if it's not the default one to be clear
@@ -544,15 +545,17 @@ export default function CroyancesPage() {
                   <ActivityIndicator color="#3b82f6" />
                 </View>
               ) : (
-                <Text
-                  className="text-slate-300 leading-8 italic py-4"
+                <FormattedBibleText 
+                  text={verseContent}
+                  baseFontSize={globalSettings.fontSize + 2}
+                  baseColor="#cbd5e1"
                   style={{
-                    fontSize: globalSettings.fontSize + 2,
+                    lineHeight: 32,
+                    fontStyle: 'italic',
+                    paddingVertical: 16,
                     fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily
                   }}
-                >
-                  {verseContent}
-                </Text>
+                />
               )}
             </ScrollView>
           </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from '@/lib/i18n';
 import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } fr
 
 export default function BibleReader() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { bookId, bookName, testament, testamentName, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
   const [chapter, setChapter] = useState(Number(chapterParam) || 1);
   const [chaptersCount, setChaptersCount] = useState(0);
@@ -36,6 +38,17 @@ export default function BibleReader() {
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
   const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
   const [highlightVerse, setHighlightVerse] = useState<number | null>(null);
+  const [visibleVerse, setVisibleVerse] = useState<number | null>(null);
+
+  const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setVisibleVerse(viewableItems[0].item.verse);
+    }
+  }).current;
+
+  const viewabilityConfig = React.useRef({
+    viewAreaCoveragePercentThreshold: 50
+  }).current;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -166,7 +179,7 @@ export default function BibleReader() {
 
   const changeChapter = (delta: number) => {
     const next = chapter + delta;
-    if (next < 1) return;
+    if (next < 1 || next > chaptersCount) return;
     setChapter(next);
     flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
   };
@@ -199,12 +212,16 @@ export default function BibleReader() {
 
           // Delay to ensure FlatList is rendered
           setTimeout(() => {
-            flatListRef.current?.scrollToIndex({
-              index: verseIndex,
-              animated: true,
-              viewPosition: 0.2 // Position at 20% from top
-            });
-          }, 300);
+            try {
+              flatListRef.current?.scrollToIndex({
+                index: verseIndex,
+                animated: true,
+                viewPosition: 0.2 // Position at 20% from top
+              });
+            } catch (err) {
+              console.warn("Scroll failed", err);
+            }
+          }, 500);
 
           return () => clearTimeout(timer);
         }
@@ -307,28 +324,43 @@ export default function BibleReader() {
       <StatusBar style="light" />
 
       {/* 1. Header with Language Switcher */}
-      <View className="bg-[#111621]/90 pt-12 pb-4 px-6 flex-row justify-between items-center border-b border-slate-800/50">
+      <View className="bg-[#111621]/95 pt-12 pb-4 px-6 flex-row justify-between items-center border-b border-white/5 z-50 shadow-2xl">
         <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
           <ArrowLeft size={24} color="#64748b" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setShowLangPicker(true)}
-          className="flex-row items-center bg-[#1a2233] px-4 py-2 rounded-full border border-slate-800"
+        <TouchableOpacity 
+          onPress={() => setShowChapterPicker(true)}
+          className="flex-1 items-center px-4"
         >
-          <Globe size={16} color="#94a3b8" />
-          <Text className="text-white font-bold text-xs ml-2 tracking-wider">
-            {availableBibles.find(b => b.id === lang)?.language || lang}
-          </Text>
-          <ChevronDown size={14} color="#64748b" className="ml-1" />
+          <View className="items-center">
+            <Text className="text-white font-bold text-sm tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+              {currentBookName} {chapter}
+            </Text>
+            <View className="flex-row items-center mt-0.5">
+              <View className="w-1 h-1 rounded-full bg-blue-500 mr-1.5" />
+              <Text className="text-slate-400 text-[10px] font-medium uppercase tracking-widest">
+                {t('bible_verse_info').replace('{{current}}', (visibleVerse || 1).toString()).replace('{{total}}', verses.length.toString())}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setShowBookmarksModal(true)}
-          className="p-2 -mr-2"
-        >
-          <Bookmark size={24} color={Object.keys(bookmarks).length > 0 ? "#195de6" : "#64748b"} fill={Object.keys(bookmarks).length > 0 ? "#195de6" : "transparent"} />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-1">
+          <TouchableOpacity
+            onPress={() => setShowLangPicker(true)}
+            className="w-10 h-10 rounded-full bg-[#1a2233] items-center justify-center border border-slate-800"
+          >
+            <Globe size={18} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setShowBookmarksModal(true)}
+            className="w-10 h-10 rounded-full bg-[#1a2233] items-center justify-center border border-slate-800"
+          >
+            <Bookmark size={18} color={Object.keys(bookmarks).length > 0 ? "#195de6" : "#64748b"} fill={Object.keys(bookmarks).length > 0 ? "#195de6" : "transparent"} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -337,8 +369,13 @@ export default function BibleReader() {
         keyExtractor={(item) => item.verse.toString()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 0 }}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={(info) => {
-          console.log('Scroll to index failed:', info);
+          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+          });
         }}
         ListHeaderComponent={
           <>
@@ -422,8 +459,9 @@ export default function BibleReader() {
                   {" "}
                   {(() => {
                     let inTag = false;
+                    let inJesus = false;
                     return words.map((word: string, idx: number) => {
-                      const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>)/g);
+                      const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>|<br\/?>|<J>|<\/J>)/g);
                       return (
                         <React.Fragment key={idx}>
                           {segments.map((seg, sIdx) => {
@@ -435,9 +473,16 @@ export default function BibleReader() {
                               inTag = false;
                               return <Text key={sIdx}>{"\n"}</Text>;
                             }
-                            if (seg === '<pb>' || seg === '</pb>') {
-                              // page break: just add a line break, no style change
+                            if (seg === '<pb>' || seg === '</pb>' || seg === '<br>' || seg === '<br/>') {
                               return <Text key={sIdx}>{"\n"}</Text>;
+                            }
+                            if (seg === '<J>') {
+                              inJesus = true;
+                              return null;
+                            }
+                            if (seg === '</J>') {
+                              inJesus = false;
+                              return null;
                             }
                             if (!seg) return null;
 
@@ -445,8 +490,8 @@ export default function BibleReader() {
                               <Text
                                 key={sIdx}
                                 style={{
-                                  color: vWh[idx] || userTextColor || (inTag ? '#93c5fd' : '#cbd5e1'),
-                                  fontWeight: inTag ? 'bold' : 'normal',
+                                  color: vWh[idx] || userTextColor || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#cbd5e1'),
+                                  fontWeight: (inTag || inJesus) ? 'bold' : 'normal',
                                   fontStyle: inTag ? 'italic' : 'normal',
                                   fontSize: inTag ? globalSettings.fontSize * 0.85 : globalSettings.fontSize
                                 }}
@@ -466,22 +511,27 @@ export default function BibleReader() {
           );
         }}
         ListFooterComponent={
-          <View className="px-6 py-6 flex-row justify-between items-center pb-12">
+          <View className="px-6 py-6 flex-row justify-between items-center pb-12 bg-[#0a0e17]/50 rounded-t-[40px] mt-10">
             <TouchableOpacity
               onPress={() => changeChapter(-1)}
               disabled={Number(chapter) <= 1}
-              className={`flex-row items-center px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 ${Number(chapter) <= 1 ? 'opacity-0' : ''}`}
+              className={`flex-row items-center px-6 py-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 ${Number(chapter) <= 1 ? 'opacity-0' : ''}`}
             >
-              <ChevronLeft size={18} color="white" />
-              <Text className="text-white font-bold ml-2 text-sm">Précédent</Text>
+              <ChevronLeft size={20} color="white" />
+              <Text className="text-white font-bold ml-2 text-sm">{t('previous')}</Text>
             </TouchableOpacity>
+
+            <View className="items-center">
+               <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{chapter} / {chaptersCount}</Text>
+            </View>
 
             <TouchableOpacity
               onPress={() => changeChapter(1)}
-              className="flex-row items-center px-4 py-3 rounded-2xl bg-[#195de6] shadow-lg shadow-blue-900/40"
+              disabled={Number(chapter) >= chaptersCount}
+              className={`flex-row items-center px-6 py-4 rounded-2xl bg-[#195de6] shadow-lg shadow-blue-900/40 ${Number(chapter) >= chaptersCount ? 'opacity-50' : ''}`}
             >
-              <Text className="text-white font-bold mr-2 text-sm">Suivant</Text>
-              <ChevronRight size={18} color="white" />
+              <Text className="text-white font-bold mr-2 text-sm">{Number(chapter) >= chaptersCount ? t('end') : t('next')}</Text>
+              <ChevronRight size={20} color="white" />
             </TouchableOpacity>
           </View>
         }
@@ -678,8 +728,9 @@ export default function BibleReader() {
               }}>
                 {(() => {
                   let inTag = false;
+                  let inJesus = false;
                   return (selectedVerse?.text.split(' ') || []).map((word, idx) => {
-                    const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>)/g);
+                    const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>|<br\/?>|<J>|<\/J>)/g);
                     return (
                       <React.Fragment key={idx}>
                         {segments.map((seg, sIdx) => {
@@ -691,8 +742,16 @@ export default function BibleReader() {
                             inTag = false;
                             return <Text key={sIdx}>{"\n"}</Text>;
                           }
-                          if (seg === '<pb>' || seg === '</pb>') {
+                          if (seg === '<pb>' || seg === '</pb>' || seg === '<br>' || seg === '<br/>') {
                             return <Text key={sIdx}>{"\n"}</Text>;
+                          }
+                          if (seg === '<J>') {
+                            inJesus = true;
+                            return null;
+                          }
+                          if (seg === '</J>') {
+                            inJesus = false;
+                            return null;
                           }
                           if (!seg) return null;
 
@@ -708,9 +767,9 @@ export default function BibleReader() {
                                 }
                                 setTempWordHighlights(newTemp);
                               }}
-                              className={inTag ? "text-blue-300 font-bold italic" : ""}
+                              className={inTag ? "text-blue-300 font-bold italic" : inJesus ? "text-red-400 font-bold" : ""}
                               style={{
-                                color: tempWordHighlights[idx] || (inTag ? '#93c5fd' : '#cbd5e1'),
+                                color: tempWordHighlights[idx] || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#cbd5e1'),
                                 fontSize: inTag ? 20 : 22
                               }}
                             >

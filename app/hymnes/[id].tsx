@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Edit3, Hash, Heart, Music, Save, Share2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HymneDetail() {
@@ -151,78 +151,80 @@ export default function HymneDetail() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-8 pt-10" showsVerticalScrollIndicator={false}>
-        <View className="items-center mb-12">
-          <View className="w-20 h-20 rounded-[30px] bg-pink-500/10 items-center justify-center mb-8 border border-pink-500/20 shadow-2xl shadow-pink-500/20">
-            <Music size={36} color="#ec4899" />
-          </View>
-          <Text className="text-3xl font-bold text-white text-center uppercase mb-3 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
-            {hymn.c_title}
-          </Text>
-          <View className="flex-row items-center bg-slate-900 px-4 py-1.5 rounded-full border border-slate-800">
-            <Text className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Tonalité: {hymn.c_key} • {hymn.c_categories || "Louange"}
-            </Text>
-          </View>
-          <View className="h-1 w-12 bg-pink-500 rounded-full mt-10 shadow-lg shadow-pink-500/50" />
-        </View>
-
-        <View className="mb-48">
-          {isEditing ? (
-            <View className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
-              <TextInput
-                multiline
-                className="text-white text-lg leading-7"
-                style={{ fontFamily: 'Lexend_400Regular', minHeight: 300 }}
-                value={editedContent}
-                onChangeText={setEditedContent}
-                autoFocus
-              />
-              <TouchableOpacity
-                onPress={async () => {
-                  try {
-                    await AsyncStorage.setItem(`hymne_edit_${dbName}_${id}`, editedContent);
-                    setHymn({ ...hymn, c_content: editedContent });
-                    setIsEditing(false);
-                    Alert.alert("Succès", "Modification enregistrée avec succès.");
-                  } catch (e) {
-                    Alert.alert("Erreur", "Impossible d'enregistrer la modification.");
-                  }
-                }}
-                className="mt-6 bg-green-600 py-4 rounded-2xl items-center flex-row justify-center"
-              >
-                <Save size={20} color="white" className="mr-2" />
-                <Text className="text-white font-bold">Sauvegarder les corrections</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setEditedContent(hymn.c_content);
-                  setIsEditing(false);
-                }}
-                className="mt-3 py-2 items-center"
-              >
-                <Text className="text-slate-500 font-bold">Annuler</Text>
-              </TouchableOpacity>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+        <ScrollView className="flex-1 px-8 pt-10" showsVerticalScrollIndicator={false}>
+          <View className="items-center mb-12">
+            <View className="w-20 h-20 rounded-[30px] bg-pink-500/10 items-center justify-center mb-8 border border-pink-500/20 shadow-2xl shadow-pink-500/20">
+              <Music size={36} color="#ec4899" />
             </View>
-          ) : (
-            <Text className="leading-[40px] text-center text-slate-300" style={{
-              fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
-              fontSize: globalSettings.fontSize + 2 // Base offset for hymns
-            }}>
-              {hymn.c_content}
+            <Text className="text-3xl font-bold text-white text-center uppercase mb-3 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+              {hymn.c_title}
             </Text>
-          )}
-
-          {hymn.C_author && hymn.C_author !== "undefined" && (
-            <View className="mt-16 items-center">
-              <View className="h-[1px] w-20 bg-slate-800 mb-6" />
-              <Text className="text-sm text-slate-500 italic font-medium">
-                Auteur: {hymn.C_author}
+            <View className="flex-row items-center bg-slate-900 px-4 py-1.5 rounded-full border border-slate-800">
+              <Text className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                Tonalité: {hymn.c_key} • {hymn.c_categories || "Louange"}
               </Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+            <View className="h-1 w-12 bg-pink-500 rounded-full mt-10 shadow-lg shadow-pink-500/50" />
+          </View>
+
+          <View className="mb-48">
+            {isEditing ? (
+              <View className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6">
+                <TextInput
+                  multiline
+                  className="text-white text-lg leading-7"
+                  style={{ fontFamily: 'Lexend_400Regular', minHeight: 300 }}
+                  value={editedContent}
+                  onChangeText={setEditedContent}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      await AsyncStorage.setItem(`hymne_edit_${dbName}_${id}`, editedContent);
+                      setHymn({ ...hymn, c_content: editedContent });
+                      setIsEditing(false);
+                      Alert.alert("Succès", "Modification enregistrée avec succès.");
+                    } catch (e) {
+                      Alert.alert("Erreur", "Impossible d'enregistrer la modification.");
+                    }
+                  }}
+                  className="mt-6 bg-green-600 py-4 rounded-2xl items-center flex-row justify-center"
+                >
+                  <Save size={20} color="white" className="mr-2" />
+                  <Text className="text-white font-bold">Sauvegarder les corrections</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditedContent(hymn.c_content);
+                    setIsEditing(false);
+                  }}
+                  className="mt-3 py-2 items-center"
+                >
+                  <Text className="text-slate-500 font-bold">Annuler</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text className="leading-[40px] text-center text-slate-300" style={{
+                fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
+                fontSize: globalSettings.fontSize + 2 // Base offset for hymns
+              }}>
+                {hymn.c_content}
+              </Text>
+            )}
+
+            {hymn.C_author && hymn.C_author !== "undefined" && (
+              <View className="mt-16 items-center">
+                <View className="h-[1px] w-20 bg-slate-800 mb-6" />
+                <Text className="text-sm text-slate-500 italic font-medium">
+                  Auteur: {hymn.C_author}
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Premium Floating Toolbar */}
       <View className="absolute bottom-8 self-center w-[85%] flex-row justify-between items-center bg-slate-900/95 p-2 rounded-[30px] shadow-2xl border border-slate-800">
@@ -261,7 +263,7 @@ export default function HymneDetail() {
 
 
       {/* Number Picker Modal */}
-      <Modal visible={showNumberPicker} transparent animationType="fade">
+      <Modal visible={showNumberPicker} transparent animationType="fade" statusBarTranslucent={true}>
         <View className="flex-1 bg-black/70 justify-center items-center px-8">
           <View className="bg-[#1a2233] rounded-3xl p-8 w-full max-w-sm border border-slate-700">
             <View className="flex-row justify-between items-center mb-8">

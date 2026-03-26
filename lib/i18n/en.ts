@@ -314,4 +314,8 @@ export const en: TranslationSchema = {
 
   // Apocrypha testament
   apocrypha_testament: "Apocrypha",
+  previous: "Previous",
+  next: "Next",
+  end: "End",
+  bible_verse_info: "Verse {{current}} of {{total}}",
 };

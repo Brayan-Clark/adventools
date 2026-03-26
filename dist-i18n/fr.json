@@ -225,5 +225,10 @@
   "about": "À Propos d'Adventools",
   "privacy": "Politique de confidentialité",
   "donation": "Faire un Don",
-  "help": "Centre d'aide"
+  "help": "Centre d'aide",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "end": "Fin",
+  "bible_verse_info": "Verset {{current}} sur {{total}}",
+  "manage_languages": "Gérez les langues"
 }

@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Edit2, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Theme {
@@ -99,9 +99,20 @@ export default function ThemesDivers() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newThemeTitle, setNewThemeTitle] = useState("");
   const [newThemeVerses, setNewThemeVerses] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     loadThemes();
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const loadThemes = async () => {
@@ -276,43 +287,50 @@ export default function ThemesDivers() {
       </ScrollView>
 
       {/* Modal Add/Edit */}
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
+      <Modal visible={isModalVisible} animationType="slide" transparent statusBarTranslucent={true}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
+          className="flex-1 bg-black/60 justify-end"
+        >
+          <View className="bg-slate-900 rounded-t-[40px] p-8 pb-12 border-t border-white/10 shadow-2xl">
             <View className="flex-row justify-between items-center mb-8">
               <Text className="text-xl font-bold text-white">{editingIndex !== null ? t('edit_theme') : t('new_theme')}</Text>
               <TouchableOpacity onPress={closeModal} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_title_placeholder')}</Text>
-            <TextInput
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6 text-lg"
-              placeholder={t('theme_title_placeholder')}
-              placeholderTextColor="#475569"
-              value={newThemeTitle}
-              onChangeText={setNewThemeTitle}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+              <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_title_placeholder')}</Text>
+              <TextInput
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6 text-lg"
+                placeholder={t('theme_title_placeholder')}
+                placeholderTextColor="#475569"
+                value={newThemeTitle}
+                onChangeText={setNewThemeTitle}
+              />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_verses_placeholder')}</Text>
-            <TextInput
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 text-base min-h-[100px]"
-              multiline
-              textAlignVertical="top"
-              placeholder={t('theme_verses_placeholder')}
-              placeholderTextColor="#475569"
-              value={newThemeVerses}
-              onChangeText={setNewThemeVerses}
-            />
+              <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2 ml-1">{t('theme_verses_placeholder')}</Text>
+              <TextInput
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 text-base min-h-[100px]"
+                multiline
+                textAlignVertical="top"
+                placeholder={t('theme_verses_placeholder')}
+                placeholderTextColor="#475569"
+                value={newThemeVerses}
+                onChangeText={setNewThemeVerses}
+              />
 
-            <TouchableOpacity
-              onPress={handleAddOrEdit}
-              className="bg-emerald-500 py-5 rounded-2xl items-center shadow-lg shadow-emerald-500/40"
-            >
-              <Text className="text-white font-bold text-lg">{editingIndex !== null ? t('save') : t('add_verse')}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAddOrEdit}
+                className="bg-emerald-500 py-5 rounded-2xl items-center shadow-lg shadow-emerald-500/40 mb-10"
+              >
+                <Text className="text-white font-bold text-lg">{editingIndex !== null ? t('save') : t('add_verse')}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+            <View style={{ height: keyboardHeight / (Platform.OS === 'android' ? 1.5 : 1) }} />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <View className="absolute bottom-6 self-center bg-slate-800/90 px-6 py-3 rounded-full border border-slate-700 backdrop-blur-md">

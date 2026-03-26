@@ -221,13 +221,16 @@ export default function OnboardingScreen() {
         {/* ── STEP 1: PROFILE ── */}
         {step === 1 && (
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
             className="flex-1"
           >
             <ScrollView
               className="flex-1"
               contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
             >
               {/* Back */}
               <TouchableOpacity
@@ -319,11 +322,18 @@ export default function OnboardingScreen() {
 
         {/* ── STEP 2: PREFERENCES ── */}
         {step === 2 && (
-          <ScrollView
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
             className="flex-1"
-            contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
-            showsVerticalScrollIndicator={false}
           >
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+            >
             {/* Back */}
             <TouchableOpacity
               onPress={() => goToStep(1)}
@@ -459,7 +469,8 @@ export default function OnboardingScreen() {
               )}
             </TouchableOpacity>
           </ScrollView>
-        )}
+        </KeyboardAvoidingView>
+      )}
       </Animated.View>
     </SafeAreaView>
   );

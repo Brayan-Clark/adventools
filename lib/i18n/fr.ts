@@ -156,7 +156,7 @@ export const fr: TranslationSchema = {
   new_theme: "Nouveau Thème",
   category_selection: "Catégorie (Sélect. ou Saisir)",
   new_category_placeholder: "Ou saisir une nouvelle catégorie...",
-  verse_ref_placeholder: "Ex: Matio 24:14",
+  verse_ref_placeholder: "Ex: Matthieu 24:14",
   verse_text_placeholder: "Contenu du verset...",
   theme_title_placeholder: "Titre du Thème",
   theme_verses_placeholder: "Versets (séparés par une virgule)",
@@ -168,10 +168,10 @@ export const fr: TranslationSchema = {
   // Verse of the Day
   meditation: "Méditation",
   meditation_intro: "Prenez un moment pour réfléchir à cette parole. Comment peut-elle s'appliquer à votre vie aujourd'hui ? Laissez cette vérité transformer votre cœur et vos pensées.",
-  verse_loading: "Chargement de la versé...",
+  verse_loading: "Chargement du verset...",
   verse_incomplete: "Référence incomplète.",
   verse_not_found_db: "Verset non trouvé dans la base de données.",
-  verse_of_day_footer: "Versé du Jour • Adventools",
+  verse_of_day_footer: "Verset du Jour • Adventools",
 
   // Study Resources Index
   study_resources: "Ressources et listes d'étude",
@@ -191,13 +191,13 @@ export const fr: TranslationSchema = {
   history_cleared: "Historique effacé",
   modify_name: "Modifier votre nom",
   your_name: "Votre nom",
-  select_class_ss: "Safidio ny kilasinao amin'ny Sekoly Sabata",
+  select_class_ss: "Sélectionnez votre classe d'école du sabbat",
   select_church_depts: "Sélectionnez vos activités à l'église",
-  import_file_selection: "Safidio izay tianao halaina ao anatin'ilay rakitra",
-  items_to_import: "singa ho hafarana",
-  no_category_selected: "Tsy misy sokajy voafidy.",
-  import_success: "Tontolo soa aman-tsara ny fanafarana ny fanovana.",
-  import_error: "Tsy tontolo ny fanafarana.",
+  import_file_selection: "Choisissez ce que vous voulez importer du fichier",
+  items_to_import: "éléments à importer",
+  no_category_selected: "Aucune catégorie sélectionnée.",
+  import_success: "Importation des modifications réussie.",
+  import_error: "Échec de l'importation.",
   check_connection_to_view: "Vérifiez votre connexion internet pour voir les détails de ce trimestre.",
   download_all: "Tout télécharger",
   delete_offline: "Supprimer les leçons",
@@ -314,4 +314,8 @@ export const fr: TranslationSchema = {
 
   // Apocrypha testament
   apocrypha_testament: "Apocryphes",
+  previous: "Précédent",
+  next: "Suivant",
+  end: "Fin",
+  bible_verse_info: "Verset {{current}} sur {{total}}",
 };

@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bold, BookOpen, Check, Code, Edit, Folder, FolderPlus, Heading, Highlighter, Italic, List, Plus, Quote, Search, Share2, StickyNote, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -58,10 +58,23 @@ export default function Notes() {
 
   const textInputRef = React.useRef<TextInput>(null);
   const router = useRouter();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const { settings: globalSettings } = useSettings();
   const params = useLocalSearchParams();
 
-  useEffect(() => { loadNotes(); loadFolders(); }, []);
+  useEffect(() => {
+    loadNotes(); loadFolders();
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (params.noteId && notes.length > 0) {
@@ -321,34 +334,42 @@ export default function Notes() {
       </ScrollView>
 
       {/* MODAL EDITEUR */}
-      <Modal visible={!!editingNote} animationType="slide">
+      <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent={true}>
         <SafeAreaView className="flex-1 bg-[#0d1117]">
-          {/* Header Editeur */}
-          <View className="flex-row justify-between items-center px-6 py-4 border-b border-white/5 bg-[#0d1117]">
-            <TouchableOpacity onPress={() => { if (editingNote) autoSave(editingNote); setEditingNote(null); }} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
-              <X size={20} color="#94a3b8" />
-            </TouchableOpacity>
-            <View className="flex-row items-center gap-2">
-              <TouchableOpacity onPress={() => shareNote(editingNote!)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
-                <Share2 size={18} color="#8b949e" />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            className="flex-1">
+            <View className="flex-1 bg-[#0d1117]">
+            {/* Header Editeur */}
+            <View className="flex-row justify-between items-center px-6 py-4 border-b border-white/5 bg-[#0d1117]">
+              <TouchableOpacity onPress={() => { if (editingNote) autoSave(editingNote); setEditingNote(null); }} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
+                <X size={20} color="#94a3b8" />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={togglePreview}
-                className={cn(
-                  "px-5 py-2.5 rounded-2xl flex-row items-center gap-2 border-2 transition-all",
-                  isPreviewMode ? "bg-white/5 border-white/10" : "bg-primary/20 border-primary"
-                )}
-              >
-                {isPreviewMode ? <Edit size={16} color="white" /> : <Check size={16} color="#3b82f6" />}
-                <Text className={cn("text-xs font-bold uppercase tracking-tight", isPreviewMode ? "text-white" : "text-primary")}>
-                  {isPreviewMode ? t('edit') : t('finish')}
-                </Text>
-              </TouchableOpacity>
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity onPress={() => shareNote(editingNote!)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
+                  <Share2 size={18} color="#8b949e" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={togglePreview}
+                  className={cn(
+                    "px-5 py-2.5 rounded-2xl flex-row items-center gap-2 border-2 transition-all",
+                    isPreviewMode ? "bg-white/5 border-white/10" : "bg-primary/20 border-primary"
+                  )}
+                >
+                  {isPreviewMode ? <Edit size={16} color="white" /> : <Check size={16} color="#3b82f6" />}
+                  <Text className={cn("text-xs font-bold uppercase tracking-tight", isPreviewMode ? "text-white" : "text-primary")}>
+                    {isPreviewMode ? t('edit') : t('finish')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+            <ScrollView
+              className="flex-1 px-6 pt-6"
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+
               {editingNote && (
                 <>
                   {/* SÉLECTEUR DE DOSSIER DANS L'ÉDITEUR */}
@@ -435,8 +456,8 @@ export default function Notes() {
                       textAlignVertical="top"
                       placeholder={t('note_content_placeholder')}
                       placeholderTextColor="#475569"
-                      className="text-lg text-slate-200 leading-7 pb-40 min-h-[300px]"
-                      style={{ fontFamily: 'Lexend_400Regular' }}
+                      className="text-lg text-slate-200 leading-7 min-h-[400px]"
+                      style={{ fontFamily: 'Lexend_400Regular', paddingBottom: 150 }}
                       value={editingNote.content}
                       onChangeText={t => setEditingNote({ ...editingNote, content: t })}
                       onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
@@ -485,9 +506,11 @@ export default function Notes() {
                 </ScrollView>
               </View>
             )}
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
+            <View style={{ height: Platform.OS === 'android' ? (keyboardHeight > 0 ? keyboardHeight : 10) : (keyboardHeight > 0 ? 0 : 20) }} />
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
 
       {/* MODAL CRÉATION DOSSIER */}
       <Modal visible={showFolderModal} animationType="fade" transparent>

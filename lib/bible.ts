@@ -20,6 +20,26 @@ export const DEFAULT_BIBLE: BibleConfig = {
   isDefault: true
 };
 
+/**
+ * Maps app languages to their preferred default Bible versions
+ */
+export const LANGUAGE_TO_BIBLE_MAP: Record<string, string> = {
+  'Français': 'SBF_SQLite3',
+  'English': 'Niobe_SQLite3',
+  'Malagasy': 'MG',
+  'Español': 'NBD_08_SQLite3',
+  'Português': 'ARAi__SQLite3',
+  'Deutsch': 'ESS_SQLite3',
+  'Italian': 'TILC_85_SQLite3',
+};
+
+/**
+ * Gets the best default Bible ID for a given app language.
+ */
+export function getDefaultBibleForLanguage(lang: string): string {
+  return LANGUAGE_TO_BIBLE_MAP[lang] || DEFAULT_BIBLE.id;
+}
+
 // Built-in assets mapping
 export const DB_SOURCES: Record<string, any> = {
   "MG65_v2.db": require("../assets/bibles/MG65_v2.db"),
@@ -299,8 +319,9 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
     const versesRes: any[] = await db.getAllAsync(query, params);
     if (versesRes && versesRes.length > 0) {
       const text = versesRes.map(v => versesRes.length > 1 ? `${v.a_and}. ${v.a_text}` : v.a_text).join('\n\n');
+      const textWithBreaks = text.replace(/<br\/?>/gi, '\n');
       return {
-        text: stripNotes ? text.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : text,
+        text: stripNotes ? textWithBreaks.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : textWithBreaks,
         bookId: bookRes.id,
         bookName: bookRes.name,
         bibleId: config.id,
@@ -335,8 +356,9 @@ export async function fetchVerseContentById(lang: string, bookId: number, chapte
     const result: any = await db.getFirstAsync(verseQuery, [bookId, parseInt(chapter), parseInt(verse)]);
     if (!result) return null;
 
+    const resultWithBreaks = (result.text || '').replace(/<br\/?>/gi, '\n');
     return {
-      text: stripNotes ? result.text.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : result.text,
+      text: stripNotes ? resultWithBreaks.replace(/<[^>]*>[\s\S]*?<\/[^>]*>|<[^>]*\/>/gi, '').replace(/<[^>]+>/gi, '').trim() : resultWithBreaks,
       book: result.book,
       bookId: bookId,
       chapter: parseInt(chapter),

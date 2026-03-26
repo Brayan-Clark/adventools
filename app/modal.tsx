@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, KeyboardAvoidingView, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -555,32 +555,34 @@ export default function Settings() {
       </ScrollView>
 
       {/* Modals are unchanged but kept for functionality */}
-      <Modal visible={isNameEditVisible} transparent animationType="fade">
-        <View className="flex-1 bg-black/60 justify-center px-6">
-          <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
-            <Text className="text-white font-bold text-lg mb-4" style={{ fontFamily: 'Lexend_700Bold' }}>{t('modify_name')}</Text>
-            <TextInput
-              className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white mb-6"
-              value={tempName}
-              onChangeText={setTempName}
-              placeholder={t('your_name')}
-              placeholderTextColor="#64748b"
-              autoFocus
-            />
-            <View className="flex-row gap-3">
-              <TouchableOpacity onPress={() => setIsNameEditVisible(false)} className="flex-1 p-4 rounded-2xl border border-slate-700 items-center">
-                <Text className="text-slate-400 font-medium">{t('cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={saveName} className="flex-1 p-4 rounded-2xl bg-primary items-center">
-                <Text className="text-white font-bold">{t('save')}</Text>
-              </TouchableOpacity>
+      <Modal visible={isNameEditVisible} transparent animationType="fade" statusBarTranslucent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+          <View className="flex-1 bg-black/60 justify-center px-6">
+            <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
+              <Text className="text-white font-bold text-lg mb-4" style={{ fontFamily: 'Lexend_700Bold' }}>{t('modify_name')}</Text>
+              <TextInput
+                className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white mb-6"
+                value={tempName}
+                onChangeText={setTempName}
+                placeholder={t('your_name')}
+                placeholderTextColor="#64748b"
+                autoFocus
+              />
+              <View className="flex-row gap-3">
+                <TouchableOpacity onPress={() => setIsNameEditVisible(false)} className="flex-1 p-4 rounded-2xl border border-slate-700 items-center">
+                  <Text className="text-slate-400 font-medium">{t('cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveName} className="flex-1 p-4 rounded-2xl bg-primary items-center">
+                  <Text className="text-white font-bold">{t('save')}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* EDS Selection Modal */}
-      <Modal visible={isEDSModalVisible} transparent animationType="slide">
+      <Modal visible={isEDSModalVisible} transparent animationType="slide" statusBarTranslucent={true}>
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%] border-t border-slate-800">
             <View className="flex-row justify-between items-center mb-6 px-2">

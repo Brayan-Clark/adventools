@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FormattedBibleText } from '@/components/bible/formatted-text';
 import { fetchVerseContentById } from '@/lib/bible';
 
 export default function VerDuJourPage() {
@@ -40,7 +41,8 @@ export default function VerDuJourPage() {
           globalSettings.bibleVersion,
           randomReference.bookId,
           randomReference.chapter.toString(),
-          randomReference.verse.toString()
+          randomReference.verse.toString(),
+          false
         );
 
         if (verseContent) {
@@ -85,7 +87,8 @@ export default function VerDuJourPage() {
           globalSettings.bibleVersion,
           ref.bookId,
           ref.chapter.toString(),
-          ref.verse.toString()
+          ref.verse.toString(),
+          false
         );
 
         if (verseContent) {
@@ -314,16 +317,16 @@ export default function VerDuJourPage() {
             {/* Verse Text */}
             {currentReference ? (
               <View>
-                <Text
-                  className="text-white text-center leading-8 mb-6"
-                  style={{
-                    fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
-                    fontSize: 20 * (globalSettings.fontSize / 18),
-                    lineHeight: 32
-                  }}
-                >
-                  {verseText}
-                </Text>
+                  <FormattedBibleText 
+                    text={verseText}
+                    baseFontSize={20 * (globalSettings.fontSize / 18)}
+                    baseColor="white"
+                    style={{
+                      fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
+                      textAlign: 'center',
+                      lineHeight: 32
+                    }}
+                  />
 
                 {/* Reference */}
                 <View className="flex-row items-center">

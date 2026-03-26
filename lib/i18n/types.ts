@@ -314,6 +314,10 @@ export interface TranslationSchema {
 
   // Apocrypha testament
   apocrypha_testament: string;
+  previous: string;
+  next: string;
+  end: string;
+  bible_verse_info: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

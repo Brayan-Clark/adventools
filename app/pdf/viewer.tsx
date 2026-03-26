@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlertCircle, ArrowLeft, Bookmark, ChevronRight, FileText, Hash, Menu, Save, Search, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Conditional import to avoid crash on Expo Go immediate import
@@ -322,105 +322,109 @@ export default function PdfViewer() {
       </Modal>
 
       {/* Note Edit Modal */}
-      <Modal visible={showNoteModal} animationType="fade" transparent>
-        <View className="flex-1 bg-black/70 justify-center px-6">
-          <View className="bg-slate-900 rounded-3xl p-6 border border-slate-800">
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-white font-bold text-lg">Note - Page {currentPage}</Text>
-              <TouchableOpacity onPress={() => setShowNoteModal(false)}>
-                <X size={20} color="#64748b" />
-              </TouchableOpacity>
-            </View>
+      <Modal visible={showNoteModal} animationType="fade" transparent statusBarTranslucent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+          <View className="flex-1 bg-black/70 justify-center px-6">
+            <View className="bg-slate-900 rounded-3xl p-6 border border-slate-800">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-white font-bold text-lg">Note - Page {currentPage}</Text>
+                <TouchableOpacity onPress={() => setShowNoteModal(false)}>
+                  <X size={20} color="#64748b" />
+                </TouchableOpacity>
+              </View>
 
-            <TextInput
-              multiline
-              autoFocus
-              className="bg-slate-800/50 text-white p-4 rounded-2xl mb-6 text-base leading-6 border border-slate-700"
-              style={{ minHeight: 150, textAlignVertical: 'top' }}
-              value={currentNoteText}
-              onChangeText={setCurrentNoteText}
-              placeholder="Écrivez votre commentaire ici..."
-              placeholderTextColor="#475569"
-            />
+              <TextInput
+                multiline
+                autoFocus
+                className="bg-slate-800/50 text-white p-4 rounded-2xl mb-6 text-base leading-6 border border-slate-700"
+                style={{ minHeight: 150, textAlignVertical: 'top' }}
+                value={currentNoteText}
+                onChangeText={setCurrentNoteText}
+                placeholder="Écrivez votre commentaire ici..."
+                placeholderTextColor="#475569"
+              />
 
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setShowNoteModal(false)}
-                className="flex-1 py-4 items-center bg-slate-800 rounded-2xl"
-              >
-                <Text className="text-slate-400 font-bold">Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={saveNote}
-                className="flex-[2] py-4 items-center bg-green-600 rounded-2xl flex-row justify-center"
-              >
-                <Save size={18} color="white" className="mr-2" />
-                <Text className="text-white font-bold">Enregistrer</Text>
-              </TouchableOpacity>
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={() => setShowNoteModal(false)}
+                  className="flex-1 py-4 items-center bg-slate-800 rounded-2xl"
+                >
+                  <Text className="text-slate-400 font-bold">Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={saveNote}
+                  className="flex-[2] py-4 items-center bg-green-600 rounded-2xl flex-row justify-center"
+                >
+                  <Save size={18} color="white" className="mr-2" />
+                  <Text className="text-white font-bold">Enregistrer</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Page Picker Modal - Premium Search Experience */}
-      <Modal visible={showPagePicker} transparent animationType="fade">
-        <View className="flex-1 bg-black/80 justify-center items-center px-8">
-          <View className="bg-slate-900 rounded-[40px] p-8 w-full max-w-sm border border-slate-700 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-8">
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
-                  <Hash size={20} color="#3b82f6" />
+      <Modal visible={showPagePicker} transparent animationType="fade" statusBarTranslucent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+          <View className="flex-1 bg-black/80 justify-center items-center px-8">
+            <View className="bg-slate-900 rounded-[40px] p-8 w-full max-w-sm border border-slate-700 shadow-2xl">
+              <View className="flex-row justify-between items-center mb-8">
+                <View className="flex-row items-center">
+                  <View className="w-10 h-10 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                    <Hash size={20} color="#3b82f6" />
+                  </View>
+                  <Text className="text-xl font-bold text-white">Aller à la page</Text>
                 </View>
-                <Text className="text-xl font-bold text-white">Aller à la page</Text>
+                <TouchableOpacity
+                  onPress={() => setShowPagePicker(false)}
+                  className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center"
+                >
+                  <X size={20} color="#64748b" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => setShowPagePicker(false)}
-                className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center"
-              >
-                <X size={20} color="#64748b" />
-              </TouchableOpacity>
-            </View>
 
-            <View className="mb-6">
-              <TextInput
-                placeholder="Numéro..."
-                placeholderTextColor="#475569"
-                className="bg-slate-800/50 border-2 border-slate-700 focus:border-blue-500 rounded-3xl px-6 py-6 text-white text-4xl font-bold text-center mb-2"
-                style={{ fontFamily: 'Lexend_700Bold' }}
-                value={pagePickerValue}
-                onChangeText={setPagePickerValue}
-                keyboardType="number-pad"
-                autoFocus
-                onSubmitEditing={() => {
+              <View className="mb-6">
+                <TextInput
+                  placeholder="Numéro..."
+                  placeholderTextColor="#475569"
+                  className="bg-slate-800/50 border-2 border-slate-700 focus:border-blue-500 rounded-3xl px-6 py-6 text-white text-4xl font-bold text-center mb-2"
+                  style={{ fontFamily: 'Lexend_700Bold' }}
+                  value={pagePickerValue}
+                  onChangeText={setPagePickerValue}
+                  keyboardType="number-pad"
+                  autoFocus
+                  onSubmitEditing={() => {
+                    const page = parseInt(pagePickerValue);
+                    if (page >= 1 && page <= totalPages) {
+                      jumpToPage(page);
+                      setShowPagePicker(false);
+                    } else {
+                      Alert.alert("Hors limites", `Veuillez entrer une page entre 1 et ${totalPages}`);
+                    }
+                  }}
+                />
+                <Text className="text-center text-slate-500 font-medium">Sur un total de {totalPages} pages</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
                   const page = parseInt(pagePickerValue);
                   if (page >= 1 && page <= totalPages) {
                     jumpToPage(page);
                     setShowPagePicker(false);
                   } else {
-                    Alert.alert("Hors limites", `Veuillez entrer une page entre 1 et ${totalPages}`);
+                    Alert.alert("Invalide", `La page doit être comprise entre 1 et ${totalPages}`);
                   }
                 }}
-              />
-              <Text className="text-center text-slate-500 font-medium">Sur un total de {totalPages} pages</Text>
+                className="bg-blue-600 py-5 rounded-3xl items-center shadow-lg shadow-blue-600/30 flex-row justify-center"
+              >
+                <Text className="text-white font-bold text-lg mr-2">Valider</Text>
+                <ChevronRight size={20} color="white" />
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                const page = parseInt(pagePickerValue);
-                if (page >= 1 && page <= totalPages) {
-                  jumpToPage(page);
-                  setShowPagePicker(false);
-                } else {
-                  Alert.alert("Invalide", `La page doit être comprise entre 1 et ${totalPages}`);
-                }
-              }}
-              className="bg-blue-600 py-5 rounded-3xl items-center shadow-lg shadow-blue-600/30 flex-row justify-center"
-            >
-              <Text className="text-white font-bold text-lg mr-2">Valider</Text>
-              <ChevronRight size={20} color="white" />
-            </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

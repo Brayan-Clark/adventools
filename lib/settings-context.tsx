@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getDefaultBibleForLanguage } from './bible';
 
 type AppSettings = {
   fontFamily: string;
@@ -63,7 +64,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = async (updates: Partial<AppSettings>) => {
     try {
-      const newSettings = { ...settings, ...updates };
+      // Automatic detection: if language changes, match the bible version
+      const finalUpdates = { ...updates };
+      if (updates.language && !updates.bibleVersion) {
+        finalUpdates.bibleVersion = getDefaultBibleForLanguage(updates.language);
+      }
+      const newSettings = { ...settings, ...finalUpdates };
       setSettings(newSettings);
       await AsyncStorage.setItem('app_global_settings', JSON.stringify(newSettings));
     } catch (e) {

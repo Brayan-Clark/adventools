@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, Copy, Pencil, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface VerseEntry {
@@ -82,9 +82,20 @@ export default function EtudeSerie() {
   const [verseRef, setVerseRef] = useState("");
   const [verseText, setVerseText] = useState("");
   const [editingVerseIdx, setEditingVerseIdx] = useState<number | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     loadStudies();
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const loadStudies = async () => {
@@ -276,61 +287,68 @@ export default function EtudeSerie() {
       </ScrollView>
 
       {/* Modal for adding/editing */}
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10">
+      <Modal visible={isModalVisible} animationType="slide" transparent statusBarTranslucent={true}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
+          className="flex-1 bg-black/60 justify-end"
+        >
+          <View className="bg-slate-900 rounded-t-[40px] p-8 pb-12 border-t border-white/10 shadow-2xl">
             <View className="flex-row justify-between items-center mb-8">
               <Text className="text-xl font-bold text-white">{editingVerseIdx !== null ? t('edit_verse') : t('add_verse')}</Text>
               <TouchableOpacity onPress={() => { setIsModalVisible(false); resetForm(); }}>
                 <X size={24} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('category_selection')}</Text>
-            <View className="flex-row flex-wrap gap-2 mb-4">
-              {CATEGORIES_LIST.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setCategoryName(cat)}
-                  className={`px-3 py-2 rounded-xl border ${categoryName === cat ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/10'}`}
-                >
-                  <Text className={`text-[10px] ${categoryName === cat ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
-                    {cat.split(' (')[0]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
-              placeholder={t('new_category_placeholder')}
-              placeholderTextColor="#475569"
-              value={categoryName}
-              onChangeText={setCategoryName}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+              <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('category_selection')}</Text>
+              <View className="flex-row flex-wrap gap-2 mb-4">
+                {CATEGORIES_LIST.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setCategoryName(cat)}
+                    className={`px-3 py-2 rounded-xl border ${categoryName === cat ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/10'}`}
+                  >
+                    <Text className={`text-[10px] ${categoryName === cat ? 'text-blue-400 font-bold' : 'text-slate-400'}`}>
+                      {cat.split(' (')[0]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
+                placeholder={t('new_category_placeholder')}
+                placeholderTextColor="#475569"
+                value={categoryName}
+                onChangeText={setCategoryName}
+              />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('ref_copied')}</Text>
-            <TextInput
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
-              placeholder={t('verse_ref_placeholder')}
-              placeholderTextColor="#475569"
-              value={verseRef}
-              onChangeText={setVerseRef}
-            />
+              <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('ref_copied')}</Text>
+              <TextInput
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-6"
+                placeholder={t('verse_ref_placeholder')}
+                placeholderTextColor="#475569"
+                value={verseRef}
+                onChangeText={setVerseRef}
+              />
 
-            <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('verse_text_placeholder')}</Text>
-            <TextInput
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 min-h-[80px]"
-              placeholder={t('verse_text_placeholder')}
-              placeholderTextColor="#475569"
-              multiline
-              value={verseText}
-              onChangeText={setVerseText}
-            />
+              <Text className="text-slate-500 text-[10px] font-bold uppercase mb-2">{t('verse_text_placeholder')}</Text>
+              <TextInput
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white mb-8 min-h-[80px]"
+                placeholder={t('verse_text_placeholder')}
+                placeholderTextColor="#475569"
+                multiline
+                value={verseText}
+                onChangeText={setVerseText}
+              />
 
-            <TouchableOpacity onPress={saveVerse} className="bg-blue-600 py-5 rounded-2xl items-center">
-              <Text className="text-white font-bold text-lg">{t('save')}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={saveVerse} className="bg-blue-600 py-5 rounded-2xl items-center mb-10">
+                <Text className="text-white font-bold text-lg">{t('save')}</Text>
+              </TouchableOpacity>
+              <View style={{ height: keyboardHeight / (Platform.OS === 'android' ? 1.5 : 1) }} />
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

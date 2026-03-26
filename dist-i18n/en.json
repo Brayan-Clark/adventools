@@ -1,7 +1,4 @@
-{ TranslationSchema } from "./types";
-
-export const "en": TranslationSchema = {
-  
+{
   "settings": "Settings",
   "ok": "OK",
   "cancel": "Cancel",
@@ -14,8 +11,6 @@ export const "en": TranslationSchema = {
   "info": "Info",
   "copy": "Copy",
   "success": "Success",
-
-  
   "home": "Home",
   "welcome": "Welcome",
   "verse_of_the_day": "Verse of the Day",
@@ -42,27 +37,19 @@ export const "en": TranslationSchema = {
   "new_testament_malagasy": "Testamenta Vaovao",
   "deuterocanonical_other": "Deuterocanonical / Others",
   "other_testament": "Other",
-
-  
   "greeting_morning": "Good Morning ☀️",
   "greeting_afternoon": "Good Afternoon 🌤️",
   "greeting_evening": "Good Evening 🌙",
   "greeting_generic": "Hello 👋",
-
-  
   "bible_subtitle": "Holy Scriptures",
   "hymns_subtitle": "Songs of praise",
   "pdf_subtitle": "PDF Documents",
   "notes_subtitle": "Reflections & Notes",
   "beliefs_subtitle": "28 Foundations",
   "useful_subtitle": "Series & Themes",
-
-  
   "search_placeholder": "Number or title...",
   "results_count": "results found",
   "no_results": "No results found",
-
-  
   "my_hymnals": "My Hymnals",
   "manage_local_songs": "Manage your local songs",
   "store": "Store",
@@ -89,8 +76,6 @@ export const "en": TranslationSchema = {
   "author": "Author",
   "save_corrections": "Save corrections",
   "exported_to_clipboard": "Hymn copied to clipboard.",
-
-  
   "library": "Library",
   "manage_study_resources": "Manage your study resources",
   "recents": "Recents",
@@ -109,8 +94,6 @@ export const "en": TranslationSchema = {
   "keep_my_notes": "Keep my notes",
   "delete_doc_success": "Document and data deleted.",
   "delete_doc_error": "Error during deletion.",
-
-  
   "my_journal": "My Journal",
   "search_note_placeholder": "Search for a note...",
   "all_notes": "ALL",
@@ -131,8 +114,6 @@ export const "en": TranslationSchema = {
   "delete_folder_confirm": "Do you want to delete the folder",
   "folder_exists_error": "This folder already exists",
   "verse_not_found_in": "Not found in",
-
-  
   "useful": "Useful",
   "more_apps": "More Apps",
   "recent_read": "Recently read",
@@ -164,22 +145,16 @@ export const "en": TranslationSchema = {
   "category_biblical_theme": "Biblical Theme",
   "categories": "Categories",
   "new_verse": "New Verse",
-
-  
   "meditation": "Meditation",
   "meditation_intro": "Take a moment to reflect on this word. How can it apply to your life today? Let this truth transform your heart and thoughts.",
   "verse_loading": "Loading the verse...",
   "verse_incomplete": "Incomplete reference.",
   "verse_not_found_db": "Verse not found in the database.",
   "verse_of_day_footer": "Verse of the Day • Adventools",
-
-  
   "study_resources": "Study resources and lists",
   "personal_notes": "Personal Notes",
   "study_intro": "Find here the themes and verses grouped for your moments of study and sharing.",
   "folders_header": "Folders",
-
-  
   "sabbath_school_lessons": "Sabbath School Lessons",
   "daily_study": "Daily study",
   "study_series_subtitle": "Preaching, Prosperity, etc.",
@@ -212,8 +187,6 @@ export const "en": TranslationSchema = {
   "program_of_study": "Study program",
   "source_adventools": ""Source": Adventools",
   "no_cache_available": "Unable to load data and no cache available.",
-
-  
   "ss_cat_cradle_roll": "Cradle Roll (0-12 months)",
   "ss_cat_kindergarten": "Kindergarten (1-3 years)",
   "ss_cat_primary": "Primary (4-6 years)",
@@ -223,8 +196,6 @@ export const "en": TranslationSchema = {
   "ss_cat_real_time": "Real Time (15-18 years)",
   "ss_cat_young_adult": "Young Adult (19-35 years)",
   "ss_cat_adult": "Adult Lesson (+ 35 years)",
-
-  
   "tab_general": "General",
   "tab_reading": "Reading",
   "tab_system": "System",
