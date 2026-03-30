@@ -570,7 +570,7 @@
       ]
     },
     {
-      "id": "esp_039",
+      "id": "esp_041",
       "title": "ANY AMPARANY ANY",
       "fileName": "ANY AMPARANY ANY.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -582,7 +582,7 @@
       ]
     },
     {
-      "id": "esp_040",
+      "id": "esp_042",
       "title": "Fanompoana kristiana (service chretien)",
       "fileName": "FANOMPOANA KRISTIANA.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -594,7 +594,7 @@
       ]
     },
     {
-      "id": "esp_041",
+      "id": "esp_043",
       "title": "Hafatra Hoanny Tanora",
       "fileName": "HAFATRA-HOANNY-TANORA.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -606,7 +606,7 @@
       ]
     },
     {
-      "id": "esp_042",
+      "id": "esp_044",
       "title": "HERY MIFANANDRINA",
       "fileName": "HERY MIFANANDRINA.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -618,7 +618,7 @@
       ]
     },
     {
-      "id": "esp_043",
+      "id": "esp_045",
       "title": "VAVOLOMBELONA MAHERY",
       "fileName": "Vavolombelona-mahery.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -630,7 +630,7 @@
       ]
     },
     {
-      "id": "esp_044",
+      "id": "esp_046",
       "title": "Fiomanana ho an ny fotoantsarotra farany",
       "fileName": "Fiomanana-ho-an_ny-fotoantsarotra-farany.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -1613,6 +1613,30 @@
       "isAsset": false,
       "tags": [
         "Musique"
+      ]
+    },
+    {
+      "id": "aut_002",
+      "title": "Fanomanana Toriteny - IICM",
+      "fileName": "FANOMANANA TORITENY - IICM.pptm",
+      "categoryId": "autres",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/autres/FANOMANANA%20TORITENY%20-%20IICM.pptm",
+      "size": "258.5 KB",
+      "isAsset": false,
+      "tags": [
+        "Musique"
+      ]
+    },
+    {
+      "id": "aut_003",
+      "title": "Sekoly Sabata Velona",
+      "fileName": "SEKOLY SABATA VELONA.pptx",
+      "categoryId": "autres",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/autres/SEKOLY%20SABATA%20VELONA.pptx",
+      "size": "7.4 MB",
+      "isAsset": false,
+      "tags": [
+        "École du Sabbat"
       ]
     },
     {
