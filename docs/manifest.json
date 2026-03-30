@@ -547,6 +547,30 @@
     },
     {
       "id": "esp_039",
+      "title": "Church Assurance",
+      "fileName": "Church assurance.pdf",
+      "categoryId": "esprit_prophetie_fr",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Church%20assurance.pdf",
+      "size": "72.8 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "esp_040",
+      "title": "Histoire de la Redemption",
+      "fileName": "Histoire de la redemption.pdf",
+      "categoryId": "esprit_prophetie_fr",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Histoire%20de%20la%20redemption.pdf",
+      "size": "1.0 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "esp_039",
       "title": "ANY AMPARANY ANY",
       "fileName": "ANY AMPARANY ANY.pdf",
       "categoryId": "esprit_prophetie_mg",
@@ -606,6 +630,18 @@
       ]
     },
     {
+      "id": "esp_044",
+      "title": "Fiomanana ho an ny fotoantsarotra farany",
+      "fileName": "Fiomanana-ho-an_ny-fotoantsarotra-farany.pdf",
+      "categoryId": "esprit_prophetie_mg",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Fiomanana-ho-an_ny-fotoantsarotra-farany.pdf",
+      "size": "6.3 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
       "id": "etb_002",
       "title": "BOKY TOMOERA",
       "fileName": "BOKY TOMOERA.pdf",
@@ -653,6 +689,18 @@
         "Ancien",
         "Pasteur",
         "Jeunesse (AJA)"
+      ]
+    },
+    {
+      "id": "etb_006",
+      "title": "FAQ Daniel et Apocalypse",
+      "fileName": "faq-daniel-et-apocalypse.pdf",
+      "categoryId": "etudes_bibliques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/faq-daniel-et-apocalypse.pdf",
+      "size": "6.5 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
       ]
     },
     {
@@ -1430,6 +1478,30 @@
       "categoryId": "dossiers_JA",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/agroforestiers.pdf",
       "size": "3.0 MB",
+      "isAsset": false,
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
+    },
+    {
+      "id": "aja_066",
+      "title": "Fianarana Baiboly 1",
+      "fileName": "FIANARANA-BAIBOLY-1.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIANARANA-BAIBOLY-1.pdf",
+      "size": "450.0 KB",
+      "isAsset": false,
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
+    },
+    {
+      "id": "aja_067",
+      "title": "Fiche Explo et Avent",
+      "fileName": "Fiche-explo-et-Avent.pdf",
+      "categoryId": "dossiers_JA",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Fiche-explo-et-Avent.pdf",
+      "size": "733.1 KB",
       "isAsset": false,
       "tags": [
         "Jeunesse (AJA)"
