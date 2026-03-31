@@ -287,7 +287,7 @@
   "bible_audio": "Baiboly Audio",
   "bible_studies": "Fandalinana Baiboly",
   "hymns_audio": "Fihirana Audio",
-  "fiambenana_maraina": "Fiambenana Maraina",
+  "fiambenana_maraina": "Mofon'aina",
   "play": "Handefa",
   "pause": "Ajanona",
   "delete_audio_confirm": "Tianao ho fafana ve ity rakitra audio ity?",
@@ -297,5 +297,10 @@
   "search_series": "Hitady andiany...",
   "no_episodes_found": "Tsy misy andiany hita.",
   "old_testament": "Testamenta Taloha",
-  "new_testament": "Testamenta Vaovao"
+  "new_testament": "Testamenta Vaovao",
+  "podcasts_streaming": "Podcasts & Streaming",
+  "all_lessons_in_theme": "Ireo lesona sy fandalinana rehetra ao anatin'ity lohahevitra ity.",
+  "downloading": "Downloading",
+  "stored": "Tehirizina",
+  "quarter_number": "Telovolana faha"
 }

@@ -297,5 +297,10 @@
   "search_series": "Search for a series...",
   "no_episodes_found": "No episodes found.",
   "old_testament": "Old Testament",
-  "new_testament": "New Testament"
+  "new_testament": "New Testament",
+  "podcasts_streaming": "Podcasts & Streaming",
+  "all_lessons_in_theme": "All lessons and studies in this theme.",
+  "downloading": "Downloading",
+  "stored": "Stored",
+  "quarter_number": "Quarter"
 }

@@ -286,8 +286,8 @@
   "audio_praise": "Audio & Louange",
   "bible_audio": "Bible Audio",
   "bible_studies": "Études Bibliques",
-  "hymns_audio": "Hymnes Audio",
-  "fiambenana_maraina": "Veille Matinale",
+  "hymns_audio": "Cantiques Audio",
+  "fiambenana_maraina": "Pain de Vie",
   "play": "Lire",
   "pause": "Pause",
   "delete_audio_confirm": "Voulez-vous supprimer ce fichier audio ?",
@@ -297,5 +297,10 @@
   "search_series": "Rechercher une série...",
   "no_episodes_found": "Aucun épisode trouvé.",
   "old_testament": "Ancien Testament",
-  "new_testament": "Nouveau Testament"
+  "new_testament": "Nouveau Testament",
+  "podcasts_streaming": "Podcasts & Direct",
+  "all_lessons_in_theme": "Toutes les leçons et études de ce thème.",
+  "downloading": "Downloading",
+  "stored": "Enregistré",
+  "quarter_number": "Trimestre"
 }
