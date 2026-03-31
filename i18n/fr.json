@@ -282,5 +282,20 @@
   "previous": "Précédent",
   "next": "Suivant",
   "end": "Fin",
-  "bible_verse_info": "Verset {{current}} sur {{total}}"
+  "bible_verse_info": "Verset {{current}} sur {{total}}",
+  "audio_praise": "Audio & Louange",
+  "bible_audio": "Bible Audio",
+  "bible_studies": "Études Bibliques",
+  "hymns_audio": "Hymnes Audio",
+  "fiambenana_maraina": "Veille Matinale",
+  "play": "Lire",
+  "pause": "Pause",
+  "delete_audio_confirm": "Voulez-vous supprimer ce fichier audio ?",
+  "chapters": "Chapitres",
+  "episodes": "Épisodes",
+  "file_size": "Taille",
+  "search_series": "Rechercher une série...",
+  "no_episodes_found": "Aucun épisode trouvé.",
+  "old_testament": "Ancien Testament",
+  "new_testament": "Nouveau Testament"
 }

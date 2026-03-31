@@ -282,5 +282,20 @@
   "previous": "Teo aloha",
   "next": "Manaraka",
   "end": "Tapitra",
-  "bible_verse_info": "Andininy {{current}} amin'ny {{total}}"
+  "bible_verse_info": "Andininy {{current}} amin'ny {{total}}",
+  "audio_praise": "Audio & Fiderana",
+  "bible_audio": "Baiboly Audio",
+  "bible_studies": "Fandalinana Baiboly",
+  "hymns_audio": "Fihirana Audio",
+  "fiambenana_maraina": "Fiambenana Maraina",
+  "play": "Handefa",
+  "pause": "Ajanona",
+  "delete_audio_confirm": "Tianao ho fafana ve ity rakitra audio ity?",
+  "chapters": "Toko",
+  "episodes": "Andiany",
+  "file_size": "Haben'ny rakitra",
+  "search_series": "Hitady andiany...",
+  "no_episodes_found": "Tsy misy andiany hita.",
+  "old_testament": "Testamenta Taloha",
+  "new_testament": "Testamenta Vaovao"
 }
