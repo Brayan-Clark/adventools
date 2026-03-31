@@ -1,0 +1,72 @@
+[
+  {
+    "id": "mandehana-am-pinoana",
+    "title": "Mandehana am-pinoana",
+    "author": "Pasteur Samoely Lala James",
+    "count": 35,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/mandehana-am-pinoana.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "an-dalana-hody",
+    "title": "An-dalana Hody",
+    "author": "Pasteur Andriamparany Rabelohataona",
+    "count": 14,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/an-dalana-hody.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "tia-ahy-andriamanitra",
+    "title": "Tia ahy Andriamanitra",
+    "author": "Jasmina Lovanantenaina",
+    "count": 28,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/tia-ahy-andriamanitra.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "apokalypsy",
+    "title": "Apokalypsy",
+    "author": "Pasteur Narison Gilbert Razafinjatovo",
+    "count": 30,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/apokalypsy.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "ilay-fiaingana-vaovao",
+    "title": "Ilay Fiaingana Vaovao",
+    "author": "Pasteur Barry Joel",
+    "count": 14,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/ilay-fiaingana-vaovao.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "ankohonana-ho-any-an-danitra",
+    "title": "Ankohonana ho any an-danitra",
+    "author": "Mamitiana Razaka",
+    "count": 6,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/ankohonana-ho-any-an-danitra.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  },
+  {
+    "id": "ilay-fanantenana-lehibe",
+    "title": "Ilay Fanantenana Lehibe",
+    "author": "Pasteur Kida Tantely",
+    "count": 15,
+    "image": "https://www.fanantenanahoanao.org/uploads/podcasts/ilay-fanantenana-lehibe.jpg",
+    "defaultImage": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/etude-default.jpg",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10"
+  }
+]
