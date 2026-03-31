@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Sun, Headphones } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVerseContentById } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
+import { syncMofonaina, getMofonainaForDate, Mofonaina } from '@/lib/mofonaina';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 
@@ -18,10 +19,27 @@ export default function Home() {
   const [currentReference, setCurrentReference] = useState<VerseReference | null>(null);
   const [verseText, setVerseText] = useState<string>('');
   const [history, setHistory] = useState<any[]>([]);
+  const [mofonainaDaily, setMofonainaDaily] = useState<Mofonaina | null>(null);
 
   React.useEffect(() => {
     async function init() {
       try {
+        // Fetch Mofon'aina
+        try {
+          const mData = await getMofonainaForDate(new Date());
+          if (mData) {
+            setMofonainaDaily(mData);
+          } else {
+            const all = await syncMofonaina(false);
+            if (all.length > 0) {
+               const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
+               setMofonainaDaily(sorted[0]);
+            }
+          }
+        } catch (e) {
+          console.error("Error loading mofonaina:", e);
+        }
+
         // Obtenir une référence aléatoire depuis notre fichier
         const randomReference = getRandomVerseReference();
         setCurrentReference(randomReference);
@@ -202,6 +220,38 @@ export default function Home() {
           </View>
         </TouchableOpacity>
 
+        {/* Mofon'aina Daily Reading Card */}
+        {mofonainaDaily && (
+          <TouchableOpacity 
+            onPress={() => router.push('/mofonaina' as any)}
+            className="mb-10 bg-slate-900 rounded-[30px] border border-slate-800 shadow-xl overflow-hidden p-6"
+          >
+            <View className="flex-row items-center justify-between mb-4">
+               <View className="flex-row items-center">
+                 <View className="w-10 h-10 rounded-full bg-orange-500/20 items-center justify-center mr-3">
+                   <Sun size={18} color="#f97316" />
+                 </View>
+                 <View>
+                   <Text className="text-[10px] font-bold uppercase text-orange-500 tracking-widest leading-3" style={{ fontFamily: 'Lexend_700Bold' }}>{t('fiambenana_maraina')}</Text>
+                   <Text className="text-white font-bold text-base mt-1" style={{ fontFamily: 'Lexend_700Bold' }}>{mofonainaDaily.lohateny_andro}</Text>
+                 </View>
+               </View>
+               <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                 <ChevronRight size={16} color="#94a3b8" />
+               </View>
+            </View>
+            
+            <View className="bg-slate-800/50 rounded-2xl p-4">
+              <Text className="text-slate-300 italic text-sm mb-2 leading-6" numberOfLines={2} style={{ fontFamily: 'Lexend_400Regular' }}>
+                 "{mofonainaDaily.andininy_soratra_masina}"
+              </Text>
+              <Text className="text-orange-400 font-bold text-xs" style={{ fontFamily: 'Lexend_600SemiBold' }}>
+                 {mofonainaDaily.toerana_soratra_masina}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Feature Grid */}
         <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">{t('tools')}</Text>
         <View className="flex-row flex-wrap justify-between gap-y-5 mb-12">
@@ -241,11 +291,19 @@ export default function Home() {
             bgColor="bg-red-500/10"
           />
           <FeatureCard
+            href="/audio"
+            title="Audio"
+            subtitle={t("podcasts_streaming")}
+            icon={<Headphones color="#06b6d4" size={28} />}
+            bgColor="bg-cyan-500/10"
+          />
+          <FeatureCard
             href="/utiles"
             title={t('useful')}
             subtitle={t('useful_subtitle')}
             icon={<LayoutGrid color="#8b5cf6" size={28} />}
             bgColor="bg-violet-500/10"
+            fullWidth={true}
           />
         </View>
 
@@ -299,15 +357,17 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ href, title, subtitle, icon, bgColor }: any) {
+function FeatureCard({ href, title, subtitle, icon, bgColor, fullWidth }: any) {
   return (
-    <Link href={href} asChild>
-      <TouchableOpacity className="w-[47%] bg-slate-900 rounded-[30px] p-6 border border-slate-800 shadow-xl">
-        <View className={`w-14 h-14 rounded-2xl ${bgColor} items-center justify-center mb-5`}>
+    <Link href={href as any} asChild>
+      <TouchableOpacity className={`${fullWidth ? 'w-full flex-row items-center' : 'w-[47%]'} bg-slate-900 rounded-[30px] p-6 border border-slate-800 shadow-xl`}>
+        <View className={`w-14 h-14 rounded-2xl ${bgColor} items-center justify-center ${fullWidth ? 'mr-5 mb-0' : 'mb-5'}`}>
           {icon}
         </View>
-        <Text className="font-bold text-white text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{title}</Text>
-        <Text className="text-xs text-slate-500" style={{ fontFamily: 'Lexend_400Regular' }}>{subtitle}</Text>
+        <View className={fullWidth ? 'flex-1' : ''}>
+          <Text className="font-bold text-white text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{title}</Text>
+          <Text className="text-xs text-slate-500" style={{ fontFamily: 'Lexend_400Regular' }}>{subtitle}</Text>
+        </View>
       </TouchableOpacity>
     </Link>
   );

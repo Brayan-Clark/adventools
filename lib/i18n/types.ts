@@ -318,6 +318,27 @@ export interface TranslationSchema {
   next: string;
   end: string;
   bible_verse_info: string;
+
+  // Audio / Praise
+  audio_praise: string;
+  bible_audio: string;
+  bible_studies: string;
+  hymns_audio: string;
+  fiambenana_maraina: string;
+  play: string;
+  pause: string;
+  delete_audio_confirm: string;
+  chapters: string;
+  episodes: string;
+  file_size: string;
+  search_series: string;
+  no_episodes_found: string;
+  old_testament: string;
+  new_testament: string;
+  podcasts_streaming: string;
+  all_lessons_in_theme: string;
+  stored: string;
+  quarter_number: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

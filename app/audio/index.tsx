@@ -1,0 +1,97 @@
+import { Stack, useRouter } from 'expo-router';
+import { ChevronLeft, Folder, PlayCircle } from 'lucide-react-native';
+import React from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useSettings } from '../../lib/settings-context';
+import { useTranslation } from '../../lib/i18n';
+
+export default function AudioScreen() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { settings: globalSettings } = useSettings();
+
+  const fontFamily = globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily;
+  const fontFamilyBold = 'Lexend_700Bold';
+
+  const FOLDERS = [
+    { id: '1', title: t('hymns_audio'), count: 420, color: 'text-emerald-500', bg: 'bg-emerald-500/20' },
+    { id: '2', title: t('bible_audio'), count: 66, color: 'text-amber-500', bg: 'bg-amber-500/20' },
+    { id: '3', title: t('bible_studies'), count: 8, color: 'text-violet-500', bg: 'bg-violet-500/20' },
+    { id: '4', title: t('podcasts_streaming'), count: 1, color: 'text-blue-500', bg: 'bg-blue-500/20', isStreaming: true },
+  ];
+
+  return (
+    <SafeAreaView className="flex-1 bg-background-dark">
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-6 pt-4 pb-4 border-b border-slate-800/50">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center"
+        >
+          <ChevronLeft size={20} color="#f8fafc" />
+        </TouchableOpacity>
+
+        <View className="flex-1 items-center justify-center px-2">
+          <Text className="text-white font-bold text-lg" style={{ fontFamily: fontFamilyBold }}>
+            {t('audio_praise')}
+          </Text>
+        </View>
+
+        <View className="w-10 h-10" />
+      </View>
+
+      <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+        <Text className="text-slate-400 text-sm mb-6 leading-6" style={{ fontFamily }}>
+           {t('study_resources')}
+        </Text>
+
+        <View className="flex-row flex-wrap justify-between gap-y-4 mb-20">
+          {FOLDERS.map((folder) => (
+            <TouchableOpacity
+              key={folder.id}
+              onPress={() => {
+                if (folder.id === '4') {
+                  router.push('/audio/radio');
+                } else if (folder.id === '2') {
+                  router.push('/audio/bible');
+                } else if (folder.id === '1') {
+                  router.push('/audio/playbacks');
+                } else if (folder.id === '3') {
+                  router.push('/audio/etudes' as any);
+                }
+              }}
+              className="w-[48%] bg-slate-900 rounded-[24px] border border-slate-800 p-5 shadow-xl mb-4"
+            >
+              <View className={`w-12 h-12 rounded-full ${folder.bg} items-center justify-center mb-4`}>
+                <Folder size={20} color={folder.bg.includes('emerald') ? '#10b981' : folder.bg.includes('amber') ? '#f59e0b' : folder.bg.includes('violet') ? '#8b5cf6' : '#3b82f6'} />
+              </View>
+
+              <Text className="text-white font-bold text-base mb-1 leading-tight" style={{ fontFamily: fontFamilyBold }}>
+                {folder.title}
+              </Text>
+
+              <View className="flex-row items-center mt-2">
+                {folder.isStreaming ? (
+                  <PlayCircle size={12} color="#94a3b8" />
+                ) : (
+                  <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-wider" style={{ fontFamily: fontFamilyBold }}>
+                    Audio
+                  </Text>
+                )}
+                {folder.isStreaming && (
+                  <Text className="text-red-500 text-[10px] uppercase font-bold tracking-wider ml-1" style={{ fontFamily: fontFamilyBold }}>
+                    LIVE
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

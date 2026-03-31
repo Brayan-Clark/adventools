@@ -2,7 +2,7 @@
   "expo": {
     "name": "Adventools",
     "slug": "adventools",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "adventools",
@@ -13,7 +13,13 @@
       "backgroundColor": "#111621"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adventools",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +28,14 @@
       },
       "package": "com.adventools",
       "softwareKeyboardLayoutMode": "resize",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "WAKE_LOCK",
+        "INTERNET"
+      ],
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
@@ -31,7 +44,9 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-community/datetimepicker",
+      "expo-av"
     ],
     "experiments": {
       "typedRoutes": true
