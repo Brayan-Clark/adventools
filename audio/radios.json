@@ -16,18 +16,20 @@
       "name": "AWR Madagascar",
       "description": "Radio Mondiale Adventiste",
       "logo": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/awr-logos.jpg",
-      "streamUrl": "",
-      "isActive": false,
-      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !"
+      "streamUrl": "http://feeds.feedburner.com/mlgtn_awr",
+      "isActive": true,
+      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
+      "type": "podcast"
     },
     {
       "id": "oasis_1064",
       "name": "Radio Oasis 106.4 FM",
       "description": "Voix de l'Espérance",
       "logo": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/radio-oasis-1064-fm-madagascar.png",
-      "streamUrl": "",
-      "isActive": false,
-      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !"
+      "streamUrl": "https://hopefy.fanantenanahoanao.org/listen/radiooasistana/radio.mp3",
+      "isActive": true,
+      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
+      "type": "live"
     }
   ]
 }
