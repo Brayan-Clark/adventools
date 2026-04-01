@@ -9,7 +9,8 @@
       "logo": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/antsonny-filazantsara-antsiranana-97-fm.jpg",
       "streamUrl": "",
       "isActive": false,
-      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !"
+      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
+      "type": "live"
     },
     {
       "id": "awr_madagascar",
@@ -24,9 +25,19 @@
     {
       "id": "oasis_1064",
       "name": "Radio Oasis 106.4 FM",
-      "description": "Voix de l'Espérance",
+      "description": "Radio Adventiste locale",
       "logo": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/radio-oasis-1064-fm-madagascar.png",
       "streamUrl": "https://hopefy.fanantenanahoanao.org/listen/radiooasistana/radio.mp3",
+      "isActive": true,
+      "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
+      "type": "live"
+    },
+    {
+      "id": "Hopefy_radio",
+      "name": "Hopefy Radio",
+      "description": "Hopefy Radio (24/7) - Manandratra Fanantenana",
+      "logo": "https://hopefy.fanantenanahoanao.org/api/station/hopefy_radio_mg/art/951de35e168f545c97fe864b-1741032823.jpg",
+      "streamUrl": "https://hopefy.fanantenanahoanao.org/listen/hopefy_radio_mg/radio.mp3",
       "isActive": true,
       "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
       "type": "live"
