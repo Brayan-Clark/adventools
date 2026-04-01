@@ -61,6 +61,10 @@ export default function VideoHubScreen() {
   const getTranslatedTitle = (folder: any) => {
     if (currentLang === 'English' && folder.title_en) return folder.title_en;
     if (currentLang === 'Malagasy' && folder.title_mg) return folder.title_mg;
+    if (currentLang === 'Deutsch' && folder.title_de) return folder.title_de;
+    if (currentLang === 'Español' && folder.title_es) return folder.title_es;
+    if (currentLang === 'Português' && folder.title_pt) return folder.title_pt;
+    if (currentLang === '中文' && folder.title_zh) return folder.title_zh;
     return folder.title;
   };
 
