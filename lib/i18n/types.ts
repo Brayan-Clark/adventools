@@ -343,6 +343,20 @@ export interface TranslationSchema {
   all: string;
   stored: string;
   online: string;
+
+  // Video
+  video: string;
+  video_subtitle: string;
+  video_and_tv: string;
+  video_description: string;
+  live_tv: string;
+  gospel_songs: string;
+  video_bible_studies: string;
+  details_video: string;
+  video_source_info: string;
+  loading_stream: string;
+  search_video: string;
+  no_video_found: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

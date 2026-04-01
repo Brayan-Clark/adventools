@@ -299,8 +299,8 @@ export default function Home() {
           />
           <FeatureCard
             href="/video"
-            title={t('video') || 'Vidéos & TV'}
-            subtitle="TV, Musique, Études"
+            title={t('video_and_tv')}
+            subtitle={t('video_subtitle')}
             icon={<Tv color="#ec4899" size={28} />}
             bgColor="bg-pink-500/10"
           />

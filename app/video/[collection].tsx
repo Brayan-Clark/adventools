@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../lib/settings-context';
+import { useTranslation } from '../../lib/i18n';
 
 interface VideoItem {
   id: string;
@@ -21,6 +22,7 @@ export default function VideoCollectionScreen() {
   const params = useLocalSearchParams() as any;
   const { collection, title } = params;
   
+  const { t } = useTranslation();
   const { settings: globalSettings } = useSettings();
   const [loading, setLoading] = useState(true);
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -77,7 +79,7 @@ export default function VideoCollectionScreen() {
         
         <View className="flex-1 items-center justify-center px-2">
           <Text className="text-white font-bold text-lg" style={{ fontFamily: fontFamilyBold }}>
-            {title || 'Vidéos'}
+            {title || t('video')}
           </Text>
         </View>
         <View className="w-10 h-10" />
@@ -88,7 +90,7 @@ export default function VideoCollectionScreen() {
         <View className="flex-row items-center bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 mb-6">
           <Search size={18} color="#64748b" />
           <TextInput 
-            placeholder="Rechercher une vidéo..." 
+            placeholder={t('search_video')} 
             placeholderTextColor="#64748b"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -102,15 +104,15 @@ export default function VideoCollectionScreen() {
         {loading ? (
           <View className="items-center justify-center py-20">
             <ActivityIndicator size="large" color="#3b82f6" />
-            <Text className="text-slate-400 mt-4" style={{ fontFamily }}>Chargement des données...</Text>
+            <Text className="text-slate-400 mt-4" style={{ fontFamily }}>{t('loading')}</Text>
           </View>
         ) : !isConnected && videos.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-slate-400 text-center" style={{ fontFamily }}>Connectez-vous à Internet pour télécharger la liste.</Text>
+            <Text className="text-slate-400 text-center" style={{ fontFamily }}>{t('check_connection')}</Text>
           </View>
         ) : videos.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-slate-400 text-center" style={{ fontFamily }}>Aucune vidéo disponible dans cette catégorie pour le moment.</Text>
+            <Text className="text-slate-400 text-center" style={{ fontFamily }}>{t('no_video_found')}</Text>
           </View>
         ) : (
           <View className="pb-20">
@@ -156,9 +158,14 @@ export default function VideoCollectionScreen() {
                   <Text className="text-white font-bold text-sm mb-1" style={{ fontFamily: fontFamilyBold }} numberOfLines={2}>
                     {video.title}
                   </Text>
-                  <Text className="text-slate-400 text-[10px] leading-4" style={{ fontFamily }} numberOfLines={2}>
+                  <Text className="text-slate-400 text-[10px] leading-4 mb-2" style={{ fontFamily }} numberOfLines={2}>
                     {video.description}
                   </Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-wider" style={{ fontFamily: fontFamilyBold }}>
+                      {video.isGroup ? (t('folder') || 'Dossier') : (t('video') || 'Vidéo')}
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}

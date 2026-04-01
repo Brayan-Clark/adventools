@@ -7,12 +7,14 @@ import { Text, TouchableOpacity, View, Dimensions, ActivityIndicator } from 'rea
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../../lib/settings-context';
+import { useTranslation } from '../../lib/i18n';
 
 const { width } = Dimensions.get('window');
 
 export default function UniversalVideoPlayer() {
   useKeepAwake();
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams() as any;
   const { url, title, subtext } = params;
 
@@ -141,7 +143,7 @@ export default function UniversalVideoPlayer() {
         {isLoading && (
           <View className="absolute inset-0 items-center justify-center bg-slate-950/50">
             <ActivityIndicator size="large" color="#3b82f6" />
-            <Text className="text-white/40 text-[10px] mt-4 font-bold uppercase tracking-widest" style={{ fontFamily }}>Loading Stream...</Text>
+            <Text className="text-white/40 text-[10px] mt-4 font-bold uppercase tracking-widest" style={{ fontFamily }}>{t('loading_stream')}</Text>
           </View>
         )}
       </View>
@@ -151,11 +153,10 @@ export default function UniversalVideoPlayer() {
          <View className="bg-white/5 border border-white/10 p-5 rounded-3xl">
             <View className="flex-row items-center mb-4">
                <View className="w-2 h-2 rounded-full bg-blue-500 mr-3 shadow-lg shadow-blue-500/50" />
-               <Text className="text-white font-bold text-sm" style={{ fontFamily: fontFamilyBold }}>Détails de la vidéo</Text>
+               <Text className="text-white font-bold text-sm" style={{ fontFamily: fontFamilyBold }}>{t('details_video')}</Text>
             </View>
             <Text className="text-white/60 text-xs leading-5" style={{ fontFamily }}>
-               Cette vidéo provient de {isYouTube ? 'YouTube' : isVimeo ? 'Vimeo' : isWebStream ? 'une chaîne partenaire' : 'nos serveurs sécurisés'}. 
-               Vous pouvez utiliser le mode plein écran pour une meilleure expérience.
+               {t('video_source_info').replace('{{source}}', isYouTube ? 'YouTube' : isVimeo ? 'Vimeo' : isWebStream ? (t('online') || 'une chaîne partenaire') : (t('stored') || 'nos serveurs sécurisés'))}
             </Text>
          </View>
       </View>
