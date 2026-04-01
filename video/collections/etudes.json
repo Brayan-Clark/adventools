@@ -1,9 +1,9 @@
 [
   {
-    "id": "etude1",
-    "title": "Étude Biblique Trimestrielle - Leçon 1",
-    "description": "Discussion sur la leçon de l'École du Sabbat.",
-    "url": "https://www.youtube.com/watch?v=placeholder",
+    "id": "tfe1",
+    "title": "FAMPIDIRANA - Ireo trangan-javatra farany araka ny faminaniana ao amin'ny Baiboly.",
+    "description": "Fampidirana - Ireo trangan-javatra farany araka ny faminaniana ao amin'ny Baiboly.",
+    "url": "https://www.youtube.com/watch?v=yAjKX-YfYYs",
     "isWebStream": false,
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
   }
