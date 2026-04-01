@@ -1,0 +1,44 @@
+[
+  {
+    "id": "tv",
+    "title": "TV en direct",
+    "title_en": "Live TV",
+    "title_mg": "TV mivantana",
+    "title_de": "Live-TV",
+    "title_es": "TV en vivo",
+    "title_pt": "TV ao vivo",
+    "title_zh": "现场直播",
+    "icon": "MonitorPlay",
+    "color": "#ec4899",
+    "bg": "bg-pink-500/20",
+    "isStreaming": true
+  },
+  {
+    "id": "musique",
+    "title": "Gospel Songs",
+    "title_en": "Gospel Songs",
+    "title_mg": "Hira Gospel",
+    "title_de": "Evangeliumslieder",
+    "title_es": "Canciones del Evangelio",
+    "title_pt": "Músicas Gospel",
+    "title_zh": "福音歌曲",
+    "icon": "Music",
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/20",
+    "isStreaming": false
+  },
+  {
+    "id": "etudes",
+    "title": "Études Bibliques",
+    "title_en": "Bible Studies",
+    "title_mg": "Fianarana Baiboly",
+    "title_de": "Bibelstudien",
+    "title_es": "Estudios Bíblicos",
+    "title_pt": "Estudos Bíblicos",
+    "title_zh": "查经",
+    "icon": "BookOpen",
+    "color": "#3b82f6",
+    "bg": "bg-blue-500/20",
+    "isStreaming": false
+  }
+]

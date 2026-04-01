@@ -306,5 +306,17 @@
   "all_downloaded": "所有歌曲已下载。",
   "download_all_confirm": "您要下载此合集中的所有歌曲吗？",
   "all": "全部",
-  "online": "在线"
+  "online": "在线",
+  "video": "视频",
+  "video_subtitle": "电视、音乐、研究",
+  "video_and_tv": "视频和电视",
+  "video_description": "选择一个类别以查看多媒体内容。",
+  "live_tv": "现场直播",
+  "gospel_songs": "福音歌曲",
+  "video_bible_studies": "查经",
+  "details_video": "视频详情",
+  "video_source_info": "此视频来自 {{source}}。",
+  "loading_stream": "正在加载流...",
+  "search_video": "搜索视频...",
+  "no_video_found": "未找到视频。"
 }

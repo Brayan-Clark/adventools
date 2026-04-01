@@ -306,5 +306,17 @@
   "all_downloaded": "Todas las canciones ya están descargadas.",
   "download_all_confirm": "¿Quieres descargar todas las canciones de esta colección?",
   "all": "Todo",
-  "online": "En línea"
+  "online": "En línea",
+  "video": "Videos",
+  "video_subtitle": "TV, Música, Estudios",
+  "video_and_tv": "Videos y TV",
+  "video_description": "Seleccione una categoría para ver contenido multimedia.",
+  "live_tv": "TV en vivo",
+  "gospel_songs": "Canciones del Evangelio",
+  "video_bible_studies": "Estudios Bíblicos",
+  "details_video": "Detalles del video",
+  "video_source_info": "Este video es de {{source}}.",
+  "loading_stream": "Cargando stream...",
+  "search_video": "Buscar video...",
+  "no_video_found": "No se encontraron videos."
 }

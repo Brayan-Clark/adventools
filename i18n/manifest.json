@@ -1,48 +1,48 @@
 {
-  "versionCode": 6,
-  "lastUpdate": "2026-04-01T13:13:15Z",
+  "versionCode": 7,
+  "lastUpdate": "2026-04-01T17:05:00Z",
   "languages": [
     {
       "id": "Français",
       "file": "fr.json",
       "name": "Français",
-      "version": 8
+      "version": 9
     },
     {
       "id": "English",
       "file": "en.json",
       "name": "English",
-      "version": 7
+      "version": 8
     },
     {
       "id": "Malagasy",
       "file": "mg.json",
       "name": "Malagasy",
-      "version": 7
+      "version": 8
     },
     {
       "id": "Deutsch",
       "file": "de.json",
       "name": "Deutsch",
-      "version": 5
+      "version": 6
     },
     {
       "id": "Español",
       "file": "es.json",
       "name": "Español",
-      "version": 5
+      "version": 6
     },
     {
       "id": "Português",
       "file": "pt.json",
       "name": "Português",
-      "version": 5
+      "version": 6
     },
     {
       "id": "中文",
       "file": "zh.json",
       "name": "中文",
-      "version": 5
+      "version": 6
     }
   ]
 }

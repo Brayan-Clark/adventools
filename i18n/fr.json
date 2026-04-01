@@ -306,5 +306,17 @@
   "all_downloaded": "Tous les chants sont déjà téléchargés.",
   "download_all_confirm": "Voulez-vous télécharger tous les chants de cette collection ?",
   "all": "Tout",
-  "online": "En ligne"
+  "online": "En ligne",
+  "video": "Vidéos",
+  "video_subtitle": "TV, Musique, Études",
+  "video_and_tv": "Vidéos & TV",
+  "video_description": "Sélectionnez une catégorie pour visionner le contenu multimédia.",
+  "live_tv": "TV en direct",
+  "gospel_songs": "Gospel Songs",
+  "video_bible_studies": "Études Bibliques",
+  "details_video": "Détails de la vidéo",
+  "video_source_info": "Cette vidéo provient de {{source}}. Vous pouvez utiliser le mode plein écran pour une meilleure expérience.",
+  "loading_stream": "Chargement du flux...",
+  "search_video": "Rechercher une vidéo...",
+  "no_video_found": "Aucune vidéo disponible dans cette catégorie pour le moment."
 }

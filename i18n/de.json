@@ -306,5 +306,17 @@
   "all_downloaded": "Alle Lieder sind bereits heruntergeladen.",
   "download_all_confirm": "Möchten Sie alle Lieder in dieser Sammlung herunterladen?",
   "all": "Alle",
-  "online": "Online"
+  "online": "Online",
+  "video": "Videos",
+  "video_subtitle": "TV, Musik, Studien",
+  "video_and_tv": "Videos & TV",
+  "video_description": "Wählen Sie eine Kategorie, um Multimedia-Inhalte anzusehen.",
+  "live_tv": "Live-TV",
+  "gospel_songs": "Evangeliumslieder",
+  "video_bible_studies": "Bibelstudien",
+  "details_video": "Videodetails",
+  "video_source_info": "Dieses Video stammt von {{source}}.",
+  "loading_stream": "Stream wird geladen...",
+  "search_video": "Video suchen...",
+  "no_video_found": "Keine Videos gefunden."
 }

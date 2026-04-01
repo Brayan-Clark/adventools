@@ -306,5 +306,17 @@
   "all_downloaded": "All songs are already downloaded.",
   "download_all_confirm": "Do you want to download all songs in this collection?",
   "all": "All",
-  "online": "Online"
+  "online": "Online",
+  "video": "Videos",
+  "video_subtitle": "TV, Music, Studies",
+  "video_and_tv": "Videos & TV",
+  "video_description": "Select a category to view multimedia content.",
+  "live_tv": "Live TV",
+  "gospel_songs": "Gospel Songs",
+  "video_bible_studies": "Bible Studies",
+  "details_video": "Video Details",
+  "video_source_info": "This video is from {{source}}. You can use fullscreen mode for a better experience.",
+  "loading_stream": "Loading stream...",
+  "search_video": "Search for a video...",
+  "no_video_found": "No videos available in this category for now."
 }
