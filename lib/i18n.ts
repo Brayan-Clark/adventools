@@ -3,10 +3,6 @@ import { I18nManager } from './i18n-manager';
 import { en } from './i18n/en';
 import { fr } from './i18n/fr'; // fr is static default
 import { mg } from './i18n/mg';
-import { de } from './i18n/de';
-import { es } from './i18n/es';
-import { pt } from './i18n/pt';
-import { zh } from './i18n/zh';
 import { Language, TranslationKey, TranslationSchema } from './i18n/types';
 import { useSettings } from './settings-context';
 
@@ -19,10 +15,6 @@ export const staticTranslations: Record<Language, TranslationSchema> = {
   Français: fr,
   English: en,
   Malagasy: mg,
-  Deutsch: de,
-  Español: es,
-  Português: pt,
-  '中文': zh,
 };
 
 /**

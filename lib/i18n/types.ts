@@ -1,4 +1,4 @@
-export type Language = 'Français' | 'English' | 'Malagasy' | 'Deutsch' | 'Español' | 'Português' | '中文';
+export type Language = 'Français' | 'English' | 'Malagasy';
 
 export interface TranslationSchema {
   // General
