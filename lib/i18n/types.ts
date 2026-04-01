@@ -337,8 +337,12 @@ export interface TranslationSchema {
   new_testament: string;
   podcasts_streaming: string;
   all_lessons_in_theme: string;
-  stored: string;
   quarter_number: string;
+  all_downloaded: string;
+  download_all_confirm: string;
+  all: string;
+  stored: string;
+  online: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

@@ -335,4 +335,11 @@ export const en: TranslationSchema = {
   new_testament: 'New Testament',
   podcasts_streaming: 'Podcasts & Streaming',
   quarter_number: 'Quarter',
+  all_lessons_in_theme: 'All lessons in this theme',
+  all_downloaded: 'All songs are already downloaded.',
+  download_all_confirm: 'Do you want to download all songs in this collection?',
+  delete_audio_confirm: 'Are you sure you want to delete this audio?',
+  all: 'All',
+  stored: 'Stored',
+  online: 'Online',
 };

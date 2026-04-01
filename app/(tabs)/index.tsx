@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Sun, Headphones } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Sun, Headphones, Tv } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -298,12 +298,19 @@ export default function Home() {
             bgColor="bg-cyan-500/10"
           />
           <FeatureCard
+            href="/video"
+            title={t('video') || 'Vidéos & TV'}
+            subtitle="TV, Musique, Études"
+            icon={<Tv color="#ec4899" size={28} />}
+            bgColor="bg-pink-500/10"
+          />
+          <FeatureCard
             href="/utiles"
             title={t('useful')}
             subtitle={t('useful_subtitle')}
             icon={<LayoutGrid color="#8b5cf6" size={28} />}
             bgColor="bg-violet-500/10"
-            fullWidth={true}
+            fullWidth={false}
           />
         </View>
 

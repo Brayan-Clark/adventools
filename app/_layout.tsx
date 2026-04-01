@@ -6,7 +6,7 @@ import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform, PermissionsAndroid } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
@@ -56,6 +56,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     initBibleMetadata();
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS');
+    }
   }, []);
 
   useEffect(() => {
@@ -84,8 +87,19 @@ function RootNavigator() {
   // true = still checking AsyncStorage, overlay shown to prevent flash
   const [checking, setChecking] = useState(true);
 
-  useEffect(() => {
-    const checkOnboarding = async () => {
+    const checkPermissions = async () => {
+        if (Platform.OS === 'android' && Platform.Version >= 33) {
+            try {
+                await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS');
+            } catch (err) {
+                console.warn(err);
+            }
+        }
+    };
+
+    useEffect(() => {
+      checkPermissions();
+      const checkOnboarding = async () => {
       try {
         const done = await AsyncStorage.getItem(ONBOARDING_KEY);
         if (!done) {

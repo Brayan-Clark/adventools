@@ -20,12 +20,13 @@ interface Lesson {
 
 const ETUDES_DIR = `${FileSystem.documentDirectory}etudes/`;
 const METADATA_FILE = `${ETUDES_DIR}metadata.json`;
+const CACHE_FILE = (id: string) => `${ETUDES_DIR}cache_${id}.json`;
 
 export default function EtudesLessonsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const params = useLocalSearchParams() as any;
-  const { id: seriesId, title: seriesTitle, author: seriesAuthor } = params;
+  const { series: seriesId, title: seriesTitle, author: seriesAuthor } = params;
   
   const { settings: globalSettings } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,20 +60,75 @@ export default function EtudesLessonsScreen() {
   };
 
   const fetchLessons = async () => {
-    const net = await NetInfo.fetch();
-    if (!net.isConnected) return;
-
     setIsRefreshing(true);
     try {
-      const res = await fetch(`${SERIES_BASE_URL}${seriesId}.json?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLessons(data);
+      const cachePath = CACHE_FILE(seriesId);
+      const net = await NetInfo.fetch();
+
+      // Try to load from cache first if we are offline or just to show something fast
+      if (await FileSystem.getInfoAsync(cachePath).then(i => i.exists)) {
+        const cachedContent = await FileSystem.readAsStringAsync(cachePath);
+        setLessons(JSON.parse(cachedContent));
+      }
+
+      if (net.isConnected) {
+        const res = await fetch(`${SERIES_BASE_URL}${seriesId}.json?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLessons(data);
+          // Save to cache for offline use
+          await FileSystem.writeAsStringAsync(cachePath, JSON.stringify(data));
+        }
       }
     } catch (e) {
       console.log('Series fetch error', e);
     }
     setIsRefreshing(false);
+  };
+
+  const downloadAll = async () => {
+    const toDownload = lessons.filter(l => !downloadedLessons[getAudioKey(l.id)]);
+    if (toDownload.length === 0) {
+      Alert.alert(t('info'), t('all_downloaded'));
+      return;
+    }
+
+    Alert.alert(
+      t('download_all'),
+      `${t('download_all_confirm')} (${toDownload.length} files)`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('download'), onPress: async () => {
+             for (const l of toDownload) {
+                await downloadLesson(l);
+             }
+        }}
+      ]
+    );
+  };
+
+  const deleteAll = async () => {
+    const toDelete = lessons.filter(l => downloadedLessons[getAudioKey(l.id)]);
+    if (toDelete.length === 0) return;
+
+    Alert.alert(
+      t('delete'),
+      `${t('delete_audio_confirm')} (${toDelete.length} files)`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: async () => {
+            try {
+              for (const l of toDelete) {
+                await FileSystem.deleteAsync(getLocalFileUri(l.id), { idempotent: true });
+              }
+              const newMeta = { ...downloadedLessons };
+              toDelete.forEach(l => delete newMeta[getAudioKey(l.id)]);
+              setDownloadedLessons(newMeta);
+              await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
+            } catch (e) {}
+        }}
+      ]
+    );
   };
 
   const filteredLessons = useMemo(() => {
@@ -98,9 +154,11 @@ export default function EtudesLessonsScreen() {
 
       const result = await downloadResumable.downloadAsync();
       if (result && result.status === 200) {
-        const newMeta = { ...downloadedLessons, [key]: true };
-        setDownloadedLessons(newMeta);
-        await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
+        setDownloadedLessons(prev => {
+            const next = { ...prev, [key]: true };
+            FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(next)).catch(() => {});
+            return next;
+        });
       }
     } catch (e) {
       Alert.alert(t('error'), t('download_failed'));
@@ -125,15 +183,27 @@ export default function EtudesLessonsScreen() {
   };
 
   const playLesson = (lesson: Lesson) => {
-    const key = getAudioKey(lesson.id);
-    const isLocal = !!downloadedLessons[key];
+    const isLocal = !!downloadedLessons[getAudioKey(lesson.id)];
+    const currentIndex = filteredLessons.findIndex(l => l.id === lesson.id);
+    const playlistData = filteredLessons.map(l => ({
+        id: l.id,
+        title: l.title,
+        url: downloadedLessons[getAudioKey(l.id)] ? getLocalFileUri(l.id) : l.url,
+        isLocal: !!downloadedLessons[getAudioKey(l.id)],
+        subtext: seriesTitle,
+        artwork: params.artwork
+    }));
+
     router.push({
       pathname: '/audio/player',
       params: {
         title: lesson.title,
         url: isLocal ? getLocalFileUri(lesson.id) : lesson.url,
         isLocal: isLocal ? 'true' : 'false',
-        subtext: `${seriesTitle} • ${lesson.author}`
+        subtext: `${seriesTitle} • ${lesson.author}`,
+        index: currentIndex.toString(),
+        artwork: params.artwork,
+        playlist: JSON.stringify(playlistData)
       }
     });
   };
@@ -158,7 +228,7 @@ export default function EtudesLessonsScreen() {
             <Text className="text-white font-bold text-sm" numberOfLines={2} style={{ fontFamily: fontFamilyBold }}>{item.title}</Text>
             <View className="flex-row items-center mt-1">
                <Text className={`text-[10px] font-bold ${isDownloaded ? 'text-violet-400' : 'text-slate-500'}`} style={{ fontFamily: fontFamilyBold }}>
-                 {isDownloaded ? t('stored') : '---'} • {item.size || '--- MB'}
+                 {isDownloaded ? t('stored') : t('online')} • {item.size || '--- MB'}
                </Text>
             </View>
           </View>
@@ -227,9 +297,31 @@ export default function EtudesLessonsScreen() {
         onRefresh={fetchLessons}
         ListHeaderComponent={
            <View className="mb-6">
-             <View className="flex-row items-center mb-2">
-                <Users size={14} color="#a78bfa" />
-                <Text className="text-violet-400 text-xs ml-2 font-bold uppercase tracking-widest" style={{ fontFamily }}>{seriesAuthor}</Text>
+             <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center">
+                  <Users size={14} color="#a78bfa" />
+                  <Text className="text-violet-400 text-xs ml-2 font-bold uppercase tracking-widest" style={{ fontFamily }}>{seriesAuthor}</Text>
+                </View>
+
+                <View className="flex-row items-center">
+                  {lessons.some(l => downloadedLessons[getAudioKey(l.id)]) && (
+                    <TouchableOpacity 
+                      onPress={deleteAll}
+                      className="bg-red-500/10 p-2 rounded-full border border-red-500/20 mr-2"
+                    >
+                      <Trash2 size={12} color="#ef4444" />
+                    </TouchableOpacity>
+                  )}
+                  {lessons.length > 0 && (
+                    <TouchableOpacity 
+                      onPress={downloadAll}
+                      className="flex-row items-center bg-violet-500/20 px-3 py-1.5 rounded-full border border-violet-500/20"
+                    >
+                      <Download size={12} color="#a78bfa" />
+                      <Text className="text-violet-400 text-[10px] ml-1.5 font-bold uppercase" style={{ fontFamily: fontFamilyBold }}>{t('download_all')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
              </View>
              <Text className="text-slate-500 text-xs" style={{ fontFamily }}>{t('all_lessons_in_theme')}</Text>
            </View>

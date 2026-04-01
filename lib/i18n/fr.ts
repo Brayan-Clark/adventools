@@ -335,4 +335,11 @@ export const fr: TranslationSchema = {
   new_testament: 'Nouveau Testament',
   podcasts_streaming: 'Podcasts & Direct',
   quarter_number: 'Trimestre',
+  all_lessons_in_theme: 'Toutes les leçons de ce thème',
+  all_downloaded: 'Tous les chants sont déjà téléchargés.',
+  download_all_confirm: 'Voulez-vous télécharger tous les chants de cette collection ?',
+  delete_audio_confirm: 'Êtes-vous sûr de vouloir supprimer cet audio ?',
+  all: 'Tout',
+  stored: 'Enregistrés',
+  online: 'En ligne',
 };

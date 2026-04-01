@@ -45,6 +45,23 @@ export default function PodcastEpisodesScreen() {
     initAndLoad();
   }, [streamUrl]);
 
+  const deleteAll = async () => {
+    const toDelete = Object.keys(downloadedMetadata);
+    if (toDelete.length === 0) return;
+
+    Alert.alert('Tout supprimer', `Voulez-vous supprimer les ${toDelete.length} épisodes téléchargés ?`, [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Tout supprimer', style: 'destructive', onPress: async () => {
+            try {
+                for (const id of toDelete) {
+                    await FileSystem.deleteAsync(`${AUDIO_DIR}${id}.mp3`, { idempotent: true });
+                }
+                saveMetadata({}, cachedRemoteFeed);
+            } catch (e) {}
+        }}
+    ]);
+  };
+
   const initAndLoad = async () => {
     // 1. Load local files and cache first (INSTANT)
     await initFileSystem();
@@ -94,16 +111,31 @@ export default function PodcastEpisodesScreen() {
   const fetchEpisodes = async () => {
     setIsRemoteLoading(true);
     try {
-      const response = await fetch(streamUrl);
+      const response = await fetch(`${streamUrl}${streamUrl.includes('?') ? '&' : '?'}t=${Date.now()}`, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        }
+      });
       const xml = await response.text();
       
+      // Try to find items more robustly
+      const itemsMatch = xml.toLowerCase().includes('<item>');
+      if (!itemsMatch) {
+          console.warn('No <item> tags found in RSS');
+          setIsRemoteLoading(false);
+          return;
+      }
+
       // Defer parsing to keep UI responsive
       setTimeout(() => {
         const parsedEpisodes = parseRssFeed(xml);
         setRemoteEpisodes(parsedEpisodes);
         
-        // Cache the first 10 items for next time
-        saveMetadata(downloadedMetadata, parsedEpisodes.slice(0, 10));
+        // Cache for next time - ONLY if we actually got items!
+        if (parsedEpisodes && parsedEpisodes.length > 0) {
+            saveMetadata(downloadedMetadata, parsedEpisodes.slice(0, 20));
+        }
         setIsRemoteLoading(false);
       }, 50);
       
@@ -111,6 +143,19 @@ export default function PodcastEpisodesScreen() {
       console.error('Failed to parse podcast feed', error);
       setIsRemoteLoading(false);
     }
+  };
+
+  const decodeEntities = (html: string) => {
+    return html
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#039;/g, "'")
+      .replace(/&ndash;/g, '-')
+      .replace(/&mdash;/g, '-')
+      .replace(/&nbsp;/g, ' ');
   };
 
   const getSafeFileName = (url: string) => {
@@ -157,19 +202,25 @@ export default function PodcastEpisodesScreen() {
 
   const parseRssFeed = (xml: string): PodcastEpisode[] => {
     const items: PodcastEpisode[] = [];
-    const itemParts = xml.split('<item>');
+    // Split by <item> case-insensitively
+    const itemParts = xml.split(/<item[^>]*>/i);
     if (itemParts.length <= 1) return [];
 
-    // Skip header, parse all items (fast enough with simple split)
     for (let i = 1; i < itemParts.length; i++) {
-        const itemXml = itemParts[i].split('</item>')[0];
-        const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || itemXml.match(/<title>([\s\S]*?)<\/title>/);
+        const itemXml = itemParts[i].split(/<\/item>/i)[0];
+        
+        // Try to get title from <title> or <itunes:title>
+        const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) 
+                         || itemXml.match(/<itunes:title><!\[CDATA\[([\s\S]*?)\]\]><\/itunes:title>/)
+                         || itemXml.match(/<title>([\s\S]*?)<\/title>/)
+                         || itemXml.match(/<itunes:title>([\s\S]*?)<\/itunes:title>/);
+
         const dateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-        const audioMatch = itemXml.match(/<enclosure[^>]*url="([^"]+)"/);
+        const audioMatch = itemXml.match(/<enclosure[^>]*url="([^"]+)"/) || itemXml.match(/<enclosure[^>]*url='([^']+)'/);
         const durMatch = itemXml.match(/<itunes:duration>([\s\S]*?)<\/itunes:duration>/);
         
         if (titleMatch && audioMatch) {
-            let cleanTitle = titleMatch[1].replace(/&amp;/g, '&');
+            let cleanTitle = decodeEntities(titleMatch[1].trim());
             if (cleanTitle.startsWith('AWR ')) {
                 const parts = cleanTitle.split(' - ');
                 if (parts.length > 1) cleanTitle = parts.slice(1).join(' - ');
@@ -199,7 +250,11 @@ export default function PodcastEpisodesScreen() {
       );
       const result = await downloadResumable.downloadAsync();
       if (result && result.status === 200) {
-        saveMetadata({ ...downloadedMetadata, [ep.id]: ep });
+        setDownloadedMetadata(prev => {
+            const next = { ...prev, [ep.id]: ep };
+            saveMetadata(next);
+            return next;
+        });
       }
     } catch (e) { Alert.alert('Erreur', 'Echec du téléchargement.'); }
     setDownloadingProgress(prev => { const n = {...prev}; delete n[ep.id]; return n; });
@@ -221,15 +276,47 @@ export default function PodcastEpisodesScreen() {
 
   const playEpisode = (ep: PodcastEpisode) => {
     const isDownloaded = !!downloadedMetadata[ep.id];
+    const currentIndex = listToDisplay.findIndex(e => e.id === ep.id);
+    const playlistData = listToDisplay.map(e => ({
+        id: e.id,
+        title: e.title,
+        url: downloadedMetadata[e.id] ? `${AUDIO_DIR}${e.id}.mp3` : e.audioUrl,
+        isLocal: !!downloadedMetadata[e.id],
+        subtext: e.pubDate
+    }));
+
     router.push({
       pathname: '/audio/player',
       params: { 
         title: ep.title,
         url: isDownloaded ? `${AUDIO_DIR}${ep.id}.mp3` : ep.audioUrl,
         isLocal: isDownloaded ? 'true' : 'false',
-        subtext: ep.pubDate || "Épisode"
+        subtext: ep.pubDate || "Épisode",
+        index: currentIndex.toString(),
+        playlist: JSON.stringify(playlistData)
       }
     });
+  };
+
+  const downloadAll = async () => {
+    const toDownload = listToDisplay.filter(ep => !downloadedMetadata[ep.id]);
+    if (toDownload.length === 0) {
+        Alert.alert('Info', 'Tout les épisodes affichés sont déjà téléchargés.');
+        return;
+    }
+
+    Alert.alert(
+      'Tout télécharger',
+      `Voulez-vous télécharger les ${toDownload.length} épisodes récents affichés ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Télécharger', onPress: async () => {
+             for (const ep of toDownload) {
+                await downloadEpisode(ep);
+             }
+        }}
+      ]
+    );
   };
 
   const renderEpisodeCard = (ep: PodcastEpisode, section: 'local' | 'remote') => {
@@ -293,7 +380,22 @@ export default function PodcastEpisodesScreen() {
           <ChevronLeft size={18} color="#f8fafc" />
         </TouchableOpacity>
         <Text className="flex-1 text-white font-bold text-base text-center px-4" style={{ fontFamily: fontFamilyBold }} numberOfLines={1}>{title || "Épisodes"}</Text>
-        <View className="w-9 h-9" />
+        <View className="flex-row items-center">
+            {Object.keys(downloadedMetadata).length > 0 && (
+                <TouchableOpacity 
+                    onPress={deleteAll}
+                    className="w-9 h-9 rounded-full bg-red-500/10 border border-red-500/20 items-center justify-center mr-2"
+                >
+                    <Trash2 size={16} color="#ef4444" />
+                </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+                onPress={downloadAll}
+                className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 items-center justify-center"
+            >
+                <Download size={16} color="#3b82f6" />
+            </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 

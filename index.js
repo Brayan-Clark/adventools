@@ -2,15 +2,12 @@ import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
 import Constants from 'expo-constants';
 
-// Register service only if NOT in expo go to prevent crashes at startup
-if (Constants.appOwnership !== 'expo') {
-  try {
-    const TrackPlayer = require('react-native-track-player');
-    const { PlaybackService } = require('./lib/audio-service');
-    TrackPlayer.registerPlaybackService(() => PlaybackService);
-  } catch (e) {
-    console.warn("TrackPlayer initialization deferred or failed", e);
-  }
+try {
+  const TrackPlayer = require('react-native-track-player');
+  const { PlaybackService } = require('./lib/audio-service');
+  TrackPlayer.registerPlaybackService(() => PlaybackService);
+} catch (e) {
+  console.warn("TrackPlayer initialization failed", e);
 }
 
 // https://docs.expo.dev/router/introduction/#dynamically-import-all-files-in-the-app-directory

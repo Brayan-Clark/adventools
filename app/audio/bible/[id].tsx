@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Play, Download, Headphones, CheckCircle } from 'lucide-react-native';
+import { ChevronLeft, Play, Download, Headphones, CheckCircle, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,7 +75,11 @@ export default function BibleAudioChaptersScreen() {
 
       const result = await downloadResumable.downloadAsync();
       if (result && result.status === 200) {
-        saveMetadata({ ...downloadedChapters, [key]: true });
+        setDownloadedChapters(prev => {
+            const next = { ...prev, [key]: true };
+            saveMetadata(next);
+            return next;
+        });
       }
     } catch (e) {
       Alert.alert(t('error'), t('download_failed'));
@@ -104,16 +108,71 @@ export default function BibleAudioChaptersScreen() {
     const isDownloaded = !!downloadedChapters[key];
     
     if (url) {
+      // Build playlist for auto-play
+      const playlist = chaptersList.map(c => ({
+        id: getAudioKey(c),
+        title: `${name} ${c}`,
+        url: downloadedChapters[getAudioKey(c)] ? getLocalFileUri(c) : BIBLE_AUDIO_MAP[getAudioKey(c) as keyof typeof BIBLE_AUDIO_MAP],
+        isLocal: !!downloadedChapters[getAudioKey(c)],
+        subtext: t('bible_audio')
+      }));
+
       router.push({
         pathname: '/audio/player',
         params: {
           title: `${name} ${chapter}`,
           url: isDownloaded ? getLocalFileUri(chapter) : url,
           isLocal: isDownloaded ? 'true' : 'false',
-          subtext: t('bible_audio')
+          subtext: t('bible_audio'),
+          index: chapter - 1,
+          playlist: JSON.stringify(playlist)
         }
       });
     }
+  };
+
+  const downloadAll = async () => {
+    const toDownload = chaptersList.filter(c => !downloadedChapters[getAudioKey(c)]);
+    if (toDownload.length === 0) {
+      Alert.alert(t('info'), t('all_downloaded'));
+      return;
+    }
+
+    Alert.alert(
+      t('download_all'),
+      `${t('download_all_confirm')} (${toDownload.length} chapters)`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('download'), onPress: async () => {
+             for (const c of toDownload) {
+                await downloadChapter(c);
+             }
+        }}
+      ]
+    );
+  };
+
+  const deleteAll = async () => {
+    const toDelete = chaptersList.filter(c => downloadedChapters[getAudioKey(c)]);
+    if (toDelete.length === 0) return;
+
+    Alert.alert(
+      t('delete'),
+      `${t('delete_audio_confirm')} (${toDelete.length} ${t('chapters')})`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: async () => {
+            try {
+              for (const c of toDelete) {
+                await FileSystem.deleteAsync(getLocalFileUri(c), { idempotent: true });
+              }
+              const newMeta = { ...downloadedChapters };
+              toDelete.forEach(c => delete newMeta[getAudioKey(c)]);
+              saveMetadata(newMeta);
+            } catch (e) {}
+        }}
+      ]
+    );
   };
 
   return (
@@ -121,22 +180,37 @@ export default function BibleAudioChaptersScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* Header */}
-      <View className="px-6 py-4 border-b border-slate-800/30 flex-row items-center justify-between">
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center"
-        >
-          <ChevronLeft size={20} color="#f8fafc" />
-        </TouchableOpacity>
-        <View className="flex-1 px-4 items-center">
-            <Text className="text-white font-bold text-xl" style={{ fontFamily: fontFamilyBold }}>{name}</Text>
-        </View>
-        <View className="w-10 h-10 rounded-full bg-blue-500/10 items-center justify-center">
-            <Headphones size={18} color="#3b82f6" />
+      <View className="px-6 py-4 border-b border-slate-800/30">
+        <View className="flex-row items-center justify-between mb-2">
+            <TouchableOpacity 
+                onPress={() => router.back()}
+                className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center"
+            >
+                <ChevronLeft size={20} color="#f8fafc" />
+            </TouchableOpacity>
+            <View className="flex-1 px-4 items-center">
+                <Text className="text-white font-bold text-xl" style={{ fontFamily: fontFamilyBold }}>{name}</Text>
+            </View>
+            <View className="flex-row">
+                {chaptersList.some(c => downloadedChapters[getAudioKey(c)]) && (
+                    <TouchableOpacity 
+                        onPress={deleteAll}
+                        className="w-10 h-10 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20 mr-2"
+                    >
+                        <Trash2 size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                )}
+                <TouchableOpacity 
+                    onPress={downloadAll}
+                    className="w-10 h-10 rounded-full bg-blue-500/10 items-center justify-center border border-blue-500/20"
+                >
+                    <Download size={18} color="#3b82f6" />
+                </TouchableOpacity>
+            </View>
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-6" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
         <Text className="text-slate-500 text-xs mb-6 text-center leading-5" style={{ fontFamily }}>
            {t('bible_long_press_hint')}
         </Text>

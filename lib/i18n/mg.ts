@@ -335,4 +335,11 @@ export const mg: TranslationSchema = {
   new_testament: 'Testamenta Vaovao',
   podcasts_streaming: 'Podcasts & Streaming',
   quarter_number: 'Telovolana faha',
+  all_lessons_in_theme: 'Ireo lesona rehetra amin\'ity lohahevitra ity',
+  all_downloaded: 'Efa voatahiry avokoa ny hira rehetra.',
+  download_all_confirm: 'Te-hampidina ny hira rehetra amin\'ity fanangonana ity ve ianao?',
+  delete_audio_confirm: 'Tena te-hamafa ity feo ity ve ianao?',
+  all: 'Rehetra',
+  stored: 'Tehirizina',
+  online: 'An-tsary',
 };

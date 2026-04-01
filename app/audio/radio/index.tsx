@@ -75,7 +75,8 @@ export default function RadioScreen() {
           title: station.name,
           url: station.streamUrl,
           isLocal: 'false',
-          subtext: "En direct"
+          subtext: "En direct",
+          artwork: station.logo
         }
       });
     }
