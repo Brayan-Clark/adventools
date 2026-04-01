@@ -1,0 +1,10 @@
+[
+  {
+    "id": "etude1",
+    "title": "Étude Biblique Trimestrielle - Leçon 1",
+    "description": "Discussion sur la leçon de l'École du Sabbat.",
+    "url": "https://www.youtube.com/watch?v=placeholder",
+    "isWebStream": false,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  }
+]

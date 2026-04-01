@@ -1,0 +1,114 @@
+[
+  {
+    "id": "esperancetv",
+    "title": "Espérance TV (Français)",
+    "description": "La chaîne adventiste officielle francophone.",
+    "url": "http://esperancetv.org/direct-tv/",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopechannel-global",
+    "title": "Hope Channel (Global)",
+    "description": "Hope Channel global broadcast.",
+    "url": "https://www.hopechannel.com/watch/live",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopechannel-intl",
+    "title": "Hope Channel International",
+    "description": "Hope Channel International Live (M3U8).",
+    "url": "https://jstre.am/live/jsl:cZXINbwrFj6.m3u8",
+    "isWebStream": false,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopetv-de",
+    "title": "Hope TV Deutschland",
+    "description": "Hope TV Germany live stream.",
+    "url": "https://hopetv.de/live",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopetv-ua",
+    "title": "Hope TV Ukraine",
+    "description": "ТК Надія - Live channel.",
+    "url": "https://tv.hope.ua/live/",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopechannel-id",
+    "title": "Hope Channel Indonesia",
+    "description": "Siaran langsung TV.",
+    "url": "https://hopechannel.id/live-tv",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "hopetv-uk",
+    "title": "Hope TV UK",
+    "description": "Broadcasting hope to the UK.",
+    "url": "https://hopetv.org.uk/",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "3abn-intl",
+    "title": "3ABN International",
+    "description": "Three Angels Broadcasting Network.",
+    "url": "https://3abnplus.tv/programs/live-d6m99by540u",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "3abn-proclaim",
+    "title": "3ABN Proclaim!",
+    "description": "Sermons and Biblical teaching.",
+    "url": "https://3abnplus.tv/programs/live-mlg0wjspb3i",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "3abn-latino",
+    "title": "3ABN Latino",
+    "description": "Transmisión en vivo en español.",
+    "url": "https://3abnplus.tv/programs/live-8wb9jmtfobo",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "3abn-kids",
+    "title": "3ABN Kids Network",
+    "description": "Christian children's programming.",
+    "url": "https://3abnplus.tv/programs/live-zlkx_icwxme",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "3abn-praise",
+    "title": "3ABN Praise Him",
+    "description": "Christian music all day.",
+    "url": "https://3abnplus.tv/programs/live-wdte__35mhy",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "itiswritten",
+    "title": "It Is Written TV",
+    "description": "24/7 Biblical programming.",
+    "url": "https://itiswritten.tv/live",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  },
+  {
+    "id": "firstlight",
+    "title": "Firstlight TV",
+    "description": "Firstlight Broadcasting Live TV.",
+    "url": "https://www.firstlightbroadcasting.org/portfolio",
+    "isWebStream": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
+  }
+]
