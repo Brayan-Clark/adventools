@@ -290,7 +290,7 @@
   "fiambenana_maraina": "Pain de Vie",
   "play": "Lire",
   "pause": "Pause",
-  "delete_audio_confirm": "Voulez-vous supprimer ce fichier audio ?",
+  "delete_audio_confirm": "Êtes-vous sûr de vouloir supprimer cet audio ?",
   "chapters": "Chapitres",
   "episodes": "Épisodes",
   "file_size": "Taille",
@@ -299,8 +299,12 @@
   "old_testament": "Ancien Testament",
   "new_testament": "Nouveau Testament",
   "podcasts_streaming": "Podcasts & Direct",
-  "all_lessons_in_theme": "Toutes les leçons et études de ce thème.",
+  "all_lessons_in_theme": "Toutes les leçons de ce thème",
   "downloading": "Downloading",
-  "stored": "Enregistré",
-  "quarter_number": "Trimestre"
+  "stored": "Enregistrés",
+  "quarter_number": "Trimestre",
+  "all_downloaded": "Tous les chants sont déjà téléchargés.",
+  "download_all_confirm": "Voulez-vous télécharger tous les chants de cette collection ?",
+  "all": "Tout",
+  "online": "En ligne"
 }

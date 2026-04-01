@@ -290,7 +290,7 @@
   "fiambenana_maraina": "Mofon'aina",
   "play": "Handefa",
   "pause": "Ajanona",
-  "delete_audio_confirm": "Tianao ho fafana ve ity rakitra audio ity?",
+  "delete_audio_confirm": "Tena te-hamafa ity feo ity ve ianao?",
   "chapters": "Toko",
   "episodes": "Andiany",
   "file_size": "Haben'ny rakitra",
@@ -299,8 +299,12 @@
   "old_testament": "Testamenta Taloha",
   "new_testament": "Testamenta Vaovao",
   "podcasts_streaming": "Podcasts & Streaming",
-  "all_lessons_in_theme": "Ireo lesona sy fandalinana rehetra ao anatin'ity lohahevitra ity.",
+  "all_lessons_in_theme": "Ireo lesona rehetra amin'ity lohahevitra ity",
   "downloading": "Downloading",
   "stored": "Tehirizina",
-  "quarter_number": "Telovolana faha"
+  "quarter_number": "Telovolana faha",
+  "all_downloaded": "Efa voatahiry avokoa ny hira rehetra.",
+  "download_all_confirm": "Te-hampidina ny hira rehetra amin'ity fanangonana ity ve ianao?",
+  "all": "Rehetra",
+  "online": "An-tsary"
 }

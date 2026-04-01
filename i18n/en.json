@@ -290,7 +290,7 @@
   "fiambenana_maraina": "Morning Watch",
   "play": "Play",
   "pause": "Pause",
-  "delete_audio_confirm": "Do you want to delete this audio file?",
+  "delete_audio_confirm": "Are you sure you want to delete this audio?",
   "chapters": "Chapters",
   "episodes": "Episodes",
   "file_size": "File size",
@@ -299,8 +299,12 @@
   "old_testament": "Old Testament",
   "new_testament": "New Testament",
   "podcasts_streaming": "Podcasts & Streaming",
-  "all_lessons_in_theme": "All lessons and studies in this theme.",
+  "all_lessons_in_theme": "All lessons in this theme",
   "downloading": "Downloading",
   "stored": "Stored",
-  "quarter_number": "Quarter"
+  "quarter_number": "Quarter",
+  "all_downloaded": "All songs are already downloaded.",
+  "download_all_confirm": "Do you want to download all songs in this collection?",
+  "all": "All",
+  "online": "Online"
 }
