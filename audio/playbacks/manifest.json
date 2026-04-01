@@ -1,7 +1,7 @@
 [
   {
     "id": "sda-hymnal",
-    "title": "SDA Hymnal",
+    "title": "SDA Hymnal (PB)",
     "lang": "English",
     "count": 695,
     "color": "#fbbf24",
@@ -10,7 +10,7 @@
   },
   {
     "id": "fihirana-adventista",
-    "title": "Fihirana Adventista",
+    "title": "Fihirana Adventista (PB)",
     "lang": "Malagasy",
     "count": 608,
     "color": "#10b981",
@@ -19,11 +19,20 @@
   },
   {
     "id": "hymnes-louanges",
-    "title": "Hymnes et Louanges",
+    "title": "Hymnes et Louanges (PB)",
     "lang": "Français",
     "count": 532,
     "color": "#3b82f6",
     "bg": "bg-blue-500/10",
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hymnes-louanges.png"
+  },
+  {
+    "id": "hira-faneva_fipikri",
+    "title": "Hira Faneva FIPIKRI",
+    "lang": "Malagasy",
+    "count": 1,
+    "color": "#8b5cf6",
+    "bg": "bg-violet-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
   }
 ]
