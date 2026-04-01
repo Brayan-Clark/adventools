@@ -34,5 +34,14 @@
     "color": "#8b5cf6",
     "bg": "bg-violet-500/10",
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
+  },
+  {
+    "id": "hira-faneva_asafi",
+    "title": "Hira Faneva ASAFI",
+    "lang": "Malagasy",
+    "count": 1,
+    "color": "#06b6d4",
+    "bg": "bg-cyan-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
   }
 ]
