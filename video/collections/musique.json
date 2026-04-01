@@ -1,82 +1,23 @@
 [
   {
-    "id": "gospel_kiE3Wt1v_1o",
-    "title": "Gospel Track 1",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=kiE3Wt1v_1o",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/kiE3Wt1v_1o/hqdefault.jpg"
+    "id": "vop",
+    "title": "VOP Family Reunion",
+    "description": "Gospel Songs by Voice of Prophecy",
+    "isGroup": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
   },
   {
-    "id": "gospel_GuvLiqccgtY",
-    "title": "Gospel Track 2",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=GuvLiqccgtY",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/GuvLiqccgtY/hqdefault.jpg"
+    "id": "heritage",
+    "title": "Heritage Singers",
+    "description": "Classic Heritage Singers songs",
+    "isGroup": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
   },
   {
-    "id": "gospel_cxAX8DGF0ng",
-    "title": "Gospel Track 3",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=cxAX8DGF0ng",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/cxAX8DGF0ng/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_mMe9jGtURG4",
-    "title": "Gospel Track 4",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=mMe9jGtURG4",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/mMe9jGtURG4/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_f5uiB2yglDg",
-    "title": "Gospel Track 5",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=f5uiB2yglDg",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/f5uiB2yglDg/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_MJi5lLfEMpg",
-    "title": "Gospel Track 6",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=MJi5lLfEMpg",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/MJi5lLfEMpg/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_lAIdT5lNkfg",
-    "title": "Gospel Track 7",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=lAIdT5lNkfg",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/lAIdT5lNkfg/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_FlxbaTgDcEc",
-    "title": "Gospel Track 8",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=FlxbaTgDcEc",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/FlxbaTgDcEc/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_0ha1r2CGqbU",
-    "title": "Gospel Track 9",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=0ha1r2CGqbU",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/0ha1r2CGqbU/hqdefault.jpg"
-  },
-  {
-    "id": "gospel_hVeMrN4ms3c",
-    "title": "Gospel Track 10",
-    "description": "Fanantenana Ho Anao - Gospel",
-    "url": "https://www.youtube.com/watch?v=hVeMrN4ms3c",
-    "isWebStream": false,
-    "image": "https://img.youtube.com/vi/hVeMrN4ms3c/hqdefault.jpg"
+    "id": "jehovah-shalom",
+    "title": "Jehovah Shalom Acapella",
+    "description": "Acapella singing group",
+    "isGroup": true,
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png"
   }
 ]
