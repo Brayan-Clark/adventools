@@ -43,5 +43,50 @@
     "color": "#06b6d4",
     "bg": "bg-cyan-500/10",
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
+  },
+  {
+    "id": "hira-faneva_ja",
+    "title": "Hira Faneva JA",
+    "lang": "Malagasy",
+    "count": 3,
+    "color": "#f59e0b",
+    "bg": "bg-amber-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_ja.png"
+  },
+  {
+    "id": "hira-faneva_viedefamille",
+    "title": "Hira Faneva Vie de Famille",
+    "lang": "Malagasy",
+    "count": 1,
+    "color": "#ec4899",
+    "bg": "bg-pink-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
+  },
+  {
+    "id": "hira-faneva_sesa",
+    "title": "Hira Faneva Sesa",
+    "lang": "Malagasy",
+    "count": 2,
+    "color": "#a855f7",
+    "bg": "bg-violet-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_sesa.png"
+  },
+  {
+    "id": "hira-faneva_minenf",
+    "title": "Hira Faneva MINENF",
+    "lang": "Malagasy",
+    "count": 8,
+    "color": "#ef4444",
+    "bg": "bg-red-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_minenf.png"
+  },
+  {
+    "id": "hira-faneva_mifem",
+    "title": "Hira Faneva MIFEM",
+    "lang": "Malagasy",
+    "count": 9,
+    "color": "#f97316",
+    "bg": "bg-orange-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_mifem.png"
   }
 ]
