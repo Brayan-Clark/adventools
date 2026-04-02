@@ -1,39 +1,28 @@
-export async function PlaybackService() {
-    let TrackPlayer;
-    let Event;
-    try {
-        const TP = require('react-native-track-player');
-        TrackPlayer = TP.default || TP;
-        Event = require('react-native-track-player').Event;
-    } catch(e) { return; }
+import TrackPlayer, { Event } from 'react-native-track-player';
 
-    TrackPlayer.addEventListener(Event.RemotePause, () => {
-        TrackPlayer.pause();
-    });
+export default async function PlaybackService() {
+  console.log('[AUDIO-SERVICE] Background Task Started');
+  
+  TrackPlayer.addEventListener(Event.RemotePlay, async () => {
+    console.log('[AUDIO-SERVICE] Event: RemotePlay');
+    await TrackPlayer.play();
+  });
 
-    TrackPlayer.addEventListener(Event.RemotePlay, () => {
-        TrackPlayer.play();
-    });
+  TrackPlayer.addEventListener(Event.RemotePause, async () => {
+    console.log('[AUDIO-SERVICE] Event: RemotePause');
+    await TrackPlayer.pause();
+  });
 
-    TrackPlayer.addEventListener(Event.RemoteNext, () => {
-        TrackPlayer.skipToNext();
-    });
+  TrackPlayer.addEventListener(Event.RemoteStop, async () => {
+    console.log('[AUDIO-SERVICE] Event: RemoteStop');
+    await TrackPlayer.stop();
+  });
 
-    TrackPlayer.addEventListener(Event.RemotePrevious, () => {
-        TrackPlayer.skipToPrevious();
-    });
+  TrackPlayer.addEventListener(Event.RemoteNext, async () => {
+    await TrackPlayer.skipToNext();
+  });
 
-    TrackPlayer.addEventListener(Event.RemoteJumpForward, async (event: any) => {
-        const position = await TrackPlayer.getPosition();
-        await TrackPlayer.seekTo(position + event.interval);
-    });
-
-    TrackPlayer.addEventListener(Event.RemoteJumpBackward, async (event: any) => {
-        const position = await TrackPlayer.getPosition();
-        await TrackPlayer.seekTo(Math.max(0, position - event.interval));
-    });
-
-    TrackPlayer.addEventListener(Event.RemoteSeek, (event: any) => {
-        TrackPlayer.seekTo(event.position);
-    });
+  TrackPlayer.addEventListener(Event.RemotePrevious, async () => {
+    await TrackPlayer.skipToPrevious();
+  });
 }

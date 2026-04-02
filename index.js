@@ -1,16 +1,17 @@
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
-import Constants from 'expo-constants';
 
+// Register the background playback service for React Native Track Player.
 try {
-  const TrackPlayer = require('react-native-track-player');
-  const { PlaybackService } = require('./lib/audio-service');
-  TrackPlayer.registerPlaybackService(() => PlaybackService);
+  const TP = require('react-native-track-player');
+  const TrackPlayer = TP.default || TP;
+  // IMPORTANT: Use .default for the exported service task
+  TrackPlayer.registerPlaybackService(() => require('./lib/audio-service').default);
+  console.log('[TrackPlayer] PlaybackService registered successfully');
 } catch (e) {
-  console.warn("TrackPlayer initialization failed", e);
+  console.warn('[TrackPlayer] registerPlaybackService failed:', e);
 }
 
-// https://docs.expo.dev/router/introduction/#dynamically-import-all-files-in-the-app-directory
 export function App() {
   const ctx = require.context('./app');
   return <ExpoRoot context={ctx} />;

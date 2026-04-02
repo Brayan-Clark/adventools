@@ -2,27 +2,42 @@ import { Audio } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, Pause, Play, Rewind, FastForward, SkipBack, SkipForward, Repeat, Heart, List, Share2, Radio as RadioIcon } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View, Alert, Image, Dimensions, Animated, Platform, PermissionsAndroid } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View, Alert, Image, Dimensions, Animated, Platform, PermissionsAndroid, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// Safe dynamic import to prevent crash in Expo Go
 let TrackPlayer: any = null;
 let AppKilledPlaybackBehavior: any = null;
 let Capability: any = null;
+let State: any = null;
 try {
-  if (Constants.appOwnership !== 'expo') {
     const tpModule = require('react-native-track-player');
     TrackPlayer = tpModule.default || tpModule;
     AppKilledPlaybackBehavior = tpModule.AppKilledPlaybackBehavior;
     Capability = tpModule.Capability;
-  }
-} catch (e) {}
+    State = tpModule.State;
+} catch (e) {
+  console.warn("TrackPlayer module not found", e);
+}
+
+// Standard Android Media Session action codes for reliability
+const CAPABILITIES = {
+  PLAY: Capability?.Play ?? 0,
+  PAUSE: Capability?.Pause ?? 1,
+  STOP: Capability?.Stop ?? 2,
+  SKIP_NEXT: Capability?.SkipToNext ?? 3,
+  SKIP_PREV: Capability?.SkipToPrevious ?? 4,
+  SEEK: Capability?.SeekTo ?? 9,
+  JUMP_FWD: Capability?.JumpForward ?? 11,
+  JUMP_BWD: Capability?.JumpBackward ?? 12,
+};
+
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
@@ -41,6 +56,10 @@ export default function AudioPlayerScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const params = useLocalSearchParams() as any;
+  // NOTE: We do NOT use useKeepAwake() here.
+  // For radio playback, we WANT the screen to be able to turn off while audio
+  // continues in the background via the RNTP foreground service.
+  // useKeepAwake() would keep the screen on and drain battery.
   
   const [currentTrack, setCurrentTrack] = useState({
     title: params.title,
@@ -53,7 +72,26 @@ export default function AudioPlayerScreen() {
 
   const playlist = useRef<any[]>(params.playlist ? JSON.parse(params.playlist) : []);
   const currentIndex = useRef<number>(params.index ? parseInt(params.index) : -1);
-  const [autoPlay, setAutoPlay] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(false);
+
+  // Persistent Auto Play Setting
+  useEffect(() => {
+    const loadAutoPlay = async () => {
+      try {
+        const val = await AsyncStorage.getItem('audio_autoplay');
+        if (val !== null) setAutoPlay(val === 'true');
+      } catch (e) {}
+    };
+    loadAutoPlay();
+  }, []);
+
+  const saveAutoPlay = async (val: boolean) => {
+    setAutoPlay(val);
+    try {
+      await AsyncStorage.setItem('audio_autoplay', val ? 'true' : 'false');
+    } catch (e) {}
+  };
+  const [showPlaylist, setShowPlaylist] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
   const { settings: globalSettings } = useSettings();
@@ -67,6 +105,7 @@ export default function AudioPlayerScreen() {
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const isTPActive = useRef(false);
+  const syncIntervalRef = useRef<any>(null);
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -74,6 +113,9 @@ export default function AudioPlayerScreen() {
     return () => {
       if (soundRef.current) {
         soundRef.current.unloadAsync();
+      }
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
       }
     }
   }, [currentTrack.url]);
@@ -106,21 +148,48 @@ export default function AudioPlayerScreen() {
   });
 
   const initPlayer = async () => {
+    // 1. Request Notification Permission (Android 13+)
     if (Platform.OS === 'android' && Platform.Version >= 33) {
       try {
-        await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-      } catch (e) {}
-    }
-
-    if (TrackPlayer && TrackPlayer.default) {
-      try {
-        await setupTrackPlayer();
-        isTPActive.current = true;
-        return;
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+          {
+            title: "Permission de notification",
+            message: "Adventools a besoin d'afficher le lecteur dans la barre de notifications.",
+            buttonNeutral: "Plus tard",
+            buttonNegative: "Annuler",
+            buttonPositive: "OK"
+          }
+        );
+        console.log("[TRACKPLAYER] Notification permission:", result);
       } catch (e) {
-        console.warn("TrackPlayer setup failed", e);
+        console.warn("[TRACKPLAYER] Permission error:", e);
       }
     }
+
+    // 2. Try to initialize TrackPlayer (Requires Native APK)
+    if (TrackPlayer) {
+      try {
+        console.log("[TRACKPLAYER] Attempting setup...");
+        const success = await setupTrackPlayer();
+        if (success) {
+          isTPActive.current = true;
+          console.log("[TRACKPLAYER] Started successfully.");
+          return; // Success!
+        } else {
+          console.error("[TRACKPLAYER] setupTrackPlayer returned false.");
+        }
+      } catch (e: any) {
+        console.error("[TRACKPLAYER] Setup exception:", e);
+        Alert.alert("Erreur Lecteur Natif", "Le lecteur haute performance n'a pas pu démarrer. Assurez-vous d'utiliser l'APK mis à jour.\n\nErreur: " + (e?.message || e));
+      }
+    } else {
+      console.warn("[TRACKPLAYER] Module not found. Check if you are using Expo Go (not supported).");
+      // Don't alert here to avoid annoying users on Web/Expo Go unless they try to play
+    }
+    
+    // 3. Last resort fallback
+    console.log("[UI] Falling back to expo-av (Limited background support)");
     await setupExpoAV();
   };
 
@@ -134,6 +203,7 @@ export default function AudioPlayerScreen() {
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         playThroughEarpieceAndroid: false,
+        interruptionModeAndroid: 1, // Interrupt
       });
 
       const { sound: newSound } = await Audio.Sound.createAsync(
@@ -162,96 +232,139 @@ export default function AudioPlayerScreen() {
     } catch (e) {} finally { setIsBuffering(false); }
   };
 
-  const setupTrackPlayer = async () => {
-    const TP = TrackPlayer.default || TrackPlayer;
-    try { await TP.setupPlayer(); } catch (e) {}
 
-    await TP.updateOptions({
-      stopWithApp: false,
-      alwaysPauseOnInterruption: true,
-      android: {
-        appKilledPlaybackBehavior: AppKilledPlaybackBehavior ? AppKilledPlaybackBehavior.ContinuePlayback : 1,
-      },
-      capabilities: Capability ? [
-        Capability.Play, Capability.Pause, Capability.Stop,
-        Capability.SeekTo, Capability.SkipToNext, Capability.SkipToPrevious,
-        Capability.JumpForward, Capability.JumpBackward,
-      ] : [],
-      compactCapabilities: Capability ? [Capability.Play, Capability.Pause, Capability.SkipToNext] : [],
-      notificationCapabilities: Capability ? [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.Stop] : [],
-    });
-
-    await TP.reset();
-    
-    // If we have a playlist, add all tracks
-    if (playlist.current.length > 0) {
-        const tracks = playlist.current.map((item, idx) => ({
-            id: `track-${idx}`,
-            url: resolveAudioUrl(item.url),
-            title: item.title,
-            artist: item.artist || item.subtext || 'Adventools',
-            artwork: item.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
-            headers: { 
-              'User-Agent': USER_AGENT,
-              'Referer': 'https://www.hymnes.net/'
-            }
-        }));
-        await TP.add(tracks);
-        if (currentIndex.current >= 0) {
-            await TP.skip(currentIndex.current);
-        }
-    } else {
-        await TP.add({
-            id: 'single-track',
-            url: resolveAudioUrl(currentTrack.url),
-            title: currentTrack.title,
-            artist: currentTrack.artist || currentTrack.subtext || 'Adventools',
-            artwork: currentTrack.artwork,
-            headers: { 
-              'User-Agent': USER_AGENT,
-              'Referer': 'https://www.hymnes.net/'
-            }
-        });
+  const setupTrackPlayer = async (): Promise<boolean> => {
+    // TrackPlayer is already resolved to .default at module level
+    const TP = TrackPlayer;
+    if (!TP) {
+      console.error('[TRACKPLAYER] TrackPlayer module is null — native module not linked?');
+      return false;
     }
 
-    await TP.play();
-    setIsPlaying(true);
+    // 1. Setup player (idempotent — OK if already initialized)
+    try {
+      await TP.setupPlayer({ waitForBuffer: true });
+      console.log('[TRACKPLAYER] setupPlayer OK');
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      // Only tolerate "already initialized" errors
+      if (!msg.includes('already') && !msg.includes('initialized')) {
+        console.error('[TRACKPLAYER] setupPlayer failed (fatal):', msg);
+        return false;
+      }
+      console.log('[TRACKPLAYER] setupPlayer — already initialized, continuing');
+    }
 
-    const sync = setInterval(async () => {
-        try {
-            const pbState = await TP.getPlaybackState();
-            const state = pbState.state || pbState; // Handle both object and constant versions
-            const currentIdx = await TP.getCurrentTrack();
-            
-            if (currentIdx !== null && currentIdx !== currentIndex.current && playlist.current[currentIdx]) {
-                const next = playlist.current[currentIdx];
-                currentIndex.current = currentIdx;
-                setCurrentTrack({
-                    title: next.title,
-                    url: resolveAudioUrl(next.url),
-                    isLocal: next.isLocal,
-                    subtext: next.subtext || currentTrack.subtext,
-                    artist: next.artist,
-                    artwork: next.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png'
-                });
-            }
+        // 2. Configure capabilities & behaviour (RNTP v4 valid options only)
+    try {
+      await TP.updateOptions({
+        android: {
+          // Behavior when app is killed (keep playing)
+          appKilledPlaybackBehavior: AppKilledPlaybackBehavior?.ContinuePlayback ?? 1,
+        },
+        capabilities: [
+          CAPABILITIES.PLAY, CAPABILITIES.PAUSE, CAPABILITIES.STOP,
+          CAPABILITIES.SEEK, CAPABILITIES.SKIP_NEXT, CAPABILITIES.SKIP_PREV,
+          CAPABILITIES.JUMP_FWD, CAPABILITIES.JUMP_BWD,
+        ],
+        compactCapabilities: [
+          CAPABILITIES.PLAY, CAPABILITIES.PAUSE,
+          CAPABILITIES.SKIP_NEXT, CAPABILITIES.SKIP_PREV,
+        ],
+        notificationCapabilities: [
+          CAPABILITIES.PLAY, CAPABILITIES.PAUSE, CAPABILITIES.STOP,
+          CAPABILITIES.SKIP_NEXT, CAPABILITIES.SKIP_PREV,
+        ],
+      });
+      console.log('[TRACKPLAYER] updateOptions OK');
+    } catch (e: any) {
+      console.error('[TRACKPLAYER] updateOptions failed:', String(e?.message || e));
+      return false;
+    }
 
-            const isReallyPlaying = state === TP.State.Playing || state === 'playing' || state === 3;
-            const isReallyBuffering = state === TP.State.Buffering || state === 'buffering' || state === 6;
-            
-            setIsPlaying(isReallyPlaying);
-            setIsBuffering(isReallyBuffering);
-            
-            const pos = await TP.getPosition();
-            const dur = await TP.getDuration();
-            if (pos !== undefined) setPosition(pos);
-            if (dur !== undefined && dur > 0) setDuration(dur);
-        } catch (e) {}
+    // 3. Queue tracks and start playback
+    try {
+      await TP.reset();
+
+      const AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+
+      if (playlist.current.length > 0) {
+        const tracks = playlist.current.map((item: any, idx: number) => ({
+          id: `track-${idx}`,
+          url: resolveAudioUrl(item.url),
+          title: item.title,
+          artist: item.artist || item.subtext || 'Adventools',
+          artwork: item.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
+          headers: { 'User-Agent': AGENT, 'Referer': 'https://www.hymnes.net/' },
+        }));
+        console.log('[TRACKPLAYER] Adding playlist:', tracks.length, 'tracks');
+        await TP.add(tracks);
+        if (currentIndex.current >= 0) {
+          await TP.skip(currentIndex.current);
+        }
+      } else {
+        console.log('[TRACKPLAYER] Adding single track:', currentTrack.title);
+        await TP.add({
+          id: 'track-0',
+          url: resolveAudioUrl(currentTrack.url),
+          title: currentTrack.title,
+          artist: currentTrack.artist || currentTrack.subtext || 'Adventools',
+          artwork: currentTrack.artwork,
+          headers: { 'User-Agent': AGENT, 'Referer': 'https://www.hymnes.net/' },
+        });
+      }
+
+      await TP.play();
+      setIsPlaying(true);
+      console.log('[TRACKPLAYER] ✅ Playback started — notification should appear');
+    } catch (e: any) {
+      console.error('[TRACKPLAYER] Queue/play failed:', String(e?.message || e));
+      return false;
+    }
+
+    // 4. Sync interval — keep UI in sync with RNTP state
+    if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+    
+    syncIntervalRef.current = setInterval(async () => {
+      try {
+        if (!isTPActive.current) return;
+        const pbState = await TP.getPlaybackState();
+        const state = pbState.state ?? pbState;
+        const currentIdx = await TP.getCurrentTrack();
+
+        if (currentIdx !== null && currentIdx !== currentIndex.current && playlist.current[currentIdx]) {
+          const next = playlist.current[currentIdx];
+          currentIndex.current = currentIdx;
+          setCurrentTrack({
+            title: next.title,
+            url: resolveAudioUrl(next.url),
+            isLocal: next.isLocal,
+            subtext: next.subtext || currentTrack.subtext,
+            artist: next.artist,
+            artwork: next.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
+          });
+        }
+
+        const isReallyPlaying =
+          state === (State?.Playing ?? 'playing') || state === 'playing' || state === 3;
+        const isReallyBuffering =
+          state === (State?.Buffering ?? 'buffering') || state === 'buffering' || state === 6;
+
+        setIsPlaying(isReallyPlaying);
+        setIsBuffering(isReallyBuffering);
+
+        const pos = await TP.getPosition();
+        const dur = await TP.getDuration();
+        if (pos !== undefined) setPosition(pos);
+        if (dur !== undefined && dur > 0) setDuration(dur);
+      } catch (_) {}
     }, 500);
-    return () => clearInterval(sync);
+
+    return true;
   };
 
   const handleTrackFinish = () => {
+
     if (autoPlay && playlist.current.length > 0 && currentIndex.current < playlist.current.length - 1) {
         playNext();
     }
@@ -306,13 +419,13 @@ export default function AudioPlayerScreen() {
             const state = pbState.state || pbState;
             
             const playingStates = [
-                TrackPlayer.State.Playing,
-                TrackPlayer.State.Buffering,
+                State?.Playing,
+                State?.Buffering,
                 'playing',
                 'buffering',
-                3, // Playing
-                6  // Buffering
-            ];
+                3, // Playing (RNTP v3 numeric fallback)
+                6  // Buffering (RNTP v3 numeric fallback)
+            ].filter(Boolean);
             
             if (playingStates.includes(state)) {
                 await TrackPlayer.pause();
@@ -395,9 +508,16 @@ export default function AudioPlayerScreen() {
                 <Text className="text-white text-xs font-bold mt-0.5" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>{currentTrack.subtext}</Text>
             </View>
 
-            <TouchableOpacity className="w-10 h-10 rounded-full bg-white/10 border border-white/20 items-center justify-center shadow-lg">
-                <List size={20} color="#f8fafc" />
-            </TouchableOpacity>
+            {autoPlay ? (
+                <TouchableOpacity 
+                    onPress={() => setShowPlaylist(true)}
+                    className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 items-center justify-center shadow-lg"
+                >
+                    <List size={20} color="#3b82f6" />
+                </TouchableOpacity>
+            ) : (
+                <View className="w-10 h-10" />
+            )}
         </View>
 
         <View className="flex-1 items-center justify-center px-8">
@@ -439,18 +559,18 @@ export default function AudioPlayerScreen() {
                </View>
             </View>
 
-            {/* Main Controls */}
-            <View className="flex-row items-center justify-between w-full px-2 mb-10">
-                <TouchableOpacity onPress={() => setIsLiked(!isLiked)} className="w-12 h-12 items-center justify-center bg-white/5 rounded-2xl border border-white/10">
-                    <Heart size={24} color={isLiked ? '#ef4444' : '#f8fafc'} fill={isLiked ? '#ef4444' : 'transparent'} />
-                </TouchableOpacity>
-
-                <View className="flex-row items-center">
-                    <TouchableOpacity onPress={playPrev} disabled={currentIndex.current <= 0} className={`mx-4 ${currentIndex.current <= 0 ? 'opacity-20' : 'opacity-100'}`}>
-                        <SkipBack size={32} color="#f8fafc" fill="#f8fafc" />
+            {/* Main Controls - Enhanced with seek buttons */}
+            <View className="w-full items-center mb-10">
+                <View className="flex-row items-center justify-between w-full px-2">
+                    <TouchableOpacity onPress={playPrev} disabled={currentIndex.current <= 0} className={`w-12 h-12 items-center justify-center ${currentIndex.current <= 0 ? 'opacity-20' : 'opacity-100'}`}>
+                        <SkipBack size={28} color="#f8fafc" fill="#f8fafc" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={togglePlayPause} className="w-20 h-20 rounded-full bg-white items-center justify-center shadow-2xl mx-4 transform scale-110">
+                    <TouchableOpacity onPress={skipBackward} className="w-12 h-12 items-center justify-center bg-white/5 rounded-full border border-white/10">
+                        <Rewind size={22} color="#f8fafc" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={togglePlayPause} className="w-20 h-20 rounded-full bg-white items-center justify-center shadow-2xl mx-2">
                         {(isBuffering && !isPlaying && currentTrack.subtext !== 'En direct') ? (
                             <ActivityIndicator color="#0f172a" size="large" />
                         ) : isPlaying ? (
@@ -460,45 +580,100 @@ export default function AudioPlayerScreen() {
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={playNext} disabled={currentIndex.current >= playlist.current.length - 1} className={`mx-4 ${currentIndex.current >= playlist.current.length - 1 ? 'opacity-20' : 'opacity-100'}`}>
-                        <SkipForward size={32} color="#f8fafc" fill="#f8fafc" />
+                    <TouchableOpacity onPress={skipForward} className="w-12 h-12 items-center justify-center bg-white/5 rounded-full border border-white/10">
+                        <FastForward size={22} color="#f8fafc" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={playNext} disabled={currentIndex.current >= playlist.current.length - 1} className={`w-12 h-12 items-center justify-center ${currentIndex.current >= playlist.current.length - 1 ? 'opacity-20' : 'opacity-100'}`}>
+                        <SkipForward size={28} color="#f8fafc" fill="#f8fafc" />
                     </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity className="w-12 h-12 items-center justify-center bg-white/5 rounded-2xl border border-white/10">
-                    <Share2 size={24} color="#f8fafc" />
-                </TouchableOpacity>
+                
+                {/* Seek labels */}
+                <View className="flex-row justify-center w-full mt-2 gap-16">
+                    <Text className="text-white/20 text-[8px] font-black uppercase tracking-tighter w-12 text-center">-15s</Text>
+                    <View className="w-20" />
+                    <Text className="text-white/20 text-[8px] font-black uppercase tracking-tighter w-12 text-center">+15s</Text>
+                </View>
             </View>
 
-            {/* Secondary Controls Bar */}
-            <View className="flex-row items-center justify-around w-full bg-white/5 border border-white/10 rounded-3xl py-4 px-6 mb-4">
-                <TouchableOpacity onPress={skipBackward} className="items-center flex-1">
-                    <Rewind size={22} color="#f8fafc" />
-                    <Text className="text-white/40 text-[9px] font-black mt-1 uppercase tracking-tighter">-15s</Text>
-                </TouchableOpacity>
-                
-                <View className="w-[1px] h-6 bg-white/10" />
-                
-                {/* Dedicated Next Action Label */}
-                <TouchableOpacity onPress={playNext} disabled={currentIndex.current >= playlist.current.length - 1} className="items-center flex-1 px-2">
-                     <Text className="text-blue-500 text-[10px] font-black uppercase tracking-[2px]">{t('next') || 'SUIVANT'}</Text>
-                </TouchableOpacity>
-
-                <View className="w-[1px] h-6 bg-white/10" />
-
-                <TouchableOpacity onPress={skipForward} className="items-center flex-1">
-                    <FastForward size={22} color="#f8fafc" />
-                    <Text className="text-white/40 text-[9px] font-black mt-1 uppercase tracking-tighter">+15s</Text>
-                </TouchableOpacity>
-
-                <View className="w-[1px] h-6 bg-white/10" />
-
-                <TouchableOpacity onPress={() => setAutoPlay(!autoPlay)} className="items-center flex-1">
-                    <Repeat size={18} color={autoPlay ? '#10b981' : '#64748b'} />
-                    <Text className={`text-[8px] font-black mt-1 uppercase ${autoPlay ? 'text-emerald-500' : 'text-slate-500'}`}>AUTO</Text>
+            {/* Auto Play Option */}
+            <View className="w-full px-4 pt-4 border-t border-white/5">
+                <TouchableOpacity 
+                    onPress={() => saveAutoPlay(!autoPlay)}
+                    className={`flex-row items-center justify-between p-4 rounded-2xl border ${autoPlay ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/10'}`}
+                >
+                    <View className="flex-row items-center">
+                        <View className={`w-8 h-8 rounded-lg items-center justify-center mr-3 ${autoPlay ? 'bg-indigo-500/20' : 'bg-white/10'}`}>
+                             <Repeat size={16} color={autoPlay ? '#818cf8' : '#64748b'} />
+                        </View>
+                        <View>
+                            <Text className={`text-sm font-bold ${autoPlay ? 'text-indigo-400' : 'text-slate-400'}`} style={{ fontFamily: fontFamilyBold }}>
+                                LECTURE AUTOMATIQUE
+                            </Text>
+                            <Text className="text-[10px] text-slate-500" style={{ fontFamily: fontFamilyValue }}>
+                                {autoPlay ? 'Passer au morceau suivant automatiquement' : 'S\'arrêter à la fin du morceau'}
+                            </Text>
+                        </View>
+                    </View>
+                    <View className={`w-10 h-6 rounded-full px-1 justify-center ${autoPlay ? 'bg-indigo-500' : 'bg-slate-700'}`}>
+                        <View className={`w-4 h-4 bg-white rounded-full ${autoPlay ? 'self-end' : 'self-start'}`} />
+                    </View>
                 </TouchableOpacity>
             </View>
         </View>
+
+        {/* Playlist Overlay */}
+        {showPlaylist && (
+            <View className="absolute inset-0 bg-slate-950 z-50">
+                <SafeAreaView className="flex-1">
+                    <View className="flex-row items-center justify-between px-6 py-4 border-b border-white/5">
+                        <Text className="text-white font-bold text-xl" style={{ fontFamily: fontFamilyBold }}>File d'attente</Text>
+                        <TouchableOpacity onPress={() => setShowPlaylist(false)} className="w-10 h-10 items-center justify-center rounded-full bg-white/5">
+                            <ChevronDown size={24} color="#f8fafc" />
+                        </TouchableOpacity>
+                    </View>
+                    <FlatList 
+                        data={playlist.current}
+                        keyExtractor={(_, i) => `list-${i}`}
+                        contentContainerStyle={{ padding: 20 }}
+                        renderItem={({ item, index }) => (
+                            <TouchableOpacity 
+                                onPress={async () => {
+                                    if (isTPActive.current) {
+                                        await TrackPlayer.skip(index);
+                                        await TrackPlayer.play();
+                                    } else {
+                                        currentIndex.current = index;
+                                        setCurrentTrack({
+                                            title: item.title,
+                                            url: resolveAudioUrl(item.url),
+                                            isLocal: item.isLocal || false,
+                                            subtext: item.subtext || currentTrack.subtext,
+                                            artist: item.artist,
+                                            artwork: item.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png'
+                                        });
+                                    }
+                                    setShowPlaylist(false);
+                                }}
+                                className={`flex-row items-center p-3 rounded-2xl mb-2 ${index === currentIndex.current ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-white/5 border border-transparent'}`}
+                            >
+                                <View className="w-10 h-10 rounded-lg bg-slate-800 items-center justify-center overflow-hidden">
+                                     <Image source={{ uri: item.artwork || currentTrack.artwork }} className="w-full h-full" />
+                                </View>
+                                <View className="ml-4 flex-1">
+                                    <Text className={`text-sm font-bold ${index === currentIndex.current ? 'text-blue-400' : 'text-white'}`} numberOfLines={1}>{item.title}</Text>
+                                    <Text className="text-xs text-slate-500" numberOfLines={1}>{item.artist || item.subtext}</Text>
+                                </View>
+                                {index === currentIndex.current && isPlaying && (
+                                    <ActivityIndicator size="small" color="#3b82f6" />
+                                )}
+                            </TouchableOpacity>
+                        )}
+                    />
+                </SafeAreaView>
+            </View>
+        )}
       </SafeAreaView>
     </View>
   );

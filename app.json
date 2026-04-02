@@ -33,9 +33,11 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "WAKE_LOCK",
-        "INTERNET"
+        "INTERNET",
+        "POST_NOTIFICATIONS"
       ],
-      "versionCode": 2
+      "versionCode": 2,
+      "newArchEnabled": true
     },
     "web": {
       "bundler": "metro",

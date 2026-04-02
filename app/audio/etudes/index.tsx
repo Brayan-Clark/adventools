@@ -49,6 +49,13 @@ export default function EtudesCategoriesScreen() {
         if (res.ok) {
           const data = await res.json();
           setCategories(data);
+          
+          // Ensure directory exists
+          const dir = `${FileSystem.documentDirectory}etudes/`;
+          const dirInfo = await FileSystem.getInfoAsync(dir);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          }
           await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(data));
         }
       }

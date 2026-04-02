@@ -9,6 +9,7 @@ import NetInfo from '@react-native-community/netinfo';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/manifest.json';
+const CACHE_FILE = `${FileSystem.documentDirectory}playbacks/manifest_cache.json`;
 
 // Local Fallback
 const DEFAULT_CATEGORIES = [
@@ -40,20 +41,36 @@ export default function PlaybacksCategoriesScreen() {
   }, [categories]);
 
   const loadManifest = async () => {
-    const net = await NetInfo.fetch();
-    if (!net.isConnected) return;
-
-    setIsLoading(true);
     try {
-      const res = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data);
+      // 1. Try Cache first
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
+      if (cacheInfo.exists) {
+        setCategories(JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE)));
+      }
+
+      // 2. Fetch fresh
+      const net = await NetInfo.fetch();
+      if (net.isConnected) {
+        setIsLoading(categories.length === 0);
+        const res = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data);
+          
+          // Ensure directory exists
+          const dir = `${FileSystem.documentDirectory}playbacks/`;
+          const dirInfo = await FileSystem.getInfoAsync(dir);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          }
+          await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(data));
+        }
       }
     } catch (e) {
       console.log('Playbacks manifest load error', e);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const checkOffline = async () => {

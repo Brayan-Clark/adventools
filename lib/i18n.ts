@@ -11,11 +11,8 @@ export { Language, TranslationKey, TranslationSchema };
 /**
  * Static local translations
  */
-export const staticTranslations: Record<Language, TranslationSchema> = {
-  Français: fr,
-  English: en,
-  Malagasy: mg,
-};
+import { staticTranslations } from './i18n-static';
+export { staticTranslations };
 
 /**
  * Hook to use translations in components.

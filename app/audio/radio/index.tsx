@@ -18,7 +18,10 @@ interface RadioStation {
   type?: 'live' | 'podcast';
 }
 
+import * as FileSystem from 'expo-file-system/legacy';
+
 const RADIOS_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/radios.json';
+const CACHE_FILE = `${FileSystem.documentDirectory}radios/manifest_cache.json`;
 
 export default function RadioScreen() {
   const router = useRouter();
@@ -36,8 +39,17 @@ export default function RadioScreen() {
   }, []);
 
   const fetchStations = async () => {
-    setLoading(true);
     try {
+      // 1. Try Cache first
+      const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
+      if (cacheInfo.exists) {
+        const content = await FileSystem.readAsStringAsync(CACHE_FILE);
+        const data = JSON.parse(content);
+        setStations(data.stations || []);
+        setLoading(false);
+      }
+
+      // 2. Fetch fresh
       const networkState = await NetInfo.fetch();
       setIsConnected(networkState.isConnected);
 
@@ -46,6 +58,14 @@ export default function RadioScreen() {
         if (response.ok) {
           const data = await response.json();
           setStations(data.stations || []);
+          
+          // Ensure directory exists
+          const dir = `${FileSystem.documentDirectory}radios/`;
+          const dirInfo = await FileSystem.getInfoAsync(dir);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          }
+          await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(data));
         }
       }
     } catch (error) {

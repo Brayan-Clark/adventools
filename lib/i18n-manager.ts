@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { staticTranslations } from './i18n';
+import { staticTranslations } from './i18n-static';
 import { Language, TranslationSchema } from './i18n/types';
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/i18n/manifest.json';
