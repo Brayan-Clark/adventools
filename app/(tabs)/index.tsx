@@ -3,7 +3,7 @@ import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Sun, Headphones, Tv } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVerseContentById } from '@/lib/bible';
@@ -11,6 +11,8 @@ import { useTranslation } from '@/lib/i18n';
 import { syncMofonaina, getMofonainaForDate, Mofonaina } from '@/lib/mofonaina';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
+import { fetchWeather, WeatherInfo, getWeatherDisplay } from '@/lib/weather';
+import * as LucideIcons from 'lucide-react-native';
 
 export default function Home() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function Home() {
   const [verseText, setVerseText] = useState<string>('');
   const [history, setHistory] = useState<any[]>([]);
   const [mofonainaDaily, setMofonainaDaily] = useState<Mofonaina | null>(null);
+  const [weather, setWeather] = useState<WeatherInfo | null>(null);
 
   React.useEffect(() => {
     async function init() {
@@ -32,8 +35,8 @@ export default function Home() {
           } else {
             const all = await syncMofonaina(false);
             if (all.length > 0) {
-               const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
-               setMofonainaDaily(sorted[0]);
+              const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
+              setMofonainaDaily(sorted[0]);
             }
           }
         } catch (e) {
@@ -65,15 +68,26 @@ export default function Home() {
         console.error("Error loading verse:", e);
         setVerseText('...');
       }
+
+      // Fetch Weather info (small background update)
+      try {
+        const weatherData = await fetchWeather();
+        if (weatherData) setWeather(weatherData);
+      } catch (e) { }
     }
     init();
-  }, []);
+  }, [globalSettings.bibleVersion]);
 
   useFocusEffect(
     React.useCallback(() => {
       AsyncStorage.getItem('app_history').then(res => {
         if (res) setHistory(JSON.parse(res));
       });
+
+      // Refresh weather on focus to catch settings changes
+      fetchWeather().then(data => {
+        if (data) setWeather(data);
+      }).catch(() => { });
     }, [])
   );
 
@@ -129,7 +143,7 @@ export default function Home() {
             />
             <View>
               <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{greeting}</Text>
-              <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('welcome')} !</Text>
+              <Text className="text-lg uppercase font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{globalSettings.userName ? ` ${globalSettings.userName}` : `${t('welcome')} !`}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -222,31 +236,58 @@ export default function Home() {
 
         {/* Mofon'aina Daily Reading Card */}
         {mofonainaDaily && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/mofonaina' as any)}
             className="mb-10 bg-slate-900 rounded-[30px] border border-slate-800 shadow-xl overflow-hidden p-6"
           >
             <View className="flex-row items-center justify-between mb-4">
-               <View className="flex-row items-center">
-                 <View className="w-10 h-10 rounded-full bg-orange-500/20 items-center justify-center mr-3">
-                   <Sun size={18} color="#f97316" />
-                 </View>
-                 <View>
-                   <Text className="text-[10px] font-bold uppercase text-orange-500 tracking-widest leading-3" style={{ fontFamily: 'Lexend_700Bold' }}>{t('fiambenana_maraina')}</Text>
-                   <Text className="text-white font-bold text-base mt-1" style={{ fontFamily: 'Lexend_700Bold' }}>{mofonainaDaily.lohateny_andro}</Text>
-                 </View>
-               </View>
-               <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
-                 <ChevronRight size={16} color="#94a3b8" />
-               </View>
+              <View className="flex-row items-center flex-1">
+                <View className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 items-center justify-center mr-3">
+                  {weather ? (
+                    <View className="items-center">
+                      {(() => {
+                        const display = getWeatherDisplay(weather.conditionCode);
+                        const Icon = (LucideIcons as any)[display.name];
+                        return <Icon size={20} color={display.color} />;
+                      })()}
+                      <Text className="text-[9px] text-white font-bold mt-0.5">{weather.temp}°C</Text>
+                    </View>
+                  ) : (
+                    <View className="items-center justify-center">
+                      <ActivityIndicator size="small" color="#f97316" />
+                      <Text className="text-[7px] text-slate-500 font-bold mt-1 uppercase">SYNC</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View className="flex-1">
+                  <Text className="text-[10px] font-bold uppercase text-orange-500 tracking-widest leading-3" style={{ fontFamily: 'Lexend_700Bold' }}>{t('fiambenana_maraina')}</Text>
+                  <Text className="text-white font-bold text-base mt-1" style={{ fontFamily: 'Lexend_700Bold' }}>{mofonainaDaily.lohateny_andro}</Text>
+
+                  {/* CITY AND SUNRISE INFO */}
+                  {weather && (
+                    <View className="flex-row items-center mt-1">
+                      <LucideIcons.MapPin size={9} color="#64748b" />
+                      <Text className="text-[9px] text-slate-500 font-bold ml-1 mr-2">{weather.city}</Text>
+
+                      <LucideIcons.Sunrise size={9} color="#94a3b8" />
+                      <Text className="text-[9px] text-slate-400 font-bold ml-1">{weather.sunrise}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center ml-2">
+                <LucideIcons.ChevronRight size={16} color="#94a3b8" />
+              </View>
             </View>
-            
+
             <View className="bg-slate-800/50 rounded-2xl p-4">
               <Text className="text-slate-300 italic text-sm mb-2 leading-6" numberOfLines={2} style={{ fontFamily: 'Lexend_400Regular' }}>
-                 "{mofonainaDaily.andininy_soratra_masina}"
+                "{mofonainaDaily.andininy_soratra_masina}"
               </Text>
               <Text className="text-orange-400 font-bold text-xs" style={{ fontFamily: 'Lexend_600SemiBold' }}>
-                 {mofonainaDaily.toerana_soratra_masina}
+                {mofonainaDaily.toerana_soratra_masina}
               </Text>
             </View>
           </TouchableOpacity>

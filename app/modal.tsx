@@ -43,12 +43,15 @@ export default function Settings() {
     getInstalledLanguages,
     getRemoteAvailableLanguages
   } = useTranslation();
-  const [userName, setUserName] = useState('Fianatra Baiboly');
   const [userImage, setUserImage] = useState<string | null>(null);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
   const [isDeptModalVisible, setIsDeptModalVisible] = useState(false);
   const [isNameEditVisible, setIsNameEditVisible] = useState(false);
+  const [isCityEditVisible, setIsCityEditVisible] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [tempCity, setTempCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState<any[]>([]);
+  const [isCitySearching, setIsCitySearching] = useState(false);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
@@ -86,6 +89,33 @@ export default function Settings() {
     loadBibles();
   }, []);
 
+  // Debounced City Search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (tempCity && tempCity.length > 2 && isCityEditVisible) {
+        searchCities(tempCity);
+      } else {
+        setCitySuggestions([]);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [tempCity, isCityEditVisible]);
+
+  const searchCities = async (query: string) => {
+    setIsCitySearching(true);
+    try {
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=fr`;
+      const resp = await fetch(geoUrl);
+      if (resp.ok) {
+        const data = await resp.json();
+        setCitySuggestions(data.results || []);
+      }
+    } catch (e) {
+    } finally {
+      setIsCitySearching(false);
+    }
+  };
+
   const loadBibles = async () => {
     try {
       const list = await getAvailableBibles();
@@ -120,12 +150,10 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const name = await AsyncStorage.getItem('profile_name');
       const image = await AsyncStorage.getItem('profile_image');
       const depts = await AsyncStorage.getItem('profile_departments');
       const eds = await AsyncStorage.getItem('profile_eds_class');
 
-      if (name !== null) setUserName(name);
       if (image !== null) setUserImage(image);
       if (depts !== null) {
         const parsed = JSON.parse(depts);
@@ -155,10 +183,14 @@ export default function Settings() {
 
   const saveName = async () => {
     if (tempName.trim()) {
-      setUserName(tempName.trim());
-      await AsyncStorage.setItem('profile_name', tempName.trim());
+      await updateSettings({ userName: tempName.trim() });
       setIsNameEditVisible(false);
     }
+  };
+
+  const saveCity = async () => {
+    await updateSettings({ locationCity: tempCity.trim() });
+    setIsCityEditVisible(false);
   };
 
   const toggleDepartment = async (dept: string) => {
@@ -316,11 +348,11 @@ export default function Settings() {
             <View className="ml-5 flex-1">
               <TouchableOpacity
                 onPress={() => {
-                  setTempName(userName);
+                  setTempName(globalSettings.userName || 'Fianatra Baiboly');
                   setIsNameEditVisible(true);
                 }}
               >
-                <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{userName}</Text>
+                <Text className="text-xl font-bold text-white mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{globalSettings.userName || 'Fianatra Baiboly'}</Text>
                 <View className="flex-row items-center flex-wrap gap-2">
                   <View className="bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
                     <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{userEDS}</Text>
@@ -384,10 +416,19 @@ export default function Settings() {
                 <SettingItem
                   icon={<User size={18} color="#64748b" />}
                   label={t('edit_name')}
-                  value={userName}
+                  value={globalSettings.userName || 'Fianatra Baiboly'}
                   onPress={() => {
-                    setTempName(userName);
+                    setTempName(globalSettings.userName || 'Fianatra Baiboly');
                     setIsNameEditVisible(true);
+                  }}
+                />
+                <SettingItem
+                  icon={<Globe size={18} color="#64748b" />}
+                  label={t('location_city')}
+                  value={globalSettings.locationCity || t('auto_ip')}
+                  onPress={() => {
+                    setTempCity(globalSettings.locationCity);
+                    setIsCityEditVisible(true);
                   }}
                 />
                 <SettingItem
@@ -576,6 +617,56 @@ export default function Settings() {
                   <Text className="text-white font-bold">{t('save')}</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <Modal visible={isCityEditVisible} transparent animationType="fade" statusBarTranslucent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+          <View className="flex-1 bg-black/60 justify-center px-6">
+            <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
+              <Text className="text-white font-bold text-lg mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{t('location_city')}</Text>
+              <Text className="text-slate-500 text-xs mb-4">{t('location_city_desc')}</Text>
+              <TextInput
+                className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white mb-2"
+                value={tempCity}
+                onChangeText={setTempCity}
+                placeholder={t('city_placeholder')}
+                placeholderTextColor="#64748b"
+              />
+              
+              {/* SUGGESTIONS LIST */}
+              <View className="mb-6 max-h-40">
+                {isCitySearching && <ActivityIndicator size="small" color="#3b82f6" className="py-2" />}
+                {citySuggestions.map((item, idx) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    onPress={() => {
+                       setTempCity(`${item.name}, ${item.country}`);
+                       setCitySuggestions([]);
+                    }}
+                    className="p-3 border-b border-slate-800 flex-row items-center justify-between"
+                  >
+                    <View className="flex-1">
+                      <Text className="text-white font-bold text-sm tracking-tight">{item.name}</Text>
+                      <Text className="text-slate-500 text-[10px] mt-0.5">{item.admin1 || ''}, {item.country}</Text>
+                    </View>
+                    <Check size={14} color="#3b82f6" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity onPress={() => setIsCityEditVisible(false)} className="flex-1 p-4 rounded-2xl border border-slate-700 items-center">
+                  <Text className="text-slate-400 font-medium">{t('cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveCity} className="flex-1 p-4 rounded-2xl bg-primary items-center">
+                  <Text className="text-white font-bold">{t('save')}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => { setTempCity(''); updateSettings({ locationCity: '' }); setIsCityEditVisible(false); }} className="mt-4 p-2 items-center">
+                <Text className="text-red-400 text-xs font-bold">{t('reset_auto')}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>

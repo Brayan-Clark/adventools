@@ -121,7 +121,6 @@ export class I18nManager {
     try {
       const filePath = `${I18N_DIR}${remoteLang.file}`;
       const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/i18n/${encodeURIComponent(remoteLang.file)}?t=${Date.now()}`;
-      console.log(`[I18n] Downloading '${id}' from: ${url}`);
       const download = await FileSystem.downloadAsync(url, filePath);
 
       if (download.status === 200) {
@@ -147,7 +146,6 @@ export class I18nManager {
         this.localManifest.languages = this.localManifest.languages.filter(l => l.id !== id);
         this.localManifest.languages.push(remoteLang);
         await AsyncStorage.setItem(LOCAL_MANIFEST_KEY, JSON.stringify(this.localManifest));
-        console.log(`[I18n] Successfully downloaded '${id}' (${Object.keys(parsed).length} keys)`);
         return true;
       }
       console.error(`[I18n] Download failed for '${id}': HTTP ${download.status}`);

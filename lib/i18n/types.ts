@@ -357,6 +357,15 @@ export interface TranslationSchema {
   loading_stream: string;
   search_video: string;
   no_video_found: string;
+  sync_complete: string;
+  sync_failed: string;
+  user_name: string;
+  location_city: string;
+  location_city_desc: string;
+  edit_city: string;
+  city_placeholder: string;
+  auto_ip: string;
+  reset_auto: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

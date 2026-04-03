@@ -353,4 +353,13 @@ export const fr: TranslationSchema = {
   loading_stream: "Chargement du flux...",
   search_video: "Rechercher une vidéo...",
   no_video_found: "Aucune vidéo disponible dans cette catégorie pour le moment.",
+  sync_complete: "Mise à jour réussie",
+  sync_failed: "Échec de la mise à jour",
+  user_name: "Nom d'utilisateur",
+  location_city: "Ma ville (Météo)",
+  location_city_desc: "Entrez votre ville pour corriger la météo et le lever du soleil si la détection automatique est incorrecte.",
+  edit_city: "Modifier la ville",
+  city_placeholder: "Ex: Antsiranana, Majunga...",
+  auto_ip: "Détection Auto (IP)",
+  reset_auto: "Réinitialiser (Auto-détection)",
 };

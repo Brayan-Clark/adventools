@@ -83,7 +83,6 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
       if (!info.exists && finalSubfolder) {
         const rootInfo = await FileSystem.getInfoAsync(rootDbPath);
         if (rootInfo.exists) {
-          console.log(`Migrating ${finalDbName} from root to ${finalSubfolder}...`);
           await FileSystem.moveAsync({
             from: rootDbPath,
             to: dbPath
@@ -95,7 +94,6 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
 
       // 3. Initial Copy from Assets if needed
       if (!finalInfo.exists && assetSource) {
-        console.log(`Database ${finalDbName} not found, copying from assets...`);
         const asset = await Asset.fromModule(assetSource).downloadAsync();
         if (asset.localUri) {
           await FileSystem.copyAsync({

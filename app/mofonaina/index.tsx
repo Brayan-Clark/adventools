@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Calendar, Share2, WifiOff } from 'lucide-react-native';
+import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Share } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -36,6 +36,22 @@ export default function MofonainaScreen() {
     } catch (error) {
       console.error('Failed to load mofonaina', error);
       setMofonaina(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setLoading(true);
+    try {
+      const data = await syncMofonaina(true);
+      if (data && data.length > 0) {
+        const todayData = await getMofonainaForDate(currentDate);
+        setMofonaina(todayData);
+        Alert.alert(t('success'), t('sync_complete') || 'Mise à jour réussie');
+      }
+    } catch (e) {
+      Alert.alert(t('error'), t('sync_failed') || 'Échec de la mise à jour');
     } finally {
       setLoading(false);
     }
@@ -119,6 +135,13 @@ export default function MofonainaScreen() {
         </View>
         
         <View className="flex-row items-center">
+          <TouchableOpacity 
+            onPress={handleManualSync}
+            disabled={loading}
+            className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center mr-2"
+          >
+            <RefreshCw size={18} color={loading ? "#475569" : "#f8fafc"} />
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => setShowDatePicker(true)}
             className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center mr-2"

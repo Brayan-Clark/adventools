@@ -235,7 +235,6 @@ export default function BibleReader() {
       setLoading(true);
       try {
         const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
-        console.log(`[BibleReader] Loading ${lang} - Book: ${bookId}, Chapter: ${chapter}`);
 
         // Ensure file exists
         await checkAndDownloadBible(config);
@@ -329,7 +328,7 @@ export default function BibleReader() {
           <ArrowLeft size={24} color="#64748b" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setShowChapterPicker(true)}
           className="flex-1 items-center px-4"
         >
@@ -522,7 +521,7 @@ export default function BibleReader() {
             </TouchableOpacity>
 
             <View className="items-center">
-               <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{chapter} / {chaptersCount}</Text>
+              <Text className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{chapter} / {chaptersCount}</Text>
             </View>
 
             <TouchableOpacity

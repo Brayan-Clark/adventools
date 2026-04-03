@@ -3,6 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getDefaultBibleForLanguage } from './bible';
 
 type AppSettings = {
+  userName: string;
+  locationCity: string;
   fontFamily: string;
   fontSize: number;
   lineHeight: number;
@@ -23,6 +25,8 @@ type SettingsContextType = {
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
+  userName: '',
+  locationCity: '',
   fontFamily: 'System',
   fontSize: 18,
   lineHeight: 1.5,

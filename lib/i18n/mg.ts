@@ -353,4 +353,13 @@ export const mg: TranslationSchema = {
   loading_stream: "Eo am-pamoahana ny horonantsary...",
   search_video: "Hitady horonantsary...",
   no_video_found: "Tsy misy horonantsary ao amin'ity sokajy ity amin'izao fotoana izao.",
+  sync_complete: "Vita soa aman-tsara ny fanavaozana",
+  sync_failed: "Tsy nahomby ny fanavaozana",
+  user_name: "Anaran'ny mpampiasa",
+  location_city: "Tanànako (Météo)",
+  location_city_desc: "Ampidiro ny tanànanao hanitsiana ny météo sy ny fiposahan'ny masoandro raha tsy mahomby ny fitadiavana azy manokana.",
+  edit_city: "Hanova tanàna",
+  city_placeholder: "Ohatra: Antsiranana, Mahajanga...",
+  auto_ip: "Hita ho azy (IP)",
+  reset_auto: "Haverina (Hita ho azy)",
 };

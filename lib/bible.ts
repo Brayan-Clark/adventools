@@ -150,7 +150,6 @@ export async function initBibleMetadata() {
     if (newNames.size > 0) {
       DYNAMIC_BOOK_NAMES = newNames;
       updateBibleRegex();
-      console.log(`[Bible] Detected ${newNames.size} dynamic book names.`);
     }
   } catch (error) {
     console.error('[Bible] Init error:', error);
@@ -170,8 +169,6 @@ export async function checkAndDownloadBible(config: BibleConfig): Promise<boolea
     if (info.exists) return true;
 
     if (!config.url) return false;
-
-    console.log(`Downloading missing bible: ${config.name}...`);
 
     // Ensure directory exists
     const dirInfo = await FileSystem.getInfoAsync(dbDir);

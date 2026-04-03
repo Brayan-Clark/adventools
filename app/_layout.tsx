@@ -10,6 +10,7 @@ import { View, Platform, PermissionsAndroid } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
+import * as Linking from 'expo-linking';
 
 
 export {
@@ -99,6 +100,27 @@ function RootNavigator() {
 
     useEffect(() => {
       checkPermissions();
+
+      // Deep Linking Support for professional redirection (Fixes 'screen doesn't exist')
+      const handleDeepLink = (url: string | null) => {
+        if (!url) return;
+        const { path } = Linking.parse(url);
+        
+        // Professional Redirection for Music
+        // Handles both our custom adventools link AND the default trackplayer notification click
+        if (
+          path === 'audio/player' || 
+          path === '/audio/player' || 
+          path?.endsWith('audio/player') ||
+          url.includes('trackplayer://notification.click')
+        ) {
+          router.replace('/audio/player' as any);
+        }
+      };
+
+      Linking.getInitialURL().then(handleDeepLink);
+      const subscription = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
+
       const checkOnboarding = async () => {
       try {
         const done = await AsyncStorage.getItem(ONBOARDING_KEY);
@@ -113,12 +135,14 @@ function RootNavigator() {
       }
     };
     checkOnboarding();
+    return () => subscription.remove();
   }, []);
 
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="audio/player" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>

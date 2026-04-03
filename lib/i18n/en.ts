@@ -353,4 +353,13 @@ export const en: TranslationSchema = {
   loading_stream: "Loading stream...",
   search_video: "Search for a video...",
   no_video_found: "No videos available in this category for now.",
+  sync_complete: "Sync complete",
+  sync_failed: "Sync failed",
+  user_name: "User Name",
+  location_city: "My City (Weather)",
+  location_city_desc: "Enter your city to correct weather and sunrise data if automatic detection is incorrect.",
+  edit_city: "Edit City",
+  city_placeholder: "Ex: Antsiranana, Majunga...",
+  auto_ip: "Auto Detected (IP)",
+  reset_auto: "Reset (Auto-detect)",
 };

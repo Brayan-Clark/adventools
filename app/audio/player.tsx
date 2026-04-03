@@ -151,7 +151,7 @@ export default function AudioPlayerScreen() {
     // 1. Request Notification Permission (Android 13+)
     if (Platform.OS === 'android' && Platform.Version >= 33) {
       try {
-        const result = await PermissionsAndroid.request(
+        await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
           {
             title: "Permission de notification",
@@ -161,35 +161,23 @@ export default function AudioPlayerScreen() {
             buttonPositive: "OK"
           }
         );
-        console.log("[TRACKPLAYER] Notification permission:", result);
-      } catch (e) {
-        console.warn("[TRACKPLAYER] Permission error:", e);
-      }
+      } catch (e) {}
     }
 
     // 2. Try to initialize TrackPlayer (Requires Native APK)
     if (TrackPlayer) {
       try {
-        console.log("[TRACKPLAYER] Attempting setup...");
         const success = await setupTrackPlayer();
         if (success) {
           isTPActive.current = true;
-          console.log("[TRACKPLAYER] Started successfully.");
           return; // Success!
-        } else {
-          console.error("[TRACKPLAYER] setupTrackPlayer returned false.");
         }
       } catch (e: any) {
-        console.error("[TRACKPLAYER] Setup exception:", e);
         Alert.alert("Erreur Lecteur Natif", "Le lecteur haute performance n'a pas pu démarrer. Assurez-vous d'utiliser l'APK mis à jour.\n\nErreur: " + (e?.message || e));
       }
-    } else {
-      console.warn("[TRACKPLAYER] Module not found. Check if you are using Expo Go (not supported).");
-      // Don't alert here to avoid annoying users on Web/Expo Go unless they try to play
     }
     
     // 3. Last resort fallback
-    console.log("[UI] Falling back to expo-av (Limited background support)");
     await setupExpoAV();
   };
 
@@ -215,7 +203,7 @@ export default function AudioPlayerScreen() {
           }
         },
         { shouldPlay: true },
-        (status: any) => {
+        async (status: any) => {
           if (status.isLoaded) {
             setIsPlaying(status.isPlaying);
             setIsBuffering(status.isBuffering);
@@ -223,7 +211,17 @@ export default function AudioPlayerScreen() {
             setDuration(status.durationMillis ? status.durationMillis / 1000 : 0);
             
             if (status.didJustFinish && !status.isLooping) {
-                handleTrackFinish();
+                // Read from storage for latest autoplay state
+                try {
+                  const val = await AsyncStorage.getItem('audio_autoplay');
+                  if (val === 'true') {
+                    handleTrackFinish();
+                  } else {
+                    await newSound.pauseAsync();
+                  }
+                } catch (_) {
+                  handleTrackFinish(); // Default to old behavior if storage fails
+                }
             }
           }
         }
@@ -234,34 +232,26 @@ export default function AudioPlayerScreen() {
 
 
   const setupTrackPlayer = async (): Promise<boolean> => {
-    // TrackPlayer is already resolved to .default at module level
     const TP = TrackPlayer;
-    if (!TP) {
-      console.error('[TRACKPLAYER] TrackPlayer module is null — native module not linked?');
-      return false;
-    }
+    if (!TP) return false;
 
     // 1. Setup player (idempotent — OK if already initialized)
     try {
       await TP.setupPlayer({ waitForBuffer: true });
-      console.log('[TRACKPLAYER] setupPlayer OK');
     } catch (e: any) {
       const msg = String(e?.message || e);
-      // Only tolerate "already initialized" errors
-      if (!msg.includes('already') && !msg.includes('initialized')) {
-        console.error('[TRACKPLAYER] setupPlayer failed (fatal):', msg);
-        return false;
-      }
-      console.log('[TRACKPLAYER] setupPlayer — already initialized, continuing');
+      if (!msg.includes('already') && !msg.includes('initialized')) return false;
     }
 
-        // 2. Configure capabilities & behaviour (RNTP v4 valid options only)
+    // 2. Configure capabilities & behaviour (RNTP v4 valid options only)
     try {
       await TP.updateOptions({
         android: {
-          // Behavior when app is killed (keep playing)
           appKilledPlaybackBehavior: AppKilledPlaybackBehavior?.ContinuePlayback ?? 1,
+          notificationIntent: 'adventools:///audio/player',
+          alwaysPauseOnInterruption: true,
         },
+        progressUpdateEventInterval: 2,
         capabilities: [
           CAPABILITIES.PLAY, CAPABILITIES.PAUSE, CAPABILITIES.STOP,
           CAPABILITIES.SEEK, CAPABILITIES.SKIP_NEXT, CAPABILITIES.SKIP_PREV,
@@ -276,18 +266,42 @@ export default function AudioPlayerScreen() {
           CAPABILITIES.SKIP_NEXT, CAPABILITIES.SKIP_PREV,
         ],
       });
-      console.log('[TRACKPLAYER] updateOptions OK');
     } catch (e: any) {
-      console.error('[TRACKPLAYER] updateOptions failed:', String(e?.message || e));
       return false;
     }
 
     // 3. Queue tracks and start playback
     try {
+      const activeTrackIdx = await TP.getCurrentTrack();
+      const activeTrack = activeTrackIdx !== null ? await TP.getTrack(activeTrackIdx) : null;
+      
+      // SYNC / NO-CUT LOGIC:
+      // If we are already playing a track, just sync UI and don't reset
+      if (activeTrack && (!currentTrack.url || activeTrack.url === currentTrack.url)) {
+        setCurrentTrack({
+          title: activeTrack.title,
+          url: activeTrack.url,
+          artist: activeTrack.artist || 'Adventools',
+          artwork: activeTrack.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
+          subtext: activeTrack.artist,
+          isLocal: false
+        });
+        currentIndex.current = activeTrackIdx!;
+        
+        const queue = await TP.getQueue();
+        if (queue && queue.length > 0) playlist.current = queue;
+
+        setIsPlaying(true);
+        isTPActive.current = true;
+        return true; 
+      }
+
+      // Start a NEW session (RESET REQUIRED)
+      if (!currentTrack.url && playlist.current.length === 0) return false;
+
       await TP.reset();
 
-      const AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-
+      const AGENT = USER_AGENT;
       if (playlist.current.length > 0) {
         const tracks = playlist.current.map((item: any, idx: number) => ({
           id: `track-${idx}`,
@@ -297,16 +311,14 @@ export default function AudioPlayerScreen() {
           artwork: item.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
           headers: { 'User-Agent': AGENT, 'Referer': 'https://www.hymnes.net/' },
         }));
-        console.log('[TRACKPLAYER] Adding playlist:', tracks.length, 'tracks');
         await TP.add(tracks);
-        if (currentIndex.current >= 0) {
+        if (currentIndex.current >= 0 && currentIndex.current < tracks.length) {
           await TP.skip(currentIndex.current);
         }
-      } else {
-        console.log('[TRACKPLAYER] Adding single track:', currentTrack.title);
+      } else if (currentTrack.url) {
         await TP.add({
           id: 'track-0',
-          url: resolveAudioUrl(currentTrack.url),
+          url: currentTrack.url,
           title: currentTrack.title,
           artist: currentTrack.artist || currentTrack.subtext || 'Adventools',
           artwork: currentTrack.artwork,
@@ -316,13 +328,11 @@ export default function AudioPlayerScreen() {
 
       await TP.play();
       setIsPlaying(true);
-      console.log('[TRACKPLAYER] ✅ Playback started — notification should appear');
     } catch (e: any) {
-      console.error('[TRACKPLAYER] Queue/play failed:', String(e?.message || e));
       return false;
     }
 
-    // 4. Sync interval — keep UI in sync with RNTP state
+    // 4. Sync interval
     if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
     
     syncIntervalRef.current = setInterval(async () => {
@@ -345,10 +355,8 @@ export default function AudioPlayerScreen() {
           });
         }
 
-        const isReallyPlaying =
-          state === (State?.Playing ?? 'playing') || state === 'playing' || state === 3;
-        const isReallyBuffering =
-          state === (State?.Buffering ?? 'buffering') || state === 'buffering' || state === 6;
+        const isReallyPlaying = state === (State?.Playing ?? 'playing') || state === 'playing' || state === 3;
+        const isReallyBuffering = state === (State?.Buffering ?? 'buffering') || state === 'buffering' || state === 6;
 
         setIsPlaying(isReallyPlaying);
         setIsBuffering(isReallyBuffering);
@@ -508,12 +516,12 @@ export default function AudioPlayerScreen() {
                 <Text className="text-white text-xs font-bold mt-0.5" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>{currentTrack.subtext}</Text>
             </View>
 
-            {autoPlay ? (
+            {playlist.current.length > 0 ? (
                 <TouchableOpacity 
                     onPress={() => setShowPlaylist(true)}
-                    className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/30 items-center justify-center shadow-lg"
+                    className={`w-10 h-10 rounded-full items-center justify-center shadow-lg ${autoPlay ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-white/10 border border-white/20'}`}
                 >
-                    <List size={20} color="#3b82f6" />
+                    <List size={20} color={autoPlay ? "#3b82f6" : "#f8fafc"} />
                 </TouchableOpacity>
             ) : (
                 <View className="w-10 h-10" />

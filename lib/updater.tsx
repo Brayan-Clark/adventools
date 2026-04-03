@@ -66,8 +66,8 @@ async function performUpdateCheck(wifiOnly: boolean) {
           `Une nouvelle version (${release.tag_name}) est disponible ! Souhaitez-vous la télécharger ?\n\nNouveautés: ${release.name || ''}`,
           [
             { text: "Plus tard", style: "cancel" },
-            { 
-              text: "Télécharger", 
+            {
+              text: "Télécharger",
               onPress: () => {
                 const apkAsset = release.assets?.find((a: any) => a.name.endsWith('.apk'));
                 if (apkAsset && apkAsset.browser_download_url) {
@@ -89,20 +89,19 @@ async function performUpdateCheck(wifiOnly: boolean) {
   try {
     const manager = I18nManager.getInstance();
     await manager.init();
-    
+
     // Fetch latest manifest from Github
     const latestManifest = await manager.syncRemoteManifest();
     if (latestManifest) {
       const installedLangs = manager.getInstalledLanguages();
-      
+
       // Update only languages that the user has ALREADY downloaded!
       for (const lang of installedLangs) {
         // We only care about dynamically downloaded languages
-        if (lang.isBuiltIn) continue; 
+        if (lang.isBuiltIn) continue;
 
         const status = manager.getLanguageStatus(lang.id);
         if (status === 'update-available') {
-          console.log(`[Updater] Mise à jour en arrière-plan de la langue: ${lang.name}`);
           await manager.downloadLanguage(lang.id);
         }
       }

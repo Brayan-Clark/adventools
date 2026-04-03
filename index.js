@@ -7,7 +7,6 @@ try {
   const TrackPlayer = TP.default || TP;
   // IMPORTANT: Use .default for the exported service task
   TrackPlayer.registerPlaybackService(() => require('./lib/audio-service').default);
-  console.log('[TrackPlayer] PlaybackService registered successfully');
 } catch (e) {
   console.warn('[TrackPlayer] registerPlaybackService failed:', e);
 }

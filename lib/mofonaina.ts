@@ -33,17 +33,17 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
   try {
     const lastSyncStr = await AsyncStorage.getItem(ASYNC_STORAGE_LAST_SYNC_KEY);
     const cachedStr = await AsyncStorage.getItem(ASYNC_STORAGE_KEY);
-    
+
     let shouldSync = force;
-    
+
     if (!shouldSync) {
       if (!lastSyncStr || !cachedStr) {
         shouldSync = true;
       } else {
         const lastSync = new Date(lastSyncStr).getTime();
         const now = new Date().getTime();
-        // Sync if older than 12 hours
-        if (now - lastSync > 12 * 60 * 60 * 1000) {
+        // Sync more rarely as content is static (e.g., every 15 days)
+        if (now - lastSync > 15 * 24 * 60 * 60 * 1000) {
           shouldSync = true;
         }
       }
@@ -52,7 +52,6 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
     if (shouldSync) {
       if (cachedStr) {
         // Background sync to not block the UI if we already have cache
-        console.log('Background syncing mofonaina from API...');
         fetch(`${API_BASE}/fiambenana`)
           .then(async (response) => {
             if (response.ok) {
@@ -62,11 +61,10 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
             }
           })
           .catch(err => console.error('Error in background sync:', err));
-          
+
         return JSON.parse(cachedStr);
       } else {
         // First time or forced without cache, must await
-        console.log('Fetching mofonaina from API...');
         const response = await fetch(`${API_BASE}/fiambenana`);
         if (response.ok) {
           const data: Mofonaina[] = await response.json();
@@ -80,7 +78,7 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
     if (cachedStr) {
       return JSON.parse(cachedStr);
     }
-    
+
     return [];
   } catch (error) {
     console.error('Error syncing mofonaina:', error);
@@ -106,20 +104,20 @@ function normalizeDate(d: Date): string {
 export async function getMofonainaForDate(date: Date = new Date()): Promise<Mofonaina | null> {
   const all = await syncMofonaina();
   const targetDateStr = normalizeDate(date);
-  
+
   // Find the exact match for the date using string comparison on prefix YYYY-MM-DD
   const match = all.find(m => m.daty && m.daty.startsWith(targetDateStr));
-  
+
   if (match) return match;
-  
+
   // If not found, just return the most recent one or the first one as fallback
   if (all.length > 0) {
-     // Optional: Sort by ID descending or date descending to get the most recent
-     const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
-     // For now, let's strictly return null if no exact date match, so the UI can show "No reading for today"
-     // But wait, it's better to show 'something' if dates are slightly off in DB
+    // Optional: Sort by ID descending or date descending to get the most recent
+    const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
+    // For now, let's strictly return null if no exact date match, so the UI can show "No reading for today"
+    // But wait, it's better to show 'something' if dates are slightly off in DB
   }
-  
+
   return null;
 }
 
