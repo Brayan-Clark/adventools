@@ -274,7 +274,7 @@
   "cat_fitarihan_andriamanitra": "Direction divine",
   "cat_fiovam_po": "Conversion",
   "cat_famela_keloka": "Pardon",
-  "cat_fandresena_ny_fahotana": "Victoire sur le péché",
+  "cat_fandresena_ny_fahotana": "Victoire over sin",
   "cat_fahasitranana": "Guérison",
   "cat_hery_hanaovana": "Force pour agir",
   "cat_maha_vavolombelona": "Témoignage",
@@ -293,7 +293,7 @@
   "delete_audio_confirm": "您确定要删除此音频吗？",
   "chapters": "章",
   "episodes": "集",
-  "file_size": "File size",
+  "file_size": "Tamanho",
   "search_series": "Search for a series...",
   "no_episodes_found": "No episodes found.",
   "old_testament": "旧约",
@@ -318,5 +318,14 @@
   "video_source_info": "此视频来自 {{source}}。",
   "loading_stream": "正在加载流...",
   "search_video": "搜索视频...",
-  "no_video_found": "未找到视频。"
+  "no_video_found": "未找到视频。",
+  "sync_complete": "Sync complete",
+  "sync_failed": "Sync failed",
+  "user_name": "User Name",
+  "location_city": "My City (Weather)",
+  "location_city_desc": "Enter your city to correct weather and sunrise data if automatic detection is incorrect.",
+  "edit_city": "Edit City",
+  "city_placeholder": "Ex: Antsiranana, Majunga...",
+  "auto_ip": "Auto Detected (IP)",
+  "reset_auto": "Reset (Auto-detect)"
 }

@@ -1,48 +1,48 @@
 {
-  "versionCode": 7,
-  "lastUpdate": "2026-04-01T17:05:00Z",
-  "languages": [
-    {
-      "id": "Français",
+  "versionCode": 9,
+  "lastUpdated": 1712128800000,
+  "languages": {
+    "fr": {
+      "version": 9,
       "file": "fr.json",
       "name": "Français",
-      "version": 9
+      "timestamp": 1712128800000
     },
-    {
-      "id": "English",
-      "file": "en.json",
-      "name": "English",
-      "version": 8
-    },
-    {
-      "id": "Malagasy",
+    "mg": {
+      "version": 9,
       "file": "mg.json",
       "name": "Malagasy",
-      "version": 8
+      "timestamp": 1712128800000
     },
-    {
-      "id": "Deutsch",
+    "en": {
+      "version": 9,
+      "file": "en.json",
+      "name": "English",
+      "timestamp": 1712128800000
+    },
+    "de": {
+      "version": 9,
       "file": "de.json",
       "name": "Deutsch",
-      "version": 6
+      "timestamp": 1712128800000
     },
-    {
-      "id": "Español",
+    "es": {
+      "version": 9,
       "file": "es.json",
       "name": "Español",
-      "version": 6
+      "timestamp": 1712128800000
     },
-    {
-      "id": "Português",
+    "pt": {
+      "version": 9,
       "file": "pt.json",
       "name": "Português",
-      "version": 6
+      "timestamp": 1712128800000
     },
-    {
-      "id": "中文",
+    "zh": {
+      "version": 9,
       "file": "zh.json",
       "name": "中文",
-      "version": 6
+      "timestamp": 1712128800000
     }
-  ]
+  }
 }

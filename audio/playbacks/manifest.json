@@ -18,15 +18,6 @@
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/fihirana-adventista.png"
   },
   {
-    "id": "hymnes-louanges",
-    "title": "Hymnes et Louanges (PB)",
-    "lang": "Français",
-    "count": 532,
-    "color": "#3b82f6",
-    "bg": "bg-blue-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hymnes-louanges.png"
-  },
-  {
     "id": "hira-faneva_fipikri",
     "title": "Hira Faneva FIPIKRI",
     "lang": "Malagasy",
