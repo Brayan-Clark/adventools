@@ -360,6 +360,6 @@ export const fr: TranslationSchema = {
   location_city_desc: "Entrez votre ville pour corriger la météo et le lever du soleil si la détection automatique est incorrecte.",
   edit_city: "Modifier la ville",
   city_placeholder: "Ex: Antsiranana, Majunga...",
-  auto_ip: "Détection Auto (IP)",
+  auto_ip: "Détection Auto (GPS)",
   reset_auto: "Réinitialiser (Auto-détection)",
 };

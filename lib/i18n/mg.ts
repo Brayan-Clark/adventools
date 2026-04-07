@@ -360,6 +360,6 @@ export const mg: TranslationSchema = {
   location_city_desc: "Ampidiro ny tanànanao hanitsiana ny météo sy ny fiposahan'ny masoandro raha tsy mahomby ny fitadiavana azy manokana.",
   edit_city: "Hanova tanàna",
   city_placeholder: "Ohatra: Antsiranana, Mahajanga...",
-  auto_ip: "Hita ho azy (IP)",
+  auto_ip: "Localisation (GPS)",
   reset_auto: "Haverina (Hita ho azy)",
 };

@@ -1,31 +1,31 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 const WEATHER_CACHE_KEY = 'app_weather_info_v2';
-// 7-day cache: only one network call per week unless forced refresh
+// 7-day cache: only one network call per week unless forced or city changed
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface DayForecast {
-  date: string;          // YYYY-MM-DD
+  date: string;                      // YYYY-MM-DD
   tempMax: number;
   tempMin: number;
   conditionCode: number;
-  sunrise: string;       // HH:MM
-  sunset: string;        // HH:MM
-  precipitationProbability: number; // 0‒100 %
-  windspeed: number;     // km/h
+  sunrise: string;                   // HH:MM
+  sunset: string;                    // HH:MM
+  precipitationProbability: number;  // 0–100 %
+  windspeed: number;                 // km/h
 }
 
 export interface WeatherInfo {
-  // Current conditions
   temp: number;
   conditionCode: number;
   sunrise: string;
   sunset: string;
   city: string;
+  cityConfig?: string;
   timestamp: number;
-  // 7-day forecast
   forecast: DayForecast[];
 }
 
@@ -35,80 +35,125 @@ export async function getCachedWeather(): Promise<WeatherInfo | null> {
   try {
     const cached = await AsyncStorage.getItem(WEATHER_CACHE_KEY);
     if (cached) return JSON.parse(cached);
-  } catch (_) {}
+  } catch (_) { }
   return null;
 }
 
 async function saveWeatherCache(data: WeatherInfo) {
   try {
     await AsyncStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(data));
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // ── Main fetch ───────────────────────────────────────────────────────────────
 
 /**
  * Fetches weather (current + 7-day forecast) from Open-Meteo.
- * Uses the cache for CACHE_DURATION (7 days) unless `force` is true.
+ *
+ * Cache logic:
+ *  - Returns cache immediately if fresh (< 7 days) AND city hasn't changed.
+ *  - If the user changed their city in settings → auto-invalidates cache.
+ *  - If force=true → always fetches fresh data (pull-to-refresh).
  */
 export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
+  let cityChanged = false;
   try {
     const lastWeather = await getCachedWeather();
     const now = Date.now();
 
-    // Return cache if still fresh and not forced
-    if (!force && lastWeather && now - lastWeather.timestamp < CACHE_DURATION && lastWeather.temp) {
-      return lastWeather;
-    }
-
-    let latitude: number | null = null;
-    let longitude: number | null = null;
-    let city: string | null = null;
-
-    // 1. Read manual city from settings
+    // 1. Read manual city from settings FIRST (needed for cache-invalidation check)
+    let manualCity = '';
     try {
       const storedSettings = await AsyncStorage.getItem('app_global_settings');
       if (storedSettings) {
         const settings = JSON.parse(storedSettings);
-        const manualCity = settings.locationCity?.trim() || '';
-        if (manualCity.length > 0) {
-          const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(manualCity)}&count=1&language=fr`;
-          const geoResp = await fetch(geoUrl);
-          if (geoResp.ok) {
-            const geoData = await geoResp.json();
-            if (geoData.results && geoData.results[0]) {
-              latitude = geoData.results[0].latitude;
-              longitude = geoData.results[0].longitude;
-              city = geoData.results[0].name;
-            }
-          }
-        }
+        manualCity = settings.locationCity?.trim() || '';
       }
-    } catch (_) {}
+    } catch (_) { }
 
-    // 2. Fallback: IP-based location
-    if (!latitude) {
-      const sources = [
-        'https://ipapi.co/json/',
-        'http://ip-api.com/json/',
-        'https://freeipapi.com/api/json',
-      ];
-      for (const source of sources) {
-        try {
-          const resp = await fetch(source);
-          if (resp.ok) {
-            const d = await resp.json();
-            const lat = d.latitude ?? d.lat;
-            const lon = d.longitude ?? d.lon;
-            if (lat) { latitude = lat; longitude = lon; city = d.city || d.cityName; break; }
+    // 2. Detect city change → invalidates cache even if not expired
+    cityChanged =
+      lastWeather != null &&
+      (lastWeather.cityConfig || '') !== manualCity;
+
+    // 3. Return cache if fresh, city unchanged, and not forced
+    if (
+      !force &&
+      !cityChanged &&
+      lastWeather != null &&
+      now - lastWeather.timestamp < CACHE_DURATION &&
+      lastWeather.temp != null
+    ) {
+      console.log("[WEATHER] Returning valid cache for:", lastWeather.city);
+      return lastWeather;
+    }
+
+    // ── Resolve coordinates ──────────────────────────────────────────────────
+
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    let city: string | null = null;
+    let resolvedManualCity = false;
+
+    // 4a. Geocode the manual city if provided
+    if (manualCity.length > 0) {
+      try {
+        // Open-Meteo works best with just the city name, so we split at the comma
+        const searchTerm = manualCity.split(',')[0].trim();
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchTerm)}&count=1&language=fr`;
+        const geoResp = await fetch(geoUrl);
+        if (geoResp.ok) {
+          const geoData = await geoResp.json();
+          if (geoData.results && geoData.results[0]) {
+            latitude = geoData.results[0].latitude;
+            longitude = geoData.results[0].longitude;
+            city = geoData.results[0].name;
+            resolvedManualCity = true;
+            console.log("[WEATHER] Geocoding API resolved to:", city, "lat:", latitude, "lon:", longitude);
+          } else {
+            console.log("[WEATHER] Geocoding NO RESULTS for:", searchTerm);
           }
-        } catch (_) {}
+        } else {
+          console.log("[WEATHER] Geocoding API request failed. Status:", geoResp.status);
+        }
+      } catch (e) {
+        console.log("[WEATHER] Geocoding error:", e);
       }
     }
 
-    if (!latitude || !longitude) return lastWeather;
+    // 4b. Fallback: Device GPS localization
+    if (latitude == null) {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          latitude = location.coords.latitude;
+          longitude = location.coords.longitude;
 
-    // 3. Fetch current + 7-day forecast from Open-Meteo
+          let reverseGeo = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude
+          });
+          
+          if (reverseGeo && reverseGeo.length > 0) {
+            city = reverseGeo[0].city || reverseGeo[0].subregion || reverseGeo[0].region || 'Localisation GPS';
+          }
+        }
+      } catch (e) {
+        console.log("[WEATHER] Expo Location failed:", e);
+      }
+    }
+
+    // 5. No location available → return last cached data (if any)
+    if (latitude == null || longitude == null) {
+      return lastWeather;
+    }
+
+    // If we fell back to IP, we shouldn't pretend we cached the manual city
+    const finalCityConfig = resolvedManualCity ? manualCity : '';
+
+    // ── Fetch weather from Open-Meteo ────────────────────────────────────────
+
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${latitude}&longitude=${longitude}` +
@@ -122,7 +167,7 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     const data = await resp.json();
 
     const daily = data.daily;
-    const forecast: DayForecast[] = (daily.time as string[]).map((date, i) => ({
+    const forecast: DayForecast[] = (daily.time as string[]).map((date: string, i: number) => ({
       date,
       tempMax: Math.round(daily.temperature_2m_max[i]),
       tempMin: Math.round(daily.temperature_2m_min[i]),
@@ -138,14 +183,21 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       conditionCode: data.current_weather.weathercode,
       sunrise: forecast[0]?.sunrise ?? '--:--',
       sunset: forecast[0]?.sunset ?? '--:--',
-      city: city || 'Localisation',
+      city: city || manualCity.split(',')[0].trim() || 'Localisation',
+      cityConfig: finalCityConfig,
       timestamp: now,
       forecast,
     };
 
     await saveWeatherCache(result);
     return result;
-  } catch (_) {
+
+  } catch (e) {
+    // DO NOT fallback to the old cache if the user explicitly changed their city!
+    // Otherwise it will silently show the wrong city (like Antsiranana).
+    if (cityChanged) {
+      return null;
+    }
     return getCachedWeather();
   }
 }
@@ -153,17 +205,17 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
 // ── Display helpers ──────────────────────────────────────────────────────────
 
 export function getWeatherDisplay(code: number): { name: string; color: string; label: string } {
-  if (code === 0)               return { name: 'Sun',            color: '#f59e0b', label: 'Soleil' };
-  if (code <= 3)                return { name: 'Cloud',          color: '#94a3b8', label: 'Nuageux' };
-  if (code >= 45 && code <= 48) return { name: 'CloudFog',       color: '#94a3b8', label: 'Brouillard' };
-  if (code >= 51 && code <= 67) return { name: 'CloudRain',      color: '#3b82f6', label: 'Pluie' };
-  if (code >= 71 && code <= 77) return { name: 'Snowflake',      color: '#bae6fd', label: 'Neige' };
-  if (code >= 80 && code <= 82) return { name: 'CloudRain',      color: '#3b82f6', label: 'Averses' };
-  if (code >= 95)               return { name: 'CloudLightning', color: '#8b5cf6', label: 'Orage' };
+  if (code === 0) return { name: 'Sun', color: '#f59e0b', label: 'Soleil' };
+  if (code <= 3) return { name: 'Cloud', color: '#94a3b8', label: 'Nuageux' };
+  if (code >= 45 && code <= 48) return { name: 'CloudFog', color: '#94a3b8', label: 'Brouillard' };
+  if (code >= 51 && code <= 67) return { name: 'CloudRain', color: '#3b82f6', label: 'Pluie' };
+  if (code >= 71 && code <= 77) return { name: 'Snowflake', color: '#bae6fd', label: 'Neige' };
+  if (code >= 80 && code <= 82) return { name: 'CloudRain', color: '#3b82f6', label: 'Averses' };
+  if (code >= 95) return { name: 'CloudLightning', color: '#8b5cf6', label: 'Orage' };
   return { name: 'Cloud', color: '#94a3b8', label: 'Couvert' };
 }
 
-/** Returns user-friendly tips/suggestions based on weather */
+/** Contextual suggestion based on weather conditions */
 export function getWeatherSuggestion(code: number, rain: number, wind: number): string {
   if (code >= 95) return '⚡ Orage prévu — restez à l\'abri et évitez les sorties.';
   if (code >= 80 && code <= 82) return '🌧️ Averses probables — prenez votre parapluie.';
@@ -177,7 +229,7 @@ export function getWeatherSuggestion(code: number, rain: number, wind: number): 
   return '🌤️ Temps nuageux — agréable pour une promenade.';
 }
 
-/** Formats a date string YYYY-MM-DD to a short localized day label */
+/** Formats YYYY-MM-DD date string to a readable short label */
 export function formatDayLabel(dateStr: string): string {
   const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
   const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];

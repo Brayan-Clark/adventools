@@ -78,7 +78,7 @@ export default function Home() {
       finally { setWeatherLoading(false); }
     }
     init();
-  }, [globalSettings.bibleVersion]);
+  }, [globalSettings.bibleVersion, globalSettings.locationCity]);
 
   useFocusEffect(
     React.useCallback(() => {
