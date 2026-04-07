@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, Heart, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Sun, Headphones, Tv } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Headphones, Tv } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ export default function Home() {
   const [history, setHistory] = useState<any[]>([]);
   const [mofonainaDaily, setMofonainaDaily] = useState<Mofonaina | null>(null);
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   React.useEffect(() => {
     async function init() {
@@ -69,11 +70,12 @@ export default function Home() {
         setVerseText('...');
       }
 
-      // Fetch Weather info (small background update)
+      // Fetch Weather (uses 7-day cache — won't hit network if fresh)
       try {
         const weatherData = await fetchWeather();
         if (weatherData) setWeather(weatherData);
-      } catch (e) { }
+      } catch (_) {}
+      finally { setWeatherLoading(false); }
     }
     init();
   }, [globalSettings.bibleVersion]);
@@ -83,11 +85,11 @@ export default function Home() {
       AsyncStorage.getItem('app_history').then(res => {
         if (res) setHistory(JSON.parse(res));
       });
-
-      // Refresh weather on focus to catch settings changes
-      fetchWeather().then(data => {
-        if (data) setWeather(data);
-      }).catch(() => { });
+      // Only update from cache on focus — no network call (7-day cache)
+      fetchWeather()
+        .then(data => { if (data) setWeather(data); })
+        .catch(() => {})
+        .finally(() => setWeatherLoading(false));
     }, [])
   );
 
@@ -242,23 +244,37 @@ export default function Home() {
           >
             <View className="flex-row items-center justify-between mb-4">
               <View className="flex-row items-center flex-1">
-                <View className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 items-center justify-center mr-3">
-                  {weather ? (
-                    <View className="items-center">
-                      {(() => {
-                        const display = getWeatherDisplay(weather.conditionCode);
-                        const Icon = (LucideIcons as any)[display.name];
-                        return <Icon size={20} color={display.color} />;
-                      })()}
-                      <Text className="text-[9px] text-white font-bold mt-0.5">{weather.temp}°C</Text>
-                    </View>
-                  ) : (
-                    <View className="items-center justify-center">
-                      <ActivityIndicator size="small" color="#f97316" />
-                      <Text className="text-[7px] text-slate-500 font-bold mt-1 uppercase">SYNC</Text>
-                    </View>
-                  )}
-                </View>
+                {/* Weather icon — press → /weather (stopPropagation évite d'ouvrir mofon'aina) */}
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push('/weather' as any);
+                  }}
+                  activeOpacity={0.75}
+                  className="mr-3"
+                >
+                  <View className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 items-center justify-center">
+                    {weather ? (
+                      <View className="items-center">
+                        {(() => {
+                          const display = getWeatherDisplay(weather.conditionCode);
+                          const Icon = (LucideIcons as any)[display.name];
+                          return <Icon size={20} color={display.color} />;
+                        })()}
+                        <Text className="text-[9px] text-white font-bold mt-0.5">{weather.temp}°C</Text>
+                      </View>
+                    ) : weatherLoading ? (
+                      <View className="items-center justify-center">
+                        <ActivityIndicator size="small" color="#f97316" />
+                      </View>
+                    ) : (
+                      <View className="items-center justify-center">
+                        <LucideIcons.Cloud size={20} color="#475569" />
+                        <Text className="text-[7px] text-slate-600 font-bold mt-0.5">--°</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
 
                 <View className="flex-1">
                   <Text className="text-[10px] font-bold uppercase text-orange-500 tracking-widest leading-3" style={{ fontFamily: 'Lexend_700Bold' }}>{t('fiambenana_maraina')}</Text>

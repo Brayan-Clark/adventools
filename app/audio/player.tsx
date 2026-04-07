@@ -108,6 +108,43 @@ export default function AudioPlayerScreen() {
   const syncIntervalRef = useRef<any>(null);
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
+  // ─── Extracted sync interval so it can be restarted from any code path ───
+  const startSyncInterval = (TP: any) => {
+    if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+    syncIntervalRef.current = setInterval(async () => {
+      try {
+        if (!isTPActive.current) return;
+        const pbState = await TP.getPlaybackState();
+        const state = pbState.state ?? pbState;
+        const currentIdx = await TP.getCurrentTrack();
+
+        if (currentIdx !== null && currentIdx !== currentIndex.current && playlist.current[currentIdx]) {
+          const next = playlist.current[currentIdx];
+          currentIndex.current = currentIdx;
+          setCurrentTrack({
+            title: next.title,
+            url: resolveAudioUrl(next.url),
+            isLocal: next.isLocal,
+            subtext: next.subtext || '',
+            artist: next.artist,
+            artwork: next.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
+          });
+        }
+
+        const isReallyPlaying = state === (State?.Playing ?? 'playing') || state === 'playing' || state === 3;
+        const isReallyBuffering = state === (State?.Buffering ?? 'buffering') || state === 'buffering' || state === 6;
+
+        setIsPlaying(isReallyPlaying);
+        setIsBuffering(isReallyBuffering);
+
+        const pos = await TP.getPosition();
+        const dur = await TP.getDuration();
+        if (pos !== undefined && !isNaN(pos)) setPosition(pos);
+        if (dur !== undefined && !isNaN(dur) && dur > 0) setDuration(dur);
+      } catch (_) {}
+    }, 500);
+  };
+
   useEffect(() => {
     initPlayer();
     return () => {
@@ -293,6 +330,8 @@ export default function AudioPlayerScreen() {
 
         setIsPlaying(true);
         isTPActive.current = true;
+        // ✅ IMPORTANT: restart sync interval even when re-opening from notification
+        startSyncInterval(TP);
         return true; 
       }
 
@@ -332,41 +371,8 @@ export default function AudioPlayerScreen() {
       return false;
     }
 
-    // 4. Sync interval
-    if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
-    
-    syncIntervalRef.current = setInterval(async () => {
-      try {
-        if (!isTPActive.current) return;
-        const pbState = await TP.getPlaybackState();
-        const state = pbState.state ?? pbState;
-        const currentIdx = await TP.getCurrentTrack();
-
-        if (currentIdx !== null && currentIdx !== currentIndex.current && playlist.current[currentIdx]) {
-          const next = playlist.current[currentIdx];
-          currentIndex.current = currentIdx;
-          setCurrentTrack({
-            title: next.title,
-            url: resolveAudioUrl(next.url),
-            isLocal: next.isLocal,
-            subtext: next.subtext || currentTrack.subtext,
-            artist: next.artist,
-            artwork: next.artwork || 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/logo-player.png',
-          });
-        }
-
-        const isReallyPlaying = state === (State?.Playing ?? 'playing') || state === 'playing' || state === 3;
-        const isReallyBuffering = state === (State?.Buffering ?? 'buffering') || state === 'buffering' || state === 6;
-
-        setIsPlaying(isReallyPlaying);
-        setIsBuffering(isReallyBuffering);
-
-        const pos = await TP.getPosition();
-        const dur = await TP.getDuration();
-        if (pos !== undefined) setPosition(pos);
-        if (dur !== undefined && dur > 0) setDuration(dur);
-      } catch (_) {}
-    }, 500);
+    // 4. Start interval via shared helper
+    startSyncInterval(TP);
 
     return true;
   };
@@ -383,10 +389,16 @@ export default function AudioPlayerScreen() {
         if (isTPActive.current) {
             await TrackPlayer.skipToNext();
             await TrackPlayer.play();
+            // ✅ Reset position/duration immediately so the bar doesn't freeze
+            setPosition(0);
+            setDuration(0);
+            startSyncInterval(TrackPlayer);
         } else {
             const nextIdx = currentIndex.current + 1;
             const next = playlist.current[nextIdx];
             currentIndex.current = nextIdx;
+            setPosition(0);
+            setDuration(0);
             setCurrentTrack({
                 title: next.title,
                 url: resolveAudioUrl(next.url),
@@ -404,10 +416,16 @@ export default function AudioPlayerScreen() {
         if (isTPActive.current) {
             await TrackPlayer.skipToPrevious();
             await TrackPlayer.play();
+            // ✅ Reset position/duration immediately so the bar doesn't freeze
+            setPosition(0);
+            setDuration(0);
+            startSyncInterval(TrackPlayer);
         } else {
             const prevIdx = currentIndex.current - 1;
             const prev = playlist.current[prevIdx];
             currentIndex.current = prevIdx;
+            setPosition(0);
+            setDuration(0);
             setCurrentTrack({
                 title: prev.title,
                 url: resolveAudioUrl(prev.url),
