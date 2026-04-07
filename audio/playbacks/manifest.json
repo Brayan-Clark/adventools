@@ -6,7 +6,7 @@
     "count": 695,
     "color": "#fbbf24",
     "bg": "bg-amber-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/sda-hymnal.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "fihirana-adventista",
@@ -15,7 +15,7 @@
     "count": 608,
     "color": "#10b981",
     "bg": "bg-emerald-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/fihirana-adventista.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_fipikri",
@@ -24,7 +24,7 @@
     "count": 1,
     "color": "#8b5cf6",
     "bg": "bg-violet-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_asafi",
@@ -33,8 +33,8 @@
     "count": 17,
     "color": "#06b6d4",
     "bg": "bg-cyan-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
-  },
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
+  },  
   {
     "id": "hira-faneva_ja",
     "title": "Hira Faneva JA",
@@ -42,7 +42,7 @@
     "count": 3,
     "color": "#f59e0b",
     "bg": "bg-amber-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_ja.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_viedefamille",
@@ -51,7 +51,7 @@
     "count": 1,
     "color": "#ec4899",
     "bg": "bg-pink-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_01.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_sesa",
@@ -60,7 +60,7 @@
     "count": 2,
     "color": "#a855f7",
     "bg": "bg-violet-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_sesa.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_minenf",
@@ -69,7 +69,7 @@
     "count": 8,
     "color": "#ef4444",
     "bg": "bg-red-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_minenf.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
     "id": "hira-faneva_mifem",
@@ -78,6 +78,6 @@
     "count": 9,
     "color": "#f97316",
     "bg": "bg-orange-500/10",
-    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/hira-faneva_mifem.png"
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   }
 ]
