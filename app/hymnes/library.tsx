@@ -8,15 +8,38 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bookmark, ChevronRight as ChevronRightIcon, Globe, Hash, Music as MusicIcon, Search as SearchIcon, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, FlatList, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Hymnes() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { db: dbNameParam, title: pageTitle } = useLocalSearchParams<{ db: string, title?: string }>();
+  const { db: dbNameParam, title: pageTitle, redirected } = useLocalSearchParams<{ db: string, title?: string, redirected?: string }>();
   const dbName = dbNameParam || 'cantique.db';
   const dbPath = `hymnes/${dbName}`;
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (redirected === 'true') {
+          router.navigate('/(tabs)');
+        } else {
+          router.back();
+        }
+        return true;
+      };
+
+      if (Platform.OS === 'android') {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => backHandler.remove();
+      }
+    }, [redirected])
+  );
+
+  useEffect(() => {
+    loadFavorites();
+    fetchCategories();
+  }, [dbName]);
 
   const [hymns, setHymns] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -136,7 +159,11 @@ export default function Hymnes() {
   };
 
   const handleBack = () => {
-    router.back();
+    if (redirected === 'true') {
+      router.navigate('/(tabs)');
+    } else {
+      router.back();
+    }
   };
 
   return (

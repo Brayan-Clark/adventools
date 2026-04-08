@@ -15,6 +15,7 @@ export default function HymneManager() {
   const { t } = useTranslation();
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasAutomaticallyRedirected, setHasAutomaticallyRedirected] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -119,6 +120,16 @@ export default function HymneManager() {
       }
 
       setLocalFiles(presentFiles);
+
+      // Auto-redirect if only one hymnal is present
+      if (presentFiles.length === 1 && !hasAutomaticallyRedirected) {
+        const version = presentFiles[0];
+        setHasAutomaticallyRedirected(true);
+        router.push({
+          pathname: '/hymnes/library',
+          params: { db: version.file, title: version.name, redirected: 'true' }
+        });
+      }
     } catch (e) {
       console.error(e);
     } finally {

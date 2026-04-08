@@ -118,7 +118,7 @@ export default function HymneDetail() {
       if (result) {
         setShowNumberPicker(false);
         setHymnNumber("");
-        router.push({
+        router.replace({
           pathname: `/hymnes/[id]`,
           params: { id: result.id, db: dbName }
         });

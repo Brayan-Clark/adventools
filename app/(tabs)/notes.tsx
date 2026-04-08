@@ -3,7 +3,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bold, BookOpen, Check, Code, Edit, Folder, FolderPlus, Heading, Highlighter, Italic, List, Plus, Quote, Search, Share2, StickyNote, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -17,8 +17,6 @@ const HIGHLIGHT_COLORS = [
   { id: 'blue', bg: 'rgba(96, 165, 250, 0.3)', text: '#60a5fa', border: 'rgba(96, 165, 250, 0.4)' },
   { id: 'red', bg: 'rgba(248, 113, 113, 0.3)', text: '#f87171', border: 'rgba(248, 113, 113, 0.4)' },
 ];
-
-const TEXT_COLORS: any[] = []; // Désactivé temporairement
 
 const NOTE_COLORS = [
   { label: 'Slate', value: '#1e293b', border: '#334155' },
@@ -37,6 +35,60 @@ interface Note {
   color?: string;
   folder?: string;
 }
+
+const NoteCard = ({ note, onPress, onDelete }: { note: Note, onPress: () => void, onDelete: () => void }) => {
+  const { t } = useTranslation();
+  
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderColor: note.color ? note.color : 'rgba(255, 255, 255, 0.08)',
+      }}
+      className="p-5 rounded-[28px] border-2 mb-1 overflow-hidden"
+    >
+      <View className="flex-row justify-between items-start mb-3">
+        <Text className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+            {new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
+        </Text>
+        <TouchableOpacity onPress={onDelete} className="p-1">
+            <X size={14} color="rgba(255, 255, 255, 0.2)" />
+        </TouchableOpacity>
+      </View>
+      
+      <Text className="font-bold text-white text-lg leading-tight mb-2" style={{ fontFamily: 'Lexend_600SemiBold' }}>
+        {note.title || t('untitled_note')}
+      </Text>
+      
+      <Text className="text-sm text-white/60 leading-5 mb-4" numberOfLines={4}>
+        {note.content.replace(/[#*`]/g, '') || t('no_content')}
+      </Text>
+      
+      <View className="flex-row justify-between items-center mt-2">
+        {note.folder ? (
+          <View className="bg-white/10 px-3 py-1.5 rounded-full border border-white/5 flex-row items-center">
+            <Folder size={10} color="#94a3b8" className="mr-1.5" />
+            <Text className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{note.folder}</Text>
+          </View>
+        ) : <View />}
+        <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
+            <Edit size={12} color="#475569" />
+        </View>
+      </View>
+
+      {note.color && (
+        <View 
+          style={{ 
+            position: 'absolute', top: -20, right: -20, width: 40, height: 40, 
+            backgroundColor: note.color, opacity: 0.15, borderRadius: 20 
+          }} 
+        />
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default function Notes() {
   const { t } = useTranslation();
@@ -57,13 +109,12 @@ export default function Notes() {
   const [verseLoading, setVerseLoading] = useState(false);
 
   const textInputRef = React.useRef<TextInput>(null);
-  const router = useRouter();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const { settings: globalSettings } = useSettings();
-  const params = useLocalSearchParams();
 
   useEffect(() => {
-    loadNotes(); loadFolders();
+    loadNotes(); 
+    loadFolders();
     const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
       setKeyboardHeight(e.endCoordinates.height);
     });
@@ -75,13 +126,6 @@ export default function Notes() {
       hideSub.remove();
     };
   }, []);
-
-  useEffect(() => {
-    if (params.noteId && notes.length > 0) {
-      const targetNote = notes.find(n => n.id === String(params.noteId));
-      if (targetNote) { setEditingNote(targetNote); setIsPreviewMode(true); }
-    }
-  }, [params.noteId, notes]);
 
   const loadNotes = async () => {
     const saved = await AsyncStorage.getItem("adventools_notes");
@@ -185,7 +229,6 @@ export default function Notes() {
 
     setEditingNote({ ...editingNote, content: newContent });
 
-    // Focus sans changer la sélection brusquement
     setTimeout(() => {
       textInputRef.current?.focus();
     }, 100);
@@ -208,9 +251,13 @@ export default function Notes() {
     await Share.share({ message: text });
   };
 
+  // LOGIQUE DE FILTRAGE RENFORCÉE
   const filteredNotes = notes.filter(n => {
-    const matchesSearch = n.title.toLowerCase().includes(search.toLowerCase()) || n.content.toLowerCase().includes(search.toLowerCase());
-    return selectedFolder === "all" ? matchesSearch : matchesSearch && n.folder === selectedFolder;
+    const matchesSearch = (n.title || "").toLowerCase().includes(search.toLowerCase()) || 
+                         (n.content || "").toLowerCase().includes(search.toLowerCase());
+    
+    if (selectedFolder === "all") return matchesSearch;
+    return matchesSearch && n.folder === selectedFolder;
   });
 
   useEffect(() => {
@@ -247,101 +294,104 @@ export default function Notes() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0d1117]">
-      <StatusBar style="light" />
+    <>
+      <SafeAreaView className="flex-1 bg-[#020617]">
+        <StatusBar style="light" />
 
-      {/* HEADER PRINCIPAL */}
-      <View className="px-6 pt-6 border-b border-white/5 pb-2">
-        <View className="flex-row justify-between items-center mb-6">
-          <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
-              <ArrowLeft size={20} color="#94a3b8" />
-            </TouchableOpacity>
-            <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_journal')}</Text>
-          </View>
-          <TouchableOpacity onPress={addNote} className="w-12 h-12 rounded-2xl bg-primary items-center justify-center shadow-2xl shadow-primary/50">
-            <Plus size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        {/* RECHERCHE */}
-        <View className="relative flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 py-1 mb-6">
-          <Search size={18} color="#475569" />
-          <TextInput
-            placeholder={t('search_note_placeholder')}
-            placeholderTextColor="#475569"
-            className="flex-1 h-12 ml-3 text-white font-medium"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-
-        {/* DOSSIERS */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-2">
-          <TouchableOpacity
-            onPress={() => setSelectedFolder("all")}
-            className={cn("px-5 py-2.5 rounded-2xl mr-3 border-2 transition-all", selectedFolder === "all" ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
-          >
-            <Text className={cn("font-bold text-xs tracking-tight", selectedFolder === "all" ? "text-primary" : "text-slate-500")}>{t('all_notes')}</Text>
-          </TouchableOpacity>
-          {folders.map(f => (
-            <TouchableOpacity
-              key={f}
-              onPress={() => setSelectedFolder(f)}
-              onLongPress={() => deleteFolder(f)}
-              className={cn("px-5 py-2.5 rounded-2xl mr-3 border-2 transition-all", selectedFolder === f ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
+        <View className="px-6 pt-6 bg-[#020617]">
+          <View className="flex-row justify-between items-center mb-8">
+            <View>
+              <Text className="text-white text-sm opacity-40 font-bold uppercase tracking-widest mb-1">{t('study_journal')}</Text>
+              <Text className="text-4xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_journal')}</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={addNote} 
+              className="w-14 h-14 rounded-[22px] bg-primary items-center justify-center shadow-2xl shadow-primary/40 border border-white/20"
             >
-              <Text className={cn("font-bold text-xs tracking-tight uppercase", selectedFolder === f ? "text-primary" : "text-slate-500")}>{f}</Text>
+              <Plus size={28} color="white" />
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity onPress={() => setShowFolderModal(true)} className="px-5 py-2.5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/20 flex-row items-center">
-            <FolderPlus size={16} color="#10b981" className="mr-2" />
-            <Text className="text-emerald-500 font-bold text-xs uppercase tracking-tight">{t('new_folder')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+          </View>
 
-      {/* LISTE DES NOTES */}
-      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-        {filteredNotes.map((note) => (
-          <TouchableOpacity
-            key={note.id}
-            onPress={() => { setEditingNote(note); setIsPreviewMode(true); addToHistory(note); }}
-            style={{ backgroundColor: note.color || '#1e293b', borderColor: NOTE_COLORS.find(c => c.value === note.color)?.border || '#334155' }}
-            className="w-full p-6 rounded-[32px] mb-4 border shadow-sm relative overflow-hidden"
-          >
-            <View className="flex-row justify-between items-start mb-4">
-              <View className="flex-1 mr-4">
-                <Text className="font-bold text-white text-xl leading-tight mb-1" style={{ fontFamily: 'Lexend_700Bold' }}>{note.title || t('untitled_note')}</Text>
-                {note.folder && (
-                  <View className="flex-row items-center">
-                    <Folder size={10} color="#94a3b8" className="mr-1" />
-                    <Text className="text-[10px] text-white/50 font-bold uppercase tracking-widest">{note.folder}</Text>
-                  </View>
+          <View className="relative flex-row items-center bg-white/5 border border-white/10 rounded-3xl px-5 py-0.5 mb-8">
+            <Search size={18} color="#475569" />
+            <TextInput
+              placeholder={t('search_note_placeholder')}
+              placeholderTextColor="#475569"
+              className="flex-1 h-14 ml-4 text-white text-base font-medium"
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <X size={18} color="#475569" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="mb-6">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              <TouchableOpacity
+                onPress={() => setSelectedFolder("all")}
+                className={cn(
+                  "px-6 py-3 rounded-2xl mr-3 border transition-all", 
+                  selectedFolder === "all" ? "bg-primary border-primary shadow-lg shadow-primary/30" : "bg-white/5 border-white/10"
                 )}
-              </View>
-              <Text className="text-[10px] font-bold text-white/40 uppercase">{new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}</Text>
-            </View>
-            <Text className="text-sm text-white/70 mb-6 leading-5" numberOfLines={3}>{note.content.replace(/[#*`]/g, '') || t('no_content')}</Text>
-            <View className="flex-row justify-between items-center">
-              <View className="flex-row items-center"><BookOpen size={14} color="white" opacity={0.4} className="mr-2" /><Text className="text-[10px] text-white/40 font-medium uppercase tracking-widest">{t('study_journal')}</Text></View>
-              <TouchableOpacity onPress={() => deleteNote(note.id)} className="w-8 h-8 rounded-full bg-black/20 items-center justify-center border border-white/10"><Trash2 size={14} color="#f87171" /></TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))}
-        {filteredNotes.length === 0 && <View className="w-full items-center py-20"><StickyNote size={40} color="#1e293b" /><Text className="text-slate-500 font-medium mt-4">{t('no_notes_found')}</Text></View>}
-        <View className="h-24" />
-      </ScrollView>
+              >
+                <Text className={cn("font-bold text-sm", selectedFolder === "all" ? "text-white" : "text-slate-400")}>{t('all_notes')}</Text>
+              </TouchableOpacity>
+              {folders.map(f => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => setSelectedFolder(f)}
+                  onLongPress={() => deleteFolder(f)}
+                  className={cn(
+                    "px-6 py-3 rounded-2xl mr-3 border transition-all", 
+                    selectedFolder === f ? "bg-white/10 border-white/20 shadow-xl" : "bg-white/5 border-white/10"
+                  )}
+                >
+                  <Text className={cn("font-bold text-sm uppercase tracking-tight", selectedFolder === f ? "text-primary" : "text-slate-500")}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity 
+                onPress={() => setShowFolderModal(true)} 
+                className="w-12 h-12 rounded-2xl bg-white/5 border border-dashed border-white/20 items-center justify-center"
+              >
+                <Plus size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
 
-      {/* MODAL EDITEUR */}
+        <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+          {filteredNotes.length > 0 ? (
+            <View className="flex-row gap-4">
+              <View className="flex-1 gap-4">
+                {filteredNotes.filter((_, i) => i % 2 === 0).map((note) => (
+                  <NoteCard key={note.id} note={note} onPress={() => { setEditingNote(note); setIsPreviewMode(true); addToHistory(note); }} onDelete={() => deleteNote(note.id)} />
+                ))}
+              </View>
+              <View className="flex-1 gap-4">
+                {filteredNotes.filter((_, i) => i % 2 !== 0).map((note) => (
+                  <NoteCard key={note.id} note={note} onPress={() => { setEditingNote(note); setIsPreviewMode(true); addToHistory(note); }} onDelete={() => deleteNote(note.id)} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View className="w-full items-center py-32 opacity-20">
+              <StickyNote size={80} color="#94a3b8" />
+              <Text className="text-white font-bold text-xl mt-6">{t('no_notes_found')}</Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+
       <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent={true}>
         <SafeAreaView className="flex-1 bg-[#0d1117]">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             className="flex-1">
             <View className="flex-1 bg-[#0d1117]">
-            {/* Header Editeur */}
             <View className="flex-row justify-between items-center px-6 py-4 border-b border-white/5 bg-[#0d1117]">
               <TouchableOpacity onPress={() => { if (editingNote) autoSave(editingNote); setEditingNote(null); }} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
                 <X size={20} color="#94a3b8" />
@@ -365,19 +415,14 @@ export default function Notes() {
               </View>
             </View>
 
-            <ScrollView
-              className="flex-1 px-6 pt-6"
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled">
-
+            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {editingNote && (
                 <>
-                  {/* SÉLECTEUR DE DOSSIER DANS L'ÉDITEUR */}
                   <View className="flex-row items-center mb-6">
                     <Text className="text-[10px] text-white/40 font-bold uppercase tracking-widest mr-4">{t('folder')} :</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <TouchableOpacity
-                        onPress={() => setEditingNote({ ...editingNote, folder: undefined })}
+                        onPress={() => setEditingNote(prev => prev ? ({ ...prev, folder: undefined }) : null)}
                         className={cn("px-4 py-2 rounded-xl mr-2 border", !editingNote.folder ? "bg-primary/20 border-primary" : "bg-white/5 border-white/10")}
                       >
                         <Text className={cn("text-[10px] font-bold", !editingNote.folder ? "text-primary" : "text-white/40")}>{t('none')}</Text>
@@ -385,7 +430,7 @@ export default function Notes() {
                       {folders.map(f => (
                         <TouchableOpacity
                           key={f}
-                          onPress={() => setEditingNote({ ...editingNote, folder: f })}
+                          onPress={() => setEditingNote(prev => prev ? ({ ...prev, folder: f }) : null)}
                           className={cn("px-4 py-2 rounded-xl mr-2 border", editingNote.folder === f ? "bg-primary border-primary" : "bg-white/5 border-white/10")}
                         >
                           <Text className="text-white text-[10px] font-bold">{f}</Text>
@@ -394,12 +439,11 @@ export default function Notes() {
                     </ScrollView>
                   </View>
 
-                  {/* COULEUR DE LA NOTE */}
                   <View className="flex-row gap-3 mb-8">
                     {NOTE_COLORS.map(c => (
                       <TouchableOpacity
                         key={c.value}
-                        onPress={() => setEditingNote({ ...editingNote, color: c.value })}
+                        onPress={() => setEditingNote(prev => prev ? ({ ...prev, color: c.value }) : null)}
                         style={{ backgroundColor: c.value, borderColor: c.border }}
                         className={cn("w-8 h-8 rounded-full border-2 items-center justify-center", editingNote.color === c.value ? "border-white" : "border-transparent")}
                       >
@@ -414,7 +458,7 @@ export default function Notes() {
                     className="text-3xl font-bold text-white mb-6"
                     style={{ fontFamily: 'Lexend_700Bold' }}
                     value={editingNote.title}
-                    onChangeText={t => setEditingNote({ ...editingNote, title: t })}
+                    onChangeText={t => setEditingNote(prev => prev ? ({ ...prev, title: t }) : null)}
                   />
 
                   {isPreviewMode ? (
@@ -422,8 +466,6 @@ export default function Notes() {
                       <Markdown style={markdownStyles as any} onLinkPress={handleVerseClick} rules={{
                         link: (node, children, parent, styles) => {
                           const url = node.attributes.href;
-
-                          // 1. SURLIGNAGE (Background + Text)
                           if (url && url.startsWith('#h:')) {
                             const colorId = url.replace('#h:', '');
                             const color = HIGHLIGHT_COLORS.find(c => c.id === colorId) || HIGHLIGHT_COLORS[0];
@@ -433,14 +475,8 @@ export default function Notes() {
                               </Text>
                             );
                           }
-
-                          // 2. VERSETS & AUTRES LIENS (Forçage du BLEU ici)
                           return (
-                            <Text
-                              key={node.key}
-                              style={{ color: '#60a5fa', fontWeight: 'bold', textDecorationLine: 'none' }}
-                              onPress={() => handleVerseClick(url)}
-                            >
+                            <Text key={node.key} style={{ color: '#60a5fa', fontWeight: 'bold', textDecorationLine: 'none' }} onPress={() => handleVerseClick(url)}>
                               {children}
                             </Text>
                           );
@@ -459,7 +495,7 @@ export default function Notes() {
                       className="text-lg text-slate-200 leading-7 min-h-[400px]"
                       style={{ fontFamily: 'Lexend_400Regular', paddingBottom: 150 }}
                       value={editingNote.content}
-                      onChangeText={t => setEditingNote({ ...editingNote, content: t })}
+                      onChangeText={t => setEditingNote(prev => prev ? ({ ...prev, content: t }) : null)}
                       onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
                     />
                   )}
@@ -467,10 +503,8 @@ export default function Notes() {
               )}
             </ScrollView>
 
-            {/* BARRE D'OUTILS (TOOLBAR) */}
             {!isPreviewMode && editingNote && (
               <View className="bg-[#161b22] border-t border-white/10 pb-4">
-                {/* Palette de Surlignage */}
                 {showHighlighter && (
                   <View className="flex-row justify-around py-3 bg-white/5 border-b border-white/5">
                     {HIGHLIGHT_COLORS.map(c => (
@@ -480,17 +514,6 @@ export default function Notes() {
                     ))}
                     <TouchableOpacity onPress={() => setShowHighlighter(false)} className="w-10 h-10 items-center justify-center"><X size={18} color="#8b949e" /></TouchableOpacity>
                   </View>
-                )}
-                {/* Palette de Couleur de Texte */}
-                {showTextColor && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-3 bg-white/5 border-b border-white/5 px-4 flex-row">
-                    {TEXT_COLORS.map(c => (
-                      <TouchableOpacity key={c.id} onPress={() => { insertMarkdown(`[`, `](#c:${c.id})`); setShowTextColor(false); }} style={{ borderColor: c.color }} className="w-10 h-10 rounded-full border items-center justify-center bg-white/5 mr-4">
-                        <Text style={{ color: c.color }} className="font-bold text-lg">A</Text>
-                      </TouchableOpacity>
-                    ))}
-                    <TouchableOpacity onPress={() => setShowTextColor(false)} className="w-10 h-10 items-center justify-center"><X size={18} color="#8b949e" /></TouchableOpacity>
-                  </ScrollView>
                 )}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-4">
                   <View className="flex-row gap-4 px-6">
@@ -506,74 +529,71 @@ export default function Notes() {
                 </ScrollView>
               </View>
             )}
-            <View style={{ height: Platform.OS === 'android' ? (keyboardHeight > 0 ? keyboardHeight : 10) : (keyboardHeight > 0 ? 0 : 20) }} />
+            <View style={{ height: Platform.OS === 'ios' ? (keyboardHeight > 0 ? 0 : 20) : 0 }} />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
 
-      {/* MODAL CRÉATION DOSSIER */}
-      <Modal visible={showFolderModal} animationType="fade" transparent>
-        <SafeAreaView className="flex-1 bg-black/70 justify-center px-8">
-          <View className="bg-[#1c2128] p-8 rounded-[40px] border border-white/10 shadow-2xl">
-            <Text className="text-xl font-bold text-white mb-6 text-center">{t('new_folder_title')}</Text>
-            <TextInput
-              autoFocus
-              placeholder={t('folder_name_placeholder')}
-              placeholderTextColor="#475569"
-              className="bg-white/5 text-white p-5 rounded-2xl border border-white/10 mb-6 text-lg"
-              value={newFolderName}
-              onChangeText={setNewFolderName}
-            />
-            <View className="flex-row gap-4">
-              <TouchableOpacity onPress={() => { setShowFolderModal(false); setNewFolderName(""); }} className="flex-1 bg-white/5 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-bold">{t('cancel')}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={createFolder} className="flex-1 bg-primary py-4 rounded-2xl items-center shadow-lg shadow-primary/30"><Text className="text-white font-bold">{t('create')}</Text></TouchableOpacity>
-            </View>
+    <Modal visible={showFolderModal} animationType="fade" transparent>
+      <SafeAreaView className="flex-1 bg-black/70 justify-center px-8">
+        <View className="bg-[#1c2128] p-8 rounded-[40px] border border-white/10 shadow-2xl">
+          <Text className="text-xl font-bold text-white mb-6 text-center">{t('new_folder_title')}</Text>
+          <TextInput
+            autoFocus
+            placeholder={t('folder_name_placeholder')}
+            placeholderTextColor="#475569"
+            className="bg-white/5 text-white p-5 rounded-2xl border border-white/10 mb-6 text-lg"
+            value={newFolderName}
+            onChangeText={setNewFolderName}
+          />
+          <View className="flex-row gap-4">
+            <TouchableOpacity onPress={() => { setShowFolderModal(false); setNewFolderName(""); }} className="flex-1 bg-white/5 py-4 rounded-2xl items-center border border-white/10"><Text className="text-white font-bold">{t('cancel')}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={createFolder} className="flex-1 bg-primary py-4 rounded-2xl items-center shadow-lg shadow-primary/30"><Text className="text-white font-bold">{t('create')}</Text></TouchableOpacity>
           </View>
-        </SafeAreaView>
-      </Modal>
+        </View>
+      </SafeAreaView>
+    </Modal>
 
-      {/* DÉTAIL DU VERSET DÉTECTÉ */}
-      <Modal visible={!!detectedVerse} animationType="slide" transparent>
-        <SafeAreaView className="flex-1 bg-black/60 justify-end">
-          <View className="bg-slate-900 mx-4 mb-4 rounded-[40px] p-8 border border-white/10 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-6">
-              <View className="flex-row items-center">
-                <BookOpen size={24} color="#3b82f6" className="mr-3" />
-                <Text className="text-white font-bold text-xl">{detectedVerse?.book} {detectedVerse?.chapter}:{detectedVerse?.verses}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setDetectedVerse(null)} className="w-10 h-10 bg-white/5 rounded-full items-center justify-center"><X size={20} color="#94a3b8" /></TouchableOpacity>
+    <Modal visible={!!detectedVerse} animationType="slide" transparent>
+      <SafeAreaView className="flex-1 bg-black/60 justify-end">
+        <View className="bg-slate-900 mx-4 mb-4 rounded-[40px] p-8 border border-white/10 shadow-2xl">
+          <View className="flex-row justify-between items-center mb-6">
+            <View className="flex-row items-center">
+              <BookOpen size={24} color="#3b82f6" className="mr-3" />
+              <Text className="text-white font-bold text-xl">{detectedVerse?.book} {detectedVerse?.chapter}:{detectedVerse?.verses}</Text>
             </View>
-            <ScrollView className="max-h-[300px] mb-8">
-              {verseLoading ? <ActivityIndicator color="#3b82f6" /> : <Text className="text-slate-200 text-xl leading-8 italic font-medium">"{verseContent}"</Text>}
-            </ScrollView>
-            <TouchableOpacity
-              onPress={() => {
-                if (detectedVerse?.bookId) {
-                  router.push({
-                    pathname: "/bible/reader",
-                    params: {
-                      bookId: String(detectedVerse.bookId),
-                      bookName: detectedVerse.book,
-                      chapter: String(detectedVerse.chapter),
-                      verse: String((detectedVerse.verses || "").split(/[-,]/)[0] || "1"),
-                      lang: globalSettings.bibleVersion,
-                      testament: "1"
-                    }
-                  });
-                } else {
-                  router.push(`/(tabs)/bible`);
-                }
-                setDetectedVerse(null);
-              }}
-              className="bg-blue-600 py-5 rounded-2xl items-center shadow-lg shadow-blue-500/40"
-            >
-              <Text className="text-white font-bold text-lg">{t('open_in_bible')}</Text>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setDetectedVerse(null)} className="w-10 h-10 bg-white/5 rounded-full items-center justify-center"><X size={20} color="#94a3b8" /></TouchableOpacity>
           </View>
-        </SafeAreaView>
-      </Modal>
-
-    </SafeAreaView>
+          <ScrollView className="max-h-[300px] mb-8">
+            {verseLoading ? <ActivityIndicator color="#3b82f6" /> : <Text className="text-slate-200 text-xl leading-8 italic font-medium">"{verseContent}"</Text>}
+          </ScrollView>
+          <TouchableOpacity
+            onPress={() => {
+              if (detectedVerse?.bookId) {
+                router.push({
+                  pathname: "/bible/reader",
+                  params: {
+                    bookId: String(detectedVerse.bookId),
+                    bookName: detectedVerse.book,
+                    chapter: String(detectedVerse.chapter),
+                    verse: String((detectedVerse.verses || "").split(/[-,]/)[0] || "1"),
+                    lang: globalSettings.bibleVersion,
+                    testament: "1"
+                  }
+                });
+              } else {
+                router.push(`/(tabs)/bible`);
+              }
+              setDetectedVerse(null);
+            }}
+            className="bg-blue-600 py-5 rounded-2xl items-center shadow-lg shadow-blue-500/40"
+          >
+            <Text className="text-white font-bold text-lg">{t('open_in_bible')}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  </>
   );
 }
