@@ -366,6 +366,9 @@ export interface TranslationSchema {
   city_placeholder: string;
   auto_ip: string;
   reset_auto: string;
+  check_updates: string;
+  check_manually: string;
+  checking: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

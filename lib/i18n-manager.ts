@@ -45,7 +45,14 @@ export class I18nManager {
 
       // Load remote manifest cache
       const cachedRemote = await AsyncStorage.getItem(REMOTE_MANIFEST_CACHE_KEY);
-      if (cachedRemote) this.remoteManifest = JSON.parse(cachedRemote);
+      if (cachedRemote) {
+          const json = JSON.parse(cachedRemote);
+          // Defensive conversion from Object to Array
+          if (json.languages && !Array.isArray(json.languages) && typeof json.languages === 'object') {
+            json.languages = Object.entries(json.languages).map(([id, data]: [any, any]) => ({ id: data.id || id, ...data }));
+          }
+          this.remoteManifest = json;
+      }
 
       // Load local manifest
       const storedLocal = await AsyncStorage.getItem(LOCAL_MANIFEST_KEY);
@@ -59,7 +66,7 @@ export class I18nManager {
   }
 
   private async loadStoredTranslations() {
-    if (!this.localManifest) return;
+    if (!this.localManifest || !Array.isArray(this.localManifest.languages)) return;
     for (const lang of this.localManifest.languages) {
       const filePath = `${I18N_DIR}${lang.file}`;
       if ((await FileSystem.getInfoAsync(filePath)).exists) {
@@ -84,6 +91,12 @@ export class I18nManager {
       const resp = await fetch(`${MANIFEST_URL}?t=${Date.now()}`);
       if (!resp.ok) return this.remoteManifest;
       const json = await resp.json();
+      
+      // Defensive conversion from Object to Array
+      if (json.languages && !Array.isArray(json.languages) && typeof json.languages === 'object') {
+        json.languages = Object.entries(json.languages).map(([id, data]: [any, any]) => ({ id: data.id || id, ...data }));
+      }
+
       this.remoteManifest = json;
       await AsyncStorage.setItem(REMOTE_MANIFEST_CACHE_KEY, JSON.stringify(json));
       return json;
@@ -91,25 +104,33 @@ export class I18nManager {
   }
 
   getLanguageStatus(id: string): LanguageStatus {
-    const isBuiltIn = id === 'Français' || id === 'English' || id === 'Malagasy';
+    try {
+      const isBuiltIn = id === 'Français' || id === 'English' || id === 'Malagasy';
 
-    // Check if there is a local copy (downloaded or update)
-    const local = this.localManifest?.languages.find(l => l.id === id);
-    const remote = this.remoteManifest?.languages.find(l => l.id === id);
+      // Check if there is a local copy (downloaded or update)
+      const local = Array.isArray(this.localManifest?.languages) 
+        ? this.localManifest?.languages.find(l => l.id === id) : undefined;
+        
+      const remote = Array.isArray(this.remoteManifest?.languages) 
+        ? this.remoteManifest?.languages.find(l => l.id === id) : undefined;
 
-    // If remote version is greater than local version (or assumed version 1 for built-ins if no local copy)
-    const currentVersion = local ? local.version : (isBuiltIn ? 1 : 0);
+      // If remote version is greater than local version (or assumed version 1 for built-ins if no local copy)
+      const currentVersion = local ? local.version : (isBuiltIn ? 1 : 0);
 
-    if (remote && remote.version > currentVersion) return 'update-available';
-    if (local) return 'downloaded';
-    if (isBuiltIn) return 'built-in';
+      if (remote && remote.version > currentVersion) return 'update-available';
+      if (local) return 'downloaded';
+      if (isBuiltIn) return 'built-in';
 
-    return 'not-downloaded';
+      return 'not-downloaded';
+    } catch (e) {
+      console.error("[I18n] Error in getLanguageStatus:", e);
+      return 'built-in'; // Fallback to avoid crash
+    }
   }
 
   async downloadLanguage(id: string): Promise<boolean> {
-    if (!this.remoteManifest) {
-      console.error(`[I18n] Download failed: no remote manifest`);
+    if (!this.remoteManifest || !Array.isArray(this.remoteManifest.languages)) {
+      console.error(`[I18n] Download failed: no remote manifest or languages array`);
       return false;
     }
     const remoteLang = this.remoteManifest.languages.find(l => l.id === id);
@@ -161,11 +182,12 @@ export class I18nManager {
     if (status === 'built-in' || !this.localManifest) return false;
 
     try {
-      const lang = this.localManifest.languages.find(l => l.id === id);
+      if (!Array.isArray(this.localManifest?.languages)) return false;
+      const lang = this.localManifest?.languages.find(l => l.id === id);
       if (lang) {
         await FileSystem.deleteAsync(`${I18N_DIR}${lang.file}`, { idempotent: true });
         delete this.dynamicTranslations[id];
-        this.localManifest.languages = this.localManifest.languages.filter(l => l.id !== id);
+        this.localManifest!!.languages = this.localManifest!!.languages.filter(l => l.id !== id);
         await AsyncStorage.setItem(LOCAL_MANIFEST_KEY, JSON.stringify(this.localManifest));
         return true;
       }
@@ -174,18 +196,22 @@ export class I18nManager {
   }
 
   getInstalledLanguages(): { id: string; name: string; isBuiltIn: boolean }[] {
-    const langs = Object.keys(staticTranslations).map(id => ({ id, name: id, isBuiltIn: true }));
-    if (this.localManifest) {
-      this.localManifest.languages.forEach(l => {
-        if (!langs.find(el => el.id === l.id)) {
-          langs.push({ id: l.id, name: l.name, isBuiltIn: false });
-        }
-      });
+    try {
+      const langs = Object.keys(staticTranslations).map(id => ({ id, name: id, isBuiltIn: true }));
+      if (Array.isArray(this.localManifest?.languages)) {
+        this.localManifest?.languages.forEach(l => {
+          if (!langs.find(el => el.id === l.id)) {
+            langs.push({ id: l.id, name: l.name, isBuiltIn: false });
+          }
+        });
+      }
+      return langs;
+    } catch (e) {
+      return Object.keys(staticTranslations).map(id => ({ id, name: id, isBuiltIn: true }));
     }
-    return langs;
   }
 
   getRemoteAvailableLanguages(): I18nManifest['languages'] {
-    return this.remoteManifest?.languages || [];
+    return Array.isArray(this.remoteManifest?.languages) ? this.remoteManifest!!.languages : [];
   }
 }

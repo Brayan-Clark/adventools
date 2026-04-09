@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Play, Download, Search, Users, Trash2, Smartphone, CheckCircle } from 'lucide-react-native';
+import { ChevronLeft, Play, Download, Search, Users, Trash2, Smartphone, CheckCircle, RefreshCcw } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -260,7 +260,7 @@ export default function EtudesLessonsScreen() {
       
       {/* Header */}
       <View className="px-6 py-4 border-b border-slate-800/30">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center justify-between mb-2">
           <TouchableOpacity 
             onPress={() => router.back()}
             className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center"
@@ -268,9 +268,35 @@ export default function EtudesLessonsScreen() {
             <ChevronLeft size={20} color="#f8fafc" />
           </TouchableOpacity>
           <View className="flex-1 px-4 items-center">
-            <Text className="text-white font-bold text-lg text-center" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>{seriesTitle}</Text>
+            <Text className="text-white font-bold text-lg" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>{seriesTitle}</Text>
           </View>
-          <View className="w-10 h-10" />
+          <View className="flex-row items-center">
+            {lessons.some(l => downloadedLessons[getAudioKey(l.id)]) && (
+                <TouchableOpacity 
+                onPress={deleteAll}
+                className="w-10 h-10 bg-red-500/10 rounded-full items-center justify-center border border-red-500/20 mr-2"
+                >
+                <Trash2 size={18} color="#ef4444" />
+                </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+                onPress={fetchLessons}
+                disabled={isRefreshing}
+                className="w-10 h-10 bg-slate-900 rounded-full items-center justify-center border border-slate-800 mr-2"
+            >
+                {isRefreshing ? (
+                    <ActivityIndicator size="small" color="#f8fafc" />
+                ) : (
+                    <RefreshCcw size={18} color="#f8fafc" />
+                )}
+            </TouchableOpacity>
+            <TouchableOpacity 
+                onPress={downloadAll}
+                className="w-10 h-10 bg-blue-500/10 rounded-full items-center justify-center border border-blue-500/20"
+            >
+                <Download size={18} color="#3b82f6" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search */}

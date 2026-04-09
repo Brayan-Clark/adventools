@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Download, PlayCircle, Clock, Trash2, CheckCircle, Smartphone, Globe } from 'lucide-react-native';
+import { ChevronLeft, Download, PlayCircle, Clock, Trash2, CheckCircle, Smartphone, Globe, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,13 +64,13 @@ export default function PodcastEpisodesScreen() {
 
   const initAndLoad = async () => {
     // 1. Load local files and cache first (INSTANT)
-    await initFileSystem();
+    const localMeta = await initFileSystem();
     
     // 2. Fetch remote update
     if (streamUrl) {
       const net = await NetInfo.fetch();
       if (net.isConnected) {
-        fetchEpisodes();
+        fetchEpisodes(localMeta?.downloaded);
       }
     }
   };
@@ -80,6 +80,7 @@ export default function PodcastEpisodesScreen() {
       const info = await FileSystem.getInfoAsync(AUDIO_DIR);
       if (!info.exists) {
         await FileSystem.makeDirectoryAsync(AUDIO_DIR, { intermediates: true });
+        return { downloaded: {}, cachedFeed: [] };
       } else {
         const metaInfo = await FileSystem.getInfoAsync(METADATA_FILE);
         if (metaInfo.exists) {
@@ -87,11 +88,13 @@ export default function PodcastEpisodesScreen() {
           const meta: PodcastMetadata = JSON.parse(content);
           setDownloadedMetadata(meta.downloaded || {});
           setCachedRemoteFeed(meta.cachedFeed || []);
+          return meta;
         }
       }
     } catch (error) {
       console.error('File system init error:', error);
     }
+    return { downloaded: {}, cachedFeed: [] };
   };
 
   const saveMetadata = async (downloaded: Record<string, PodcastEpisode>, cachedFeed?: PodcastEpisode[]) => {
@@ -108,7 +111,7 @@ export default function PodcastEpisodesScreen() {
     }
   };
 
-  const fetchEpisodes = async () => {
+  const fetchEpisodes = async (currentDownloaded?: Record<string, PodcastEpisode>) => {
     setIsRemoteLoading(true);
     try {
       const response = await fetch(`${streamUrl}${streamUrl.includes('?') ? '&' : '?'}t=${Date.now()}`, {
@@ -134,7 +137,8 @@ export default function PodcastEpisodesScreen() {
         
         // Cache for next time - ONLY if we actually got items!
         if (parsedEpisodes && parsedEpisodes.length > 0) {
-            saveMetadata(downloadedMetadata, parsedEpisodes.slice(0, 20));
+            // Use the passed currentDownloaded or the latest state to avoid erasing data
+            saveMetadata(currentDownloaded || downloadedMetadata, parsedEpisodes.slice(0, 20));
         }
         setIsRemoteLoading(false);
       }, 50);
@@ -389,6 +393,17 @@ export default function PodcastEpisodesScreen() {
                     <Trash2 size={16} color="#ef4444" />
                 </TouchableOpacity>
             )}
+            <TouchableOpacity 
+                onPress={() => fetchEpisodes(downloadedMetadata)}
+                disabled={isRemoteLoading}
+                className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 items-center justify-center mr-2"
+            >
+                {isRemoteLoading ? (
+                    <ActivityIndicator size={12} color="#f8fafc" />
+                ) : (
+                    <RefreshCcw size={16} color="#f8fafc" />
+                )}
+            </TouchableOpacity>
             <TouchableOpacity 
                 onPress={downloadAll}
                 className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 items-center justify-center"

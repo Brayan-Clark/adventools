@@ -1,4 +1,5 @@
 import { exportAllAppData, readBackupFile } from '@/lib/backup-utils';
+import { performUpdateCheck } from '@/lib/updater';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
@@ -61,6 +62,7 @@ export default function Settings() {
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
   const [remoteLangs, setRemoteLangs] = useState<any[]>([]);
   const [isSyncingLangs, setIsSyncingLangs] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Import states
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
@@ -498,6 +500,20 @@ export default function Settings() {
               </SettingsGroup>
 
               <SettingsGroup title={t('maintenance')}>
+                <SettingItem
+                  icon={<RefreshCcw size={18} color="#3b82f6" />}
+                  label={t('check_updates')}
+                  value={isUpdating ? t('checking') : t('check_manually')}
+                  onPress={async () => {
+                    if (isUpdating) return;
+                    setIsUpdating(true);
+                    try {
+                        await performUpdateCheck(globalSettings.downloadOverWifiOnly, true);
+                    } catch (e) {}
+                    setIsUpdating(false);
+                  }}
+                  rightElement={isUpdating ? <ActivityIndicator size="small" color="#3b82f6" /> : undefined}
+                />
                 <SettingItem
                   icon={<Globe size={18} color="#10b981" />}
                   label="Mises à jour via Wi-Fi uniquement"

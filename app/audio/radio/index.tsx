@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Radio as RadioIcon, WifiOff, PlayCircle, ListMusic } from 'lucide-react-native';
+import { ChevronLeft, Radio as RadioIcon, WifiOff, PlayCircle, ListMusic, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -127,9 +127,17 @@ export default function RadioScreen() {
           )}
         </View>
         
-        <View className="w-10 h-10 rounded-full bg-blue-500/10 items-center justify-center">
-          <RadioIcon size={18} color="#3b82f6" />
-        </View>
+        <TouchableOpacity 
+          onPress={fetchStations}
+          disabled={loading}
+          className="w-10 h-10 rounded-full bg-blue-500/10 items-center justify-center border border-blue-500/10"
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#3b82f6" />
+          ) : (
+            <RefreshCcw size={18} color="#3b82f6" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>

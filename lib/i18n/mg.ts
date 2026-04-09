@@ -362,4 +362,7 @@ export const mg: TranslationSchema = {
   city_placeholder: "Ohatra: Antsiranana, Mahajanga...",
   auto_ip: "Localisation (GPS)",
   reset_auto: "Haverina (Hita ho azy)",
+  check_updates: "Hitady fanavaozana",
+  check_manually: "Hijery mivantana",
+  checking: "Eo am-pijerena...",
 };

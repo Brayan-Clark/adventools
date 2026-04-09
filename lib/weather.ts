@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
 const WEATHER_CACHE_KEY = 'app_weather_info_v2';
-// 7-day cache: only one network call per week unless forced or city changed
+// 7-day cache: we store a week of data to minimize requests.
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ async function saveWeatherCache(data: WeatherInfo) {
  *
  * Cache logic:
  *  - Returns cache immediately if fresh (< 7 days) AND city hasn't changed.
- *  - If the user changed their city in settings → auto-invalidates cache.
+ *  - Dynamically shifts the forecast so it always starts at the CURRENT date.
  *  - If force=true → always fetches fresh data (pull-to-refresh).
  */
 export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
@@ -71,12 +71,12 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       }
     } catch (_) { }
 
-    // 2. Detect city change → invalidates cache even if not expired
+    // 2. Detect city change → invalidates cache
     cityChanged =
       lastWeather != null &&
       (lastWeather.cityConfig || '') !== manualCity;
 
-    // 3. Return cache if fresh, city unchanged, and not forced
+    // 3. Return cache if fresh, city unchanged, AND today is found in forecast
     if (
       !force &&
       !cityChanged &&
@@ -84,8 +84,17 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       now - lastWeather.timestamp < CACHE_DURATION &&
       lastWeather.temp != null
     ) {
-      console.log("[WEATHER] Returning valid cache for:", lastWeather.city);
-      return lastWeather;
+      // Trouver l'index d'aujourd'hui dans les prévisions stockées pour décaler la liste
+      const todayStr = new Date(now).toISOString().split('T')[0];
+      const startIndex = lastWeather.forecast.findIndex(d => d.date === todayStr);
+
+      if (startIndex >= 0) {
+        console.log("[WEATHER] Returning valid cache (shifted to today) for:", lastWeather.city);
+        return {
+          ...lastWeather,
+          forecast: lastWeather.forecast.slice(startIndex)
+        };
+      }
     }
 
     // ── Resolve coordinates ──────────────────────────────────────────────────

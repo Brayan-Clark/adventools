@@ -44,11 +44,20 @@ export function useAutoUpdater() {
   }, [settings.updateCheckIntervalMonths, settings.downloadOverWifiOnly, isLoading]);
 }
 
-async function performUpdateCheck(wifiOnly: boolean) {
+export async function performUpdateCheck(wifiOnly: boolean, manual = false) {
   // 1. Check Network
   const networkState = await NetInfo.fetch();
-  if (!networkState.isConnected) return;
-  if (wifiOnly && networkState.type !== 'wifi') return;
+  if (!networkState.isConnected) {
+    if (manual) Alert.alert("Pas de connexion", "Veuillez vous connecter à Internet pour rechercher des mises à jour.");
+    return;
+  }
+  if (wifiOnly && networkState.type !== 'wifi') {
+    if (manual) Alert.alert("Wi-Fi requis", "La vérification manuelle nécessite une connexion Wi-Fi selon vos paramètres.");
+    return;
+  }
+
+  let foundSomething = false;
+  const currentVersion = Constants.expoConfig?.version || "1.0.0";
 
   // 2. Check App Update (APK via GitHub Releases)
   try {
@@ -56,14 +65,24 @@ async function performUpdateCheck(wifiOnly: boolean) {
     const response = await fetch(gitHubApiUrl);
     if (response.ok) {
       const release = await response.json();
-      const currentVersion = Constants.expoConfig?.version || "1.0.0";
       const latestVersion = release.tag_name ? release.tag_name.replace('v', '') : "0.0.0";
 
-      // Simple version comparison (e.g. "1.0.1" > "1.0.0")
-      if (latestVersion > currentVersion) {
+      // Robust semantic version comparison
+      const isNewer = (latest: string, current: string) => {
+        const l = latest.split('.').map(n => parseInt(n) || 0);
+        const c = current.split('.').map(n => parseInt(n) || 0);
+        for (let i = 0; i < Math.max(l.length, c.length); i++) {
+          if ((l[i] || 0) > (c[i] || 0)) return true;
+          if ((l[i] || 0) < (c[i] || 0)) return false;
+        }
+        return false;
+      };
+
+      if (isNewer(latestVersion, currentVersion)) {
+        foundSomething = true;
         Alert.alert(
           "Mise à jour disponible",
-          `Une nouvelle version (${release.tag_name}) est disponible ! Souhaitez-vous la télécharger ?\n\nNouveautés: ${release.name || ''}`,
+          `Une nouvelle version (${release.tag_name}) est disponible ! Souhaitez-vous la télécharger ?\n\nVersion actuelle : ${currentVersion}\nNouveautés : ${release.name || ''}`,
           [
             { text: "Plus tard", style: "cancel" },
             {
@@ -102,11 +121,17 @@ async function performUpdateCheck(wifiOnly: boolean) {
 
         const status = manager.getLanguageStatus(lang.id);
         if (status === 'update-available') {
+          foundSomething = true;
           await manager.downloadLanguage(lang.id);
+          if (manual) Alert.alert("Mise à jour réussie", `La langue ${lang.name} a été mise à jour.`);
         }
       }
     }
   } catch (e) {
     console.error("Language Update Error:", e);
+  }
+
+  if (manual && !foundSomething) {
+    Alert.alert("Tout est à jour", "Vous utilisez déjà la dernière version de l'application et des données.");
   }
 }

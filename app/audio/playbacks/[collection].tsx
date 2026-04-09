@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Play, Download, Search, Trash2, Smartphone, CheckCircle } from 'lucide-react-native';
+import { ChevronLeft, Play, Download, Search, Trash2, Smartphone, CheckCircle, RefreshCcw } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -344,6 +344,17 @@ export default function PlaybacksSongsScreen() {
                 <Trash2 size={18} color="#ef4444" />
                 </TouchableOpacity>
             )}
+            <TouchableOpacity 
+                onPress={fetchSongs}
+                disabled={isRefreshing}
+                className="w-10 h-10 bg-slate-900 rounded-full items-center justify-center border border-slate-800 mr-2"
+            >
+                {isRefreshing ? (
+                    <ActivityIndicator size="small" color="#f8fafc" />
+                ) : (
+                    <RefreshCcw size={18} color="#f8fafc" />
+                )}
+            </TouchableOpacity>
             <TouchableOpacity 
                 onPress={downloadAll}
                 className="w-10 h-10 bg-violet-500/10 rounded-full items-center justify-center border border-violet-500/20"

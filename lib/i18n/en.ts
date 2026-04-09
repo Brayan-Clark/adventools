@@ -362,4 +362,7 @@ export const en: TranslationSchema = {
   city_placeholder: "Ex: Antsiranana, Majunga...",
   auto_ip: "Auto Detected (GPS)",
   reset_auto: "Reset (Auto-detect)",
+  check_updates: "Check for updates",
+  check_manually: "Check manually",
+  checking: "Checking...",
 };
