@@ -55,6 +55,13 @@
       "bg": "rgba(17, 102, 85, 0.1)"
     },
     {
+      "id": "dossier_MINENF",
+      "title": "Dossiers Ministère de l'Enfant",
+      "icon": "FolderOpen",
+      "color": "#f59e0b",
+      "bg": "rgba(245, 158, 11, 0.1)"
+    },
+    {
       "id": "semaine_priere",
       "title": "Semaine de Prière",
       "icon": "Clock",
@@ -1811,6 +1818,114 @@
       "isAsset": false,
       "tags": [
         "Tous"
+      ]
+    },
+    {
+      "id": "men_001",
+      "title": "ARMA",
+      "fileName": "ARMA.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/ARMA.pptx",
+      "size": "3.6 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_002",
+      "title": "FITANTARANA TANTARA",
+      "fileName": "FITANTARANA TANTARA.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://drive.usercontent.google.com/download?id=1LMPJf7a-tuujzb6ueteM490BXNMBsSK7&export=download&authuser=0&confirm=t&uuid=7ca7909d-ef10-46c9-9303-9ea04dc6c607&at=ALBwUgmBbiri8j1B5ySAccufIW6t%3A1775718194346",
+      "size": "124 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_003",
+      "title": "Manao ankizy ho mpianatra",
+      "fileName": "Manao ankizy ho mpianatra.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Manao%20ankizy%20ho%20mpianatra.pptx",
+      "size": "1.9 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_004",
+      "title": "Mifototra amin'ny Baiboly mifantoka amin'ny hiraka",
+      "fileName": "Mifototra amin'ny Baiboly mifantoka amin'ny hiraka.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Mifototra%20amin'ny%20Baiboly%20mifantoka%20amin'ny%20hiraka.pptx",
+      "size": "30 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_005",
+      "title": "Mpanabe mamita hiraka",
+      "fileName": "Mpanabe mamita hiraka.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Mpanabe%20mamita%20hiraka.pptx",
+      "size": "132 KB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_006",
+      "title": "NY PSYCHOLOGIE NY ZAZA",
+      "fileName": "NY PSYCHOLOGIE NY ZAZA.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/NY%20PSYCHOLOGIE%20NY%20ZAZA.pptx",
+      "size": "11 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_007",
+      "title": "NY SAMPANA MIADIDY NY ANKIZY",
+      "fileName": "NY SAMPANA MIADIDY NY ANKIZY.odp",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/NY%20SAMPANA%20MIADIDY%20NY%20ANKIZY.odp",
+      "size": "8.8 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_008",
+      "title": "TARI-DALANA NO AN'IREO MPANDRINDRA SY MPANENTANA",
+      "fileName": "TARI-DALANA NO AN'IREO MPANDRINDRA SY MPANENTANA.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/TARI-DALANA%20NO%20AN'IREO%20MPANDRINDRA%20SY%20MPANENTANA.pptx",
+      "size": "52 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "men_009",
+      "title": "Tomoera ao amin'i Jesosy",
+      "fileName": "Tomoera ao amin'i Jesosy.pptx",
+      "categoryId": "dossier_MINENF",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Tomoera%20ao%20amin'i%20Jesosy.pptx",
+      "size": "3.7 MB",
+      "isAsset": false,
+      "tags": [
+        "Ministères de l'Enfant"
       ]
     }
   ]
