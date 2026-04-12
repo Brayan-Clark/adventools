@@ -1510,11 +1510,11 @@
     },
     {
       "id": "aja_055",
-      "title": "MANUEL DADMINISTRATION DES EXPLORATEURS (1)",
-      "fileName": "MANUEL-DADMINISTRATION-DES-EXPLORATEURS (1).pdf",
+      "title": "Manuel Ambassadeur",
+      "fileName": "Manuel-Ambassadeur.pdf",
       "categoryId": "dossiers_JA",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MANUEL-DADMINISTRATION-DES-EXPLORATEURS%20%281%29.pdf",
-      "size": "1.6 MB",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Manuel-Ambassadeur.pdf",
+      "size": "3.1 MB",
       "isAsset": false,
       "tags": [
         "Jeunesse (AJA)"
@@ -1551,18 +1551,6 @@
       "categoryId": "dossiers_JA",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MUSIC.pdf",
       "size": "746.9 KB",
-      "isAsset": false,
-      "tags": [
-        "Jeunesse (AJA)"
-      ]
-    },
-    {
-      "id": "aja_059",
-      "title": "Manuel Ambassadeur",
-      "fileName": "Manuel-Ambassadeur.pdf",
-      "categoryId": "dossiers_JA",
-      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Manuel-Ambassadeur.pdf",
-      "size": "3.1 MB",
       "isAsset": false,
       "tags": [
         "Jeunesse (AJA)"
