@@ -1,0 +1,48 @@
+[
+  { 
+    "id": "playbacks", 
+    "title": "Hymnes & Louanges", 
+    "title_en": "Hymns Audio", 
+    "count": 420, 
+    "color": "text-emerald-500", 
+    "bg": "bg-emerald-500/20",
+    "icon": "Music"
+  },
+  { 
+    "id": "bible", 
+    "title": "Bible Audio (MG)", 
+    "title_en": "Bible Audio", 
+    "count": 66, 
+    "color": "text-amber-500", 
+    "bg": "bg-amber-500/20",
+    "icon": "BookOpen"
+  },
+  { 
+    "id": "etudes", 
+    "title": "Études Bibliques", 
+    "title_en": "Bible Studies", 
+    "count": 8, 
+    "color": "text-violet-500", 
+    "bg": "bg-violet-500/20",
+    "icon": "Folder"
+  },
+  { 
+    "id": "ecole-de-sabbat", 
+    "title": "École du Sabbat", 
+    "title_en": "Sabbath School", 
+    "count": 13, 
+    "color": "text-rose-500", 
+    "bg": "bg-rose-500/20",
+    "icon": "Headphones"
+  },
+  { 
+    "id": "radio", 
+    "title": "Radios & Podcasts", 
+    "title_en": "Podcasts & Streaming", 
+    "count": 1, 
+    "color": "text-blue-500", 
+    "bg": "bg-blue-500/20", 
+    "isStreaming": true,
+    "icon": "PlayCircle"
+  }
+]

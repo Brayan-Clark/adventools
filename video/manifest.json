@@ -40,5 +40,19 @@
     "color": "#3b82f6",
     "bg": "bg-blue-500/20",
     "isStreaming": false
+  },
+  {
+    "id": "ecole-de-sabbat",
+    "title": "École du Sabbat",
+    "title_en": "Sabbath School",
+    "title_mg": "Sekoly Sabata",
+    "title_de": "Sabbatschule",
+    "title_es": "Escuela Sabática",
+    "title_pt": "Escola Sabatina",
+    "title_zh": "安息日学",
+    "icon": "MonitorPlay",
+    "color": "#f59e0b",
+    "bg": "bg-amber-500/20",
+    "isStreaming": false
   }
 ]
