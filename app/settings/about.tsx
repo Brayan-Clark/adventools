@@ -1,4 +1,5 @@
 import { useTranslation } from '@/lib/i18n';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Github, Globe, Mail, Shield } from 'lucide-react-native';
@@ -34,7 +35,7 @@ export default function AboutScreen() {
             />
           </View>
           <Text className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>Adventools</Text>
-          <Text className="text-slate-500 font-medium tracking-widest uppercase text-[10px]">Version 1.0.0 (Stable)</Text>
+          <Text className="text-slate-500 font-medium tracking-widest uppercase text-[10px]">Version {Constants.expoConfig?.version || '1.2.0'} (Stable)</Text>
         </View>
 
         {/* Mission Card */}

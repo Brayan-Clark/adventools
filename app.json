@@ -2,7 +2,7 @@
   "expo": {
     "name": "Adventools",
     "slug": "adventools",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "adventools",
@@ -18,7 +18,8 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
-        ]
+        ],
+        "NSMicrophoneUsageDescription": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal."
       }
     },
     "android": {
@@ -30,6 +31,8 @@
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "WAKE_LOCK",
@@ -38,7 +41,7 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
       ],
-      "versionCode": 3,
+      "versionCode": 4,
       "newArchEnabled": true
     },
     "web": {
@@ -50,7 +53,13 @@
       "expo-router",
       "expo-asset",
       "@react-native-community/datetimepicker",
-      "expo-av"
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal."
+        }
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

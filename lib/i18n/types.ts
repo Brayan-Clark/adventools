@@ -131,6 +131,7 @@ export interface TranslationSchema {
   delete_folder_confirm: string;
   folder_exists_error: string;
   verse_not_found_in: string;
+  category: string;
 
   // Utiles / Study Resources
   useful: string;

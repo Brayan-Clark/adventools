@@ -128,8 +128,9 @@ export const fr: TranslationSchema = {
   create: "Créer",
   open_in_bible: "Ouvrir dans la Bible",
   delete_note_confirm: "Voulez-vous supprimer cette note ?",
-  delete_folder_confirm: "Voulez-vous supprimer le dossier",
-  folder_exists_error: "Ce dossier existe déjà",
+  delete_folder_confirm: "Supprimer le dossier",
+  folder_exists_error: "Un dossier avec ce nom existe déjà",
+  category: "Catégorie",
   verse_not_found_in: "Non trouvé dans",
 
   // Utiles / Study Resources

@@ -110,10 +110,14 @@ export default function VideoHubScreen() {
                 <TouchableOpacity
                   key={folder.id}
                   onPress={() => {
-                    router.push({
-                      pathname: '/video/[collection]',
-                      params: { collection: folder.id, title: title }
-                    } as any);
+                    if (folder.id === 'ecole-de-sabbat') {
+                        router.push('/video/sabbath-school');
+                    } else {
+                        router.push({
+                            pathname: '/video/[collection]',
+                            params: { collection: folder.id, title: title }
+                        } as any);
+                    }
                   }}
                   className="w-[48%] bg-slate-900 rounded-[24px] border border-slate-800 p-5 shadow-xl mb-4"
                 >

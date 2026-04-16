@@ -12,21 +12,27 @@ import {
   Download,
   FileText,
   Globe,
+  Languages,
   RefreshCw,
   Share,
   Trash2,
-  X
+  X,
+  PlayCircle,
+  Headphones,
+  FileDown
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Image,
   Linking,
   Modal,
   Share as RNShare,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View
@@ -148,10 +154,56 @@ interface Segment {
 }
 
 interface WeeklyLesson {
+  id?: string;
   title: string;
   segments: Segment[];
   introduction?: string;
+  cover?: string;
+  startDate?: string;
+  audio?: any[];
+  video?: any[];
+  pdf?: any[];
 }
+
+const QuestionBlock = ({ block, content, lessonId }: { block: any, content: React.ReactNode, lessonId: string }) => {
+  const { t } = useTranslation();
+  const [note, setNote] = useState('');
+  
+  useEffect(() => {
+    AsyncStorage.getItem(`adventools_note_${lessonId}_${block.id}`).then(val => {
+      if (val) setNote(val);
+    });
+  }, [lessonId, block.id]);
+
+  const saveNote = (text: string) => {
+    setNote(text);
+    AsyncStorage.setItem(`adventools_note_${lessonId}_${block.id}`, text).catch(() => {});
+  };
+
+  return (
+    <View className="my-6 bg-slate-900 border border-slate-700/50 rounded-2xl overflow-hidden p-1 shadow-lg shadow-black/20">
+      <View className="p-4 mb-2 bg-slate-800/50 rounded-xl">
+        {content}
+      </View>
+      <View className="px-1 pb-1 relative">
+        <TextInput
+          className="bg-slate-900 text-white p-4 pt-4 rounded-xl border border-white/5"
+          placeholder={t('write_notes') || "Écrivez vos notes ici..."}
+          placeholderTextColor="#475569"
+          multiline
+          minHeight={120}
+          textAlignVertical="top"
+          value={note}
+          onChangeText={saveNote}
+          style={{ fontFamily: 'Lexend_400Regular' }}
+        />
+        <View className="absolute bottom-4 right-4 bg-primary/20 px-3 py-1 rounded-full border border-primary/30">
+          <Text className="text-primary text-[10px] font-bold uppercase">{t('saved') || 'Enregistré'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 export default function LesonaSekolySabata() {
   const { t } = useTranslation();
@@ -164,6 +216,7 @@ export default function LesonaSekolySabata() {
   const [selectedQuarterly, setSelectedQuarterly] = useState<Quarterly | null>(null);
   const [readingLesson, setReadingLesson] = useState<WeeklyLesson | null>(null);
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
+  const [currentLessonId, setCurrentLessonId] = useState("");
   const [activeCategory, setActiveCategory] = useState("Lesona Lehibe (+ 35 taona)");
   const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
   const [selectedLang, setSelectedLang] = useState<string>('mg');
@@ -199,6 +252,25 @@ export default function LesonaSekolySabata() {
       checkDownloaded();
     }, [selectedLang])
   );
+  
+  // Custom hardware back button handling
+  useEffect(() => {
+    const onBackPress = () => {
+      if (readingLesson) {
+        setReadingLesson(null);
+        setCurrentLessonId("");
+        return true;
+      }
+      if (selectedQuarterly) {
+        setSelectedQuarterly(null);
+        return true;
+      }
+      return false;
+    };
+
+    const handler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => handler.remove();
+  }, [readingLesson, selectedQuarterly]);
 
   useEffect(() => {
     loadInitialData();
@@ -682,6 +754,110 @@ export default function LesonaSekolySabata() {
     );
   };
 
+
+  const enhanceLessonWithMedia = async (lesson: WeeklyLesson, quarterlyId: string, lessonId: string) => {
+    let finalJson: any = { ...lesson };
+    try {
+      const qClean = quarterlyId.replace(/^[a-z]{2}-/, "").replace("ss-", "");
+      let shortLessonId = lessonId.split('-').pop() || "";
+      if (shortLessonId.length === 1) shortLessonId = shortLessonId.padStart(2, '0');
+
+      const ad_qId = qClean;
+      const audioUrl = `https://sabbath-school.adventech.io/api/v2/${selectedLang}/quarterlies/${ad_qId}/audio.json`;
+      const videoUrl = `https://sabbath-school.adventech.io/api/v2/${selectedLang}/quarterlies/${ad_qId}/video.json`;
+      const v2LessonUrl = `https://sabbath-school.adventech.io/api/v2/${selectedLang}/quarterlies/${ad_qId}/lessons/${shortLessonId}/index.json`;
+      
+      const [audioRes, videoRes, v2LessonRes] = await Promise.all([
+        fetch(audioUrl).catch(() => null),
+        fetch(videoUrl).catch(() => null),
+        fetch(v2LessonUrl).catch(() => null)
+      ]);
+      
+      const targetPattern = `${ad_qId}/${shortLessonId}`;
+      
+      if (v2LessonRes && v2LessonRes.ok) {
+        try {
+          const v2Data = await v2LessonRes.json();
+          if (v2Data.pdfs && v2Data.pdfs.length > 0) finalJson.pdf = v2Data.pdfs;
+          if (v2Data.cover && !finalJson.cover) finalJson.cover = v2Data.cover;
+        } catch (je) { console.log("JSON Parse error v2Lesson"); }
+      }
+
+      if (audioRes && audioRes.ok) {
+        try {
+          const audioData = await audioRes.json();
+          if (Array.isArray(audioData)) {
+            const lessonAudio = audioData.filter((t: any) => 
+               (t.target && t.target.includes(targetPattern)) || 
+               (t.targetIndex && t.targetIndex === lessonId)
+            );
+            if (lessonAudio.length > 0) finalJson.audio = lessonAudio;
+          }
+        } catch (je) { console.log("JSON Parse error audio"); }
+      }
+      
+      if (videoRes && videoRes.ok) {
+        try {
+          const videoData = await videoRes.json();
+          if (Array.isArray(videoData)) {
+            let lessonVideo: any[] = [];
+            videoData.forEach((v: any) => {
+               if (v.clips && Array.isArray(v.clips)) {
+                  const clips = v.clips.filter((c: any) => 
+                     (c.target && (c.target.includes(targetPattern) || c.target.includes(lessonId))) || 
+                     (c.targetIndex && (c.targetIndex === lessonId || c.targetIndex.includes(targetPattern)))
+                  );
+                  lessonVideo = lessonVideo.concat(clips);
+               }
+            });
+            if (lessonVideo.length > 0) finalJson.video = lessonVideo;
+          }
+        } catch (je) { console.log("JSON Parse error video"); }
+      }
+      
+      // Mission Quarterly specific enhancement (Direct from adventistmission.org)
+      const isMission = quarterlyId.toLowerCase().includes('mission') || 
+                        quarterlyId.toLowerCase().includes('mq') ||
+                        (selectedQuarterly?.title && selectedQuarterly.title.toLowerCase().includes('mission'));
+
+      if (isMission) {
+         const parts = quarterlyId.split('-');
+         const yearFull = parts.find(p => p.match(/^\d{4}$/)) || new Date().getFullYear().toString();
+         const quarterPart = parts.find(p => p.match(/^0[1-4]$|^[1-4]$/)) || "02";
+         
+         const YY = yearFull.substring(2);
+         const Q = parseInt(quarterPart);
+         const W = parseInt(shortLessonId) || 1;
+         
+         const mqaPdf = `https://am.adventistmission.org/mqa${YY}q${Q}.pdf`;
+         const storyUrl = `https://am.adventistmission.org/a${YY}${Q}${W}`;
+         
+         if (!finalJson.pdf) finalJson.pdf = [];
+         if (!finalJson.pdf.some((p: any) => p.src === mqaPdf)) {
+             finalJson.pdf.unshift({ src: mqaPdf, title: `Mission Quarterly PDF (Q${Q} ${yearFull})` });
+         }
+         
+         // Fallback for missing/scanty content in segments
+         if (finalJson.segments) {
+           finalJson.segments.forEach((seg: any) => {
+              const hasActualStory = seg.blocks && seg.blocks.some((b: any) => b.markdown && b.markdown.length > 200);
+              if (!hasActualStory) {
+                 if (!seg.blocks) seg.blocks = [];
+                 seg.blocks.push({
+                    type: 'markdown',
+                    markdown: `### Mission Story - Week ${W}\n\n[**Cliquez ici pour lire l'histoire complète sur le web**](${storyUrl})\n\nLe contenu textuel complet n'est pas fourni dans ce flux. Veuillez utiliser le bouton **PDF d'archive** en haut à droite (icône orange) pour lire le manuel officiel.`
+                 });
+              }
+           });
+         }
+      }
+      
+      setReadingLesson(prev => prev ? ({ ...prev, ...finalJson }) : finalJson);
+    } catch (e) {
+       console.log("Global media error:", e);
+    }
+  };
+
   const fetchWeeklyLesson = async (quarterlyId: string, lessonId: string) => {
     setLoading(true);
     setReadingLesson(null);
@@ -696,8 +872,10 @@ export default function LesonaSekolySabata() {
         const offlineData = JSON.parse(content);
         if (offlineData[lessonId]) {
           setReadingLesson(offlineData[lessonId]);
+          setCurrentLessonId(lessonId);
           setLoading(false);
           autoSelectSegment(offlineData[lessonId]);
+          enhanceLessonWithMedia(offlineData[lessonId], quarterlyId, lessonId);
           return;
         }
       }
@@ -878,12 +1056,16 @@ export default function LesonaSekolySabata() {
         throw new Error(errorText);
       }
 
+      
+      
       let normalizedData = finalJson;
+      enhanceLessonWithMedia(normalizedData, quarterlyId, lessonId);
       if (!finalJson.segments && finalJson.lessons) {
         normalizedData = { ...finalJson, segments: finalJson.lessons };
       }
 
       setReadingLesson(normalizedData);
+      setCurrentLessonId(lessonId);
       autoSelectSegment(normalizedData);
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
@@ -1073,24 +1255,83 @@ export default function LesonaSekolySabata() {
           <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
             {segment ? (
               <>
-                <View className="mb-8 p-6 bg-slate-900 rounded-[32px] border border-white/5 relative overflow-hidden shadow-xl shadow-black/20">
-                  <View className="absolute -right-10 -top-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-50" />
-                  <View className="flex-row items-center mb-3">
-                    <Text className="text-primary font-bold text-[10px] uppercase tracking-[0.2em]">{segment.date || t('daily_study')}</Text>
-                    {segment.type === 'pdf' && (
-                      <View className="ml-3 px-2 py-0.5 bg-blue-500/20 rounded-full border border-blue-500/30">
-                        <Text className="text-blue-400 font-bold text-[8px] uppercase">PDF</Text>
+                <View className="mb-8 rounded-[32px] overflow-hidden border border-white/10 relative shadow-xl shadow-black/30" style={{ minHeight: 250 }}>
+                  <Image 
+                    source={{ uri: readingLesson.cover || selectedQuarterly?.covers?.landscape || selectedQuarterly?.covers?.portrait }} 
+                    style={{ position: 'absolute', width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                  <View className="absolute inset-0 bg-slate-950/60" />
+                  <View className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-90" />
+                  
+                  <View className="absolute inset-x-0 bottom-0 top-0 p-6 flex-col justify-between">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-row items-center bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                        <Text className="text-white font-bold text-[10px] uppercase tracking-[0.2em]">{segment.date || readingLesson.startDate}</Text>
                       </View>
-                    )}
+                      
+                      <View className="flex-row gap-2">
+                        {/* Audio Media */}
+                        {readingLesson.audio && readingLesson.audio.length > 0 && (() => {
+                          const audioObj = readingLesson.audio[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/audio/player', params: { title: audioObj.title || readingLesson.title, artist: audioObj.artist || selectedQuarterly?.title || 'Sabbath School', artwork: audioObj.image || selectedQuarterly?.covers?.portrait, url: audioObj.src || audioObj.url } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center border border-blue-500/30"
+                            >
+                              <Headphones size={18} color="#60a5fa" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* Video Media */}
+                        {readingLesson.video && readingLesson.video.length > 0 && (() => {
+                          const videoObj = readingLesson.video[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/video/player', params: { title: videoObj.title || readingLesson.title, url: videoObj.src || videoObj.url, thumbnail: videoObj.image || videoObj.thumbnail } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-red-500/20 items-center justify-center border border-red-500/30"
+                            >
+                             <PlayCircle size={18} color="#f87171" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* PDF Media */}
+                        {readingLesson.pdf && readingLesson.pdf.length > 0 && (() => {
+                          const pdfObj = readingLesson.pdf[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/pdf/viewer', params: { uri: pdfObj.src, title: pdfObj.title || readingLesson.title, fileName: pdfObj.src.split('/').pop() || 'document.pdf' } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-amber-500/20 items-center justify-center border border-amber-500/30"
+                            >
+                             <FileDown size={18} color="#fbbf24" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* Share */}
+                        <TouchableOpacity onPress={handleShare} className="w-10 h-10 rounded-full bg-white/10 items-center justify-center border border-white/20">
+                          <Share size={18} color="#f8fafc" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    
+                    <View className="mt-8 justify-end">
+                       <Text className="text-white/80 text-[10px] font-bold uppercase tracking-widest mb-2" style={{ fontFamily: 'Lexend_600SemiBold' }}>
+                          {cleanSspmMarkdown(readingLesson.title)}
+                       </Text>
+                       <Text className="text-white text-3xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+                          {cleanSspmMarkdown(segment.title)}
+                       </Text>
+                    </View>
                   </View>
-                  <Text className="text-white text-2xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>{cleanSspmMarkdown(segment.title)}</Text>
-
-                  <TouchableOpacity
-                    onPress={handleShare}
-                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
-                  >
-                    <Share size={18} color="#94a3b8" />
-                  </TouchableOpacity>
                 </View>
 
                 {readingLesson.introduction && activeSegmentIdx === 0 && (
@@ -1190,6 +1431,17 @@ export default function LesonaSekolySabata() {
                         b.items.forEach((item, ii) => {
                           content.push(renderBlockRecursive(item, ii, blockData));
                         });
+                      }
+
+                      if (b.type === 'question' || b.type === 'textarea' || b.type === 'input') {
+                        return (
+                          <QuestionBlock
+                            key={b.id || idx}
+                            block={b}
+                            content={content}
+                            lessonId={currentLessonId}
+                          />
+                        );
                       }
 
                       if (b.type === 'blockquote') {
@@ -1452,7 +1704,10 @@ export default function LesonaSekolySabata() {
         <View className="flex-row items-center flex-1">
           <TouchableOpacity
             onPress={() => {
-              if (readingLesson) setReadingLesson(null);
+              if (readingLesson) {
+                setReadingLesson(null);
+                setCurrentLessonId("");
+              }
               else if (selectedQuarterly) setSelectedQuarterly(null);
               else router.back();
             }}
@@ -1468,29 +1723,30 @@ export default function LesonaSekolySabata() {
               <Text className="text-slate-500 text-xs mr-2">
                 {readingLesson ? t('daily_study') : SS_LANGUAGES.find(l => l.code === selectedLang)?.label || 'Sekoly Sabata'}
               </Text>
-              {!readingLesson && !selectedQuarterly && (
-                <TouchableOpacity
-                  onPress={() => setShowLangPicker(true)}
-                  className="flex-row items-center bg-primary/20 px-3 py-1 rounded-full border border-primary/30"
-                >
-                  <Globe size={12} color="#3b82f6" />
-                  <Text className="text-primary font-bold text-[10px] ml-1 uppercase">{t('language') || 'Language'}</Text>
-                  <ChevronRight size={10} color="#3b82f6" />
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
 
         {!readingLesson && !selectedQuarterly && (
-          <TouchableOpacity
-            onPress={loadInitialData}
-            className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
-          >
-            <RefreshCw size={18} color="#94a3b8" />
-          </TouchableOpacity>
-        )
-        }
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={() => setShowLangPicker(true)}
+              className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
+            >
+              <Languages size={18} color="#94a3b8" />
+              <View className="absolute -top-1 -right-1 bg-primary px-1.5 py-0.5 rounded-md border border-slate-900 shadow-sm">
+                 <Text className="text-[7px] text-white font-bold uppercase">{selectedLang}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={loadInitialData}
+              className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
+            >
+              <RefreshCw size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {renderContent()}

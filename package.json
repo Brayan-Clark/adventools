@@ -1,7 +1,7 @@
 {
   "name": "adventools",
   "main": "index.js",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "scripts": {
     "start": "npx expo start -c",
     "android": "npx expo run:android",
@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "expo": "~54.0.33",
     "expo-asset": "~12.0.12",
+    "expo-audio": "~1.1.1",
     "expo-av": "~16.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
