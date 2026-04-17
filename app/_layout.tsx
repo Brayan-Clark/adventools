@@ -28,6 +28,7 @@ import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-goo
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider } from '@/lib/settings-context';
 import { useAutoUpdater } from '@/lib/updater';
+import { getSetting } from '@/lib/user-storage';
 
 const ONBOARDING_KEY = 'adventools_onboarding_done';
 
@@ -123,10 +124,13 @@ function RootNavigator() {
 
       const checkOnboarding = async () => {
       try {
-        const done = await AsyncStorage.getItem(ONBOARDING_KEY);
+        // Use getSetting from SQLite to check if onboarding is done
+        const done = await getSetting<string | null>(ONBOARDING_KEY, null);
         if (!done) {
           // Navigate to onboarding — Stack is already mounted so router works
-          router.replace('/onboarding' as any);
+          setTimeout(() => {
+            router.replace('/onboarding' as any);
+          }, 500); // Slight delay to ensure navigation context is solid
         }
       } catch (_) {
         // On error, just proceed to (tabs) normally

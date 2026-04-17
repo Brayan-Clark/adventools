@@ -3,30 +3,16 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
+import { exportAllData, importData, migrateFromAsyncStorage } from './user-storage';
 
 export async function exportUserModifications() {
   try {
-    const keys = await AsyncStorage.getAllKeys();
-    const modKeys = keys.filter(key =>
-      key.startsWith('hymne_edit_') ||
-      key === 'utiles_etude_serie' ||
-      key === 'utiles_themes_divers' ||
-      key === 'adventools_notes'
-    );
-
-    if (modKeys.length === 0) {
-      Alert.alert("Information", "Aucune modification à exporter.");
-      return;
-    }
-
-    const pairs = await AsyncStorage.multiGet(modKeys);
-    const data = Object.fromEntries(pairs);
-    const json = JSON.stringify(data, null, 2);
+    const backupData = await exportAllData();
 
     const filename = `adventools_modifications_${new Date().toISOString().split('T')[0]}.json`;
     const fileUri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || "") + filename;
 
-    await FileSystem.writeAsStringAsync(fileUri, json);
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData, null, 2));
     await Sharing.shareAsync(fileUri, {
       mimeType: 'application/json',
       dialogTitle: 'Exporter les modifications',
@@ -127,42 +113,7 @@ export async function resetHymnCorrections() {
  */
 export async function exportAllAppData() {
   try {
-    const allKeys = await AsyncStorage.getAllKeys();
-
-    // Filtrage des clés importantes pour la sauvegarde
-    const keysToBackup = allKeys.filter(key =>
-      key.startsWith('hymne_edit_') ||
-      key.startsWith('hymn_favorites_') ||
-      key.startsWith('highlights_') ||
-      key.startsWith('word_highlights_') ||
-      key.startsWith('bookmarks_') ||
-      key.startsWith('pdf_bookmarks_') ||
-      key.startsWith('pdf_notes_') ||
-      key.startsWith('bible_favorites') ||
-      key.startsWith('bible_bookmarks') ||
-      key === 'adventools_notes' ||
-      key === 'adventools_folders' ||
-      key === 'utiles_etude_serie' ||
-      key === 'utiles_themes_divers' ||
-      key === 'profile_name' ||
-      key === 'profile_image' ||
-      key === 'profile_eds_class' ||
-      key === 'profile_departments' ||
-      key === 'app_history' ||
-      key === 'app_settings'
-    );
-
-    if (keysToBackup.length === 0) {
-      Alert.alert("Information", "Aucune donnée à sauvegarder.");
-      return;
-    }
-
-    const pairs = await AsyncStorage.multiGet(keysToBackup);
-    const backupData = {
-      version: "1.0",
-      timestamp: Date.now(),
-      data: Object.fromEntries(pairs)
-    };
+    const backupData = await exportAllData();
 
     const json = JSON.stringify(backupData, null, 2);
     const filename = `adventools_backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -200,19 +151,27 @@ export async function importAllAppData() {
       return;
     }
 
-    const entries = Object.entries(backup.data);
-    const validPairs: [string, string][] = entries.map(([key, value]) => [key, String(value)]);
-
     Alert.alert(
       "Restauration Complète",
-      `Cette action va restaurer ${validPairs.length} éléments (notes, réglages, surlignages...). Vos données actuelles seront écrasées. Continuer ?`,
+      `Cette action va restaurer vos données (notes, réglages, surlignages...). Vos données actuelles pourraient être écrasées. Continuer ?`,
       [
         { text: "Annuler", style: "cancel" },
         {
           text: "Restaurer",
           onPress: async () => {
             try {
-              await AsyncStorage.multiSet(validPairs);
+              if (backup.version === "2.0") {
+                  // Direct SQLite import
+                  await importData(backup);
+              } else {
+                  // Legacy AsyncStorage import
+                  const entries = Object.entries(backup.data);
+                  const validPairs: [string, string][] = entries.map(([key, value]) => [key, String(value)]);
+                  await AsyncStorage.multiSet(validPairs);
+                  // Trigger migration on next run or now?
+                  await migrateFromAsyncStorage();
+              }
+              
               Alert.alert(
                 "Succès",
                 "Restauration terminée ! Il est conseillé de redémarrer l'application pour appliquer tous les changements.",

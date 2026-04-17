@@ -102,8 +102,8 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
           });
         }
       } else if (!info.exists && !assetSource) {
-        console.error(`Database ${finalDbName} not found and no asset source provided.`);
-        throw new Error(`Database ${finalDbName} not found`);
+        // No asset source and doesn't exist? That's fine for new databases like user-storage
+        console.log(`Database ${finalDbName} not found, will be created fresh.`);
       }
     } catch (error) {
       console.error(`Error preparing database ${finalDbName}:`, error);
@@ -139,7 +139,10 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
   return dbLoadingPromises[cacheKey];
 }
 
-function wrapDatabase(db: SQLite.SQLiteDatabase) {
+/**
+ * Wraps a database with sanitized parameters to prevent NPE on Android
+ */
+export function wrapDatabase(db: SQLite.SQLiteDatabase) {
   const originalGetAll = db.getAllAsync.bind(db);
   const originalGetFirst = db.getFirstAsync.bind(db);
   const originalRun = db.runAsync.bind(db);

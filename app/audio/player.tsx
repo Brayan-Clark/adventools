@@ -8,7 +8,7 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSetting, setSetting } from '../../lib/user-storage';
 
 // Images par défaut
 const DEFAULT_BIBLE_IMAGE = require('../../assets/images/Livre.png');
@@ -30,6 +30,50 @@ try {
 } catch (e) {
   console.warn("TrackPlayer module not found", e);
 }
+
+const AudioWaveIndicator = ({ color = '#3b82f6' }: { color?: string }) => {
+  const anims = useRef([new Animated.Value(0.4), new Animated.Value(0.2), new Animated.Value(0.6), new Animated.Value(0.3)]).current;
+
+  useEffect(() => {
+    const animations = anims.map((anim, i) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 400 + i * 100,
+            useNativeDriver: false,
+          }),
+          Animated.timing(anim, {
+            toValue: 0.2,
+            duration: 400 + i * 100,
+            useNativeDriver: false,
+          }),
+        ])
+      );
+    });
+    animations.forEach(a => a.start());
+    return () => animations.forEach(a => a.stop());
+  }, []);
+
+  return (
+    <View className="flex-row items-end justify-between w-5 h-5">
+      {anims.map((anim, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            height: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['20%', '100%'],
+            }),
+            width: 3,
+            backgroundColor: color,
+            borderRadius: 1.5,
+          }}
+        />
+      ))}
+    </View>
+  );
+};
 
 // Standard Android Media Session action codes for reliability
 const CAPABILITIES = {
@@ -105,8 +149,8 @@ export default function AudioPlayerScreen() {
   useEffect(() => {
     const loadAutoPlay = async () => {
       try {
-        const val = await AsyncStorage.getItem('audio_autoplay');
-        if (val !== null) setAutoPlay(val === 'true');
+        const val = await getSetting<boolean>('audio_autoplay', false);
+        setAutoPlay(val);
       } catch (e) { }
     };
     loadAutoPlay();
@@ -115,7 +159,7 @@ export default function AudioPlayerScreen() {
   const saveAutoPlay = async (val: boolean) => {
     setAutoPlay(val);
     try {
-      await AsyncStorage.setItem('audio_autoplay', val ? 'true' : 'false');
+      await setSetting('audio_autoplay', val);
     } catch (e) { }
   };
   const [showPlaylist, setShowPlaylist] = useState(false);
@@ -277,8 +321,8 @@ export default function AudioPlayerScreen() {
             if (status.didJustFinish && !status.isLooping) {
               // Read from storage for latest autoplay state
               try {
-                const val = await AsyncStorage.getItem('audio_autoplay');
-                if (val === 'true') {
+                const val = await getSetting<boolean>('audio_autoplay', false);
+                if (val) {
                   handleTrackFinish();
                 } else {
                   await newSound.pauseAsync();
@@ -720,7 +764,7 @@ export default function AudioPlayerScreen() {
                       <Text className="text-xs text-slate-500" numberOfLines={1}>{item.artist || item.subtext}</Text>
                     </View>
                     {index === currentIndex.current && isPlaying && (
-                      <ActivityIndicator size="small" color="#3b82f6" />
+                      <AudioWaveIndicator color="#3b82f6" />
                     )}
                   </TouchableOpacity>
                 )}

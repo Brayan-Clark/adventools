@@ -2,7 +2,7 @@ import { useTranslation } from '@/lib/i18n';
 import { loadDatabase } from '@/lib/database';
 import { useSettings } from '@/lib/settings-context';
 import { cn } from '@/lib/utils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBibleMarkup, saveBibleMarkup, saveHistory } from '@/lib/user-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -39,6 +39,11 @@ export default function BibleReader() {
   const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
   const [highlightVerse, setHighlightVerse] = useState<number | null>(null);
   const [visibleVerse, setVisibleVerse] = useState<number | null>(null);
+  const [pickerStep, setPickerStep] = useState<'chapter' | 'verse'>('chapter');
+  const [tempChapter, setTempChapter] = useState(1);
+  const [tempVersesCount, setTempVersesCount] = useState(50);
+  const [countsCache, setCountsCache] = useState<Record<string, number>>({});
+  const [dbInstance, setDbInstance] = useState<any>(null);
 
   const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -86,15 +91,15 @@ export default function BibleReader() {
     }
 
     setWordHighlights(newWh);
-    await AsyncStorage.setItem(`word_highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newWh));
+    await saveBibleMarkup(`word_highlights_${lang}_${bookId}_${chapter}`, newWh);
     setWordSelectMode(false);
     setSelectedVerse(null);
   };
 
   const loadWordHighlights = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`word_highlights_${lang}_${bookId}_${chapter}`);
-      setWordHighlights(stored ? JSON.parse(stored) : {});
+      const stored = await getBibleMarkup(`word_highlights_${lang}_${bookId}_${chapter}`);
+      setWordHighlights(stored || {});
     } catch (e) { console.error(e); }
   };
 
@@ -117,14 +122,14 @@ export default function BibleReader() {
       }
 
       setWordHighlights(newWh);
-      await AsyncStorage.setItem(`word_highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newWh));
+      await saveBibleMarkup(`word_highlights_${lang}_${bookId}_${chapter}`, newWh);
     } catch (e) { console.error(e); }
   };
 
   const loadBookmarks = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`bookmarks_${lang}_${bookId}_${chapter}`);
-      setBookmarks(stored ? JSON.parse(stored) : {});
+      const stored = await getBibleMarkup(`bookmarks_${lang}_${bookId}_${chapter}`);
+      setBookmarks(stored || {});
     } catch (e) {
       console.error(e);
     }
@@ -137,7 +142,7 @@ export default function BibleReader() {
       newBookmarks[key] = !newBookmarks[key];
       if (!newBookmarks[key]) delete newBookmarks[key];
       setBookmarks(newBookmarks);
-      await AsyncStorage.setItem(`bookmarks_${lang}_${bookId}_${chapter}`, JSON.stringify(newBookmarks));
+      await saveBibleMarkup(`bookmarks_${lang}_${bookId}_${chapter}`, newBookmarks);
     } catch (e) {
       console.error(e);
     }
@@ -145,8 +150,8 @@ export default function BibleReader() {
 
   const loadHighlights = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`highlights_${lang}_${bookId}_${chapter}`);
-      setHighlights(stored ? JSON.parse(stored) : {});
+      const stored = await getBibleMarkup(`highlights_${lang}_${bookId}_${chapter}`);
+      setHighlights(stored || {});
     } catch (e) {
       console.error(e);
     }
@@ -173,7 +178,7 @@ export default function BibleReader() {
       }
 
       setHighlights(newHighlights);
-      await AsyncStorage.setItem(`highlights_${lang}_${bookId}_${chapter}`, JSON.stringify(newHighlights));
+      await saveBibleMarkup(`highlights_${lang}_${bookId}_${chapter}`, newHighlights);
     } catch (e) { console.error(e); }
   };
 
@@ -183,6 +188,59 @@ export default function BibleReader() {
     setChapter(next);
     flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
   };
+
+  // Initialize picker state when opened
+  useEffect(() => {
+    if (showChapterPicker) {
+      setTempChapter(chapter);
+      setPickerStep('chapter');
+    }
+  }, [showChapterPicker, chapter]);
+
+  const [tempVerses, setTempVerses] = useState<number[]>([]);
+  useEffect(() => {
+    async function loadPickerVerses() {
+        if (!showChapterPicker || !bookId) return;
+        
+        const cacheKey = `${lang}_${bookId}_${tempChapter}`;
+        if (tempChapter === chapter && verses.length > 0) {
+            setTempVerses(Array.from({ length: verses.length }, (_, i) => i + 1));
+            return;
+        }
+        
+        if (countsCache[cacheKey]) {
+            setTempVerses(Array.from({ length: countsCache[cacheKey] }, (_, i) => i + 1));
+            return;
+        }
+
+        try {
+            let db = dbInstance;
+            if (!db) {
+                const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
+                db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+                setDbInstance(db);
+            }
+
+            const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
+            const isCloud = tables.some((t: any) => t.name === 'books');
+            const bookIdNum = Number(bookId);
+            let countResult: any;
+
+            if (isCloud) {
+                countResult = await db.getFirstAsync(`SELECT MAX(verse) as count FROM verses WHERE book_number = ? AND CAST(chapter AS INTEGER) = ?`, [bookIdNum, tempChapter]);
+            } else {
+                const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+                if (verseTable) {
+                    countResult = await db.getFirstAsync(`SELECT MAX(CAST(a_and AS INTEGER)) as count FROM ${verseTable} WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?`, [bookIdNum, tempChapter]);
+                }
+            }
+            const count = countResult?.count || 50;
+            setCountsCache(prev => ({ ...prev, [cacheKey]: count }));
+            setTempVerses(Array.from({ length: count }, (_, i) => i + 1));
+        } catch (e) {}
+    }
+    loadPickerVerses();
+  }, [tempChapter, showChapterPicker, bookId, lang, availableBibles, chapter, verses.length, dbInstance]);
 
   // Update chapter when chapterParam changes
   useEffect(() => {
@@ -199,30 +257,26 @@ export default function BibleReader() {
     if (verseParam && verses.length > 0 && flatListRef.current) {
       const targetVerse = Number(verseParam);
       if (!isNaN(targetVerse)) {
-        // Find index of the verse
         const verseIndex = verses.findIndex(v => Number(v.verse) === targetVerse);
         if (verseIndex !== -1) {
-          // Trigger highlight
           setHighlightVerse(targetVerse);
+          const timer = setTimeout(() => { setHighlightVerse(null); }, 4000);
 
-          // Clear highlight after 3 seconds
-          const timer = setTimeout(() => {
-            setHighlightVerse(null);
-          }, 3000);
-
-          // Delay to ensure FlatList is rendered
-          setTimeout(() => {
-            try {
-              flatListRef.current?.scrollToIndex({
-                index: verseIndex,
-                animated: true,
-                viewPosition: 0.2 // Position at 20% from top
-              });
-            } catch (err) {
-              console.warn("Scroll failed", err);
+          const tryScroll = (retries = 5) => {
+            if (flatListRef.current) {
+              try {
+                flatListRef.current.scrollToIndex({
+                  index: verseIndex,
+                  animated: true,
+                  viewPosition: 0.1
+                });
+              } catch (err) {
+                if (retries > 0) setTimeout(() => tryScroll(retries - 1), 150);
+              }
             }
-          }, 500);
-
+          };
+          
+          setTimeout(() => tryScroll(), 300);
           return () => clearTimeout(timer);
         }
       }
@@ -282,23 +336,18 @@ export default function BibleReader() {
         if (bookInfo) setCurrentBookName(bookInfo.name);
         if (countResult) setChaptersCount(countResult.count);
         setVerses(versesResult || []);
+        setDbInstance(db); // Cache for other uses
 
-        // Save to History
-        try {
-          const historyItem = {
-            type: 'bible',
-            title: `${bookInfo?.name || 'Bible'} ${chapter}`,
-            subtitle: `Chapitre consulté • ${new Date().toLocaleDateString('fr-FR')}`,
-            timestamp: Date.now(),
-            params: { bookId, chapter }
-          };
-
-          const existingHistory = await AsyncStorage.getItem('app_history');
-          let history = existingHistory ? JSON.parse(existingHistory) : [];
-          history = history.filter((h: any) => h.title !== historyItem.title);
-          history.unshift(historyItem);
-          await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 5)));
-        } catch (e) { }
+          // Save to History
+          try {
+            await saveHistory({
+              type: 'bible',
+              title: `${bookInfo?.name || 'Bible'} ${chapter}`,
+              subtitle: `Chapitre consulté • ${new Date().toLocaleDateString('fr-FR')}`,
+              timestamp: Date.now(),
+              params: { bookId, chapter }
+            });
+          } catch (e) { }
       } catch (e) {
         console.error("[BibleReader] Load Error:", e);
       } finally {
@@ -452,7 +501,7 @@ export default function BibleReader() {
                     color: userTextColor || '#cbd5e1'
                   }}
                 >
-                  <Text className="text-[10px] font-bold text-slate-500 mr-1">
+                  <Text className="text-[12px] font-bold text-[#195de6] mr-2">
                     {v.verse}
                   </Text>
                   {" "}
@@ -915,35 +964,86 @@ export default function BibleReader() {
         )
       }
 
-      {/* Modal Selection Chapitre */}
-      {
-        showChapterPicker && (
-          <View className="absolute inset-0 bg-black/70 justify-end z-[100]">
-            <TouchableOpacity className="flex-1" onPress={() => setShowChapterPicker(false)} />
-            <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
-              <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-              <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir un chapitre</Text>
-              <FlatList
-                data={Array.from({ length: chaptersCount || 50 }, (_, i) => i + 1)}
-                numColumns={5}
-                keyExtractor={(item) => item.toString()}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => { setChapter(item); setShowChapterPicker(false); }}
-                    className={cn(
-                      "w-[17%] aspect-square items-center justify-center rounded-2xl m-1.5 border",
-                      item === chapter ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
-                    )}
-                  >
-                    <Text className={cn("font-bold text-base", item === chapter ? "text-white" : "text-slate-500")}>{item}</Text>
-                  </TouchableOpacity>
-                )}
-              />
+      {/* Modal Selection Chapitre et Verset */}
+      <Modal visible={showChapterPicker} transparent animationType="slide">
+        <TouchableOpacity 
+          className="flex-1 bg-black/70 justify-end" 
+          activeOpacity={1} 
+          onPress={() => { setShowChapterPicker(false); setPickerStep('chapter'); }}
+        >
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[90%] border-t border-slate-700">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
+            
+            <View className="flex-row justify-center items-center mb-6 gap-4">
+              <TouchableOpacity onPress={() => setPickerStep('chapter')}>
+                <Text className={cn("text-lg font-bold", pickerStep === 'chapter' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Chapitre</Text>
+              </TouchableOpacity>
+              <Text className="text-slate-700 font-bold">/</Text>
+              <TouchableOpacity onPress={() => pickerStep === 'verse' && setPickerStep('chapter')} disabled={pickerStep === 'chapter'}>
+                 <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Verset</Text>
+              </TouchableOpacity>
             </View>
+
+            <Text className="text-blue-400 font-bold mb-6 text-center text-[10px] uppercase tracking-widest">
+              {pickerStep === 'chapter' ? `Sélectionnez un chapitre (${currentBookName})` : `${currentBookName} ${tempChapter} - Choisissez un verset`}
+            </Text>
+
+            <View style={{ height: 350 }}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                {pickerStep === 'chapter' ? (
+                  <View className="flex-row flex-wrap justify-center">
+                    {Array.from({ length: chaptersCount || 50 }, (_, i) => i + 1).map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        onPress={() => { 
+                          setTempChapter(item); 
+                          setPickerStep('verse');
+                        }}
+                        className={cn(
+                          "w-[22%] aspect-square items-center justify-center rounded-2xl m-1.5 border",
+                          item === tempChapter ? "bg-[#195de6] border-[#195de6]" : "bg-[#111621] border-slate-800"
+                        )}
+                      >
+                        <Text className={cn("font-bold text-xl", item === tempChapter ? "text-white" : "text-slate-500")}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <View className="flex-row flex-wrap justify-center">
+                    {tempVerses.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        onPress={() => {
+                          setChapter(tempChapter);
+                          setShowChapterPicker(false);
+                          setPickerStep('chapter');
+                          router.setParams({ chapter: tempChapter.toString(), verse: item.toString() });
+                        }}
+                        className="w-[22%] aspect-square items-center justify-center rounded-2xl m-1.5 bg-[#111621] border border-slate-800"
+                      >
+                        <Text className="text-slate-300 font-bold text-lg">{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => { 
+                setChapter(tempChapter); 
+                setShowChapterPicker(false); 
+                setPickerStep('chapter'); 
+                router.setParams({ chapter: tempChapter.toString(), verse: '' });
+              }}
+              className="mt-4 p-5 items-center bg-[#195de6] rounded-2xl shadow-lg border border-[#195de6]"
+            >
+              <Text className="text-white font-bold text-base uppercase">Lire tout le chapitre {tempChapter}</Text>
+            </TouchableOpacity>
+            <View className="h-4" />
           </View>
-        )
-      }
+        </TouchableOpacity>
+      </Modal>
 
       {/* Modal Paramètres */}
       {

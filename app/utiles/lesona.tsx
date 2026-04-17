@@ -2,6 +2,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -19,16 +20,30 @@ import {
   X,
   PlayCircle,
   Headphones,
-  FileDown
+  FileDown,
+  StickyNote,
+  Edit,
+  Footprints,
+  Music,
+  Bold,
+  Italic,
+  List,
+  Heading,
+  Camera,
+  Video as VideoIcon,
+  Mic
 } from 'lucide-react-native';
+import { getAllNotes, saveNote } from '@/lib/user-storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Share as RNShare,
   ScrollView,
   Text,
@@ -188,17 +203,16 @@ const QuestionBlock = ({ block, content, lessonId }: { block: any, content: Reac
       <View className="px-1 pb-1 relative">
         <TextInput
           className="bg-slate-900 text-white p-4 pt-4 rounded-xl border border-white/5"
-          placeholder={t('write_notes') || "Écrivez vos notes ici..."}
+          placeholder={"Écrivez vos notes ici..."}
           placeholderTextColor="#475569"
           multiline
-          minHeight={120}
           textAlignVertical="top"
           value={note}
           onChangeText={saveNote}
-          style={{ fontFamily: 'Lexend_400Regular' }}
+          style={{ fontFamily: 'Lexend_400Regular', minHeight: 120 }}
         />
         <View className="absolute bottom-4 right-4 bg-primary/20 px-3 py-1 rounded-full border border-primary/30">
-          <Text className="text-primary text-[10px] font-bold uppercase">{t('saved') || 'Enregistré'}</Text>
+          <Text className="text-primary text-[10px] font-bold uppercase">{'Enregistré'}</Text>
         </View>
       </View>
     </View>
@@ -246,6 +260,95 @@ export default function LesonaSekolySabata() {
   const [verseModalVisible, setVerseModalVisible] = useState(false);
   const [verseTitle, setVerseTitle] = useState("");
   const [verseContent, setVerseContent] = useState("");
+
+  // Quick Note state
+  const [quickNoteModalVisible, setQuickNoteModalVisible] = useState(false);
+  const [editingQuickNote, setEditingQuickNote] = useState<any>(null);
+
+  const openNoteForVerse = async (title: string) => {
+    try {
+      const allNotes = await getAllNotes();
+      let existingNote = allNotes.find((n: any) => n.title === title);
+      
+      if (!existingNote) {
+        existingNote = {
+          id: Date.now().toString() + Math.random().toString(),
+          type: 'text',
+          title: title,
+          content: `> ${verseContent}\n\n`,
+          date: Date.now(),
+          color: '#1e293b'
+        };
+      }
+      
+      setEditingQuickNote(existingNote);
+      setQuickNoteModalVisible(true);
+    } catch (error) {
+      console.error("Error opening note for verse", error);
+    }
+  };
+
+  const saveFilePermanently = async (uri: string, type: 'image' | 'voice' | 'video'): Promise<string> => {
+    try {
+      const docDir = FileSystem.documentDirectory;
+      if (!docDir) return uri;
+
+      const notesDir = `${docDir}adventools_notes/`;
+      const dirInfo = await FileSystem.getInfoAsync(notesDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(notesDir, { intermediates: true });
+      }
+      const filename = `${type}_${Date.now()}.${uri.split('.').pop() || 'tmp'}`;
+      const newUri = `${notesDir}${filename}`;
+      await FileSystem.copyAsync({ from: uri, to: newUri });
+      return newUri;
+    } catch (e) {
+      console.error("Failed to save file permanently", e);
+      return uri;
+    }
+  };
+
+  const handleSaveQuickNote = async () => {
+    if (!editingQuickNote) return;
+    try {
+      await saveNote(editingQuickNote);
+      setQuickNoteModalVisible(false);
+      Alert.alert(t('success') || "Succès", t('note_saved' as any) || "Note enregistrée dans votre journal.");
+    } catch (error) {
+      console.error("Error saving quick note", error);
+    }
+  };
+
+  const insertMarkdownToQuickNote = (before: string, after: string = '') => {
+    if (!editingQuickNote) return;
+    const prev = editingQuickNote.content;
+    // We don't have selection state in QuickNoteModal yet, so we append at end or we add selection state
+    setEditingQuickNote({ ...editingQuickNote, content: prev + before + after });
+  };
+
+  const pickAndInsertMediaToQuickNote = async (type: 'image' | 'video' | 'audio') => {
+    try {
+      let options: any = {
+        mediaTypes: type === 'image' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: type === 'image',
+        quality: 0.8,
+      };
+
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const r = await ImagePicker.launchImageLibraryAsync(options);
+
+      if (!r.canceled && editingQuickNote) {
+        const asset = r.assets[0];
+        const permanentUri = await saveFilePermanently(asset.uri, type === 'audio' ? 'voice' : (type === 'video' ? 'video' : 'image'));
+        const tag = `[${type}: ${permanentUri}]`;
+        insertMarkdownToQuickNote(tag, '');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -1345,6 +1448,16 @@ export default function LesonaSekolySabata() {
                         body: { color: '#94a3b8', fontSize: 13, lineHeight: 20, fontFamily: globalSettings.fontFamily },
                         strong: { color: '#cbd5e1', fontWeight: 'bold' }
                       }}
+                      rules={{
+                        image: (node) => (
+                          <Image
+                            key={node.key}
+                            source={{ uri: node.attributes.src }}
+                            style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
+                            resizeMode="cover"
+                          />
+                        )
+                      }}
                     >
                       {cleanSspmMarkdown(readingLesson.introduction)}
                     </Markdown>
@@ -1403,6 +1516,16 @@ export default function LesonaSekolySabata() {
                               italic: { fontStyle: 'italic' },
                               blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
                               link: { color: '#3b82f6', textDecorationLine: 'none' }
+                            }}
+                            rules={{
+                              image: (node) => (
+                                <Image
+                                  key={node.key}
+                                  source={{ uri: node.attributes.src }}
+                                  style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
+                                  resizeMode="cover"
+                                />
+                              )
                             }}
                           >
                             {cleanSspmMarkdown(b.markdown)}
@@ -1802,19 +1925,108 @@ export default function LesonaSekolySabata() {
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            <ScrollView className="max-h-[60vh]" showsVerticalScrollIndicator={false}>
+            <ScrollView className="max-h-[60vh] mb-4" showsVerticalScrollIndicator={false}>
               <Markdown
                 style={{
                   body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily, fontStyle: 'italic' },
                   strong: { color: '#f8fafc', fontWeight: 'bold' },
                   heading3: { color: '#3b82f6', marginTop: 15, marginBottom: 5, fontFamily: 'Lexend_600SemiBold' }
                 }}
+                rules={{
+                  image: (node) => (
+                    <Image
+                      key={node.key}
+                      source={{ uri: node.attributes.src }}
+                      style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
+                      resizeMode="cover"
+                    />
+                  )
+                }}
               >
                 {verseContent}
               </Markdown>
             </ScrollView>
+
+            <TouchableOpacity 
+              onPress={() => {
+                setVerseModalVisible(false);
+                setTimeout(() => openNoteForVerse(verseTitle), 300);
+              }}
+              className="bg-primary/20 p-5 rounded-3xl border border-primary/30 flex-row items-center justify-center"
+            >
+              <StickyNote size={20} color="#3b82f6" className="mr-3" />
+              <Text className="text-primary font-bold text-base">Journal d'étude</Text>
+            </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* Quick Note Modal */}
+      <Modal
+        visible={quickNoteModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setQuickNoteModalVisible(false)}
+      >
+        <SafeAreaView className="flex-1 bg-black/80 justify-end">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 justify-end">
+            <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[90%]">
+              <View className="flex-row justify-between items-center mb-6">
+                <View className="flex-row items-center flex-1 mr-4">
+                   <View className="w-10 h-10 rounded-2xl bg-primary/20 items-center justify-center mr-3">
+                      <StickyNote size={20} color="#3b82f6" />
+                   </View>
+                   <View className="flex-1">
+                      <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5">Note de verset</Text>
+                      <Text className="text-white font-bold text-xl" numberOfLines={1}>{editingQuickNote?.title}</Text>
+                   </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setQuickNoteModalVisible(false)}
+                  className="w-10 h-10 rounded-full bg-white/5 items-center justify-center"
+                >
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+              
+              <TextInput
+                className="text-slate-200 text-lg leading-7 mb-6 p-4 bg-white/5 rounded-3xl border border-white/10"
+                placeholder="Écrivez vos pensées..."
+                placeholderTextColor="#475569"
+                multiline
+                textAlignVertical="top"
+                autoFocus
+                style={{ fontFamily: 'Lexend_400Regular', minHeight: 200 }}
+                value={editingQuickNote?.content}
+                onChangeText={(t) => setEditingQuickNote({...editingQuickNote, content: t})}
+              />
+
+              <View className="flex-row items-center mb-6">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                  <TouchableOpacity onPress={() => insertMarkdownToQuickNote('**', '**')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Bold size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => insertMarkdownToQuickNote('*', '*')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Italic size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => {
+                      const refNum = (editingQuickNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1;
+                      insertMarkdownToQuickNote(`[^${refNum}]`, '');
+                      setEditingQuickNote({ ...editingQuickNote, content: editingQuickNote.content + `\n\n[^${refNum}]: ` });
+                  }} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Footprints size={18} color="#8b949e" /></TouchableOpacity>
+                  
+                  <View className="w-[1px] h-8 bg-white/10 mx-2" />
+                  
+                  <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('image')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Camera size={18} color="#8b949e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('video')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><VideoIcon size={18} color="#8b949e" /></TouchableOpacity>
+                </ScrollView>
+              </View>
+              
+              <TouchableOpacity
+                onPress={handleSaveQuickNote}
+                className="bg-primary p-5 rounded-3xl flex-row items-center justify-center shadow-lg shadow-primary/20"
+              >
+                <Text className="text-white font-bold text-lg">Enregistrer dans le journal</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );

@@ -19,7 +19,9 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal."
+        "NSMicrophoneUsageDescription": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal.",
+        "NSCameraUsageDescription": "Cette application a besoin de l'appareil photo pour joindre des photos à vos notes.",
+        "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à vos photos pour joindre des images à vos notes."
       }
     },
     "android": {
@@ -32,6 +34,9 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "RECORD_AUDIO",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
         "MODIFY_AUDIO_SETTINGS",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
@@ -56,7 +61,8 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal."
+          "microphonePermission": "Cette application a besoin d'accéder à votre micro pour enregistrer des notes vocales dans votre journal.",
+          "cameraPermission": "Cette application a besoin de l'appareil photo pour joindre des photos à vos notes."
         }
       ],
       "expo-audio"

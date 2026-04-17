@@ -132,6 +132,10 @@ export interface TranslationSchema {
   folder_exists_error: string;
   verse_not_found_in: string;
   category: string;
+  create_note: string;
+  choose_note_type: string;
+  text: string;
+  drawing: string;
 
   // Utiles / Study Resources
   useful: string;

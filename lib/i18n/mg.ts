@@ -131,6 +131,11 @@ export const mg: TranslationSchema = {
   delete_folder_confirm: "Tianao ho fafana ve ny fampirimana",
   folder_exists_error: "Efa misy io fampirimana io",
   verse_not_found_in: "Tsy hita ao amin'ny",
+  create_note: "Hanoratra na hanao sary",
+  choose_note_type: "Safidio izay hatao",
+  text: "Soratra",
+  drawing: "Sary",
+  category: "Sokajy",
 
   // Utiles / Study Resources
   useful: "Mahasoa",

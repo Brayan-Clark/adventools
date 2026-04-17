@@ -1,7 +1,7 @@
 import { loadDatabase } from '@/lib/database';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useSettings } from '@/lib/settings-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSetting, setSetting, saveHistory } from '@/lib/user-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -30,8 +30,7 @@ export default function HymneDetail() {
 
   const checkFavorite = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`hymn_favorites_${dbName}`);
-      const favorites = stored ? JSON.parse(stored) : [];
+      const favorites = await getSetting<number[]>(`hymn_favorites_${dbName}`, []);
       setIsFavorite(favorites.includes(Number(id)));
     } catch (e) {
       console.error(e);
@@ -40,8 +39,7 @@ export default function HymneDetail() {
 
   const toggleFavorite = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`hymn_favorites_${dbName}`);
-      let favorites = stored ? JSON.parse(stored) : [];
+      let favorites = await getSetting<number[]>(`hymn_favorites_${dbName}`, []);
       const hymnId = Number(id);
 
       if (favorites.includes(hymnId)) {
@@ -51,7 +49,7 @@ export default function HymneDetail() {
         favorites.push(hymnId);
         setIsFavorite(true);
       }
-      await AsyncStorage.setItem(`hymn_favorites_${dbName}`, JSON.stringify(favorites));
+      await setSetting(`hymn_favorites_${dbName}`, favorites);
     } catch (e) {
       console.error(e);
     }
@@ -68,7 +66,7 @@ export default function HymneDetail() {
 
         if (result) {
           // Load edited content if exists
-          const localEdit = await AsyncStorage.getItem(`hymne_edit_${dbName}_${hymnId}`);
+          const localEdit = await getSetting<string | null>(`hymne_edit_${dbName}_${hymnId}`, null);
           if (localEdit) {
             result.c_content = localEdit;
           }
@@ -78,20 +76,13 @@ export default function HymneDetail() {
 
           // Save to history
           try {
-            const historyItem = {
+            await saveHistory({
               type: 'hymn',
               title: result.c_title || `Cantique ${result.c_num}`,
               subtitle: `${dbName.replace('.db', '').toUpperCase()} • Cantique ${result.c_num}`,
               timestamp: Date.now(),
               params: { id: hymnId, db: dbName }
-            };
-
-            const existingHistory = await AsyncStorage.getItem('app_history');
-            let history = existingHistory ? JSON.parse(existingHistory) : [];
-            // Deduplicate by both ID and DB
-            history = history.filter((h: any) => !(h.type === 'hymn' && h.params?.id === hymnId && h.params?.db === dbName));
-            history.unshift(historyItem);
-            await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 20)));
+            });
           } catch (e) {
             console.error("Failed to save hymn history", e);
           }
@@ -182,7 +173,7 @@ export default function HymneDetail() {
                 <TouchableOpacity
                   onPress={async () => {
                     try {
-                      await AsyncStorage.setItem(`hymne_edit_${dbName}_${id}`, editedContent);
+                      await setSetting(`hymne_edit_${dbName}_${id}`, editedContent);
                       setHymn({ ...hymn, c_content: editedContent });
                       setIsEditing(false);
                       Alert.alert("Succès", "Modification enregistrée avec succès.");

@@ -2,7 +2,7 @@ import { loadDatabase } from '@/lib/database';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSetting } from '@/lib/user-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -62,8 +62,8 @@ export default function Hymnes() {
 
   const loadFavorites = async () => {
     try {
-      const stored = await AsyncStorage.getItem(`hymn_favorites_${dbName}`);
-      setFavoriteIds(stored ? JSON.parse(stored) : []);
+      const stored = await getSetting<number[]>(`hymn_favorites_${dbName}`, []);
+      setFavoriteIds(stored);
     } catch (e) {
       console.error(e);
     }

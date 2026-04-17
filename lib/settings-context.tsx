@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getDefaultBibleForLanguage } from './bible';
+import { getSetting, setSetting, migrateFromAsyncStorage } from './user-storage';
 
 type AppSettings = {
   userName: string;
@@ -47,17 +47,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadSettings();
+    const init = async () => {
+        await migrateFromAsyncStorage();
+        await loadSettings();
+    };
+    init();
   }, []);
 
   const loadSettings = async () => {
     try {
-      const stored = await AsyncStorage.getItem('app_global_settings');
+      const stored = await getSetting<AppSettings | null>('app_global_settings', null);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          setSettings({ ...DEFAULT_SETTINGS, ...parsed });
-        }
+        setSettings({ ...DEFAULT_SETTINGS, ...stored });
       }
     } catch (e) {
       console.error('Failed to load global settings', e);
@@ -75,7 +76,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
       const newSettings = { ...settings, ...finalUpdates };
       setSettings(newSettings);
-      await AsyncStorage.setItem('app_global_settings', JSON.stringify(newSettings));
+      await setSetting('app_global_settings', newSettings);
     } catch (e) {
       console.error('Failed to save global settings', e);
     }

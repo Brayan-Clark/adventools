@@ -131,6 +131,11 @@ export const en: TranslationSchema = {
   delete_folder_confirm: "Do you want to delete the folder",
   folder_exists_error: "This folder already exists",
   verse_not_found_in: "Not found in",
+  create_note: "Create a note",
+  choose_note_type: "Choose note type",
+  text: "Text",
+  drawing: "Drawing",
+  category: "Category",
 
   // Utiles / Study Resources
   useful: "Useful",

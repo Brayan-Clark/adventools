@@ -132,6 +132,10 @@ export const fr: TranslationSchema = {
   folder_exists_error: "Un dossier avec ce nom existe déjà",
   category: "Catégorie",
   verse_not_found_in: "Non trouvé dans",
+  create_note: "Créer une note",
+  choose_note_type: "Choisissez le type de note",
+  text: "Texte",
+  drawing: "Dessin",
 
   // Utiles / Study Resources
   useful: "Utiles",
