@@ -7,7 +7,7 @@
       "name": "Antson'ny Filazantsara Antsiranana 97.0 FM",
       "description": "Radio Adventiste Antsiranana",
       "logo": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/images/antsonny-filazantsara-antsiranana-97-fm.jpg",
-      "streamUrl": "",
+      "streamUrl": "https://hopefy.fanantenanahoanao.org/listen/raf/radio.mp3",
       "isActive": false,
       "message": "Le flux en direct n'est pas encore disponible, mais arrive bientôt !",
       "type": "live"
