@@ -9,7 +9,7 @@ const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/
 
 export function HymnDatabaseManager() {
   const [manifest, setManifest] = useState<any>(null);
-  const [localFiles, setLocalFiles] = useState<Record<string, { size: number, exists: boolean }>>({});
+  const [localFiles, setLocalFiles] = useState<Record<string, { size: number, exists: boolean, needsUpdate: boolean }>>({});
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<Record<string, number>>({});
 
@@ -23,16 +23,26 @@ export function HymnDatabaseManager() {
       if (!docDir) return;
 
       const dbDir = `${docDir}SQLite/hymnes/`;
-      const filesState: Record<string, { size: number, exists: boolean }> = {};
+      const filesState: Record<string, { size: number, exists: boolean, needsUpdate: boolean }> = {};
 
       const list = currentManifest?.versions || manifest?.versions || [];
+      
+      // Load installed versions from storage
+      const storedVersions = await AsyncStorage.getItem('hymn_installed_versions');
+      const installedVersions = storedVersions ? JSON.parse(storedVersions) : {};
 
       for (const v of list) {
         const path = `${dbDir}${v.file}`;
         const info = await FileSystem.getInfoAsync(path);
+        
+        // Check if update is needed based on version number in manifest vs local storage
+        const currentV = installedVersions[v.id] || 0;
+        const needsUpdate = info.exists && v.version && v.version > currentV;
+
         filesState[v.file.toLowerCase()] = {
           exists: info.exists && info.size > 0,
-          size: info.exists ? info.size : 0
+          size: info.exists ? info.size : 0,
+          needsUpdate: !!needsUpdate
         };
       }
 
@@ -89,6 +99,13 @@ export function HymnDatabaseManager() {
           await FileSystem.deleteAsync(localPath, { idempotent: true });
           throw new Error("Lien rompu ou erreur 404.");
         }
+        
+        // Save the version after successful download
+        const storedVersions = await AsyncStorage.getItem('hymn_installed_versions');
+        const installedVersions = storedVersions ? JSON.parse(storedVersions) : {};
+        installedVersions[version.id] = version.version || 1;
+        await AsyncStorage.setItem('hymn_installed_versions', JSON.stringify(installedVersions));
+
         await checkLocalFiles();
         Alert.alert("Vita", `${version.name} dia voasintona soa aman-tsara.`);
       }
@@ -137,9 +154,7 @@ export function HymnDatabaseManager() {
         const isDefault = v.isDefault || v.file.toLowerCase() === 'cantique.db';
         const isDownloading = downloading[v.id] !== undefined;
 
-        // Simple update check logic: if local size is significantly different or if we want to force update
-        // In a real app, we'd compare MD5/Hashes in manifest
-        const needsUpdate = isLocal && v.needsUpdate; // Placeholder for future manifest logic
+        const needsUpdate = localFiles[v.file.toLowerCase()]?.needsUpdate;
 
         return (
           <View
@@ -163,9 +178,9 @@ export function HymnDatabaseManager() {
                 <>
                   <TouchableOpacity
                     onPress={() => downloadDatabase(v)}
-                    className="w-10 h-10 rounded-xl bg-blue-600/20 items-center justify-center mr-2 border border-blue-500/30"
+                    className={`w-10 h-10 rounded-xl items-center justify-center mr-2 border ${needsUpdate ? 'bg-blue-600 border-blue-400 shadow-lg shadow-blue-500/50' : 'bg-blue-600/20 border-blue-500/30'}`}
                   >
-                    <RefreshCw size={18} color="#3b82f6" />
+                    <RefreshCw size={18} color={needsUpdate ? "white" : "#3b82f6"} />
                   </TouchableOpacity>
                   {!isDefault && (
                     <TouchableOpacity

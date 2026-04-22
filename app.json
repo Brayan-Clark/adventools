@@ -44,7 +44,8 @@
         "INTERNET",
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "REQUEST_INSTALL_PACKAGES"
       ],
       "versionCode": 4,
       "newArchEnabled": true
@@ -65,7 +66,8 @@
           "cameraPermission": "Cette application a besoin de l'appareil photo pour joindre des photos à vos notes."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

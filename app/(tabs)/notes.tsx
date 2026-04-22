@@ -3,7 +3,8 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { deleteNoteFromDb, getAllNotes, getFolders, saveFolders, saveNote } from '@/lib/user-storage';
 import { cn } from '@/lib/utils';
-import { Audio, Video as ExpoVideo, ResizeMode } from 'expo-av';
+import { Audio } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -160,14 +161,17 @@ const AudioPlayer = ({ uri, onDelete }: { uri: string, onDelete?: () => void }) 
 };
 
 const VideoPlayer = ({ uri }: { uri: string }) => {
+    const player = useVideoPlayer(uri, (p) => {
+        p.loop = false;
+    });
+
     return (
         <View className="mb-4 rounded-[32px] overflow-hidden border border-white/10 bg-black">
-            <ExpoVideo
-                source={{ uri }}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
+            <VideoView
+                player={player}
+                nativeControls
+                contentFit="contain"
                 style={{ width: '100%', height: 250 }}
-                isLooping={false}
             />
         </View>
     );

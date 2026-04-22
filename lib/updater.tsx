@@ -5,6 +5,9 @@ import { useEffect } from 'react';
 import { Alert, Linking } from 'react-native';
 import { I18nManager } from './i18n-manager';
 import { useSettings } from './settings-context';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { Platform } from 'react-native';
 
 const LAST_CHECK_KEY = 'adventools_last_update_check';
 
@@ -87,12 +90,33 @@ export async function performUpdateCheck(wifiOnly: boolean, manual = false) {
             { text: "Plus tard", style: "cancel" },
             {
               text: "Télécharger",
-              onPress: () => {
+              onPress: async () => {
                 const apkAsset = release.assets?.find((a: any) => a.name.endsWith('.apk'));
-                if (apkAsset && apkAsset.browser_download_url) {
-                  Linking.openURL(apkAsset.browser_download_url);
+                const downloadUrl = apkAsset?.browser_download_url || release.html_url;
+
+                if (Platform.OS === 'android' && apkAsset) {
+                  try {
+                    const fileUri = FileSystem.cacheDirectory + 'adventools-update.apk';
+                    
+                    // Simple progress notification via Alert is hard, 
+                    // so we just show a starting message and then the installer.
+                    // For a more advanced UI, we'd need a modal with progress.
+                    Alert.alert("Téléchargement", "Le téléchargement de la mise à jour a commencé. L'installation débutera automatiquement une fois terminé.");
+
+                    const { uri } = await FileSystem.downloadAsync(downloadUrl, fileUri);
+                    const contentUri = await FileSystem.getContentUriAsync(uri);
+
+                    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+                      data: contentUri,
+                      flags: 1 | 0x10000000, // FLAG_GRANT_READ_URI_PERMISSION | FLAG_ACTIVITY_NEW_TASK
+                      type: 'application/vnd.android.package-archive',
+                    });
+                  } catch (error) {
+                    console.error("In-app update failed:", error);
+                    Linking.openURL(downloadUrl);
+                  }
                 } else {
-                  Linking.openURL(release.html_url);
+                  Linking.openURL(downloadUrl);
                 }
               }
             }

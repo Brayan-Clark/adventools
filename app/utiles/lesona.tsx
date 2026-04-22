@@ -407,9 +407,9 @@ export default function LesonaSekolySabata() {
         setQuarterlyList([]);
       }
 
-      // Fetch fresh
-      let url = `${getApiBase(selectedLang)}/index.json`;
-      if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json`;
+      // Fetch fresh with cache busting
+      let url = `${getApiBase(selectedLang)}/index.json?t=${Date.now()}`;
+      if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json?t=${Date.now()}`;
 
       const response = await fetch(url).catch(() => null);
       let items: QuarterlyItem[] = [];
@@ -547,7 +547,7 @@ export default function LesonaSekolySabata() {
         url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/${qPath}/index.json`;
       }
 
-      const response = await fetch(url).catch(() => null);
+      const response = await fetch(`${url}?t=${Date.now()}`).catch(() => null);
       if (response && response.ok) {
         const json = await response.json();
         setSelectedQuarterly(json);
@@ -600,7 +600,7 @@ export default function LesonaSekolySabata() {
               const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
               const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
               const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
-              lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json`;
+              lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json?t=${Date.now()}`;
             }
 
             fetch(lUrl).then(res => res.text()).then(text => {
@@ -672,7 +672,7 @@ export default function LesonaSekolySabata() {
             for (const section of sections) {
               if (lessonJson) break;
               const pathAttempt = quarterlyPath.replace(/\/(ss|aij|explore)\//, `/${section}/`);
-              const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${lessonId}/index.json`;
+              const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${lessonId}/index.json?t=${Date.now()}`;
               const res = await fetch(url).catch(() => null);
               if (res && res.ok) {
                 const text = await res.text();

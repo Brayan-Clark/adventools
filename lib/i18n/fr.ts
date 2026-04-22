@@ -370,4 +370,7 @@ export const fr: TranslationSchema = {
   check_updates: "Rechercher des mises à jour",
   check_manually: "Vérifier manuellement",
   checking: "Vérification...",
+  daily_bread: "Mofon'aina",
+  sabbath_school: "École du Sabbat",
+  lessons: "Leçons",
 };

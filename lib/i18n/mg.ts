@@ -370,4 +370,7 @@ export const mg: TranslationSchema = {
   check_updates: "Hitady fanavaozana",
   check_manually: "Hijery mivantana",
   checking: "Eo am-pijerena...",
+  daily_bread: "Mofon'aina",
+  sabbath_school: "Sekoly Sabata",
+  lessons: "Lesona",
 };

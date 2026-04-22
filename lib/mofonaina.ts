@@ -1,9 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NetInfoState } from '@react-native-community/netinfo';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const API_BASE = 'https://jasemsoftware.tech/api/v1';
 const ASYNC_STORAGE_KEY = 'mofonaina_cache';
 const ASYNC_STORAGE_LAST_SYNC_KEY = 'mofonaina_last_sync';
+
+/**
+ * Global function to sync all remote-manifest-based modules
+ */
+export async function syncAllModules(): Promise<boolean> {
+  try {
+    const results = await Promise.allSettled([
+      syncMofonaina(true),
+      // Other modules have their own sync logic in their components, 
+      // but we can trigger a pre-fetch here if we want to warm the cache.
+      // For now, we'll focus on the ones that use simple JSON manifests.
+      fetch('https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/manifest.json?t=' + Date.now()).catch(() => null),
+      fetch('https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json?t=' + Date.now()).catch(() => null),
+      fetch('https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/radios.json?t=' + Date.now()).catch(() => null),
+      fetch('https://raw.githubusercontent.com/Brayan-Clark/adventools/data/video/manifest.json?t=' + Date.now()).catch(() => null),
+    ]);
+    return results.every(r => r.status === 'fulfilled');
+  } catch (e) {
+    return false;
+  }
+}
 
 export interface Telovolana {
   id: number;
@@ -42,36 +63,27 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
       } else {
         const lastSync = new Date(lastSyncStr).getTime();
         const now = new Date().getTime();
-        // Sync more rarely as content is static (e.g., every 15 days)
-        if (now - lastSync > 15 * 24 * 60 * 60 * 1000) {
+        // Sync daily if online to ensure fresh content
+        if (now - lastSync > 24 * 60 * 60 * 1000) {
           shouldSync = true;
         }
       }
     }
 
     if (shouldSync) {
-      if (cachedStr) {
-        // Background sync to not block the UI if we already have cache
-        fetch(`${API_BASE}/fiambenana`)
-          .then(async (response) => {
-            if (response.ok) {
-              const data = await response.json();
-              await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
-              await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
-            }
-          })
-          .catch(err => console.error('Error in background sync:', err));
-
-        return JSON.parse(cachedStr);
-      } else {
-        // First time or forced without cache, must await
-        const response = await fetch(`${API_BASE}/fiambenana`);
+      try {
+        // Use a timestamp to bypass any server-side or network-level caching
+        const response = await fetch(`${API_BASE}/fiambenana?t=${Date.now()}`);
         if (response.ok) {
           const data: Mofonaina[] = await response.json();
-          await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
-          await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
-          return data;
+          if (Array.isArray(data) && data.length > 0) {
+            await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
+            await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
+            return data;
+          }
         }
+      } catch (fetchError) {
+        console.error('Fetch failed in syncMofonaina, falling back to cache:', fetchError);
       }
     }
 
@@ -127,9 +139,8 @@ export async function getMofonainaForDate(date: Date = new Date()): Promise<Mofo
 export async function getCurrentTelovolanaInfo(): Promise<Telovolana | null> {
   const all = await syncMofonaina();
   if (all.length > 0) {
-    // Determine the most common or highest id_telovolana, or just grab from the latest date
     const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
-    return sorted[0].telovolana;
+    return sorted.length > 0 ? sorted[0].telovolana : null;
   }
   return null;
 }

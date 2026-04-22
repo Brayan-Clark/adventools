@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import * as FileSystem from 'expo-file-system/legacy';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 
@@ -30,29 +31,53 @@ export default function VideoHubScreen() {
     try {
       setIsLoading(true);
       setError(false);
-      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/video/manifest.json`;
+      
+      const cacheDir = `${FileSystem.documentDirectory}video/`;
+      const cacheFile = `${cacheDir}manifest_cache.json`;
+      
+      // 1. Try Cache
+      const cacheInfo = await FileSystem.getInfoAsync(cacheFile);
+      if (cacheInfo.exists) {
+        const cachedContent = await FileSystem.readAsStringAsync(cacheFile);
+        const cachedData = JSON.parse(cachedContent);
+        setFolders(processData(cachedData));
+        setIsLoading(false);
+      }
+
+      // 2. Fetch fresh
+      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/video/manifest.json?t=${Date.now()}`;
       const response = await fetch(url);
-      const data = await response.json();
-      
-      // Map icons string to component
-      const processed = data.map((item: any) => ({
-        ...item,
-        icon: ICON_MAP[item.icon] || Folder
-      }));
-      
-      setFolders(processed);
+      if (response.ok) {
+        const data = await response.json();
+        setFolders(processData(data));
+        
+        // Save to cache
+        if (!(await FileSystem.getInfoAsync(cacheDir)).exists) {
+          await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
+        }
+        await FileSystem.writeAsStringAsync(cacheFile, JSON.stringify(data));
+      }
     } catch (e) {
       console.error("Video manifest error:", e);
-      setError(true);
-      // Fallback
-      setFolders([
-        { id: 'tv', title: t('live_tv'), icon: MonitorPlay, color: 'text-pink-500', bg: 'bg-pink-500/20', isStreaming: true },
-        { id: 'musique', title: t('gospel_songs'), icon: Music, color: 'text-violet-500', bg: 'bg-violet-500/20', isStreaming: false },
-        { id: 'etudes', title: t('video_bible_studies'), icon: BookOpen, color: 'text-blue-500', bg: 'bg-blue-500/20', isStreaming: false },
-      ]);
+      if (folders.length === 0) {
+        setError(true);
+        // Fallback
+        setFolders([
+          { id: 'tv', title: t('live_tv'), icon: MonitorPlay, color: '#ec4899', bg: 'bg-pink-500/20', isStreaming: true },
+          { id: 'musique', title: t('gospel_songs'), icon: Music, color: '#8b5cf6', bg: 'bg-violet-500/20', isStreaming: false },
+          { id: 'etudes', title: t('video_bible_studies'), icon: BookOpen, color: '#3b82f6', bg: 'bg-blue-500/20', isStreaming: false },
+        ]);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const processData = (data: any) => {
+    return data.map((item: any) => ({
+      ...item,
+      icon: ICON_MAP[item.icon] || Folder
+    }));
   };
 
   const fontFamily = globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily;

@@ -3,6 +3,7 @@ import { ChevronLeft, PlayCircle, Search, Tv } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
@@ -40,8 +41,21 @@ export default function VideoCollectionScreen() {
   }, [collection]);
 
   const fetchVideos = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
+      
+      const cacheDir = `${FileSystem.documentDirectory}video/collections/`;
+      const cacheFile = `${cacheDir}${collection}.json`;
+
+      // 1. Try Cache
+      const cacheInfo = await FileSystem.getInfoAsync(cacheFile);
+      if (cacheInfo.exists) {
+        const cachedContent = await FileSystem.readAsStringAsync(cacheFile);
+        setVideos(JSON.parse(cachedContent));
+        setLoading(false);
+      }
+
+      // 2. Fetch fresh
       const networkState = await NetInfo.fetch();
       setIsConnected(networkState.isConnected);
 
@@ -50,6 +64,12 @@ export default function VideoCollectionScreen() {
         if (response.ok) {
           const data = await response.json();
           setVideos(data || []);
+          
+          // Save to cache
+          if (!(await FileSystem.getInfoAsync(cacheDir)).exists) {
+            await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
+          }
+          await FileSystem.writeAsStringAsync(cacheFile, JSON.stringify(data));
         }
       }
     } catch (error) {

@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { loadDatabase } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -135,8 +136,30 @@ export async function saveNote(note: any) {
     );
     
     // Update attachments
-    // Simple way: delete old ones and insert new ones
-    await database.runAsync('DELETE FROM attachments WHERE note_id = ?', [note.id]);
+    // To be professional and save space, we should delete files that are no longer used
+    const oldAtts: any[] = await database.getAllAsync('SELECT uri FROM attachments WHERE note_id = ?', [noteId]);
+    const newUris = new Set<string>();
+    if (note.attachments) {
+        if (note.attachments.images) note.attachments.images.forEach((u: string) => newUris.add(u));
+        if (note.attachments.videos) note.attachments.videos.forEach((u: string) => newUris.add(u));
+        if (note.attachments.voice) note.attachments.voice.forEach((v: any) => newUris.add(v.uri));
+    }
+
+    // Delete files that are in oldAtts but NOT in newUris
+    for (const old of oldAtts) {
+        if (!newUris.has(old.uri)) {
+            try {
+                const fileInfo = await FileSystem.getInfoAsync(old.uri);
+                if (fileInfo.exists) {
+                    await FileSystem.deleteAsync(old.uri, { idempotent: true });
+                }
+            } catch (e) {
+                console.error("Failed to cleanup orphaned attachment file:", old.uri, e);
+            }
+        }
+    }
+
+    await database.runAsync('DELETE FROM attachments WHERE note_id = ?', [noteId]);
     
     if (note.attachments) {
         if (note.attachments.images) {
@@ -159,6 +182,21 @@ export async function saveNote(note: any) {
 
 export async function deleteNoteFromDb(id: string) {
     const database = await initUserStorage();
+    
+    // 1. Find all attachments for this note and delete their files
+    const atts: any[] = await database.getAllAsync('SELECT uri FROM attachments WHERE note_id = ?', [id]);
+    for (const att of atts) {
+        try {
+            const fileInfo = await FileSystem.getInfoAsync(att.uri);
+            if (fileInfo.exists) {
+                await FileSystem.deleteAsync(att.uri, { idempotent: true });
+            }
+        } catch (e) {
+            console.error("Failed to delete attachment file:", att.uri, e);
+        }
+    }
+
+    // 2. Delete from database
     await database.runAsync('DELETE FROM notes WHERE id = ?', [id]);
     await database.runAsync('DELETE FROM attachments WHERE note_id = ?', [id]);
 }

@@ -374,6 +374,9 @@ export interface TranslationSchema {
   check_updates: string;
   check_manually: string;
   checking: string;
+  daily_bread: string;
+  sabbath_school: string;
+  lessons: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

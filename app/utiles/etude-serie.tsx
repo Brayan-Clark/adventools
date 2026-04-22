@@ -32,23 +32,35 @@ const DEFAULT_STUDIES = [
   {
     category: "I - ASA FITORIANA (Prédication)",
     verses: [
+      { ref: "Matio 28:19-20", text: "19. koa mandehana ianareo, dia ataovy mpianatra ny firenena rehetra, manao batisa azy ho amin'ny anaran'ny Ray sy ny Zanaka ary ny Fanahy Masina. 20. sady mampianatra azy hitandrina izay rehetra nandidiako anareo; ary, indro, Izaho momba anareo mandrakariva ambara-pahatongan'ny fahataperan'izao tontolo izao." },
+      { ref: "Marka 16:15", text: "Ary hoy Izy taminy: Mandehana any amin'izao tontolo izao ianareo, ka mitoria ny filazantsara amin'ny olombelona rehetra." },
+      { ref: "Asan'ny Apostoly 1:8", text: "Fa hahazo hery ianareo amin'ny hilatsahan'ny Fanahy Masina aminareo, ary ho vavolombeloko any Jerosalema sy eran'i Jodia sy Samaria ary hatramin'ny faran'ny tany." },
+      { ref: "Romana 10:14-15", text: "14. Hataony ahoana ary no fiantso izay tsy ninoany? Ary hataony ahoana no fino izay Olona tsy reny? Ary hataony ahoana no fandre raha tsy misy mpitory? 15. Ary hataony ahoana no fitory, raha tsy nirahina? araka ny voasoratra hoe: Akory ny hatsaran'ny tongotr'iry mitondra teny soa mahafaly!" },
+      { ref: "2 Timoty 4:2", text: "mitoria ny teny, mazotoa, na amin'ny fotoana, na tsy amin'ny fotoana, mandrese lahatra, mamporisiha, mananara mafy amin'ny fahari-po sy ny fampianarana rehetra." },
       { ref: "Matio 24:14", text: "Ary hotononina amin'izao tontolo izao ity filazantsaran'ny fanjakana ity ho vavolombelona amin'ny firenena rehetra, dia vao ho tonga ny farany." },
-      { ref: "Matio 28:19", text: "Koa mandehana ianareo, dia ataovy mpianatra ny firenena rehetra, manao batisa azy amin'ny anaran'ny Ray sy ny Zanaka ary ny Fanahy Masina." },
       { ref: "Romana 1:16", text: "Fa tsy menatra ny filazantsara aho; fa herin'Andriamanitra hamonjena izay rehetra mino izany, amin'ny Jiosy aloha, dia amin'ny Jentilisa koa." }
     ]
   },
   {
     category: "II - FANAMBINANA (Prospérité / Bénédiction)",
     verses: [
+      { ref: "Salamo 1:1-3", text: "1. Sambatra ny olona izay tsy mandeha eo amin'ny fisainan'ny ratsy fanahy, ary tsy mijanona eo amin'ny lalana falehan'ny mpanota, ary tsy mipetraka eo amin'ny fipetrahan'ny mpaniratsira; 2. Fa ny lalàn'i Jehovah no sitrany; eny ny lalàny no saintsaininy andro aman'alina. 3. Dia tahaka ny hazo ambolena eo amoron'ny rano velona izy, izay mamoa amin'ny fotoany, ny raviny koa tsy mba malazo; ary ny asany rehetra dia ataony lavorary avokoa." },
+      { ref: "Ohabolana 10:22", text: "Ny fitahian'i Jehovah no mampanan-karena, Ary tsy azon'ny fisasarana ampiana izany." },
+      { ref: "Salamo 128:1-2", text: "1. Sambatra izay rehetra matahotra an'i Jehovah, Dia izay mandeha amin'ny lalany. 2. Fa hohaninao tokoa ny asan'ny tananao; Sambatra sady ambinina ianao." },
+      { ref: "3 Jaona 1:2", text: "Ry malala, mangataka aho mba hambinina sy ho salama amin'ny zavatra rehetra anie ianao, tahaka izay anambinana ny fanahinao ihany." },
+      { ref: "Deoteronomia 28:2-6", text: "2. ary ho tonga aminao sy ho azonao izao fitahiana rehetra izao, raha mihaino ny feon'i Jehovah Andriamanitrao ianao 3. Hotahina ianao ao an-tanàna, ary hotahina ianao any an-tsaha. 4. Hotahina ny ateraky ny kibonao sy ny vokatry ny taninao ary ny ateraky ny biby fiompinao, dia ny ateraky ny ombinao sy ny ateraky ny ondry aman'osinao. 5. Hotahina ny haronao sy ny vilia fanaova-mofonao. 6. Hotahina ianao, raha miditra; ary hotahina ianao, raha mivoaka." },
+      { ref: "Fitomaniana 3:22-23", text: "Ny famindram-pon'i Jehovah no tsy nahalany laniana antsika, fa tsy mitsahatra ny fiantrany. Vaovao isa-maraina izany; lehibe ny fahatokianao." },
       { ref: "Asan'ny Apostoly 15:36", text: "Ary rehefa afaka andro vitsivitsy, dia hoy Paoly tamin'i Barnaba: Andao isika hiverina hamangy ny rahalahy any amin'ny tanàna rehetra izay nitoriantsika ny tenin'ny Tompo, hahitantsika izay toetry ny rainy." },
-      { ref: "Asan'ny Apostoly 14:3", text: "Ary nitoetra ela teo ihany izy roa lahy ka niteny tamin'ny fahasahiana tao amin'ny Tompo, Izay nanambara ny tenin'ny fahasoavany ary nampanao famantarana sy fahagagana tamin'ny tanany." },
-      { ref: "Deoteronomia 28:1-3", text: "Ary raha hihaino tsara ny feon'i Jehovah Andriamanitrao ianao ka hitandrina hanao ny didiny rehetra ... hateraka ho ambony ambonin'ny firenena rehetra ambonin'ny tany ianao." },
-      { ref: "Fitomaniana 3:22-23", text: "Ny famindram-pon'i Jehovah no tsy nahalany laniana antsika, fa tsy mitsahatra ny fiantrany. Vaovao isa-maraina izany; lehibe ny fahatokianao." }
+      { ref: "Asan'ny Apostoly 14:3", text: "Ary nitoetra ela teo ihany izy roa lahy ka niteny tamin'ny fahasahiana tao amin'ny Tompo, Izay nanambara ny tenin'ny fahasoavany ary nampanao famantarana sy fahagagana tamin'ny tanany." }
     ]
   },
   {
     category: "III - FANDROSOANA (Progrès / Avancée)",
     verses: [
+      { ref: "Josoa 1:8", text: "Aoka tsy hiala amin'ny vavanao ity bokin'ny lalàna ity, fa saintsaino andro aman'alina, hitandremanao hanao araka izay rehetra voasoratra eo; ary amin'izany dia hahalavorary ny lalanao ianao sady hambinina." },
+      { ref: "Ohabolana 4:18", text: "Fa ny lalan'ny marina dia toy ny fipoak'andro maraina, Izay mihamazava mandra-pitataovovonan'ny andro." },
+      { ref: "Salamo 37:5", text: "Ankino amin'i Jehovah ny lalanao, ary matokia Azy, fa hataony tanteraka." },
+      { ref: "Ohabolana 16:3", text: "Ankino amin'i Jehovah ny asanao, Dia ho lavorary izay kasainao." },
       { ref: "1 Timoty 4:14-15", text: "Aza hotsiratsiraina ny fanomezam-pahasoasana izay ao anatinao ... Hevero tsara izany zavatra izany, dia hitoero, mba hita miharihary amin'ny olona rehetra ny fandrosoanao." },
       { ref: "Eksodosy 14:15", text: "Ary Jehovah niteny tamin'i Mosesy hoe: Nahoana no mitaraina amiko ianao? Lazao amin'ny Zanak'Isiraely mba handroso." }
     ]
@@ -56,6 +68,10 @@ const DEFAULT_STUDIES = [
   {
     category: "IV - FITSINGERENAN-TAONA (Cycle / Anniversaire)",
     verses: [
+      { ref: "Salamo 90:12", text: "Mampianara anay hanisa ny andronay, Hahazoanay fo hendry." },
+      { ref: "Salamo 118:24", text: "Ity no andro nataon'i Jehovah; Hifaly sy ho ravoravo amin'izao isika." },
+      { ref: "Mpitoriteny 3:1", text: "Ny zavatra rehetra samy manana ny fotoany avy, ary samy manana ny androny avy ny raharaha rehetra atỳ ambanin'ny lanitra:" },
+      { ref: "Salamo 103:1-5", text: "1. Misaora an'i Jehovah, ry fanahiko; Ary izay rehetra ato anatiko, misaora ny anarany masina. 2. Misaora an'i Jehovah, ry fanahiko; Ary aza misy hadinoinao ny fitahiany rehetra, 3. Izay mamela ny helokao rehetra, Izay manasitrana ny aretinao rehetra, 4. Izay manavotra ny ainao tsy hidina any an-davaka, Izay manarona famindram-po sy fiantrana anao, 5. Izay mahavoky soa ny vavanao; Ny fahatanoranao mody indray toy ny an'ny voromahery." },
       { ref: "Joba 1:4-5", text: "Ary ny zanany lahy nandeha ka nanao fanasana tao an-tranon'izy rehetra avy ... Ary raha vao tapitra ny andro nanaovany fanasana, dia naniraka Joba ka nanamasina azy." },
       { ref: "Ohabolana 10:27", text: "Ny fahatahorana an'i Jehovah no mampitombo andro; fa ny taonan'ny ratsy fanahy hofohezina." },
       { ref: "Jaona 3:36", text: "Izay mino ny Zanaka manana fiainana mandrakizay; fa izay tsy mino ny Zanaka dia tsy hahita fiainana, fa ny fahatezeran'Andriamanitra no mitoetra eo aminy." },
@@ -65,6 +81,10 @@ const DEFAULT_STUDIES = [
   {
     category: "V - MPAMANGY (Visite / Compassion)",
     verses: [
+      { ref: "Hebreo 13:2", text: "Aza manadino ny fampiantranoam-bahiny; fa tamin'izany dia nampiantrano anjely ny sasany, nefa tsy fantany." },
+      { ref: "Matio 25:35", text: "fa noana Aho, dia nomenareo hanina; nangetaheta Aho dia nampisotroinareo; nivahiny Aho, dia nampiantranoinareo;" },
+      { ref: "Romana 12:13", text: "Miantrà ny olona masina araka izay ilainy; mazotoa mampiantrano vahiny." },
+      { ref: "1 Petera 4:9", text: "Mifampiantranoa, ka aza mimonomonona." },
       { ref: "Jakoba 1:27", text: "Izao no fivavahana madio sy tsy misy tsiny eo anatrehan'Andriamanitra Ray: ny mamangy ny kamboty sy ny mpitondratena amin'ny fahoriany, sy ny miaro ny tena tsy ho voaloto amin'izao tontolo izao." }
     ]
   }
@@ -102,7 +122,34 @@ export default function EtudeSerie() {
     try {
       const saved = await AsyncStorage.getItem('utiles_etude_serie');
       if (saved) {
-        setStudies(JSON.parse(saved));
+        let parsedSaved: StudySection[] = JSON.parse(saved);
+        let hasChanges = false;
+
+        // Merge DEFAULT_STUDIES into saved studies
+        DEFAULT_STUDIES.forEach(defaultSection => {
+          const savedSectionIdx = parsedSaved.findIndex(s => s.category === defaultSection.category);
+          
+          if (savedSectionIdx === -1) {
+            // Category doesn't exist at all, add it completely
+            parsedSaved.push(defaultSection);
+            hasChanges = true;
+          } else {
+            // Category exists, check for missing verses
+            const savedSection = parsedSaved[savedSectionIdx];
+            defaultSection.verses.forEach(defaultVerse => {
+              const verseExists = savedSection.verses.some(v => v.ref === defaultVerse.ref);
+              if (!verseExists) {
+                savedSection.verses.push(defaultVerse);
+                hasChanges = true;
+              }
+            });
+          }
+        });
+
+        setStudies(parsedSaved);
+        if (hasChanges) {
+          await AsyncStorage.setItem('utiles_etude_serie', JSON.stringify(parsedSaved));
+        }
       } else {
         setStudies(DEFAULT_STUDIES);
         await AsyncStorage.setItem('utiles_etude_serie', JSON.stringify(DEFAULT_STUDIES));

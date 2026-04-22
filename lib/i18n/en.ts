@@ -370,4 +370,7 @@ export const en: TranslationSchema = {
   check_updates: "Check for updates",
   check_manually: "Check manually",
   checking: "Checking...",
+  daily_bread: "Daily Bread",
+  sabbath_school: "Sabbath School",
+  lessons: "Lessons",
 };

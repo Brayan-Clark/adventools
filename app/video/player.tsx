@@ -1,4 +1,4 @@
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Info, Maximize, Play, Pause } from 'lucide-react-native';
@@ -20,7 +20,39 @@ export default function UniversalVideoPlayer() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
-  const videoRef = useRef<any>(null);
+  
+  const player = useVideoPlayer(url, (p) => {
+    p.loop = false;
+    p.play();
+  });
+
+  // Handle headers and changes
+  React.useEffect(() => {
+    if (!isStreaming) {
+      player.replace({
+        uri: url,
+        metadata: { title },
+        headers: {
+          'User-Agent': 'ExoPlayer',
+          'Referer': 'https://3abnplus.tv/'
+        }
+      });
+    }
+  }, [url]);
+
+  // Sync state
+  React.useEffect(() => {
+    const subscription = player.addListener('playingChange', (event) => {
+      setIsPlaying(event.isPlaying);
+    });
+    const statusSub = player.addListener('statusChange', (event) => {
+      if (event.status === 'readyToPlay') setIsLoading(false);
+    });
+    return () => {
+      subscription.remove();
+      statusSub.remove();
+    };
+  }, [player]);
 
   const { settings: globalSettings } = useSettings();
   const fontFamilyBold = 'Lexend_700Bold';
@@ -90,24 +122,12 @@ export default function UniversalVideoPlayer() {
 
     return (
       <View className="flex-1 bg-black justify-center">
-        <Video
-          ref={videoRef}
-          source={{ 
-            uri: url,
-            ...(isM3U8 && { overrideFileExtensionAndroid: 'm3u8' }),
-            headers: {
-              'User-Agent': 'ExoPlayer',
-              'Referer': 'https://3abnplus.tv/' // Many HLS streams require referer or a valid player UA
-            }
-          }}
+        <VideoView
+          player={player}
           style={{ width: '100%', height: '100%' }}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={true}
-          onLoad={() => setIsLoading(false)}
-          onPlaybackStatusUpdate={(status: any) => {
-             setIsPlaying(status.isPlaying);
-          }}
+          nativeControls
+          contentFit="contain"
+          allowsFullscreen
         />
       </View>
     );
