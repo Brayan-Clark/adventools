@@ -1,7 +1,7 @@
 {
   "name": "adventools",
   "main": "index.js",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "scripts": {
     "start": "npx expo start -c",
     "android": "npx expo run:android",
