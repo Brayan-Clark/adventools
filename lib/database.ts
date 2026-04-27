@@ -33,7 +33,7 @@ function sanitizeParams(params: any[]): any[] {
  * Opens and prepares the database. 
  * Includes a singleton pattern to avoid re-opening and re-copying files constantly.
  */
-export async function loadDatabase(dbName: string, assetSource?: any, subfolder?: string): Promise<SQLite.SQLiteDatabase> {
+export async function loadDatabase(dbName: string, assetSource?: any, subfolder?: string, expectedVersion: number = 0): Promise<SQLite.SQLiteDatabase> {
   // Normalize dbName if it already contains a path
   let finalDbName = dbName;
   let finalSubfolder = subfolder;
@@ -92,17 +92,50 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
 
       const finalInfo = await FileSystem.getInfoAsync(dbPath);
 
-      // 3. Initial Copy from Assets if needed
-      if (!finalInfo.exists && assetSource) {
+      // 3. Initial Copy or Version Update from Assets
+      let shouldCopy = !finalInfo.exists && !!assetSource;
+
+      // If already exists but we have a version requirement
+      if (finalInfo.exists && assetSource && expectedVersion > 0) {
+        try {
+          const tempDb = await SQLite.openDatabaseAsync(finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName);
+          const result: any = await tempDb.getFirstAsync("PRAGMA user_version;");
+          const currentVersion = result ? result.user_version : 0;
+          
+          // Special case: check for melodie table if it's cantique.db
+          let hasMelodie = true;
+          if (finalDbName === 'cantique.db') {
+            const tableCheck: any = await tempDb.getFirstAsync("SELECT name FROM sqlite_master WHERE type='table' AND name='melodie'");
+            hasMelodie = !!tableCheck;
+          }
+
+          await tempDb.closeAsync();
+
+          if (currentVersion < expectedVersion || !hasMelodie) {
+            shouldCopy = true;
+            console.log(`Database ${finalDbName} is outdated (v${currentVersion} < v${expectedVersion} or missing tables). Re-copying...`);
+          }
+        } catch (e) {
+          console.error(`Error checking version for ${finalDbName}:`, e);
+        }
+      }
+
+      if (shouldCopy && assetSource) {
         const asset = await Asset.fromModule(assetSource).downloadAsync();
         if (asset.localUri) {
           await FileSystem.copyAsync({
             from: asset.localUri,
             to: dbPath,
           });
+          
+          // After copying, set the new version
+          if (expectedVersion > 0) {
+            const newDb = await SQLite.openDatabaseAsync(finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName);
+            await newDb.execAsync(`PRAGMA user_version = ${expectedVersion};`);
+            await newDb.closeAsync();
+          }
         }
       } else if (!info.exists && !assetSource) {
-        // No asset source and doesn't exist? That's fine for new databases like user-storage
         console.log(`Database ${finalDbName} not found, will be created fresh.`);
       }
     } catch (error) {

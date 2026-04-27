@@ -1,14 +1,14 @@
 import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
-import { deleteNoteFromDb, getAllNotes, getFolders, saveFolders, saveNote } from '@/lib/user-storage';
+import { deleteNoteFromDb, getAllNotes, getFolders, saveFolders, saveHistory, saveNote } from '@/lib/user-storage';
 import { cn } from '@/lib/utils';
 import { Audio } from 'expo-av';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bold, Camera, Check, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Mic, Music, Palette, Pause, Play, Plus, Search, Share2, Square, StickyNote, Trash2, Undo2, Video, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -368,7 +368,19 @@ export default function Notes() {
 
     // --- CORE LOGIC ---
 
+    const { id: noteIdParam } = useLocalSearchParams();
+
     useEffect(() => { loadInitialData(); }, []);
+
+    useEffect(() => {
+        if (noteIdParam && notes.length > 0) {
+            const note = notes.find(n => n.id === noteIdParam);
+            if (note) {
+                setEditingNote(note);
+                setIsPreviewMode(true);
+            }
+        }
+    }, [noteIdParam, notes]);
 
     const loadInitialData = async () => {
         try {
@@ -424,7 +436,17 @@ export default function Notes() {
     };
 
     const addToHistory = async (note: Note) => {
-        // In a real app we'd save this to simple table too
+        try {
+            await saveHistory({
+                type: 'note',
+                title: note.title || t('untitled_note'),
+                subtitle: `Note • ${new Date(note.date).toLocaleDateString("fr-FR")}`,
+                timestamp: Date.now(),
+                params: { id: note.id }
+            });
+        } catch (e) {
+            console.error("Failed to add note to history", e);
+        }
     };
 
     const deleteNote = (id: string) => {

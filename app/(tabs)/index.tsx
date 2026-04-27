@@ -12,6 +12,7 @@ import { syncMofonaina, getMofonainaForDate, Mofonaina } from '@/lib/mofonaina';
 import { useSettings } from '@/lib/settings-context';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 import { fetchWeather, WeatherInfo, getWeatherDisplay } from '@/lib/weather';
+import { getHistory, clearHistory } from '@/lib/user-storage';
 import * as LucideIcons from 'lucide-react-native';
 
 export default function Home() {
@@ -82,8 +83,8 @@ export default function Home() {
 
   useFocusEffect(
     React.useCallback(() => {
-      AsyncStorage.getItem('app_history').then(res => {
-        if (res) setHistory(JSON.parse(res));
+      getHistory(5).then(res => {
+        setHistory(res);
       });
       // Only update from cache on focus — no network call (7-day cache)
       fetchWeather()
@@ -377,7 +378,7 @@ export default function Home() {
             <Text className="text-lg font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('recent_read')}</Text>
             <TouchableOpacity onPress={async () => {
               setHistory([]);
-              await AsyncStorage.removeItem('app_history');
+              await clearHistory();
             }}>
               <Text className="text-xs text-primary font-bold">{t('reset_history')}</Text>
             </TouchableOpacity>

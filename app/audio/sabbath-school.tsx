@@ -69,6 +69,7 @@ export default function SabbathSchoolAudioScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [mediaItems, setMediaItems] = useState<AudioItem[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null);
@@ -125,6 +126,7 @@ export default function SabbathSchoolAudioScreen() {
 
   const initAndLoad = async () => {
     setLoading(true);
+    setMediaItems([]); // Clear previous results when switching
     setIsOffline(false);
 
     // Step 1: Ensure directory exists
@@ -134,11 +136,11 @@ export default function SabbathSchoolAudioScreen() {
       }
     } catch (e) {}
 
-    // Step 2: Reconcile downloads — cross-check metadata vs actual files on disk
+    // Step 2: Reconcile downloads
     const verified = await reconcileDownloads();
     setDownloadedMedia(verified);
 
-    // Step 3: Load from local cache FIRST so user sees content immediately
+    // Step 3: Load from local cache FIRST
     let cachedItems: AudioItem[] = [];
     try {
       if ((await FileSystem.getInfoAsync(SS_MEDIA_CACHE)).exists) {
@@ -149,29 +151,26 @@ export default function SabbathSchoolAudioScreen() {
           cachedItems = langItems;
           setMediaItems(langItems);
           autoSelectQuarter(langItems);
-          setLoading(false); // Show cached data right away
+          setLoading(false); // Cache found, stop main loading
         }
       }
     } catch (e) {}
 
-    // Step 4: Try to fetch fresh data from network
+    // Step 4: Fetch fresh data from network
     try {
+      setIsRefreshing(true);
       const freshItems = await fetchFromNetwork();
       if (freshItems.length > 0) {
         setMediaItems(freshItems);
         autoSelectQuarter(freshItems);
-        // Save to cache for next offline use
         await saveToCache(freshItems);
       }
     } catch (e) {
-      // Network failed — use cached data if available
       setIsOffline(true);
-      if (cachedItems.length === 0) {
-        // No cache at all → show offline state
-        setMediaItems([]);
-      }
+      if (cachedItems.length === 0) setMediaItems([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -308,6 +307,7 @@ export default function SabbathSchoolAudioScreen() {
                 {isOffline && <View className="bg-amber-500/20 px-2 py-0.5 rounded-full flex-row items-center gap-1 border border-amber-500/30"><WifiOff size={9} color="#f59e0b" /><Text className="text-amber-500 text-[8px] font-bold">HORS-LIGNE</Text></View>}
             </View>
             <View className="flex-row gap-2">
+                {(loading || isRefreshing) && <ActivityIndicator size="small" color="#3b82f6" className="mr-2" />}
                 <TouchableOpacity onPress={() => initAndLoad()} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><RefreshCw size={14} color="#3b82f6" /></TouchableOpacity>
                 <TouchableOpacity onPress={() => setLangModalVisible(true)} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><Globe size={16} color="#3b82f6" /></TouchableOpacity>
             </View>

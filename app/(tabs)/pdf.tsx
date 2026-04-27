@@ -1,5 +1,6 @@
 import { useTranslation } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getHistory, saveHistory } from '@/lib/user-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -8,6 +9,7 @@ import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock, Cl
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CacheManager } from '@/lib/cache-manager';
 
 const ICON_MAP: Record<string, any> = {
   BookOpen,
@@ -72,12 +74,8 @@ export default function PDFLibrary() {
 
   const loadRecentPdfs = async () => {
     try {
-      const storedHistory = await AsyncStorage.getItem('app_history');
-      if (storedHistory) {
-        const history = JSON.parse(storedHistory);
-        const pdfHistory = history.filter((h: any) => h.type === 'pdf');
-        setRecentPdfs(pdfHistory.slice(0, 5));
-      }
+      const history = await getHistory(5, { includeTypes: ['pdf'] });
+      setRecentPdfs(history);
     } catch (e) {
       console.error(e);
     }
@@ -86,23 +84,15 @@ export default function PDFLibrary() {
   const loadManifest = async (force = false) => {
     try {
       if (force) setRefreshing(true);
-
-      const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
-      if (cachedManifest && !manifest) {
-        const parsed = JSON.parse(cachedManifest);
-        setManifest(parsed);
-      }
-
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json?t=${Date.now()}`;
-      const response = await fetch(GITHUB_MANIFEST_URL).catch(() => null);
-
-      if (response && response.ok) {
-        const remoteData = await response.json();
-        setManifest(remoteData);
-        await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
-      }
+      
+      const data = await CacheManager.fetchWithCache<any>({
+        key: 'pdf_manifest',
+        url: 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json'
+      });
+      
+      setManifest(data);
     } catch (e) {
-      console.log("PDF Manifest sync error - using cache if available");
+      console.error("PDF manifest error:", e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -218,21 +208,13 @@ export default function PDFLibrary() {
     }
 
     try {
-      const historyItem = {
+      await saveHistory({
         type: 'pdf',
         title: title,
         subtitle: 'Document PDF',
         timestamp: Date.now(),
         params: { fileName: file, title: title }
-      };
-
-      const existingHistory = await AsyncStorage.getItem('app_history');
-      let history = existingHistory ? JSON.parse(existingHistory) : [];
-
-      history = history.filter((h: any) => !(h.type === 'pdf' && h.params?.fileName === file));
-
-      history.unshift(historyItem);
-      await AsyncStorage.setItem('app_history', JSON.stringify(history.slice(0, 20)));
+      });
       loadRecentPdfs();
     } catch (e) {
       console.error(e);

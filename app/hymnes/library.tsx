@@ -6,17 +6,17 @@ import { getSetting } from '@/lib/user-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Bookmark, ChevronRight as ChevronRightIcon, Globe, Hash, Music as MusicIcon, Search as SearchIcon, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, Bookmark, ChevronRight as ChevronRightIcon, ChevronRight, Globe, Grid3X3, Music as MusicIcon, Search as SearchIcon, X, Music } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, BackHandler, FlatList, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function Hymnes() {
   const { t } = useTranslation();
   const router = useRouter();
   const { db: dbNameParam, title: pageTitle, redirected } = useLocalSearchParams<{ db: string, title?: string, redirected?: string }>();
   const dbName = dbNameParam || 'cantique.db';
-  const dbPath = `hymnes/${dbName}`;
 
   useFocusEffect(
     useCallback(() => {
@@ -36,11 +36,6 @@ export default function Hymnes() {
     }, [redirected])
   );
 
-  useEffect(() => {
-    loadFavorites();
-    fetchCategories();
-  }, [dbName]);
-
   const [hymns, setHymns] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -52,6 +47,7 @@ export default function Hymnes() {
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   const [totalHymns, setTotalHymns] = useState(0);
   const [maxHymnNumber, setMaxHymnNumber] = useState(0);
+  const [previewHymn, setPreviewHymn] = useState<any>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +55,27 @@ export default function Hymnes() {
       fetchCategories();
     }, [dbName])
   );
+
+  useEffect(() => {
+    if (hymnNumber.length > 0) {
+      const timer = setTimeout(updatePreview, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setPreviewHymn(null);
+    }
+  }, [hymnNumber]);
+
+  const updatePreview = async () => {
+    try {
+      const num = parseInt(hymnNumber);
+      if (isNaN(num)) return;
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const result: any = await db.getFirstAsync("SELECT id, c_title, c_num FROM adventiste_cantique WHERE c_num = ?", [num]);
+      setPreviewHymn(result);
+    } catch (e) {
+      setPreviewHymn(null);
+    }
+  };
 
   const loadFavorites = async () => {
     try {
@@ -71,7 +88,7 @@ export default function Hymnes() {
 
   const fetchCategories = async () => {
     try {
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
 
       // Get categories
       const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
@@ -86,7 +103,6 @@ export default function Hymnes() {
       }
     } catch (e) {
       console.error(e);
-      // If DB not found, redirect back to selector
       Alert.alert(t('error'), t('db_not_found' as any));
       router.back();
     }
@@ -95,7 +111,7 @@ export default function Hymnes() {
   useEffect(() => {
     async function fetchHymns() {
       try {
-        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
         let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
         let conditions = [];
         let params: any[] = [];
@@ -142,7 +158,7 @@ export default function Hymnes() {
     if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {
@@ -295,46 +311,80 @@ export default function Hymnes() {
         }}
       />
 
-      {/* Floating Number Search Button */}
       <TouchableOpacity
         onPress={() => setShowNumberPicker(true)}
         className="absolute bottom-8 right-8 w-16 h-16 rounded-full bg-pink-500 items-center justify-center shadow-2xl shadow-pink-500/40"
       >
-        <Hash size={28} color="white" />
+        <MaterialCommunityIcons name="dialpad" size={32} color="white" />
       </TouchableOpacity>
 
-      {/* Number Picker Modal */}
-      <Modal visible={showNumberPicker} transparent animationType="fade">
-        <View className="flex-1 bg-black/70 justify-center items-center px-8">
-          <View className="bg-[#1a2233] rounded-3xl p-8 w-full max-w-sm border border-slate-700">
-            <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('quick_search')}</Text>
-              <TouchableOpacity onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
-                <X size={18} color="#94a3b8" />
-              </TouchableOpacity>
+      {/* Premium Custom Keypad Modal */}
+      <Modal visible={showNumberPicker} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} />
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 pb-12 border-t border-slate-700">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+            
+            <View className="items-center mb-8">
+              <Text className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Numéro du Cantique</Text>
+              <View className="flex-row items-center justify-center min-h-[60px]">
+                {hymnNumber.length === 0 ? (
+                  <Text className="text-slate-700 text-5xl font-black italic">000</Text>
+                ) : (
+                  <Text className="text-white text-6xl font-black" style={{ fontFamily: 'Lexend_700Bold' }}>{hymnNumber}</Text>
+                )}
+              </View>
+              
+              {/* Preview Section */}
+              <View className="mt-4 h-14 justify-center items-center px-4 w-full">
+                {previewHymn ? (
+                   <View className="bg-pink-500/5 border border-pink-500/10 px-5 py-2.5 rounded-2xl flex-row items-center max-w-[90%]">
+                    <Music size={14} color="#ec4899" />
+                    <Text className="text-pink-500 font-bold text-[13px] ml-3" numberOfLines={1}>{previewHymn.c_title}</Text>
+                  </View>
+                ) : hymnNumber.length > 0 ? (
+                  <Text className="text-slate-600 text-[10px] uppercase font-bold tracking-widest">Aucun chant trouvé</Text>
+                ) : null}
+              </View>
             </View>
 
-            <Text className="text-slate-400 text-sm mb-4">
-              {t('enter_hymn_number')} {maxHymnNumber > 0 ? `(1-${maxHymnNumber})` : ""}
-            </Text>
+            {/* Custom Grid Keypad */}
+            <View className="flex-row flex-wrap justify-between gap-y-4 mb-10">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'DEL', 0, 'GO'].map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => {
+                    if (key === 'DEL') {
+                      setHymnNumber(prev => prev.slice(0, -1));
+                    } else if (key === 'GO') {
+                      goToHymnByNumber();
+                    } else {
+                      if (hymnNumber.length < 3) {
+                        setHymnNumber(prev => prev + key);
+                      }
+                    }
+                  }}
+                  className={cn(
+                    "w-[30%] h-20 rounded-[28px] items-center justify-center border",
+                    key === 'GO' ? "bg-pink-500 border-pink-400 shadow-lg shadow-pink-500/30" : "bg-slate-900/40 border-slate-800/60"
+                  )}
+                >
+                  {key === 'DEL' ? (
+                    <X size={24} color="#64748b" />
+                  ) : key === 'GO' ? (
+                    <ChevronRight size={32} color="white" />
+                  ) : (
+                    <Text className="text-white text-3xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{key}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            <TextInput
-              placeholder="Ex: 123"
-              placeholderTextColor="#475569"
-              className="bg-[#111621] border border-slate-800 rounded-2xl px-6 py-4 text-white text-2xl font-bold text-center mb-6"
-              style={{ fontFamily: 'Lexend_700Bold' }}
-              value={hymnNumber}
-              onChangeText={setHymnNumber}
-              keyboardType="number-pad"
-              autoFocus
-              onSubmitEditing={goToHymnByNumber}
-            />
-
-            <TouchableOpacity
-              onPress={goToHymnByNumber}
-              className="bg-pink-500 rounded-2xl py-4 items-center shadow-lg shadow-pink-500/30"
+            <TouchableOpacity 
+              onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }}
+              className="py-2 items-center"
             >
-              <Text className="text-white font-bold text-base">{t('go_to_hymn')}</Text>
+              <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest">Annuler la recherche</Text>
             </TouchableOpacity>
           </View>
         </View>

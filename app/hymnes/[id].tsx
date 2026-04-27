@@ -2,13 +2,15 @@ import { loadDatabase } from '@/lib/database';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useSettings } from '@/lib/settings-context';
 import { getSetting, setSetting, saveHistory } from '@/lib/user-storage';
+import { cn } from '@/lib/utils';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Edit3, Hash, Heart, Music, Save, Share2, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { ArrowLeft, ChevronRight, Edit3, Heart, Music, Save, Share2, X, Grid3X3 } from 'lucide-react-native';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HymneDetail() {
   const router = useRouter();
@@ -23,10 +25,34 @@ export default function HymneDetail() {
   const [editedContent, setEditedContent] = useState("");
   const { settings: globalSettings } = useSettings();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [sameMelodyHymns, setSameMelodyHymns] = useState<any[]>([]);
+  const [showMelodyModal, setShowMelodyModal] = useState(false);
+  const [previewHymn, setPreviewHymn] = useState<any>(null);
 
   useEffect(() => {
     checkFavorite();
   }, [id, dbName]);
+
+  useEffect(() => {
+    if (hymnNumber.length > 0) {
+      const timer = setTimeout(updatePreview, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setPreviewHymn(null);
+    }
+  }, [hymnNumber]);
+
+  const updatePreview = async () => {
+    try {
+      const num = parseInt(hymnNumber);
+      if (isNaN(num)) return;
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const result: any = await db.getFirstAsync("SELECT id, c_title, c_num FROM adventiste_cantique WHERE c_num = ?", [num]);
+      setPreviewHymn(result);
+    } catch (e) {
+      setPreviewHymn(null);
+    }
+  };
 
   const checkFavorite = async () => {
     try {
@@ -61,7 +87,7 @@ export default function HymneDetail() {
         const hymnId = Number(id);
         if (isNaN(hymnId)) return;
 
-        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
         const result: any = await db.getFirstAsync("SELECT * FROM adventiste_cantique WHERE id = ?", [hymnId]);
 
         if (result) {
@@ -86,6 +112,18 @@ export default function HymneDetail() {
           } catch (e) {
             console.error("Failed to save hymn history", e);
           }
+
+          // Fetch same melody hymns
+          try {
+            const sameMelodyRows: any[] = await db.getAllAsync(
+              "SELECT m.Id_melodie as num, m.groupe, c.id, c.c_title as title FROM melodie m JOIN adventiste_cantique c ON m.Id_melodie = c.c_num WHERE m.Id_cant = ?",
+              [result.c_num]
+            );
+            setSameMelodyHymns(sameMelodyRows);
+          } catch (e) {
+            console.error("Failed to fetch same melody hymns", e);
+            setSameMelodyHymns([]);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -99,12 +137,12 @@ export default function HymneDetail() {
   }, [id, dbName]);
 
   const goToHymnByNumber = async () => {
-    const num = parseInt(hymnNumber);
-    if (isNaN(num) || num < 1 || num > 800) return;
+    let num = parseInt(hymnNumber);
+    if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes');
-      const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE id = ?", [num]);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {
         setShowNumberPicker(false);
@@ -135,11 +173,19 @@ export default function HymneDetail() {
           <ArrowLeft size={20} color="#94a3b8" />
         </TouchableOpacity>
         <View className="items-center">
-          <Text className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-500">Cantique {hymn.c_num}</Text>
+          <Text className="text-[14px] font-black uppercase tracking-[0.1em] text-pink-500" style={{ fontFamily: 'Lexend_700Bold' }}>Cantique {hymn.c_num}</Text>
         </View>
-        <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center">
-          <Share2 size={20} color="#94a3b8" />
-        </TouchableOpacity>
+        <View className="flex-row gap-2">
+          {sameMelodyHymns.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => setShowMelodyModal(true)}
+              className="w-10 h-10 rounded-full bg-pink-500/10 border border-pink-500/30 items-center justify-center"
+            >
+              <Music size={18} color="#ec4899" />
+            </TouchableOpacity>
+          )}
+          {sameMelodyHymns.length === 0 && <View className="w-10" />}
+        </View>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
@@ -248,41 +294,132 @@ export default function HymneDetail() {
           onPress={() => setShowNumberPicker(true)}
           className="w-14 h-14 rounded-full bg-pink-500 items-center justify-center shadow-xl shadow-pink-500/40"
         >
-          <Hash size={24} color="white" />
+          <MaterialCommunityIcons name="dialpad" size={28} color="white" />
         </TouchableOpacity>
       </View>
 
 
-      {/* Number Picker Modal */}
-      <Modal visible={showNumberPicker} transparent animationType="fade" statusBarTranslucent={true}>
-        <View className="flex-1 bg-black/70 justify-center items-center px-8">
-          <View className="bg-[#1a2233] rounded-3xl p-8 w-full max-w-sm border border-slate-700">
-            <View className="flex-row justify-between items-center mb-8">
-              <Text className="text-xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>Recherche rapide</Text>
-              <TouchableOpacity onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
-                <X size={18} color="#94a3b8" />
-              </TouchableOpacity>
+      {/* Premium Custom Keypad Modal */}
+      <Modal visible={showNumberPicker} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }} />
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 pb-12 border-t border-slate-700">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+            
+            <View className="items-center mb-8">
+              <Text className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Numéro du Cantique</Text>
+              <View className="flex-row items-center justify-center min-h-[60px]">
+                {hymnNumber.length === 0 ? (
+                  <Text className="text-slate-700 text-5xl font-black italic">000</Text>
+                ) : (
+                  <Text className="text-white text-6xl font-black" style={{ fontFamily: 'Lexend_700Bold' }}>{hymnNumber}</Text>
+                )}
+              </View>
+              
+              {/* Preview Section */}
+              <View className="mt-4 h-14 justify-center items-center px-4 w-full">
+                {previewHymn ? (
+                  <View className="bg-pink-500/5 border border-pink-500/10 px-5 py-2.5 rounded-2xl flex-row items-center max-w-[90%]">
+                    <Music size={14} color="#ec4899" />
+                    <Text className="text-pink-500 font-bold text-[13px] ml-3" numberOfLines={1}>{previewHymn.c_title}</Text>
+                  </View>
+                ) : hymnNumber.length > 0 ? (
+                  <Text className="text-slate-600 text-[10px] uppercase font-bold tracking-widest">Aucun chant trouvé</Text>
+                ) : null}
+              </View>
             </View>
 
-            <Text className="text-slate-400 text-sm mb-4">Entrez le numéro du cantique (1-800)</Text>
+            {/* Custom Grid Keypad */}
+            <View className="flex-row flex-wrap justify-between gap-y-4 mb-10">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'DEL', 0, 'GO'].map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => {
+                    if (key === 'DEL') {
+                      setHymnNumber(prev => prev.slice(0, -1));
+                    } else if (key === 'GO') {
+                      goToHymnByNumber();
+                    } else {
+                      if (hymnNumber.length < 3) {
+                        setHymnNumber(prev => prev + key);
+                      }
+                    }
+                  }}
+                  className={cn(
+                    "w-[30%] h-20 rounded-[28px] items-center justify-center border",
+                    key === 'GO' ? "bg-pink-500 border-pink-400 shadow-lg shadow-pink-500/30" : "bg-slate-900/40 border-slate-800/60"
+                  )}
+                >
+                  {key === 'DEL' ? (
+                    <X size={24} color="#64748b" />
+                  ) : key === 'GO' ? (
+                    <ChevronRight size={32} color="white" />
+                  ) : (
+                    <Text className="text-white text-3xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{key}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            <TextInput
-              placeholder="Ex: 123"
-              placeholderTextColor="#475569"
-              className="bg-[#111621] border border-slate-800 rounded-2xl px-6 py-4 text-white text-2xl font-bold text-center mb-6"
-              style={{ fontFamily: 'Lexend_700Bold' }}
-              value={hymnNumber}
-              onChangeText={setHymnNumber}
-              keyboardType="number-pad"
-              autoFocus
-              onSubmitEditing={goToHymnByNumber}
-            />
-
-            <TouchableOpacity
-              onPress={goToHymnByNumber}
-              className="bg-pink-500 rounded-2xl py-4 items-center shadow-lg shadow-pink-500/30"
+            <TouchableOpacity 
+              onPress={() => { setShowNumberPicker(false); setHymnNumber(""); }}
+              className="py-2 items-center"
             >
-              <Text className="text-white font-bold text-base">Aller au cantique</Text>
+              <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest">Annuler la recherche</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Same Melody Modal */}
+      <Modal visible={showMelodyModal} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/70 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => setShowMelodyModal(false)} />
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 border-t border-slate-700 min-h-[40%]">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+            
+            <View className="flex-row items-center justify-center mb-8">
+              <View className="w-10 h-10 rounded-full bg-pink-500/20 items-center justify-center mr-4">
+                <Music size={20} color="#ec4899" />
+              </View>
+              <Text className="text-xl font-bold text-white uppercase tracking-widest" style={{ fontFamily: 'Lexend_700Bold' }}>Même Mélodie</Text>
+            </View>
+
+            <Text className="text-slate-400 text-center mb-8 px-6 text-xs leading-5">Ces cantiques partagent la même mélodie que le chant actuel.</Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+              {sameMelodyHymns.map((m, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => {
+                    setShowMelodyModal(false);
+                    router.replace({ pathname: '/hymnes/[id]', params: { id: m.id, db: dbName } });
+                  }}
+                  className="flex-row items-center p-5 bg-[#111621] border border-slate-800 rounded-3xl mb-4"
+                >
+                  <View className="w-12 h-12 rounded-2xl bg-pink-500/10 items-center justify-center mr-4">
+                    <Text className="text-pink-500 font-bold text-sm">{m.num}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white font-bold text-sm" numberOfLines={1}>{m.title}</Text>
+                    {m.groupe && (
+                      <View className="flex-row mt-1">
+                        <View className="bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
+                          <Text className="text-blue-400 text-[8px] font-black uppercase">Groupe {m.groupe}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                  <ChevronRight size={16} color="#475569" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity 
+              onPress={() => setShowMelodyModal(false)}
+              className="bg-slate-800 py-4 rounded-2xl items-center mb-4"
+            >
+              <Text className="text-white font-bold">Fermer</Text>
             </TouchableOpacity>
           </View>
         </View>

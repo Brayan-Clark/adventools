@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import * as FileSystem from 'expo-file-system/legacy';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import { CacheManager } from '../../lib/cache-manager';
 
 const ICON_MAP = {
   MonitorPlay,
@@ -31,43 +31,23 @@ export default function VideoHubScreen() {
     try {
       setIsLoading(true);
       setError(false);
-      
-      const cacheDir = `${FileSystem.documentDirectory}video/`;
-      const cacheFile = `${cacheDir}manifest_cache.json`;
-      
-      // 1. Try Cache
-      const cacheInfo = await FileSystem.getInfoAsync(cacheFile);
-      if (cacheInfo.exists) {
-        const cachedContent = await FileSystem.readAsStringAsync(cacheFile);
-        const cachedData = JSON.parse(cachedContent);
-        setFolders(processData(cachedData));
-        setIsLoading(false);
-      }
 
-      // 2. Fetch fresh
-      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/video/manifest.json?t=${Date.now()}`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setFolders(processData(data));
-        
-        // Save to cache
-        if (!(await FileSystem.getInfoAsync(cacheDir)).exists) {
-          await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
-        }
-        await FileSystem.writeAsStringAsync(cacheFile, JSON.stringify(data));
-      }
+      const data = await CacheManager.fetchWithCache<any[]>({
+        key: 'video_manifest',
+        url: 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/video/manifest.json',
+        fallbackData: [
+          { id: 'tv', title: t('live_tv'), icon: 'MonitorPlay', color: '#ec4899', bg: 'bg-pink-500/20', isStreaming: true },
+          { id: 'musique', title: t('gospel_songs'), icon: 'Music', color: '#8b5cf6', bg: 'bg-violet-500/20', isStreaming: false },
+          { id: 'etudes', title: t('video_bible_studies'), icon: 'BookOpen', color: '#3b82f6', bg: 'bg-blue-500/20', isStreaming: false },
+          { id: 'ecole-de-sabbat', title: t('sabbath_school_lessons'), icon: 'MonitorPlay', color: '#f59e0b', bg: 'bg-amber-500/20', isStreaming: false },
+          { id: 'films', title: t('films_and_reports' as any) || 'Films', icon: 'Folder', color: '#10b981', bg: 'bg-emerald-500/20', isStreaming: false },
+        ]
+      });
+
+      setFolders(processData(data));
     } catch (e) {
       console.error("Video manifest error:", e);
-      if (folders.length === 0) {
-        setError(true);
-        // Fallback
-        setFolders([
-          { id: 'tv', title: t('live_tv'), icon: MonitorPlay, color: '#ec4899', bg: 'bg-pink-500/20', isStreaming: true },
-          { id: 'musique', title: t('gospel_songs'), icon: Music, color: '#8b5cf6', bg: 'bg-violet-500/20', isStreaming: false },
-          { id: 'etudes', title: t('video_bible_studies'), icon: BookOpen, color: '#3b82f6', bg: 'bg-blue-500/20', isStreaming: false },
-        ]);
-      }
+      setError(true);
     } finally {
       setIsLoading(false);
     }

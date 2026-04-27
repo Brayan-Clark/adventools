@@ -79,6 +79,14 @@ export async function initUserStorage() {
         chapter INTEGER,
         data TEXT
     );
+
+    -- Performance Indexes
+    CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
+    CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_history_type ON history(type);
+    CREATE INDEX IF NOT EXISTS idx_favorites_ref ON favorites(type, ref_id);
+    CREATE INDEX IF NOT EXISTS idx_bible_markup_query ON bible_markup(type, lang, book_id, chapter);
   `);
   
   return db;
@@ -238,9 +246,25 @@ export async function saveBibleMarkup(key: string, data: any) {
 }
 
 // --- HISTORY ---
-export async function getHistory(limit = 10) {
+export async function getHistory(limit = 10, options?: { includeTypes?: string[], excludeTypes?: string[] }) {
     const database = await initUserStorage();
-    const rows: any[] = await database.getAllAsync('SELECT * FROM history ORDER BY timestamp DESC LIMIT ?', [limit]);
+    let query = 'SELECT * FROM history';
+    let params: any[] = [];
+
+    if (options?.includeTypes && options.includeTypes.length > 0) {
+        const placeholders = options.includeTypes.map(() => '?').join(',');
+        query += ` WHERE type IN (${placeholders})`;
+        params.push(...options.includeTypes);
+    } else if (options?.excludeTypes && options.excludeTypes.length > 0) {
+        const placeholders = options.excludeTypes.map(() => '?').join(',');
+        query += ` WHERE type NOT IN (${placeholders})`;
+        params.push(...options.excludeTypes);
+    }
+
+    query += ' ORDER BY timestamp DESC LIMIT ?';
+    params.push(limit);
+
+    const rows: any[] = await database.getAllAsync(query, params);
     return rows.map(r => ({
         ...r,
         params: r.params_json ? JSON.parse(r.params_json) : null
@@ -260,6 +284,10 @@ export async function saveHistory(item: { type: string, title: string, subtitle:
 
     // Limit to 50 items
     await database.runAsync('DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY timestamp DESC LIMIT 50)');
+}
+export async function clearHistory() {
+    const database = await initUserStorage();
+    await database.runAsync('DELETE FROM history');
 }
 
 // --- BACKUP & RESTORE ---

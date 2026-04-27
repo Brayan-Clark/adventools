@@ -66,6 +66,7 @@ export default function SabbathSchoolVideoScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [videoClips, setVideoClips] = useState<VideoClip[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null);
@@ -116,6 +117,7 @@ export default function SabbathSchoolVideoScreen() {
 
   const initAndLoad = async () => {
     setLoading(true);
+    setVideoClips([]); // Clear previous results when switching
     setIsOffline(false);
 
     try {
@@ -139,13 +141,14 @@ export default function SabbathSchoolVideoScreen() {
           cachedItems = langItems;
           setVideoClips(langItems);
           autoSelectQuarter(langItems);
-          setLoading(false);
+          setLoading(false); // Cache found, stop main loading
         }
       }
     } catch (e) {}
 
     // Then try network
     try {
+      setIsRefreshing(true);
       const freshItems = await fetchFromNetwork();
       if (freshItems.length > 0) {
         setVideoClips(freshItems);
@@ -157,6 +160,7 @@ export default function SabbathSchoolVideoScreen() {
       if (cachedItems.length === 0) setVideoClips([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -295,6 +299,7 @@ export default function SabbathSchoolVideoScreen() {
                 {isOffline && <View className="bg-amber-500/20 px-2 py-0.5 rounded-full flex-row items-center gap-1 border border-amber-500/30"><WifiOff size={9} color="#f59e0b" /><Text className="text-amber-500 text-[8px] font-bold">HORS-LIGNE</Text></View>}
             </View>
             <View className="flex-row gap-2">
+                {(loading || isRefreshing) && <ActivityIndicator size="small" color="#f59e0b" className="mr-2" />}
                 <TouchableOpacity onPress={() => initAndLoad()} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><RefreshCw size={14} color="#f59e0b" /></TouchableOpacity>
                 <TouchableOpacity onPress={() => setLangModalVisible(true)} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><Globe size={16} color="#f59e0b" /></TouchableOpacity>
             </View>

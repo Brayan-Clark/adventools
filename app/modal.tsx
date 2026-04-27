@@ -3,6 +3,7 @@ import { performUpdateCheck } from '@/lib/updater';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
+import { clearHistory } from '@/lib/user-storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -222,7 +223,7 @@ export default function Settings() {
           text: t('delete'),
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem('app_history');
+            await clearHistory();
             Alert.alert(t('success'), t('history_cleared'));
           }
         }

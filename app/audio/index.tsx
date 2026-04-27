@@ -3,6 +3,8 @@ import { ChevronLeft, Folder, PlayCircle, Headphones, Music, BookOpen } from 'lu
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
+import { CacheManager } from '../../lib/cache-manager';
 
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
@@ -32,22 +34,20 @@ export default function AudioScreen() {
   const fetchManifest = async () => {
     try {
       setIsLoading(true);
-      const url = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/manifest.json`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await CacheManager.fetchWithCache<any[]>({
+        key: 'audio_manifest',
+        url: 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/manifest.json',
+        fallbackData: [
+          { id: 'playbacks', title: t('hymns_audio'), count: 420, color: 'text-emerald-500', bg: 'bg-emerald-500/20', icon: 'Music' },
+          { id: 'bible', title: t('bible_audio'), count: 66, color: 'text-amber-500', bg: 'bg-amber-500/20', icon: 'BookOpen' },
+          { id: 'etudes', title: t('bible_studies'), count: 8, color: 'text-violet-500', bg: 'bg-violet-500/20', icon: 'Folder' },
+          { id: 'ecole-de-sabbat', title: t('sabbath_school_lessons'), count: 1, color: 'text-rose-500', bg: 'bg-rose-500/20', icon: 'Headphones' },
+          { id: 'radio', title: t('podcasts_streaming'), count: 1, color: 'text-blue-500', bg: 'bg-blue-500/20', isStreaming: true, icon: 'PlayCircle' },
+        ]
+      });
       setFolders(data);
     } catch (e) {
       console.error("Audio manifest error:", e);
-      // Fallback if fetch fails
-      setFolders([
-        { id: 'playbacks', title: t('hymns_audio'), count: 420, color: 'text-emerald-500', bg: 'bg-emerald-500/20', icon: 'Music' },
-        { id: 'bible', title: t('bible_audio'), count: 66, color: 'text-amber-500', bg: 'bg-amber-500/20', icon: 'BookOpen' },
-        { id: 'etudes', title: t('bible_studies'), count: 8, color: 'text-violet-500', bg: 'bg-violet-500/20', icon: 'Folder' },
-        { id: 'radio', title: t('podcasts_streaming'), count: 1, color: 'text-blue-500', bg: 'bg-blue-500/20', isStreaming: true, icon: 'PlayCircle' },
-      ]);
     } finally {
       setIsLoading(false);
     }

@@ -4,9 +4,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlertCircle, ArrowLeft, Bookmark, ChevronRight, FileText, Hash, Menu, Save, Search, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { saveHistory } from '@/lib/user-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Conditional import to avoid crash on Expo Go immediate import
 let Pdf: any;
@@ -19,7 +21,7 @@ try {
 // No bundled documents - everything is downloadable
 
 export default function PdfViewer() {
-  const { fileName, title, uri } = useLocalSearchParams();
+  const { fileName, title, uri, page: initialPage } = useLocalSearchParams();
   const router = useRouter();
   const [source, setSource] = useState<{ uri: string, cache: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,9 +38,11 @@ export default function PdfViewer() {
   const [currentNoteText, setCurrentNoteText] = useState("");
   const [showPagePicker, setShowPagePicker] = useState(false);
   const [pagePickerValue, setPagePickerValue] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const isExpoGo = Constants.appOwnership === 'expo';
   const pdfRef = React.useRef<any>(null);
+  const initialJumpDone = useRef(false);
 
   useEffect(() => {
     if (fileName) {
@@ -145,6 +149,44 @@ export default function PdfViewer() {
     preparePdf();
   }, [fileName]);
 
+  // Jump to saved page once initialized
+  useEffect(() => {
+    if (isInitialized && initialPage && pdfRef.current && !initialJumpDone.current) {
+      const p = parseInt(initialPage as string);
+      if (!isNaN(p) && p > 1) {
+        initialJumpDone.current = true;
+        // Small delay to ensure the native view is ready for scrolling
+        const timer = setTimeout(() => {
+          pdfRef.current?.setPage(p);
+        }, 500); // Slightly longer delay for stability
+        return () => clearTimeout(timer);
+      } else {
+        initialJumpDone.current = true; // No jump needed, but mark as done
+      }
+    }
+  }, [isInitialized, initialPage]);
+
+  // Save history on page change (debounced)
+  useEffect(() => {
+    if (!isInitialized || !fileName) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await saveHistory({
+          type: 'pdf',
+          title: (title as string) || (fileName as string),
+          subtitle: `Document • Page ${currentPage}`,
+          timestamp: Date.now(),
+          params: { fileName, title, uri, page: currentPage }
+        });
+      } catch (e) {
+        console.error("Failed to update PDF history", e);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [currentPage, fileName, title, uri, isInitialized]);
+
   if (isExpoGo) {
     return (
       <SafeAreaView className="flex-1 bg-black justify-center items-center px-6">
@@ -176,21 +218,21 @@ export default function PdfViewer() {
           <TouchableOpacity onPress={() => router.back()} className="mr-3 w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
             <ArrowLeft size={20} color="#cbd5e1" />
           </TouchableOpacity>
+          <View className="flex-1">
+            <Text className="text-white font-bold text-xs" numberOfLines={1}>{title || fileName}</Text>
+            <Text className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Page {currentPage} / {totalPages}</Text>
+          </View>
+        </View>
+        <View className="flex-row gap-2 items-center">
           <TouchableOpacity
             onPress={() => {
               setPagePickerValue("");
               setShowPagePicker(true);
             }}
-            className="active:opacity-60"
+            className="w-10 h-10 rounded-full bg-blue-500 items-center justify-center shadow-lg shadow-blue-500/30"
           >
-            <Text className="text-white font-bold text-sm" numberOfLines={1}>{title || fileName}</Text>
-            <View className="flex-row items-center">
-              <Text className="text-[10px] text-blue-400 font-bold">Aller à la page {currentPage} / {totalPages}</Text>
-              <Search size={8} color="#3b82f6" className="ml-1" />
-            </View>
+            <MaterialCommunityIcons name="dialpad" size={20} color="white" />
           </TouchableOpacity>
-        </View>
-        <View className="flex-row gap-2">
           <TouchableOpacity
             onPress={toggleBookmark}
             className={`p-2 rounded-lg border ${bookmarks.includes(currentPage) ? 'bg-blue-500/10 border-blue-500' : 'bg-slate-800 border-slate-700'}`}
@@ -235,6 +277,8 @@ export default function PdfViewer() {
             }}
             onLoadComplete={(total: number) => {
               setTotalPages(total);
+              // Mark as initialized to trigger the jump useEffect
+              setIsInitialized(true);
             }}
             onError={(error: any) => {
               console.error(error);

@@ -277,22 +277,22 @@ export default function Bible() {
 
       <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
         {searchMode === 'books' ? (
-          testaments.map((testament, testamentIndex) => {
-            const booksInSection = filteredBooks.filter(b => b.testamentId == testament.id);
-            if (booksInSection.length === 0) return null;
-
-            const colorIdx = testamentIndex % 3;
-            
-            return (
-              <View key={testament.id} className="mb-2">
-                <View className="flex-row flex-wrap justify-between pb-2">
-                  {booksInSection.map((book) => (
-                    <BookGridItem key={book.id} book={book} lang={lang} testamentName={testament.name} colorIdx={colorIdx} />
-                  ))}
-                </View>
-              </View>
-            );
-          })
+          <View className="flex-row flex-wrap justify-between pb-2">
+            {filteredBooks.map((book) => {
+              const testament = testaments.find(t => t.id == book.testamentId);
+              const testamentIndex = testaments.findIndex(t => t.id == book.testamentId);
+              const colorIdx = testamentIndex === -1 ? 0 : testamentIndex % 3;
+              return (
+                <BookGridItem 
+                  key={book.id} 
+                  book={book} 
+                  lang={lang} 
+                  testamentName={testament?.name || ""} 
+                  colorIdx={colorIdx} 
+                />
+              );
+            })}
+          </View>
         ) : (
           <View className="pb-24">
             {isSearchingVerses ? (
