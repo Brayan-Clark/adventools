@@ -6,7 +6,7 @@ import { getBibleMarkup, saveBibleMarkup, saveHistory } from '@/lib/user-storage
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Plus, Share2, Trash2, Type, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
@@ -213,13 +213,14 @@ export default function BibleReader() {
             return;
         }
 
-        try {
-            let db = dbInstance;
-            if (!db) {
-                const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
-                db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
-                setDbInstance(db);
-            }
+            try {
+                let db = dbInstance;
+                if (!db) {
+                    const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
+                    if (!config) return;
+                    db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+                    setDbInstance(db);
+                }
 
             const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
             const isCloud = tables.some((t: any) => t.name === 'books');
@@ -966,20 +967,21 @@ export default function BibleReader() {
 
       {/* Modal Selection Chapitre et Verset */}
       <Modal visible={showChapterPicker} transparent animationType="slide">
-        <TouchableOpacity 
-          className="flex-1 bg-black/70 justify-end" 
-          activeOpacity={1} 
-          onPress={() => { setShowChapterPicker(false); setPickerStep('chapter'); }}
-        >
+        <View className="flex-1 bg-black/70 justify-end">
+          <TouchableOpacity 
+            className="absolute inset-0" 
+            activeOpacity={1} 
+            onPress={() => { setShowChapterPicker(false); setPickerStep('chapter'); }}
+          />
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[90%] border-t border-slate-700">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
             
             <View className="flex-row justify-center items-center mb-6 gap-4">
-              <TouchableOpacity onPress={() => setPickerStep('chapter')}>
+              <TouchableOpacity onPress={() => setPickerStep('chapter')} className="px-4 py-2">
                 <Text className={cn("text-lg font-bold", pickerStep === 'chapter' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Chapitre</Text>
               </TouchableOpacity>
               <Text className="text-slate-700 font-bold">/</Text>
-              <TouchableOpacity onPress={() => pickerStep === 'verse' && setPickerStep('chapter')} disabled={pickerStep === 'chapter'}>
+              <TouchableOpacity onPress={() => setPickerStep('verse')} className="px-4 py-2">
                  <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Verset</Text>
               </TouchableOpacity>
             </View>
@@ -1017,7 +1019,14 @@ export default function BibleReader() {
                           setChapter(tempChapter);
                           setShowChapterPicker(false);
                           setPickerStep('chapter');
-                          router.setParams({ chapter: tempChapter.toString(), verse: item.toString() });
+                          if (router) {
+                            setTimeout(() => {
+                              router.setParams({ 
+                                chapter: tempChapter.toString(), 
+                                verse: item.toString() 
+                              });
+                            }, 50);
+                          }
                         }}
                         className="w-[22%] aspect-square items-center justify-center rounded-2xl m-1.5 bg-[#111621] border border-slate-800"
                       >
@@ -1042,7 +1051,7 @@ export default function BibleReader() {
             </TouchableOpacity>
             <View className="h-4" />
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Modal Paramètres */}

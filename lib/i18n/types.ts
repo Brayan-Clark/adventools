@@ -377,6 +377,9 @@ export interface TranslationSchema {
   daily_bread: string;
   sabbath_school: string;
   lessons: string;
+  save_success_title: string;
+  save_success_msg: string;
+  save_error_msg: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

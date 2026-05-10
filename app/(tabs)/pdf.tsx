@@ -400,7 +400,12 @@ export default function PDFLibrary() {
         )}
       </ScrollView>
 
-      <Modal visible={showStore} animationType="slide" transparent>
+      <Modal 
+        visible={showStore} 
+        animationType="slide" 
+        transparent 
+        onRequestClose={() => setShowStore(false)}
+      >
         <SafeAreaView className="flex-1 bg-slate-950">
           <View className="px-6 py-4 flex-row justify-between items-center border-b border-slate-800">
             <View className="flex-1">

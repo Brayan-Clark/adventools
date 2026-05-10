@@ -373,4 +373,7 @@ export const mg: TranslationSchema = {
   daily_bread: "Mofon'aina",
   sabbath_school: "Sekoly Sabata",
   lessons: "Lesona",
+  save_success_title: "Fampidinana vita",
+  save_success_msg: "Voatahiry ao amin'ny findainao ny rakitra.",
+  save_error_msg: "Tsy nahomby ny fampidinana. Manandrama indray azafady.",
 };

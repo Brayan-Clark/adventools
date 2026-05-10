@@ -3,6 +3,7 @@ import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -34,7 +35,7 @@ import {
   Mic
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -50,7 +51,8 @@ import {
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
+  Animated
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -375,6 +377,118 @@ export default function LesonaSekolySabata() {
     return () => handler.remove();
   }, [readingLesson, selectedQuarterly]);
 
+  const [downloadingPdfs, setDownloadingPdfs] = useState<Record<string, number>>({});
+  const [toast, setToast] = useState<{ type: 'success' | 'error', title: string, message: string } | null>(null);
+  const toastAnim = useRef(new Animated.Value(-100)).current;
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  } | null>(null);
+
+  const triggerToast = (type: 'success' | 'error', title: string, message: string) => {
+    setToast({ type, title, message });
+    Animated.spring(toastAnim, { toValue: 60, useNativeDriver: true, tension: 20, friction: 7 }).start();
+    setTimeout(() => {
+      Animated.timing(toastAnim, { toValue: -100, duration: 400, useNativeDriver: true }).start(() => {
+        setToast(null);
+      });
+    }, 4000);
+  };
+
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [selectedPdfForDownload, setSelectedPdfForDownload] = useState<PdfResource | null>(null);
+
+  const downloadPdf = async (pdf: PdfResource, format: 'pdf' | 'markdown' = 'pdf') => {
+    try {
+      setShowDownloadModal(false);
+      setDownloadingPdfs(prev => ({ ...prev, [format === 'markdown' ? pdf.src + '_md' : pdf.src]: 0 }));
+      
+      const fileNameBase = pdf.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      let localUri = "";
+      let mimeType = "";
+
+      if (format === 'markdown') {
+        // Extract all text
+        let content = "";
+        if (readingLesson) {
+          const segment = readingLesson.segments[activeSegmentIdx];
+          if (segment.blocks) {
+            content = segment.blocks.map(b => extractTextRecursive(b)).join('\n\n');
+            content = cleanSspmMarkdown(content);
+          }
+        }
+        localUri = `${FileSystem.cacheDirectory}${fileNameBase}.txt`;
+        await FileSystem.writeAsStringAsync(localUri, content);
+        mimeType = "text/plain";
+      } else {
+        const extension = pdf.src.split('.').pop() || 'pdf';
+        localUri = `${FileSystem.cacheDirectory}${fileNameBase}.${extension}`;
+        mimeType = "application/pdf";
+        
+        const downloadResumable = FileSystem.createDownloadResumable(
+          pdf.src,
+          localUri,
+          {},
+          (progress) => {
+            const p = progress.totalBytesWritten / progress.totalBytesExpectedToWrite;
+            setDownloadingPdfs(prev => ({ ...prev, [pdf.src]: p }));
+          }
+        );
+        await downloadResumable.downloadAsync();
+      }
+
+      // System Save (Android specialized for direct file access)
+      if (Platform.OS === 'android') {
+        try {
+          const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+          if (permissions.granted) {
+            const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.Base64 });
+            const finalFileName = format === 'markdown' ? `${fileNameBase}.txt` : `${fileNameBase}.${pdf.src.split('.').pop() || 'pdf'}`;
+            const destinationUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, finalFileName, mimeType);
+            await FileSystem.writeAsStringAsync(destinationUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+            triggerToast('success', t('save_success_title'), t('save_success_msg'));
+            return;
+          }
+        } catch (err) {
+          console.log("SAF error or cancelled:", err);
+        }
+      }
+
+      // Fallback to standard sharing (iOS or Android if SAF cancelled)
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, {
+          mimeType,
+          dialogTitle: `Enregistrer ${pdf.title}`,
+          UTI: format === 'markdown' ? 'public.plain-text' : 'com.adobe.pdf'
+        });
+        triggerToast('success', t('save_success_title'), t('save_success_msg'));
+      } else {
+        triggerToast('error', t('error'), t('save_error_msg'));
+      }
+
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Erreur", "Le téléchargement a échoué.");
+    } finally {
+      setDownloadingPdfs(prev => {
+        const next = { ...prev };
+        delete next[pdf.src];
+        delete next[pdf.src + '_md'];
+        return next;
+      });
+    }
+  };
+
+  const showDownloadOptions = (pdf: PdfResource) => {
+    setSelectedPdfForDownload(pdf);
+    setShowDownloadModal(true);
+  };
+
   useEffect(() => {
     loadInitialData();
   }, [selectedLang]);
@@ -554,7 +668,16 @@ export default function LesonaSekolySabata() {
         await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
         loadLessonTitles(json);
       } else if (!cached) {
-        throw new Error("Impossible de charger les données et aucun cache disponible.");
+        // Final fallback: check for offline directory
+        const offlineId = `${OFFLINE_LESSONS_PREFIX}${id}`;
+        const offlineData = await AsyncStorage.getItem(offlineId);
+        if (offlineData) {
+          const json = JSON.parse(offlineData);
+          setSelectedQuarterly(json);
+          loadLessonTitles(json);
+        } else {
+          throw new Error("Impossible de charger les données et aucun cache disponible.");
+        }
       }
     } catch (e: any) {
       console.error(e);
@@ -585,34 +708,42 @@ export default function LesonaSekolySabata() {
       setLessonTitlesMap(titles);
 
       const prefix = `${selectedLang}-`;
-      lessons.forEach((l: any) => {
-        const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
-        const lId = lIdStr.split('-').pop();
-        if (lId) {
-          // Si le titre par défaut est basé sur le mot semaine, herinandro, etc, on essaye de ramener le vrai
-          const currentTitle = titles[lId] || '';
-          if (currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part')) {
-            let lUrl: string;
-            if (q.index) {
-              const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-              lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
-            } else {
-              const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
-              const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
-              const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
-              lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json?t=${Date.now()}`;
-            }
-
-            fetch(lUrl).then(res => res.text()).then(text => {
-              if (text.trim().startsWith('{')) {
-                const lJson = JSON.parse(text);
-                if (lJson.title) {
-                  setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
-                }
+      
+      // Try to load offline titles first
+      const offlineTitlesFile = `${LESSONS_DIR}titles_${q.id}.json`;
+      FileSystem.readAsStringAsync(offlineTitlesFile).then(content => {
+        const offlineTitles = JSON.parse(content);
+        setLessonTitlesMap(prev => ({ ...prev, ...offlineTitles }));
+      }).catch(() => {
+        // Fallback to fetching online if not found offline
+        lessons.forEach((l: any) => {
+          const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
+          const lId = lIdStr.split('-').pop();
+          if (lId) {
+            const currentTitle = titles[lId] || '';
+            if (currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part')) {
+              let lUrl: string;
+              if (q.index) {
+                const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
+                lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
+              } else {
+                const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
+                const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
+                const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
+                lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json?t=${Date.now()}`;
               }
-            }).catch(() => { });
+
+              fetch(lUrl).then(res => res.text()).then(text => {
+                if (text.trim().startsWith('{')) {
+                  const lJson = JSON.parse(text);
+                  if (lJson.title) {
+                    setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
+                  }
+                }
+              }).catch(() => { });
+            }
           }
-        }
+        });
       });
     } catch (e) {
       console.error("Error loading titles", e);
@@ -817,8 +948,27 @@ export default function LesonaSekolySabata() {
 
       await AsyncStorage.setItem(`adventools_ss_q_detail_${downloadId}`, JSON.stringify(q));
 
+      // Save all collected titles for offline use
+      const collectedTitles: Record<string, string> = {};
+      Object.keys(lessonsData).forEach(lId => {
+        if (lessonsData[lId].title) {
+          collectedTitles[lId] = lessonsData[lId].title;
+        }
+      });
+      await FileSystem.writeAsStringAsync(`${LESSONS_DIR}titles_${q.id}.json`, JSON.stringify(collectedTitles)).catch(() => {});
+
+      // Download Covers for offline use
+      if (q.covers) {
+        if (q.covers.landscape) {
+          await FileSystem.downloadAsync(q.covers.landscape, `${LESSONS_DIR}cover_${q.id}_landscape.png`).catch(() => {});
+        }
+        if (q.covers.portrait) {
+          await FileSystem.downloadAsync(q.covers.portrait, `${LESSONS_DIR}cover_${q.id}_portrait.png`).catch(() => {});
+        }
+      }
+
       setDownloadedQuarterlies(prev => prev.includes(downloadId) ? prev : [...prev, downloadId]);
-      Alert.alert(t('success'), `${t('download_success')} (${successCount} leçons)`);
+      triggerToast('success', t('save_success_title'), `${t('download_success')} (${successCount} ${t('lessons')})`);
     } catch (e) {
       console.error(e);
       Alert.alert(t('error'), t('download_failed'));
@@ -828,33 +978,36 @@ export default function LesonaSekolySabata() {
   };
 
   const deleteQuarterly = async (qId: string) => {
-    Alert.alert(
-      t('delete_offline'),
-      t('confirm_delete_all'),
-      [
-        { text: t('cancel'), style: "cancel" },
-        {
-          text: t('ok'),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const downloadId = `${selectedLang}_${qId}`;
-              const filePath = `${LESSONS_DIR}${downloadId}.json`;
-              const info = await FileSystem.getInfoAsync(filePath);
-              if (info.exists) {
-                await FileSystem.deleteAsync(filePath);
-              }
-              await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
-              setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
-              Alert.alert(t('success'), t('delete_success'));
-            } catch (e) {
-              console.error(e);
-              Alert.alert(t('error'), t('delete_doc_error'));
-            }
-          }
+    setConfirmConfig({
+      visible: true,
+      title: t('delete_offline'),
+      message: t('confirm_delete_all'),
+      onConfirm: async () => {
+        try {
+          const downloadId = `${selectedLang}_${qId}`;
+          const filePath = `${LESSONS_DIR}${downloadId}.json`;
+          
+          // Cleanup lesson titles and covers too
+          const titlesFile = `${LESSONS_DIR}titles_${qId}.json`;
+          const coverL = `${LESSONS_DIR}cover_${qId}_landscape.png`;
+          const coverP = `${LESSONS_DIR}cover_${qId}_portrait.png`;
+
+          await Promise.all([
+            FileSystem.deleteAsync(filePath, { idempotent: true }),
+            FileSystem.deleteAsync(titlesFile, { idempotent: true }),
+            FileSystem.deleteAsync(coverL, { idempotent: true }),
+            FileSystem.deleteAsync(coverP, { idempotent: true })
+          ]);
+
+          await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
+          setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
+          triggerToast('success', t('success'), t('delete_success'));
+        } catch (e) {
+          console.error(e);
+          triggerToast('error', t('error'), t('delete_doc_error'));
         }
-      ]
-    );
+      }
+    });
   };
 
 
@@ -1362,8 +1515,28 @@ export default function LesonaSekolySabata() {
                   <Image 
                     source={{ uri: readingLesson.cover || selectedQuarterly?.covers?.landscape || selectedQuarterly?.covers?.portrait }} 
                     style={{ position: 'absolute', width: '100%', height: '100%' }}
+                    defaultSource={require('../../assets/images/icon.png')}
                     resizeMode="cover"
                   />
+                  {/* Local Cover Fallback overlay if offline */}
+                  {(() => {
+                    const localLandscape = `${LESSONS_DIR}cover_${selectedQuarterly?.id}_landscape.png`;
+                    const localPortrait = `${LESSONS_DIR}cover_${selectedQuarterly?.id}_portrait.png`;
+                    return (
+                      <View style={{ position: 'absolute', width: '100%', height: '100%' }}>
+                         <Image 
+                            source={{ uri: localLandscape }} 
+                            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 1 }}
+                            resizeMode="cover"
+                         />
+                         <Image 
+                            source={{ uri: localPortrait }} 
+                            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.5 }}
+                            resizeMode="cover"
+                         />
+                      </View>
+                    );
+                  })()}
                   <View className="absolute inset-0 bg-slate-950/60" />
                   <View className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-90" />
                   
@@ -1407,15 +1580,30 @@ export default function LesonaSekolySabata() {
                         {/* PDF Media */}
                         {readingLesson.pdf && readingLesson.pdf.length > 0 && (() => {
                           const pdfObj = readingLesson.pdf[0];
+                          const isDownloading = downloadingPdfs[pdfObj.src] !== undefined;
                           return (
-                            <TouchableOpacity
-                              onPress={() => {
-                                router.push({ pathname: '/pdf/viewer', params: { uri: pdfObj.src, title: pdfObj.title || readingLesson.title, fileName: pdfObj.src.split('/').pop() || 'document.pdf' } });
-                              }}
-                              className="w-10 h-10 rounded-full bg-amber-500/20 items-center justify-center border border-amber-500/30"
-                            >
-                             <FileDown size={18} color="#fbbf24" />
-                            </TouchableOpacity>
+                            <View className="flex-row gap-2">
+                              <TouchableOpacity
+                                onPress={() => {
+                                  router.push({ pathname: '/pdf/viewer', params: { uri: pdfObj.src, title: pdfObj.title || readingLesson.title, fileName: pdfObj.src.split('/').pop() || 'document.pdf' } });
+                                }}
+                                className="w-10 h-10 rounded-full bg-amber-500/20 items-center justify-center border border-amber-500/30"
+                              >
+                               <FileDown size={18} color="#fbbf24" />
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity
+                                onPress={() => showDownloadOptions(pdfObj)}
+                                disabled={isDownloading}
+                                className="w-10 h-10 rounded-full bg-green-500/20 items-center justify-center border border-green-500/30"
+                              >
+                                {isDownloading ? (
+                                  <ActivityIndicator size="small" color="#22c55e" />
+                                ) : (
+                                  <Download size={18} color="#22c55e" />
+                                )}
+                              </TouchableOpacity>
+                            </View>
                           );
                         })()}
                         
@@ -1467,34 +1655,47 @@ export default function LesonaSekolySabata() {
                 {segment.type === 'pdf' && segment.pdf ? (
                   <View className="mt-4 mb-8">
                     <Text className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Documents disponibles</Text>
-                    {segment.pdf.map((pdf, pIdx) => (
-                      <TouchableOpacity
-                        key={pdf.id || pIdx}
-                        onPress={() => {
-                          const fileName = pdf.src.split('/').pop() || 'document.pdf';
-                          // For now, navigate to viewer or open URL
-                          // Ideally we verify if downloaded or use public URL
-                          router.push({
-                            pathname: '/pdf/viewer',
-                            params: {
-                              uri: pdf.src,
-                              title: pdf.title,
-                              fileName: fileName
-                            }
-                          });
-                        }}
-                        className="bg-slate-900 p-5 rounded-3xl mb-3 flex-row items-center border border-white/5"
-                      >
-                        <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
-                          <FileText size={24} color="#3b82f6" />
+                    {segment.pdf.map((pdf, pIdx) => {
+                      const isDownloading = downloadingPdfs[pdf.src] !== undefined;
+                      return (
+                        <View key={pdf.id || pIdx} className="bg-slate-900 p-5 rounded-3xl mb-3 border border-white/5 flex-row items-center">
+                          <TouchableOpacity
+                            onPress={() => {
+                              const fileName = pdf.src.split('/').pop() || 'document.pdf';
+                              router.push({
+                                pathname: '/pdf/viewer',
+                                params: {
+                                  uri: pdf.src,
+                                  title: pdf.title,
+                                  fileName: fileName
+                                }
+                              });
+                            }}
+                            className="flex-row items-center flex-1"
+                          >
+                            <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                              <FileText size={24} color="#3b82f6" />
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-white font-bold text-base" numberOfLines={1}>{pdf.title}</Text>
+                              <Text className="text-slate-500 text-xs mt-1">Format PDF • Ouvrir le lecteur</Text>
+                            </View>
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity 
+                            onPress={() => showDownloadOptions(pdf)}
+                            disabled={isDownloading}
+                            className="w-10 h-10 rounded-2xl bg-green-500/10 items-center justify-center border border-green-500/20 ml-2"
+                          >
+                            {isDownloading ? (
+                              <ActivityIndicator size="small" color="#22c55e" />
+                            ) : (
+                              <Download size={20} color="#22c55e" />
+                            )}
+                          </TouchableOpacity>
                         </View>
-                        <View className="flex-1">
-                          <Text className="text-white font-bold text-base">{pdf.title}</Text>
-                          <Text className="text-slate-500 text-xs mt-1">Format PDF • Ouvrir le lecteur</Text>
-                        </View>
-                        <ChevronRight size={20} color="#475569" />
-                      </TouchableOpacity>
-                    ))}
+                      );
+                    })}
                   </View>
                 ) : segment.blocks && segment.blocks.length > 0 ? (
                   segment.blocks.map((block, bIdx) => {
@@ -2027,7 +2228,118 @@ export default function LesonaSekolySabata() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
+       </Modal>
+
+      {/* Custom Download Modal */}
+      <Modal visible={showDownloadModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/80 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => setShowDownloadModal(false)} />
+          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-slate-800 shadow-2xl">
+            <View className="w-12 h-1.5 bg-slate-800 rounded-full self-center mb-8" />
+            
+            <View className="flex-row items-center mb-6">
+              <View className="w-12 h-12 rounded-2xl bg-blue-500/20 items-center justify-center mr-4">
+                <Download size={24} color="#3b82f6" />
+              </View>
+              <View>
+                <Text className="text-white font-bold text-xl">Télécharger la leçon</Text>
+                <Text className="text-slate-500 text-sm">Le fichier sera enregistré sur votre téléphone.</Text>
+              </View>
+            </View>
+
+            <View className="gap-4 mb-8">
+              <TouchableOpacity
+                onPress={() => selectedPdfForDownload && downloadPdf(selectedPdfForDownload, 'pdf')}
+                className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl flex-row items-center"
+              >
+                <View className="w-12 h-12 rounded-xl bg-red-500/20 items-center justify-center mr-4">
+                  <FileText size={24} color="#ef4444" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-base">Version PDF (Original)</Text>
+                  <Text className="text-slate-500 text-xs mt-1">Version mise en page complète</Text>
+                </View>
+                <ChevronRight size={20} color="#475569" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => selectedPdfForDownload && downloadPdf(selectedPdfForDownload, 'markdown')}
+                className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl flex-row items-center"
+              >
+                <View className="w-12 h-12 rounded-xl bg-blue-500/20 items-center justify-center mr-4">
+                  <StickyNote size={24} color="#3b82f6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-base">Version Texte (.txt)</Text>
+                  <Text className="text-slate-500 text-xs mt-1">Version épurée lisible partout</Text>
+                </View>
+                <ChevronRight size={20} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowDownloadModal(false)}
+              className="py-5 bg-slate-800 rounded-3xl items-center"
+            >
+              <Text className="text-white font-bold">Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
+
+      {/* Premium Confirm Modal */}
+      <Modal visible={!!confirmConfig?.visible} transparent animationType="fade">
+        <View className="flex-1 bg-black/70 justify-center items-center px-6">
+          <View className="bg-slate-900 w-full rounded-[40px] p-8 border border-white/10 shadow-2xl">
+            <View className="w-16 h-16 rounded-full bg-red-500/20 items-center justify-center self-center mb-6">
+              <Trash2 size={32} color="#ef4444" />
+            </View>
+            <Text className="text-white text-2xl font-bold text-center mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{confirmConfig?.title}</Text>
+            <Text className="text-slate-400 text-center mb-8 leading-5">{confirmConfig?.message}</Text>
+            <View className="flex-row gap-4">
+              <TouchableOpacity 
+                onPress={() => setConfirmConfig(null)}
+                className="flex-1 py-5 bg-slate-800 rounded-3xl items-center"
+              >
+                <Text className="text-white font-bold">{confirmConfig?.cancelText || t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => {
+                  confirmConfig?.onConfirm();
+                  setConfirmConfig(null);
+                }}
+                className="flex-1 py-5 bg-red-600 rounded-3xl items-center"
+              >
+                <Text className="text-white font-bold">{confirmConfig?.confirmText || t('delete')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success/Error Toast */}
+      {toast && (
+        <Animated.View 
+          className="absolute left-6 right-6 z-[10000] bg-slate-900 border border-white/10 rounded-3xl p-5 flex-row items-center shadow-2xl"
+          style={{ 
+            transform: [{ translateY: toastAnim }],
+            shadowColor: toast.type === 'success' ? '#10b981' : '#ef4444',
+            shadowOpacity: 0.2,
+            shadowRadius: 20
+          }}
+        >
+          <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${toast.type === 'success' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+            {toast.type === 'success' ? <CheckCircle size={24} color="#10b981" /> : <X size={24} color="#ef4444" />}
+          </View>
+          <View className="flex-1">
+            <Text className="text-white font-bold text-base">{toast.title}</Text>
+            <Text className="text-slate-500 text-xs mt-0.5">{toast.message}</Text>
+          </View>
+          <TouchableOpacity onPress={() => setToast(null)}>
+            <X size={18} color="#475569" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }

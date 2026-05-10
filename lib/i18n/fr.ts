@@ -373,4 +373,7 @@ export const fr: TranslationSchema = {
   daily_bread: "Mofon'aina",
   sabbath_school: "École du Sabbat",
   lessons: "Leçons",
+  save_success_title: "Téléchargement réussi",
+  save_success_msg: "Le fichier a été enregistré sur votre appareil.",
+  save_error_msg: "Échec du téléchargement. Veuillez réessayer.",
 };

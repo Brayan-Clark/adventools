@@ -5,9 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { BookOpen, ChevronRight, Music, Plus } from 'lucide-react-native';
+import { BookOpen, ChevronRight, Music, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HymneManager() {
@@ -16,6 +16,12 @@ export default function HymneManager() {
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAutomaticallyRedirected, setHasAutomaticallyRedirected] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: { text: string; onPress: () => void; style?: 'cancel' | 'destructive' | 'default' }[];
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -143,11 +149,16 @@ export default function HymneManager() {
       return;
     }
 
-    Alert.alert(
-      t('delete_hymnal') + ' : ' + version.name,
-      t('delete_hymnal_data_warning'),
-      [
-        { text: t('cancel'), style: "cancel" },
+    setConfirmConfig({
+      visible: true,
+      title: `${t('delete_hymnal')} : ${version.name}`,
+      message: t('delete_hymnal_data_warning'),
+      buttons: [
+        {
+          text: t('cancel'),
+          style: 'cancel',
+          onPress: () => {}
+        },
         {
           text: t('keep_my_data'),
           onPress: async () => {
@@ -162,7 +173,7 @@ export default function HymneManager() {
         },
         {
           text: t('delete_all'),
-          style: "destructive",
+          style: 'destructive',
           onPress: async () => {
             try {
               const rootPath = `${FileSystem.documentDirectory}SQLite/${version.file}`;
@@ -175,7 +186,7 @@ export default function HymneManager() {
           }
         }
       ]
-    );
+    });
   };
 
   const openLibrary = (version: any) => {
@@ -246,6 +257,36 @@ export default function HymneManager() {
           )}
         </View>
       </ScrollView>
+
+      {/* Premium Confirm Modal */}
+      <Modal visible={!!confirmConfig?.visible} transparent animationType="fade">
+        <View className="flex-1 bg-black/70 justify-center items-center px-6">
+          <View className="bg-slate-900 w-full rounded-[40px] p-8 border border-white/10 shadow-2xl">
+            <View className="w-16 h-16 rounded-full bg-pink-500/20 items-center justify-center self-center mb-6">
+              <Trash2 size={32} color="#ec4899" />
+            </View>
+            <Text className="text-white text-2xl font-bold text-center mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>{confirmConfig?.title}</Text>
+            <Text className="text-slate-400 text-center mb-8 leading-5">{confirmConfig?.message}</Text>
+            <View className="gap-3">
+              {confirmConfig?.buttons.map((btn, idx) => (
+                <TouchableOpacity 
+                  key={idx}
+                  onPress={() => {
+                    btn.onPress();
+                    setConfirmConfig(null);
+                  }}
+                  className={`py-4 rounded-2xl items-center ${
+                    btn.style === 'destructive' ? 'bg-red-600' : 
+                    btn.style === 'cancel' ? 'bg-slate-800' : 'bg-slate-700'
+                  }`}
+                >
+                  <Text className="text-white font-bold">{btn.text}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

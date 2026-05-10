@@ -373,4 +373,7 @@ export const en: TranslationSchema = {
   daily_bread: "Daily Bread",
   sabbath_school: "Sabbath School",
   lessons: "Lessons",
+  save_success_title: "Download Success",
+  save_success_msg: "The file has been saved to your device.",
+  save_error_msg: "Download failed. Please try again.",
 };

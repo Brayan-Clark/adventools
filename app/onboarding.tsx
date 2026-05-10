@@ -1,5 +1,5 @@
 import { useTranslation } from '@/lib/i18n';
-import { useSettings } from '@/lib/settings-context';
+import { useSettings } from '../lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -27,6 +27,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { setSetting } from '@/lib/user-storage';
 
 const { width } = Dimensions.get('window');
 const ONBOARDING_KEY = 'adventools_onboarding_done';
@@ -41,6 +42,12 @@ const EDS_CLASSES = [
   "Lesona Zatovo (15-18 taona)",
   "Lesona Tanora zokiny (19-35 taona)",
   "Lesona Lehibe (+ 35 taona)",
+];
+
+const DEFAULT_DEPARTMENTS = [
+  "Pasteur", "Ancien", "Diacre", "Diaconesse", "Secrétaire", "Trésorier", 
+  "École du Sabbat", "Ministères Personnels", "Jeunesse", "Ministère de la Femme", 
+  "Ministère de l'Enfant", "Santé", "Communication", "Musique", "Éducation", "Famille"
 ];
 
 const STEPS = [
@@ -59,7 +66,7 @@ export default function OnboardingScreen() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedEDS, setSelectedEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [departments, setDepartments] = useState<string[]>([]);
-  const [availableDepts, setAvailableDepts] = useState<string[]>([]);
+  const [availableDepts, setAvailableDepts] = useState<string[]>(DEFAULT_DEPARTMENTS);
   const [saving, setSaving] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -122,17 +129,34 @@ export default function OnboardingScreen() {
     setSaving(true);
     try {
       if (!skip) {
-        if (name.trim()) await AsyncStorage.setItem('profile_name', name.trim());
-        if (photo) await AsyncStorage.setItem('profile_image', photo);
+        if (name.trim()) {
+          await AsyncStorage.setItem('profile_name', name.trim());
+          await setSetting('profile_name', name.trim());
+        }
+        if (photo) {
+          await AsyncStorage.setItem('profile_image', photo);
+          await setSetting('profile_image', photo);
+        }
         await AsyncStorage.setItem('profile_eds_class', selectedEDS);
-        if (departments.length > 0)
+        await setSetting('profile_eds_class', selectedEDS);
+        
+        if (departments.length > 0) {
           await AsyncStorage.setItem('profile_departments', JSON.stringify(departments));
+          await setSetting('profile_departments', departments);
+        }
       } else {
         // Anonyme : valeurs par défaut
         await AsyncStorage.setItem('profile_name', 'Fianatra Baiboly');
+        await setSetting('profile_name', 'Fianatra Baiboly');
+        
         await AsyncStorage.setItem('profile_eds_class', 'Lesona Lehibe (+ 35 taona)');
+        await setSetting('profile_eds_class', 'Lesona Lehibe (+ 35 taona)');
       }
+      
+      // Crucial: Save to both for reliability during transition
       await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+      await setSetting(ONBOARDING_KEY, 'true');
+      
       router.replace('/(tabs)');
     } catch (e) {
       console.error(e);

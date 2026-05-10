@@ -26,7 +26,7 @@ SplashScreen.preventAutoHideAsync();
 import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
 
 import { initBibleMetadata } from '@/lib/bible';
-import { SettingsProvider } from '@/lib/settings-context';
+import { SettingsProvider, useSettings } from '@/lib/settings-context';
 import { useAutoUpdater } from '@/lib/updater';
 import { getSetting } from '@/lib/user-storage';
 
@@ -85,6 +85,7 @@ export default function RootLayout() {
 
 function RootNavigator() {
   useAutoUpdater();
+  const { isLoading } = useSettings();
   
   // true = still checking AsyncStorage, overlay shown to prevent flash
   const [checking, setChecking] = useState(true);
@@ -125,7 +126,13 @@ function RootNavigator() {
       const checkOnboarding = async () => {
       try {
         // Use getSetting from SQLite to check if onboarding is done
-        const done = await getSetting<string | null>(ONBOARDING_KEY, null);
+        let done = await getSetting<string | null>(ONBOARDING_KEY, null);
+        
+        // Fallback to AsyncStorage for robustness during transition
+        if (!done) {
+            done = await AsyncStorage.getItem(ONBOARDING_KEY);
+        }
+
         if (!done) {
           // Navigate to onboarding — Stack is already mounted so router works
           setTimeout(() => {
@@ -138,9 +145,12 @@ function RootNavigator() {
         setChecking(false);
       }
     };
-    checkOnboarding();
+
+    if (!isLoading) {
+        checkOnboarding();
+    }
     return () => subscription.remove();
-  }, []);
+  }, [isLoading]);
 
   return (
     <>
