@@ -1,55 +1,56 @@
 {
-  "versionCode": 9,
-  "lastUpdated": 1712128800000,
+  "versionCode": 10,
+  "lastUpdated": 1778414400000,
   "languages": [
     {
       "id": "fr",
-      "version": 9,
+      "version": 10,
       "file": "fr.json",
       "name": "Français",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "mg",
-      "version": 9,
+      "version": 10,
       "file": "mg.json",
       "name": "Malagasy",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "en",
-      "version": 9,
+      "version": 10,
       "file": "en.json",
       "name": "English",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "de",
-      "version": 9,
+      "version": 10,
       "file": "de.json",
       "name": "Deutsch",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "es",
-      "version": 9,
+      "version": 10,
       "file": "es.json",
       "name": "Español",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "pt",
-      "version": 9,
+      "version": 10,
+      "versionName": "Português",
       "file": "pt.json",
       "name": "Português",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     },
     {
       "id": "zh",
-      "version": 9,
+      "version": 10,
       "file": "zh.json",
       "name": "中文",
-      "timestamp": 1712128800000
+      "timestamp": 1778414400000
     }
   ]
 }
