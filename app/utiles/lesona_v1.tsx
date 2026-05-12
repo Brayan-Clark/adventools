@@ -3,7 +3,7 @@ import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
-import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
@@ -31,14 +31,9 @@ import {
   Heading,
   Camera,
   Video as VideoIcon,
-  Mic,
-  Database,
-  HardDrive
+  Mic
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
-import { cleanSspmMarkdown, parseDate, formatDateRange } from '@/lib/utils';
-import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
-import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -82,6 +77,31 @@ const getApiBase = (lang: string) => `https://inverse.sspmadventist.org/api/v3/$
 const getAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${lang}/ss`;
 const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
 
+const parseDate = (dStr: string) => {
+  if (!dStr || typeof dStr !== 'string') return new Date(0);
+  // Handle "DD/MM/YYYY" or "YYYY-MM-DD" or similar
+  const dateStr = dStr.split(' ')[0]; // Take first part if range
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    }
+  }
+  return new Date(dateStr);
+};
+
+const formatDateRange = (start: string | undefined, end: string | undefined) => {
+  if (!start || !end || typeof start !== 'string' || typeof end !== 'string') return "";
+  try {
+    const sParts = start.split('/');
+    const eParts = end.split('/');
+    if (sParts.length < 3 || eParts.length < 3) return "";
+    return `${sParts.slice(1).join('/')} — ${eParts.slice(1).join('/')}`;
+  } catch (e) {
+    return "";
+  }
+};
 
 interface Lesson {
   id: string;
@@ -160,15 +180,47 @@ interface WeeklyLesson {
   pdf?: any[];
 }
 
-import QuestionBlock from '@/components/lessons/QuestionBlock';
-import SegmentSelector from '@/components/lessons/SegmentSelector';
-import LessonHeader from '@/components/lessons/LessonHeader';
-import QuarterlyCard from '@/components/lessons/QuarterlyCard';
-import { PremiumAlert } from '@/components/ui/PremiumAlert';
+const QuestionBlock = ({ block, content, lessonId }: { block: any, content: React.ReactNode, lessonId: string }) => {
+  const { t } = useTranslation();
+  const [note, setNote] = useState('');
+  
+  useEffect(() => {
+    AsyncStorage.getItem(`adventools_note_${lessonId}_${block.id}`).then(val => {
+      if (val) setNote(val);
+    });
+  }, [lessonId, block.id]);
+
+  const saveNote = (text: string) => {
+    setNote(text);
+    AsyncStorage.setItem(`adventools_note_${lessonId}_${block.id}`, text).catch(() => {});
+  };
+
+  return (
+    <View className="my-6 bg-slate-900 border border-slate-700/50 rounded-2xl overflow-hidden p-1 shadow-lg shadow-black/20">
+      <View className="p-4 mb-2 bg-slate-800/50 rounded-xl">
+        {content}
+      </View>
+      <View className="px-1 pb-1 relative">
+        <TextInput
+          className="bg-slate-900 text-white p-4 pt-4 rounded-xl border border-white/5"
+          placeholder={"Écrivez vos notes ici..."}
+          placeholderTextColor="#475569"
+          multiline
+          textAlignVertical="top"
+          value={note}
+          onChangeText={saveNote}
+          style={{ fontFamily: 'Lexend_400Regular', minHeight: 120 }}
+        />
+        <View className="absolute bottom-4 right-4 bg-primary/20 px-3 py-1 rounded-full border border-primary/30">
+          <Text className="text-primary text-[10px] font-bold uppercase">{'Enregistré'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 export default function LesonaSekolySabata() {
   const { t } = useTranslation();
-  const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { settings: globalSettings } = useSettings();
@@ -183,68 +235,8 @@ export default function LesonaSekolySabata() {
   const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
   const [selectedLang, setSelectedLang] = useState<string>('mg');
   const [showLangPicker, setShowLangPicker] = useState(false);
-  const { qId: qIdParam, lId: lIdParam } = useLocalSearchParams();
 
-  // Premium Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'error' | 'info';
-    onConfirm?: () => void;
-  }>({ visible: false, title: '', message: '', type: 'info' });
-
-  // Storage State
-  const [storageModalVisible, setStorageModalVisible] = useState(false);
-  const [storageInfo, setStorageInfo] = useState({ totalSize: 0, count: 0 });
-
-  const calculateStorage = async () => {
-    try {
-      const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
-      if (!dirInfo.exists) {
-        setStorageInfo({ totalSize: 0, count: 0 });
-        return;
-      }
-      const files = await FileSystem.readDirectoryAsync(LESSONS_DIR);
-      let total = 0;
-      let count = 0;
-      for (const f of files) {
-        if (f.endsWith('.json')) {
-          const info = await FileSystem.getInfoAsync(LESSONS_DIR + f);
-          if (info.exists) {
-            total += (info as any).size || 0;
-            count++;
-          }
-        }
-      }
-      setStorageInfo({ totalSize: total, count });
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const clearStorage = async () => {
-    try {
-      await FileSystem.deleteAsync(LESSONS_DIR, { idempotent: true });
-      await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true });
-      setDownloadedQuarterlies([]);
-      setStorageInfo({ totalSize: 0, count: 0 });
-      setStorageModalVisible(false);
-      showToast("Cache vidé avec succès", 'success');
-    } catch (e) {
-      console.error(e);
-      showToast(t('error'), 'error');
-    }
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
+  // Persistence for language across screen re-mounts
   useEffect(() => {
     const loadSavedLang = async () => {
       const saved = await AsyncStorage.getItem('adventools_ss_selected_lang');
@@ -254,38 +246,6 @@ export default function LesonaSekolySabata() {
     };
     loadSavedLang();
   }, [globalSettings.language]);
-
-  useEffect(() => {
-    if (qIdParam && !selectedQuarterly) {
-      fetchQuarterlyDetail(qIdParam as string);
-    }
-  }, [qIdParam]);
-
-  useEffect(() => {
-    if (lIdParam && selectedQuarterly && !readingLesson) {
-      fetchWeeklyLesson(selectedQuarterly.id, lIdParam as string);
-    }
-  }, [lIdParam, selectedQuarterly]);
-
-  useEffect(() => {
-    const backAction = () => {
-      if (readingLesson) {
-        setReadingLesson(null);
-        setCurrentLessonId("");
-        router.setParams({ lId: undefined });
-        return true;
-      }
-      if (selectedQuarterly) {
-        setSelectedQuarterly(null);
-        router.setParams({ qId: undefined });
-        return true;
-      }
-      return false;
-    };
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, [readingLesson, selectedQuarterly]);
 
   const changeLang = async (l: string) => {
     setSelectedLang(l);
@@ -353,7 +313,7 @@ export default function LesonaSekolySabata() {
     try {
       await saveNote(editingQuickNote);
       setQuickNoteModalVisible(false);
-      showToast(t('note_saved' as any) || "Note enregistrée dans votre journal.", 'success');
+      Alert.alert(t('success') || "Succès", t('note_saved' as any) || "Note enregistrée dans votre journal.");
     } catch (error) {
       console.error("Error saving quick note", error);
     }
@@ -456,23 +416,22 @@ export default function LesonaSekolySabata() {
 
       if (response && response.ok) {
         const data = await response.json();
-        if (data && data.groups) {
-          data.groups.forEach((group: any) => {
-            if (group.resources) {
-              group.resources.forEach((res: any) => {
-                const validated = QuarterlyItemSchema.safeParse({
-                  ...res,
-                  groupTitle: group.title || ""
-                });
-                if (validated.success) {
-                  items.push(validated.data);
-                } else {
-                  console.warn("[Zod] QuarterlyItem validation failed:", validated.error.format());
-                }
+        data.groups.forEach((group: any) => {
+          if (group.resources) {
+            group.resources.forEach((res: any) => {
+              items.push({
+                id: res.id,
+                title: res.title,
+                description: res.description,
+                covers: res.covers,
+                startDate: res.startDate,
+                endDate: res.endDate,
+                index: res.index,
+                groupTitle: group.title
               });
-            }
-          });
-        }
+            });
+          }
+        });
       }
 
       items.sort((a, b) => {
@@ -567,20 +526,12 @@ export default function LesonaSekolySabata() {
     setLoading(true);
     setSelectedQuarterly(null);
     try {
-      const downloadId = `${selectedLang}_${id}`;
-      const cacheKey = `adventools_ss_q_detail_${downloadId}`;
+      const cacheKey = `adventools_ss_q_detail_${selectedLang}_${id}`;
       const cached = await AsyncStorage.getItem(cacheKey);
-      
       if (cached) {
         const json = JSON.parse(cached);
         setSelectedQuarterly(json);
         loadLessonTitles(json);
-        
-        // If it's already downloaded, we don't need to fetch from network
-        if (downloadedQuarterlies.includes(downloadId)) {
-          setLoading(false);
-          return;
-        }
       }
 
       const storedItem = quarterlyList.find(q => q.id === id);
@@ -599,29 +550,23 @@ export default function LesonaSekolySabata() {
       const response = await fetch(`${url}?t=${Date.now()}`).catch(() => null);
       if (response && response.ok) {
         const json = await response.json();
-        const validated = safeValidate(QuarterlySchema, json, json);
-        setSelectedQuarterly(validated);
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(validated));
-        loadLessonTitles(validated);
+        setSelectedQuarterly(json);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(json));
+        loadLessonTitles(json);
       } else if (!cached) {
         throw new Error("Impossible de charger les données et aucun cache disponible.");
       }
     } catch (e: any) {
       console.error(e);
       if (!selectedQuarterly) {
-        setAlertConfig({
-          visible: true,
-          title: t('connection_error'),
-          message: t('check_connection'),
-          type: 'error'
-        });
+        Alert.alert(t('connection_error'), t('check_connection'));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const loadLessonTitles = async (q: Quarterly) => {
+  const loadLessonTitles = (q: Quarterly) => {
     const isBabies = q.id.includes('-bb-') || q.id.includes('babies');
     const isGuide = q.id.includes('-pb') || q.id.includes('-pth') || q.id.includes('guide');
     const weekLabel = selectedLang === 'mg' ? 'Herinandro' : (selectedLang === 'fr' ? 'Semaine' : (t('week' as any) || 'Week'));
@@ -640,71 +585,37 @@ export default function LesonaSekolySabata() {
       setLessonTitlesMap(titles);
 
       const prefix = `${selectedLang}-`;
-      const lessonsToFetch = lessons.filter((l: any) => {
+      lessons.forEach((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
-        if (!lId) return false;
-        const currentTitle = titles[lId] || '';
-        return currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part');
-      });
-
-      // US-14: Batch fetch titles (3 at a time) to avoid network saturation
-      const batchSize = 3;
-      for (let i = 0; i < lessonsToFetch.length; i += batchSize) {
-        const batch = lessonsToFetch.slice(i, i + batchSize);
-        await Promise.all(batch.map(async (l: any) => {
-          const lId = l.id.split('-').pop();
-          if (!lId) return;
-
-          let lUrl: string;
-          if (q.index) {
-            const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-            lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
-          } else {
-            const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
-            const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
-            const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
-            lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json?t=${Date.now()}`;
-          }
-
-          try {
-            const res = await fetch(lUrl);
-            const text = await res.text();
-            if (text.trim().startsWith('{')) {
-              const lJson = JSON.parse(text);
-              if (lJson.title) {
-                setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
-              }
+        if (lId) {
+          // Si le titre par défaut est basé sur le mot semaine, herinandro, etc, on essaye de ramener le vrai
+          const currentTitle = titles[lId] || '';
+          if (currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part')) {
+            let lUrl: string;
+            if (q.index) {
+              const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
+              lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
+            } else {
+              const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
+              const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
+              const section = (q.id.includes('-bb-') || q.id.includes('-aij-') || q.id.includes('babies')) ? 'aij' : (q.id.includes('explore') || q.id.includes('mission-spotlight')) ? 'explore' : 'ss';
+              lUrl = `https://${sub}.sspmadventist.org/api/v3/${selectedLang}/${section}/${qPart}/${lId}/index.json?t=${Date.now()}`;
             }
-          } catch (e) {
-            // Silently fail for background title loading
+
+            fetch(lUrl).then(res => res.text()).then(text => {
+              if (text.trim().startsWith('{')) {
+                const lJson = JSON.parse(text);
+                if (lJson.title) {
+                  setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
+                }
+              }
+            }).catch(() => { });
           }
-        }));
-        // Small delay between batches
-        if (i + batchSize < lessonsToFetch.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
         }
-      }
+      });
     } catch (e) {
       console.error("Error loading titles", e);
-    }
-  };
-
-  const downloadAndCacheFile = async (url: string, prefix: string): Promise<string> => {
-    if (!url || !url.startsWith('http')) return url;
-    try {
-      const fileName = url.split('/').pop()?.split('?')[0] || `file_${Date.now()}`;
-      const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const localUri = `${LESSONS_DIR}${prefix}_${cleanFileName}`;
-      
-      const info = await FileSystem.getInfoAsync(localUri);
-      if (info.exists) return localUri;
-
-      await FileSystem.downloadAsync(url, localUri);
-      return localUri;
-    } catch (e) {
-      console.error("Download file error", url, e);
-      return url;
     }
   };
 
@@ -736,14 +647,6 @@ export default function LesonaSekolySabata() {
         id: `${q.id}-${(i + 1).toString().padStart(2, '0')}`
       }));
 
-      // Download Quarterly Covers
-      const qPrefix = `q_${q.id}`;
-      if (q.covers) {
-        if (q.covers.portrait) q.covers.portrait = await downloadAndCacheFile(q.covers.portrait, qPrefix);
-        if (q.covers.landscape) q.covers.landscape = await downloadAndCacheFile(q.covers.landscape, qPrefix);
-        if (q.covers.square) q.covers.square = await downloadAndCacheFile(q.covers.square, qPrefix);
-      }
-
       const lessonsData: Record<string, WeeklyLesson> = {};
       const batchSize = 3;
       for (let i = 0; i < lessons.length; i += batchSize) {
@@ -757,6 +660,7 @@ export default function LesonaSekolySabata() {
             // Try multiple sections (ss, aij, explore)
             const sections = ['ss', 'aij', 'explore'];
             if (quarterlyPath.includes('/aij/') || quarterlyPath.includes('/explore/')) {
+              // Move existing section to front
               const currentSect = quarterlyPath.split('/')[1];
               if (sections.includes(currentSect)) {
                 sections.splice(sections.indexOf(currentSect), 1);
@@ -765,26 +669,17 @@ export default function LesonaSekolySabata() {
             }
 
             let lessonJson = null;
-            let networkError = false;
             for (const section of sections) {
               if (lessonJson) break;
               const pathAttempt = quarterlyPath.replace(/\/(ss|aij|explore)\//, `/${section}/`);
               const url = `https://${subdomain}.sspmadventist.org/api/v3/${pathAttempt}/${lessonId}/index.json?t=${Date.now()}`;
-              try {
-                const res = await fetch(url);
-                if (res.ok) {
-                  const text = await res.text();
-                  if (text.trim().startsWith('{')) {
-                    lessonJson = JSON.parse(text);
-                  }
+              const res = await fetch(url).catch(() => null);
+              if (res && res.ok) {
+                const text = await res.text();
+                if (text.trim().startsWith('{')) {
+                  lessonJson = JSON.parse(text);
                 }
-              } catch (e) {
-                networkError = true;
               }
-            }
-
-            if (networkError && !lessonJson) {
-               throw new Error("Network failed during download");
             }
 
             if (!lessonJson && q) {
@@ -821,41 +716,95 @@ export default function LesonaSekolySabata() {
                     }]
                   };
                 }
+
+                if (!lessonJson && lessonInfo.share?.shareGroups) {
+                  const pdfFiles = lessonInfo.share.shareGroups.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+                  if (pdfFiles && pdfFiles.length > 0) {
+                    lessonJson = {
+                      id: lessonId,
+                      title: lessonInfo.title || q.title,
+                      segments: [{
+                        id: `${lessonId}-pdf`,
+                        title: pdfFiles[0].title || lessonInfo.title,
+                        type: 'pdf',
+                        pdf: pdfFiles
+                      }]
+                    };
+                  }
+                }
+              }
+            }
+
+            if (!lessonJson) {
+              const resourceUrl = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/ss/resources/${lessonId}/index.json`;
+              try {
+                const res = await fetch(resourceUrl).catch(() => null);
+                if (res && res.ok) {
+                  const text = await res.text();
+                  if (text.trim().startsWith('{')) {
+                    lessonJson = JSON.parse(text);
+                  }
+                }
+              } catch (e) { }
+            }
+
+            if (!lessonJson && q) {
+              if ((q as any).introduction || q.description) {
+                lessonJson = {
+                  id: lessonId,
+                  title: q.title,
+                  segments: [{
+                    id: `${lessonId}-intro`,
+                    title: q.title,
+                    type: 'markdown',
+                    blocks: [{
+                      id: 'intro-block',
+                      type: 'markdown',
+                      markdown: (q as any).introduction || q.description
+                    }]
+                  }]
+                };
+              }
+
+              if (!lessonJson) {
+                const pdfFiles = (q as any).share?.shareGroups?.find((g: any) => g.type === 'file' || g.title === 'PDF')?.files;
+                const pdfLink = (q as any).share?.shareGroups?.find((g: any) => g.type === 'link')?.links?.find((l: any) => l.src.endsWith('.pdf'));
+
+                if (pdfFiles && pdfFiles.length > 0) {
+                  lessonJson = {
+                    id: lessonId,
+                    title: q.title,
+                    segments: [{
+                      id: `${lessonId}-pdf`,
+                      title: pdfFiles[0].title || q.title,
+                      type: 'pdf',
+                      pdf: pdfFiles
+                    }]
+                  };
+                } else if (pdfLink) {
+                  lessonJson = {
+                    id: lessonId,
+                    title: q.title,
+                    segments: [{
+                      id: `${lessonId}-pdf`,
+                      title: q.title,
+                      type: 'pdf',
+                      pdf: [{ id: '1', title: q.title, src: pdfLink.src }]
+                    }]
+                  };
+                }
               }
             }
 
             if (lessonJson) {
-              const lPrefix = `l_${q.id}_${lessonId}`;
-              
-              // Download Lesson Cover
-              if (lessonJson.cover) {
-                lessonJson.cover = await downloadAndCacheFile(lessonJson.cover, lPrefix);
+              let normalized = lessonJson;
+              if (!lessonJson.segments && lessonJson.lessons) normalized = { ...lessonJson, segments: lessonJson.lessons };
+              if (lessonId) {
+                lessonsData[lessonId] = normalized;
+                successCount++;
               }
-
-              // Download PDFs in segments
-              if (lessonJson.segments) {
-                for (let s of lessonJson.segments) {
-                  if (s.type === 'pdf' && s.pdf) {
-                    for (let p of s.pdf) {
-                      if (p.src) {
-                        p.src = await downloadAndCacheFile(p.src, lPrefix);
-                      }
-                    }
-                  }
-                }
-              }
-
-              const storageKey = `${OFFLINE_LESSONS_PREFIX}${selectedLang}_${q.id}_${lessonId}.json`;
-              await FileSystem.writeAsStringAsync(`${LESSONS_DIR}${storageKey}`, JSON.stringify(lessonJson));
-              
-              // Map to lessonsData for the quarterly summary file
-              lessonsData[lessonId] = lessonJson;
-              successCount++;
             }
-          } catch (le) { 
-            console.error("Lesson DL error", le); 
-            throw le; 
-          }
+          } catch (le) { console.error("Lesson DL error", le); }
         }));
         await new Promise(r => setTimeout(r, 100));
       }
@@ -869,43 +818,43 @@ export default function LesonaSekolySabata() {
       await AsyncStorage.setItem(`adventools_ss_q_detail_${downloadId}`, JSON.stringify(q));
 
       setDownloadedQuarterlies(prev => prev.includes(downloadId) ? prev : [...prev, downloadId]);
-      showToast(`${t('download_success')} (${successCount} leçons)`, 'success');
+      Alert.alert(t('success'), `${t('download_success')} (${successCount} leçons)`);
     } catch (e) {
       console.error(e);
-      setAlertConfig({
-        visible: true,
-        title: t('error'),
-        message: t('download_failed'),
-        type: 'error'
-      });
+      Alert.alert(t('error'), t('download_failed'));
     } finally {
       setDownloadingAll(false);
     }
   };
 
   const deleteQuarterly = async (qId: string) => {
-    setAlertConfig({
-      visible: true,
-      title: t('delete_offline'),
-      message: t('confirm_delete_all'),
-      type: 'error',
-      onConfirm: async () => {
-        try {
-          const downloadId = `${selectedLang}_${qId}`;
-          const filePath = `${LESSONS_DIR}${downloadId}.json`;
-          const info = await FileSystem.getInfoAsync(filePath);
-          if (info.exists) {
-            await FileSystem.deleteAsync(filePath);
+    Alert.alert(
+      t('delete_offline'),
+      t('confirm_delete_all'),
+      [
+        { text: t('cancel'), style: "cancel" },
+        {
+          text: t('ok'),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const downloadId = `${selectedLang}_${qId}`;
+              const filePath = `${LESSONS_DIR}${downloadId}.json`;
+              const info = await FileSystem.getInfoAsync(filePath);
+              if (info.exists) {
+                await FileSystem.deleteAsync(filePath);
+              }
+              await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
+              setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
+              Alert.alert(t('success'), t('delete_success'));
+            } catch (e) {
+              console.error(e);
+              Alert.alert(t('error'), t('delete_doc_error'));
+            }
           }
-          await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
-          setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
-          showToast(t('delete_success'), 'success');
-        } catch (e) {
-          console.error(e);
-          showToast(t('delete_doc_error'), 'error');
         }
-      }
-    });
+      ]
+    );
   };
 
 
@@ -1036,19 +985,6 @@ export default function LesonaSekolySabata() {
 
       let quarterlyPath = selectedQuarterly?.index;
       const langPrefix = `${selectedLang}-`;
-
-      const storageKey = `${OFFLINE_LESSONS_PREFIX}${selectedLang}_${quarterlyId}_${lessonId}.json`;
-      const localUri = `${LESSONS_DIR}${storageKey}`;
-      const localInfo = await FileSystem.getInfoAsync(localUri);
-      
-      if (localInfo.exists) {
-        const localContent = await FileSystem.readAsStringAsync(localUri);
-        const localJson = JSON.parse(localContent);
-        setReadingLesson(localJson);
-        autoSelectSegment(localJson);
-        setLoading(false);
-        return;
-      }
 
       if (!quarterlyPath) {
         let qId = quarterlyId.replace(langPrefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '');
@@ -1226,25 +1162,17 @@ export default function LesonaSekolySabata() {
       
       
       let normalizedData = finalJson;
+      enhanceLessonWithMedia(normalizedData, quarterlyId, lessonId);
       if (!finalJson.segments && finalJson.lessons) {
         normalizedData = { ...finalJson, segments: finalJson.lessons };
       }
-      
-      const validated = safeValidate(WeeklyLessonSchema, normalizedData, normalizedData);
-      enhanceLessonWithMedia(validated, quarterlyId, lessonId);
-      normalizedData = validated;
 
       setReadingLesson(normalizedData);
       setCurrentLessonId(lessonId);
       autoSelectSegment(normalizedData);
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
-      setAlertConfig({
-        visible: true,
-        title: t('error'),
-        message: `${t('no_content')}: ${e.message}`,
-        type: 'error'
-      });
+      Alert.alert(t('error'), `${t('no_content')}: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -1322,6 +1250,21 @@ export default function LesonaSekolySabata() {
     loadEDS();
   }, [selectedLang]);
 
+  const cleanSspmMarkdown = (md: string) => {
+    if (!md) return "";
+    return md
+      .replace(/\\\\\n/g, '\n')                 // Handle double backslash at end of line
+      // Ultra-robust styled tag cleaning supporting nested braces (up to 3 levels)
+      .replace(/\\?(\^)?\[([^\]]+)\]\(\s*(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})\s*\)/g, '$2')
+      .replace(/<span[^>]*>([\s\S]*?)<\/span>/g, '$1') // Strip span tags but keep content
+      .replace(/<[^>]+>/g, '')                  // Strip other HTML tags
+      .replace(/\{#.*?\}/g, '')                 // Remove custom ID anchors
+      .replace(/Lesona faha/gi, 'Herinandro')   // Malagasy: Lesson -> Week
+      .replace(/Leçon\s*(?=\d)/gi, 'Semaine ')  // French: Leçon -> Semaine
+      .replace(/Lesson\s*(?=\d)/gi, 'Week ')    // English: Lesson -> Week
+      .replace(/\n{3,}/g, '\n\n')               // Normalize multiple newlines
+      .trim();
+  };
 
   const extractTextRecursive = (block: ContentBlock): string => {
     let text = block.markdown || "";
@@ -1393,25 +1336,106 @@ export default function LesonaSekolySabata() {
       const segment = readingLesson.segments[activeSegmentIdx];
       return (
         <View className="flex-1">
-          <View className="py-2 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
-            <SegmentSelector 
-              segments={readingLesson.segments}
-              activeSegmentIdx={activeSegmentIdx}
-              onSelectSegment={setActiveSegmentIdx}
-              cleanTitle={cleanSspmMarkdown}
-              lang={selectedLang}
-            />
+          <View className="px-6 py-2 border-b border-white/5 bg-background-dark/80 backdrop-blur-md">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              {readingLesson.segments.map((s, idx) => {
+                const isSelected = idx === activeSegmentIdx;
+                return (
+                  <TouchableOpacity
+                    key={s.id || idx}
+                    onPress={() => setActiveSegmentIdx(idx)}
+                    className={`px-5 py-2 rounded-2xl mr-2 border ${isSelected ? 'bg-primary border-primary' : 'bg-slate-900 border-slate-800'}`}
+                  >
+                    <Text className={`font-bold text-[11px] ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                      {cleanSspmMarkdown(s.title).toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
             {segment ? (
               <>
-                <LessonHeader 
-                  readingLesson={readingLesson}
-                  selectedQuarterly={selectedQuarterly}
-                  segment={segment}
-                  onShare={handleShare}
-                />
+                <View className="mb-8 rounded-[32px] overflow-hidden border border-white/10 relative shadow-xl shadow-black/30" style={{ minHeight: 250 }}>
+                  <Image 
+                    source={{ uri: readingLesson.cover || selectedQuarterly?.covers?.landscape || selectedQuarterly?.covers?.portrait }} 
+                    style={{ position: 'absolute', width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                  <View className="absolute inset-0 bg-slate-950/60" />
+                  <View className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-90" />
+                  
+                  <View className="absolute inset-x-0 bottom-0 top-0 p-6 flex-col justify-between">
+                    <View className="flex-row items-start justify-between">
+                      <View className="flex-row items-center bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                        <Text className="text-white font-bold text-[10px] uppercase tracking-[0.2em]">{segment.date || readingLesson.startDate}</Text>
+                      </View>
+                      
+                      <View className="flex-row gap-2">
+                        {/* Audio Media */}
+                        {readingLesson.audio && readingLesson.audio.length > 0 && (() => {
+                          const audioObj = readingLesson.audio[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/audio/player', params: { title: audioObj.title || readingLesson.title, artist: audioObj.artist || selectedQuarterly?.title || 'Sabbath School', artwork: audioObj.image || selectedQuarterly?.covers?.portrait, url: audioObj.src || audioObj.url } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center border border-blue-500/30"
+                            >
+                              <Headphones size={18} color="#60a5fa" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* Video Media */}
+                        {readingLesson.video && readingLesson.video.length > 0 && (() => {
+                          const videoObj = readingLesson.video[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/video/player', params: { title: videoObj.title || readingLesson.title, url: videoObj.src || videoObj.url, thumbnail: videoObj.image || videoObj.thumbnail } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-red-500/20 items-center justify-center border border-red-500/30"
+                            >
+                             <PlayCircle size={18} color="#f87171" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* PDF Media */}
+                        {readingLesson.pdf && readingLesson.pdf.length > 0 && (() => {
+                          const pdfObj = readingLesson.pdf[0];
+                          return (
+                            <TouchableOpacity
+                              onPress={() => {
+                                router.push({ pathname: '/pdf/viewer', params: { uri: pdfObj.src, title: pdfObj.title || readingLesson.title, fileName: pdfObj.src.split('/').pop() || 'document.pdf' } });
+                              }}
+                              className="w-10 h-10 rounded-full bg-amber-500/20 items-center justify-center border border-amber-500/30"
+                            >
+                             <FileDown size={18} color="#fbbf24" />
+                            </TouchableOpacity>
+                          );
+                        })()}
+                        
+                        {/* Share */}
+                        <TouchableOpacity onPress={handleShare} className="w-10 h-10 rounded-full bg-white/10 items-center justify-center border border-white/20">
+                          <Share size={18} color="#f8fafc" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    
+                    <View className="mt-8 justify-end">
+                       <Text className="text-white/80 text-[10px] font-bold uppercase tracking-widest mb-2" style={{ fontFamily: 'Lexend_600SemiBold' }}>
+                          {cleanSspmMarkdown(readingLesson.title)}
+                       </Text>
+                       <Text className="text-white text-3xl font-bold leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+                          {cleanSspmMarkdown(segment.title)}
+                       </Text>
+                    </View>
+                  </View>
+                </View>
 
                 {readingLesson.introduction && activeSegmentIdx === 0 && (
                   <View className="mb-8 p-6 bg-slate-400/5 rounded-3xl border border-white/5">
@@ -1484,15 +1508,14 @@ export default function LesonaSekolySabata() {
                             key={`${b.id || idx}_md`}
                             onLinkPress={(url) => handleLinkPress(url, blockData)}
                             style={{
-                              body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: 'Lexend_400Regular' },
+                              body: { color: '#cbd5e1', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily },
                               heading1: { color: '#f8fafc', fontWeight: 'bold', marginTop: 30, marginBottom: 15, fontFamily: 'Lexend_700Bold' },
-                              heading2: { color: '#60a5fa', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                              heading3: { color: '#60a5fa', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                              strong: { color: '#ffffff', fontWeight: 'bold', fontFamily: 'Lexend_700Bold' },
-                              italic: { fontStyle: 'italic', fontFamily: 'Lexend_400Regular' },
-                              blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 16, marginVertical: 12, borderRadius: 8 },
-                              link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: 'bold' },
-                              paragraph: { marginBottom: 12 }
+                              heading2: { color: '#3b82f6', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                              heading3: { color: '#3b82f6', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
+                              strong: { color: '#f8fafc', fontWeight: 'bold' },
+                              italic: { fontStyle: 'italic' },
+                              blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 10, marginVertical: 10 },
+                              link: { color: '#3b82f6', textDecorationLine: 'none' }
                             }}
                             rules={{
                               image: (node) => (
@@ -1600,16 +1623,47 @@ export default function LesonaSekolySabata() {
       return (
         <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
           {/* Quarterly Card */}
-          <QuarterlyCard 
-            item={selectedQuarterly}
-            variant="detail"
-            onDownload={() => downloadFullQuarterly(selectedQuarterly)}
-            onDelete={() => deleteQuarterly(selectedQuarterly.id)}
-            isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${selectedQuarterly.id}`)}
-            isCurrent={isQuarterlyCurrent(selectedQuarterly)}
-            downloadingAll={downloadingAll}
-            t={t}
-          />
+          <View className="bg-slate-900 rounded-[32px] overflow-hidden border border-slate-800 mb-8 p-6 flex-row items-center">
+            {selectedQuarterly.covers?.portrait ? (
+              <Image source={{ uri: selectedQuarterly.covers.portrait }} className="w-20 h-28 rounded-lg mr-4" />
+            ) : (
+              <View className="w-20 h-28 rounded-lg mr-4 bg-slate-800 items-center justify-center">
+                <BookOpen size={24} color="#475569" />
+              </View>
+            )}
+            <View className="flex-1">
+              <Text className="text-white font-bold text-lg mb-1">{cleanSspmMarkdown(selectedQuarterly.title)}</Text>
+              <Text className="text-slate-500 text-xs leading-5" numberOfLines={3}>{selectedQuarterly.description}</Text>
+
+              <View className="flex-row items-center mt-4">
+                <TouchableOpacity
+                  onPress={() => downloadFullQuarterly(selectedQuarterly)}
+                  disabled={downloadingAll || (isDownloaded && !isCurrent)}
+                  className={`flex-row items-center px-4 py-2 rounded-full self-start ${isDownloaded ? 'bg-emerald-500/10' : 'bg-primary/10'}`}
+                >
+                  {downloadingAll ? (
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  ) : isDownloaded ? (
+                    <CheckCircle size={14} color="#10b981" />
+                  ) : (
+                    <Download size={14} color="#3b82f6" />
+                  )}
+                  <Text className={`ml-2 text-[10px] font-bold ${isDownloaded ? 'text-emerald-500' : 'text-primary'}`}>
+                    {isDownloaded ? (isCurrent ? t('updated') : t('offline_available')) : t('download_all')}
+                  </Text>
+                </TouchableOpacity>
+
+                {isDownloaded && (
+                  <TouchableOpacity
+                    onPress={() => deleteQuarterly(selectedQuarterly.id)}
+                    className="ml-3 w-8 h-8 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20"
+                  >
+                    <Trash2 size={14} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
 
           <View className="flex-row items-center justify-between mt-8 mb-6 ml-1">
             <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t('program_of_study')}</Text>
@@ -1708,15 +1762,33 @@ export default function LesonaSekolySabata() {
           {filteredQuarterlies.length > 0 ? (
             <View className="flex-row flex-wrap justify-between">
               {filteredQuarterlies.map((item) => (
-                <QuarterlyCard 
+                <TouchableOpacity
                   key={item.id}
-                  item={item}
-                  variant="list"
-                  width={width}
-                  isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${item.id}`)}
                   onPress={() => fetchQuarterlyDetail(item.id, item.index)}
-                  t={t}
-                />
+                  style={{ width: (width - 60) / 2 }}
+                  className="bg-slate-900 rounded-[24px] overflow-hidden border border-slate-800 mb-6"
+                >
+                  <View className="relative">
+                    <Image source={{ uri: item.covers.portrait }} className="w-full h-48" resizeMode="cover" />
+                    {downloadedQuarterlies.includes(`${selectedLang}_${item.id}`) && (
+                      <View className="absolute top-2 right-2 w-6 h-6 rounded-full bg-emerald-500 items-center justify-center">
+                        <CheckCircle size={14} color="white" />
+                      </View>
+                    )}
+                  </View>
+                  <View className="p-4">
+                    <Text className="text-primary font-bold text-[8px] uppercase tracking-widest mb-1" numberOfLines={1}>
+                      {formatDateRange(item.startDate, item.endDate)}
+                    </Text>
+                    <Text className="text-white text-sm font-bold mb-1 h-10" numberOfLines={2} style={{ fontFamily: 'Lexend_700Bold' }}>
+                      {cleanSspmMarkdown(item.title)}
+                    </Text>
+                    <View className="flex-row items-center justify-between mt-1">
+                      <Text className="text-slate-500 text-[10px] italic" numberOfLines={1}>{item.groupTitle}</Text>
+                      <ChevronRight size={12} color="#475569" />
+                    </View>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           ) : (
@@ -1751,19 +1823,15 @@ export default function LesonaSekolySabata() {
       <StatusBar style="light" />
 
       {/* Header */}
-      <View className="px-4 py-4 flex-row items-center justify-between border-b border-white/5">
+      <View className="px-6 py-4 flex-row items-center justify-between border-b border-white/5">
         <View className="flex-row items-center flex-1">
           <TouchableOpacity
             onPress={() => {
               if (readingLesson) {
                 setReadingLesson(null);
                 setCurrentLessonId("");
-                router.setParams({ lId: undefined });
               }
-              else if (selectedQuarterly) {
-                setSelectedQuarterly(null);
-                router.setParams({ qId: undefined });
-              }
+              else if (selectedQuarterly) setSelectedQuarterly(null);
               else router.back();
             }}
             className="mr-4 w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
@@ -1785,20 +1853,10 @@ export default function LesonaSekolySabata() {
         {!readingLesson && !selectedQuarterly && (
           <View className="flex-row items-center gap-3">
             <TouchableOpacity
-              onPress={() => {
-                calculateStorage();
-                setStorageModalVisible(true);
-              }}
-              className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
-            >
-              <HardDrive size={18} color="#94a3b8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
               onPress={() => setShowLangPicker(true)}
-              className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
+              className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
             >
-              <Globe size={18} color="#94a3b8" />
+              <Languages size={18} color="#94a3b8" />
               <View className="absolute -top-1 -right-1 bg-primary px-1.5 py-0.5 rounded-md border border-slate-900 shadow-sm">
                  <Text className="text-[7px] text-white font-bold uppercase">{selectedLang}</Text>
               </View>
@@ -1970,75 +2028,6 @@ export default function LesonaSekolySabata() {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-      {/* Storage Management Modal */}
-      <Modal visible={storageModalVisible} transparent animationType="slide">
-        <View className="flex-1 bg-black/60 justify-end">
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setStorageModalVisible(false)} 
-            className="flex-1" 
-          />
-          <View className="bg-slate-900 rounded-t-[40px] border-t border-white/10 p-8 pb-12 shadow-2xl">
-            <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-8" />
-            
-            <View className="flex-row items-center justify-between mb-8">
-              <View>
-                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Stockage</Text>
-                <Text className="text-slate-500 text-sm mt-1">Gérez vos contenus hors-ligne</Text>
-              </View>
-              <View className="w-16 h-16 rounded-3xl bg-primary/10 items-center justify-center border border-primary/20">
-                <Database size={32} color="#3b82f6" />
-              </View>
-            </View>
-
-            <View className="bg-white/5 rounded-3xl p-6 border border-white/5 mb-8">
-              <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-slate-400 font-medium">Trimestres en cache</Text>
-                <Text className="text-white font-bold text-lg">{storageInfo.count}</Text>
-              </View>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-slate-400 font-medium">Espace total occupé</Text>
-                <Text className="text-primary font-bold text-lg">{formatSize(storageInfo.totalSize)}</Text>
-              </View>
-            </View>
-
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setStorageModalVisible(false)}
-                className="flex-1 bg-white/5 py-5 rounded-3xl items-center border border-white/10"
-              >
-                <Text className="text-slate-400 font-bold">Fermer</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={() => {
-                  setAlertConfig({
-                    visible: true,
-                    title: "Tout supprimer ?",
-                    message: "Ceci effacera toutes les leçons téléchargées. Vous devrez les retélécharger pour les consulter hors-ligne.",
-                    type: 'error',
-                    onConfirm: clearStorage
-                  });
-                }}
-                className="flex-[1.5] bg-red-500/10 py-5 rounded-3xl items-center border border-red-500/20"
-              >
-                <Text className="text-red-500 font-bold">Vider le cache</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <PremiumAlert 
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
-        onConfirm={alertConfig.onConfirm}
-        confirmText={alertConfig.onConfirm ? t('ok') : 'OK'}
-        cancelText={t('cancel')}
-      />
     </SafeAreaView>
   );
 }

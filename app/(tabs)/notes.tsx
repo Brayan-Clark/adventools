@@ -2,17 +2,20 @@ import { BIBLE_REGEX, fetchVerseContent } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { deleteNoteFromDb, getAllNotes, getFolders, saveFolders, saveHistory, saveNote } from '@/lib/user-storage';
-import { cn } from '@/lib/utils';
+import { cn, saveFilePermanently } from '@/lib/utils';
+import { AudioPlayer, VideoPlayer, DrawModal, NoteCard } from '@/components/notes';
+import type { Note } from '@/components/notes';
 import { Audio } from 'expo-av';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import * as FileSystem from 'expo-file-system/legacy';
+
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Mic, Music, Palette, Pause, Play, Plus, Search, Share2, Square, StickyNote, Trash2, Undo2, Video, X } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
@@ -41,6 +44,8 @@ const NOTE_COLORS = [
     { label: 'Brown', value: '#451a03', border: '#78350f' },
     { label: 'Violet', value: '#4c1d95', border: '#5b21b6' },
 ];
+
+import { BackHandler } from 'react-native';
 
 const FULL_PALETTE = [
     '#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#f1f5f9',
@@ -116,257 +121,10 @@ interface Note {
 
 // --- HELPERS ---
 
-const saveFilePermanently = async (uri: string, type: 'image' | 'voice' | 'video'): Promise<string> => {
-    try {
-        const docDir = FileSystem.documentDirectory;
-        if (!docDir) return uri;
 
-        const notesDir = `${docDir}adventools_notes/`;
-        const dirInfo = await FileSystem.getInfoAsync(notesDir);
-        if (!dirInfo.exists) {
-            await FileSystem.makeDirectoryAsync(notesDir, { intermediates: true });
-        }
-        const filename = `${type}_${Date.now()}.${uri.split('.').pop() || 'tmp'}`;
-        const newUri = `${notesDir}${filename}`;
-        await FileSystem.copyAsync({ from: uri, to: newUri });
-        return newUri;
-    } catch (e) {
-        console.error("Failed to save file permanently", e);
-        return uri;
-    }
-};
 
-// --- COMPONENTS ---
-
-const AudioPlayer = ({ uri, onDelete }: { uri: string, onDelete?: () => void }) => {
-    const [sound, setSound] = useState<Audio.Sound | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-
-    useEffect(() => {
-        return sound ? () => { sound.unloadAsync(); } : undefined;
-    }, [sound]);
-
-    const playSound = async () => {
-        if (sound) {
-            await sound.playAsync();
-            setIsPlaying(true);
-            return;
-        }
-        const { sound: newSound } = await Audio.Sound.createAsync({ uri });
-        setSound(newSound);
-        newSound.setOnPlaybackStatusUpdate((status: any) => {
-            if (status.didJustFinish) setIsPlaying(false);
-        });
-        await newSound.playAsync();
-        setIsPlaying(true);
-    };
-
-    const pauseSound = async () => {
-        if (sound) {
-            await sound.pauseAsync();
-            setIsPlaying(false);
-        }
-    };
-
-    return (
-        <View className="flex-row items-center mb-2">
-            <TouchableOpacity
-                onPress={isPlaying ? pauseSound : playSound}
-                className="bg-white/5 p-4 rounded-3xl border border-white/10 flex-1 flex-row items-center"
-            >
-                <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center">
-                    {isPlaying ? <Pause size={18} color="#3b82f6" /> : <Play size={18} color="#3b82f6" />}
-                </View>
-                <View className="ml-4 flex-1">
-                    <Text className="text-white font-bold text-xs">Vocal</Text>
-                    <Text className="text-white/40 text-[9px]">{isPlaying ? "Lecture en cours..." : "Cliquer pour écouter"}</Text>
-                </View>
-            </TouchableOpacity>
-            
-            {onDelete && (
-                <TouchableOpacity 
-                    onPress={onDelete}
-                    className="ml-3 w-10 h-10 bg-red-500/10 rounded-2xl items-center justify-center border border-red-500/20"
-                >
-                    <Trash2 size={18} color="#f87171" />
-                </TouchableOpacity>
-            )}
-        </View>
-    );
-};
-
-const VideoPlayer = ({ uri }: { uri: string }) => {
-    const player = useVideoPlayer(uri, (p) => {
-        p.loop = false;
-    });
-
-    return (
-        <View className="mb-4 rounded-[32px] overflow-hidden border border-white/10 bg-black">
-            <VideoView
-                player={player}
-                nativeControls
-                contentFit="contain"
-                style={{ width: '100%', height: 250 }}
-            />
-        </View>
-    );
-};
-
-const DrawModal = ({ visible, onClose, onSave, initialUri }: { visible: boolean, onClose: () => void, onSave: (uri: string) => void, initialUri?: string }) => {
-    const [paths, setPaths] = useState<Array<{ d: string, color: string, width: number }>>([]);
-    const [currentPath, setCurrentPath] = useState('');
-    const [color, setColor] = useState('#000000');
-    const [width, setWidth] = useState(3);
-    const [isEraser, setIsEraser] = useState(false);
-    const viewShotRef = useRef<any>(null);
- 
-    useEffect(() => {
-        if (visible) {
-            setPaths([]);
-            setCurrentPath('');
-            setIsEraser(false);
-        }
-    }, [visible]);
-
-    const panResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt) => {
-            const { locationX, locationY } = evt.nativeEvent;
-            setCurrentPath(`M${locationX},${locationY}`);
-        },
-        onPanResponderMove: (evt) => {
-            const { locationX, locationY } = evt.nativeEvent;
-            setCurrentPath(prev => `${prev} L${locationX},${locationY}`);
-        },
-        onPanResponderRelease: () => {
-            if (currentPath) {
-                setPaths(prev => [...prev, { d: currentPath, color: isEraser ? '#FFFFFF' : color, width: isEraser ? width * 2 : width }]);
-                setCurrentPath('');
-            }
-        },
-    });
-
-    const handleSave = async () => {
-        if (viewShotRef.current) {
-            try {
-                const uri = await viewShotRef.current.capture();
-                const permanentUri = await saveFilePermanently(uri, 'image');
-                onSave(permanentUri);
-            } catch (e) { console.error("Capture failed", e); }
-        }
-    };
-
-    return (
-        <Modal visible={visible} animationType="slide" statusBarTranslucent>
-            <SafeAreaView className="flex-1 bg-white">
-                <View className="flex-row justify-between items-center px-6 py-4 border-b border-slate-100">
-                    <TouchableOpacity onPress={onClose} className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center">
-                        <X size={20} color="#475569" />
-                    </TouchableOpacity>
-                    <View className="flex-row items-center gap-4">
-                        <TouchableOpacity onPress={() => setPaths([])} className="w-8 h-8 items-center justify-center"><Trash2 size={20} color="#94a3b8" /></TouchableOpacity>
-                        <TouchableOpacity onPress={handleSave} className="w-8 h-8 items-center justify-center"><Check size={20} color="#3b82f6" /></TouchableOpacity>
-                    </View>
-                </View>
-
-                <ViewShot ref={viewShotRef} style={{ flex: 1, backgroundColor: 'white' }} options={{ format: "jpg", quality: 0.9 }}>
-                    <View className="flex-1" {...panResponder.panHandlers}>
-                        {initialUri && (
-                            <RNImage source={{ uri: initialUri }} className="absolute inset-0 w-full h-full" resizeMode="contain" />
-                        )}
-                        <Svg className="flex-1">
-                            {paths.map((p, i) => <Path key={i} d={p.d} stroke={p.color} strokeWidth={p.width} fill="none" strokeLinecap="round" strokeLinejoin="round" />)}
-                            {currentPath ? <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : color} strokeWidth={isEraser ? width * 2 : width} fill="none" strokeLinecap="round" strokeLinejoin="round" /> : null}
-                        </Svg>
-                    </View>
-                </ViewShot>
-
-                <View className="bg-white border-t border-slate-100 p-6 pb-12">
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-                        {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#000000', '#64748b'].map(c => (
-                            <TouchableOpacity key={c} onPress={() => setColor(c)} style={{ backgroundColor: c, opacity: color === c ? 1 : 0.8 }} className={cn("w-10 h-10 rounded-full mr-4 shadow-sm", color === c ? "border-2 border-white" : "")} />
-                        ))}
-                    </ScrollView>
-                    <View className="flex-row justify-between items-center">
-                        <View className="flex-row gap-6 items-center">
-                            <TouchableOpacity onPress={() => setIsEraser(false)} className={cn("p-2 rounded-xl", !isEraser ? "bg-slate-100" : "")}>
-                                <Edit size={24} color={!isEraser ? "#3b82f6" : "#475569"} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setIsEraser(true)} className={cn("p-2 rounded-xl", isEraser ? "bg-slate-100" : "")}>
-                                <Eraser size={24} color={isEraser ? "#ef4444" : "#475569"} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setPaths(paths.slice(0, -1))} className="p-2"><Undo2 size={24} color="#94a3b8" /></TouchableOpacity>
-                        </View>
-                        <View className="flex-row items-center bg-slate-100 px-4 py-2 rounded-3xl">
-                            <TouchableOpacity onPress={() => setWidth(Math.max(1, width - 1))} className="p-2"><Text className="text-slate-600 font-bold">-</Text></TouchableOpacity>
-                            <Text className="text-slate-600 font-bold w-6 text-center">{width}</Text>
-                            <TouchableOpacity onPress={() => setWidth(Math.min(20, width + 1))} className="p-2"><Text className="text-slate-600 font-bold">+</Text></TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </SafeAreaView>
-        </Modal>
-    );
-};
-
-const NoteCard = ({ note, onPress, onDelete }: { note: Note, onPress: () => void, onDelete: () => void }) => {
-    const { t } = useTranslation();
-    const hasImage = note.attachments?.images && note.attachments.images.length > 0;
-
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            activeOpacity={0.7}
-            style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderColor: note.color ? note.color : 'rgba(255, 255, 255, 0.08)',
-            }}
-            className="p-5 rounded-[32px] border-2 mb-1 overflow-hidden"
-        >
-            <View className="flex-row justify-between items-start mb-3">
-                <Text className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                    {new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
-                </Text>
-                <TouchableOpacity onPress={onDelete} className="p-1">
-                    <X size={14} color="rgba(255, 255, 255, 0.2)" />
-                </TouchableOpacity>
-            </View>
-
-            <Text className="font-bold text-white text-lg leading-tight mb-2" style={{ fontFamily: 'Lexend_600SemiBold' }}>
-                {note.title || (note.type === 'draw' ? 'Mon Dessin' : t('untitled_note'))}
-            </Text>
-
-            {note.type === 'draw' && hasImage ? (
-                <View className="mb-4">
-                    <RNImage source={{ uri: note.attachments?.images![note.attachments!.images!.length - 1] }} className="w-full h-48 rounded-3xl bg-white" resizeMode="contain" />
-                    <View className="absolute top-3 left-3 bg-purple-600 px-3 py-1 rounded-full shadow-lg">
-                        <Text className="text-[8px] text-white font-bold uppercase tracking-widest">Dessin</Text>
-                    </View>
-                </View>
-            ) : (
-                <Text className="text-sm text-white/60 leading-5 mb-4" numberOfLines={4}>
-                    {note.content.replace(/[#*`]/g, '') || t('no_content')}
-                </Text>
-            )}
-
-            <View className="flex-row justify-between items-center mt-2">
-                {note.folder ? (
-                    <View className="bg-white/10 px-3 py-1.5 rounded-full border border-white/5 flex-row items-center">
-                        <Folder size={10} color="#94a3b8" className="mr-1.5" />
-                        <Text className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{note.folder}</Text>
-                    </View>
-                ) : <View />}
-                <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
-                    <Edit size={12} color="#475569" />
-                </View>
-            </View>
-
-            {note.color && (
-                <View style={{ position: 'absolute', top: -20, right: -20, width: 40, height: 40, backgroundColor: note.color, opacity: 0.15, borderRadius: 20 }} />
-            )}
-        </TouchableOpacity>
-    );
-};
+// --- COMPONENTS --- (Extracted to @/components/notes)
+// AudioPlayer, VideoPlayer, DrawModal, NoteCard are now in components/notes/
 
 // --- MAIN PAGE ---
 
@@ -411,24 +169,26 @@ export default function Notes() {
     const [currentVerseBookId, setCurrentVerseBookId] = useState<number | null>(null);
     const [verseLoading, setVerseLoading] = useState(false);
 
-    const [confirmConfig, setConfirmConfig] = useState<{
+    const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
         title: string;
         message: string;
-        onConfirm: () => void;
-        confirmText?: string;
-        cancelText?: string;
-        type?: 'danger' | 'info';
-    } | null>(null);
+        type: 'success' | 'error' | 'info';
+        onConfirm?: () => void;
+    }>({ visible: false, title: '', message: '', type: 'info' });
 
     const textInputRef = useRef<TextInput>(null);
     const { settings: globalSettings } = useSettings();
 
     // --- CORE LOGIC ---
 
-    const { id: noteIdParam } = useLocalSearchParams();
+    const { id: noteIdParam, action } = useLocalSearchParams();
 
-    useEffect(() => { loadInitialData(); }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadInitialData();
+        }, [])
+    );
 
     useEffect(() => {
         if (noteIdParam && notes.length > 0) {
@@ -439,6 +199,36 @@ export default function Notes() {
             }
         }
     }, [noteIdParam, notes]);
+
+    useEffect(() => {
+        if (action === 'new') {
+            // Automatically open a new text note when requested by the Quick Action
+            handleCreateNote('text');
+            // Clear the param to prevent re-triggering if the component re-renders
+            router.setParams({ action: undefined });
+        }
+    }, [action]);
+
+    useEffect(() => {
+        const backAction = () => {
+            if (editingNote) {
+                closeNote();
+                return true;
+            }
+            return false;
+        };
+
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+        return () => backHandler.remove();
+    }, [editingNote]);
+
+    const closeNote = async () => {
+        if (editingNote) {
+            await handleSaveNote();
+            setEditingNote(null);
+            router.setParams({ id: undefined });
+        }
+    };
 
     const loadInitialData = async () => {
         try {
@@ -522,10 +312,11 @@ export default function Notes() {
     };
 
     const deleteNote = (id: string) => {
-        setConfirmConfig({
+        setAlertConfig({
             visible: true,
             title: "Supprimer la note",
             message: "Êtes-vous sûr de vouloir supprimer cette réflexion ? Cette action est irréversible.",
+            type: 'error',
             onConfirm: async () => {
                 await deleteNoteFromDb(id);
                 setNotes(notes.filter(n => n.id !== id));
@@ -572,7 +363,12 @@ export default function Notes() {
             }
         } catch (e) {
             console.error(e);
-            Alert.alert("Erreur", "Impossible d'insérer le média.");
+            setAlertConfig({
+              visible: true,
+              title: "Erreur",
+              message: "Impossible d'insérer le média.",
+              type: 'error'
+            });
         }
     };
 
@@ -757,20 +553,20 @@ export default function Notes() {
     const markdownStyles = {
         body: { color: '#e2e8f0', fontSize: 18, lineHeight: 30, fontFamily: 'Lexend_400Regular' },
         heading1: { color: '#ffffff', fontSize: 28, fontFamily: 'Lexend_700Bold', marginTop: 20, marginBottom: 10 },
-        heading2: { color: '#ffffff', fontSize: 24, fontFamily: 'Lexend_700Bold', marginTop: 15, marginBottom: 8 },
-        heading3: { color: '#ffffff', fontSize: 20, fontFamily: 'Lexend_600SemiBold', marginTop: 12, marginBottom: 6 },
+        heading2: { color: '#60a5fa', fontSize: 24, fontFamily: 'Lexend_700Bold', marginTop: 15, marginBottom: 8 },
+        heading3: { color: '#60a5fa', fontSize: 20, fontFamily: 'Lexend_600SemiBold', marginTop: 12, marginBottom: 6 },
         strong: { fontFamily: 'Lexend_700Bold', color: '#ffffff' },
-        em: { fontStyle: 'italic', color: '#cbd5e1' },
-        link: { color: '#3b82f6', textDecorationLine: 'none' },
-        list_item: { color: '#cbd5e1', marginBottom: 5 },
-        blockquote: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderLeftColor: '#3b82f6', borderLeftWidth: 4, paddingHorizontal: 15, paddingVertical: 10, marginVertical: 10, borderRadius: 8 },
+        em: { fontStyle: 'italic', color: '#cbd5e1', fontFamily: 'Lexend_400Regular' },
+        link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: 'bold' },
+        list_item: { color: '#cbd5e1', marginBottom: 5, fontFamily: 'Lexend_400Regular' },
+        blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, paddingHorizontal: 15, paddingVertical: 10, marginVertical: 10, borderRadius: 8 },
         code_inline: { backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#fbbf24', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 16 },
         code_block: { backgroundColor: '#0f172a', color: '#94a3b8', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
         fence: { backgroundColor: '#0f172a', color: '#94a3b8', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
         table: { borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 8 },
         tr: { borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-        th: { backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', fontWeight: 'bold', padding: 8 },
-        td: { color: '#cbd5e1', padding: 8 },
+        th: { backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', fontWeight: 'bold', padding: 8, fontFamily: 'Lexend_700Bold' },
+        td: { color: '#cbd5e1', padding: 8, fontFamily: 'Lexend_400Regular' },
         hr: { backgroundColor: 'rgba(255, 255, 255, 0.1)', height: 1, marginVertical: 20 }
     };
 
@@ -824,11 +620,11 @@ export default function Notes() {
                 )}
             </ScrollView>
 
-            <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent>
+            <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent onRequestClose={closeNote}>
                 <View className="flex-1 bg-[#0d1117]">
                     <SafeAreaView edges={['top']} className="bg-[#0d1117] border-b border-white/5">
                         <View className="flex-row justify-between items-center px-6 py-4">
-                            <TouchableOpacity onPress={async () => { await handleSaveNote(); setEditingNote(null); }} className="w-12 h-12 rounded-full bg-white/5 items-center justify-center border border-white/10"><X size={24} color="#94a3b8" /></TouchableOpacity>
+                            <TouchableOpacity onPress={closeNote} className="w-12 h-12 rounded-full bg-white/5 items-center justify-center border border-white/10"><X size={24} color="#94a3b8" /></TouchableOpacity>
                             <View className="flex-row items-center gap-2">
                                 <TouchableOpacity onPress={() => setShowColorPicker(!showColorPicker)} className={cn("w-12 h-12 rounded-full items-center justify-center", showColorPicker ? "bg-primary/20" : "bg-white/5")}>
                                     <Palette size={20} color={showColorPicker ? "#60a5fa" : "#8b949e"} />
@@ -1179,10 +975,11 @@ export default function Notes() {
                                     onPress={() => {
                                         const f = folderActionSheet!;
                                         setFolderActionSheet(null);
-                                        setConfirmConfig({
+                                        setAlertConfig({
                                             visible: true,
                                             title: `Supprimer "${f}"`,
                                             message: `Voulez-vous supprimer cette catégorie ? Les notes qu'elle contient ne seront pas supprimées.`,
+                                            type: 'error',
                                             onConfirm: async () => {
                                                 const u = folders.filter(x => x !== f);
                                                 setFolders(u);
@@ -1217,19 +1014,14 @@ export default function Notes() {
                 </TouchableOpacity>
             </Modal>
 
-            <Modal visible={!!confirmConfig?.visible} transparent animationType="fade">
-                <View className="flex-1 bg-black/70 justify-center items-center px-6">
-                    <View className="bg-slate-900 w-full rounded-[40px] p-8 border border-white/10 items-center">
-                        <View className="w-16 h-16 rounded-full bg-red-500/20 items-center justify-center mb-6"><Trash2 size={32} color="#ef4444" /></View>
-                        <Text className="text-white text-2xl font-bold text-center mb-2">{confirmConfig?.title}</Text>
-                        <Text className="text-slate-400 text-center mb-8">{confirmConfig?.message}</Text>
-                        <View className="flex-row gap-4">
-                            <TouchableOpacity onPress={() => setConfirmConfig(null)} className="flex-1 py-5 bg-slate-800 rounded-3xl items-center"><Text className="text-white font-bold">{t('cancel')}</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => { confirmConfig?.onConfirm(); setConfirmConfig(null); }} className="flex-1 py-5 bg-red-600 rounded-3xl items-center"><Text className="text-white font-bold">{t('delete')}</Text></TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+            <PremiumAlert 
+              visible={alertConfig.visible}
+              title={alertConfig.title}
+              message={alertConfig.message}
+              type={alertConfig.type}
+              onConfirm={alertConfig.onConfirm}
+              onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+            />
         </SafeAreaView>
     );
 }

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Headphones, Tv } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Headphones, Tv, Search } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -149,12 +149,21 @@ export default function Home() {
               <Text className="text-lg uppercase font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{globalSettings.userName ? ` ${globalSettings.userName}` : `${t('welcome')} !`}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push('/modal')}
-            className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 items-center justify-center relative shadow-lg"
-          >
-            <Settings size={20} color="#94a3b8" />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity
+              onPress={() => router.push('/search')}
+              className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 items-center justify-center shadow-lg"
+            >
+              <Search size={20} color="#94a3b8" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => router.push('/modal')}
+              className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 items-center justify-center relative shadow-lg"
+            >
+              <Settings size={20} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Hero Verse Card */}
@@ -341,13 +350,18 @@ export default function Home() {
             icon={<StickyNote color="#10b981" size={28} />}
             bgColor="bg-emerald-500/10"
           />
-          <FeatureCard
-            href="/utiles/lesona"
-            title={t('sabbath_school_lessons')}
-            subtitle={t('daily_study')}
-            icon={<BookOpen color="#ef4444" size={28} />}
-            bgColor="bg-red-500/10"
-          />
+          <TouchableOpacity 
+            onPress={() => router.push('/utiles/lesona')}
+            className="w-[47%] bg-slate-900 rounded-[30px] p-6 border border-slate-800 shadow-xl"
+          >
+            <View className="w-14 h-14 rounded-2xl bg-red-500/10 items-center justify-center mb-5">
+              <BookOpen color="#ef4444" size={28} />
+            </View>
+            <View>
+              <Text className="font-bold text-white text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{t('sabbath_school_lessons')}</Text>
+              <Text className="text-xs text-slate-500" style={{ fontFamily: 'Lexend_400Regular' }}>{t('daily_study')}</Text>
+            </View>
+          </TouchableOpacity>
           <FeatureCard
             href="/audio"
             title="Audio"

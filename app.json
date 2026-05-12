@@ -67,7 +67,39 @@
         }
       ],
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Mofonaina",
+              "label": "Veille Matinale",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "description": "Le texte du jour sur votre écran d'accueil",
+              "updatePeriodMillis": 3600000
+            },
+            {
+              "name": "Lesona",
+              "label": "Leçon du Sabbat",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "description": "Votre leçon quotidienne de l'école du sabbat",
+              "updatePeriodMillis": 3600000
+            },
+            {
+              "name": "Shortcuts",
+              "label": "Accès Rapide",
+              "minWidth": "250dp",
+              "minHeight": "60dp",
+              "description": "Raccourcis vers vos outils préférés",
+              "updatePeriodMillis": 0
+            }
+          ]
+        }
+      ],
+      "expo-quick-actions"
     ],
     "experiments": {
       "typedRoutes": true

@@ -11,6 +11,13 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
 import * as Linking from 'expo-linking';
+import * as QuickActions from 'expo-quick-actions';
+import { useQuickActionRouting } from 'expo-quick-actions/router';
+import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import { widgetTaskHandler } from '../widgets/widget-task-handler';
+
+// Register the background task for the Android Widget
+registerWidgetTaskHandler(widgetTaskHandler);
 
 
 export {
@@ -27,6 +34,7 @@ import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-goo
 
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider, useSettings } from '@/lib/settings-context';
+import { ToastProvider } from '@/lib/toast-context';
 import { useAutoUpdater } from '@/lib/updater';
 import { getSetting } from '@/lib/user-storage';
 
@@ -57,10 +65,9 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
+    // Bible metadata init on startup
     initBibleMetadata();
-    if (Platform.OS === 'android' && Platform.Version >= 33) {
-      PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS');
-    }
+    // NOTE: Notification permission is handled once in RootNavigator.checkPermissions()
   }, []);
 
   useEffect(() => {
@@ -74,10 +81,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <ThemeProvider value={DarkTheme}>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </ThemeProvider>
+        <ToastProvider>
+          <ThemeProvider value={DarkTheme}>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </ThemeProvider>
+        </ToastProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );
@@ -85,6 +94,7 @@ export default function RootLayout() {
 
 function RootNavigator() {
   useAutoUpdater();
+  useQuickActionRouting();
   const { isLoading } = useSettings();
   
   // true = still checking AsyncStorage, overlay shown to prevent flash
@@ -102,6 +112,31 @@ function RootNavigator() {
 
     useEffect(() => {
       checkPermissions();
+
+      // Configure App Shortcuts (Long Press on App Icon)
+      QuickActions.setItems([
+        {
+          title: 'Nouvelle Note',
+          subtitle: 'Créer une note rapide',
+          icon: 'compose',
+          id: 'action_new_note',
+          params: { href: '/(tabs)/notes?action=new' }
+        },
+        {
+          title: 'Mofon\'aina',
+          subtitle: 'Veille matinale du jour',
+          icon: 'bookmark',
+          id: 'action_mofonaina',
+          params: { href: '/mofonaina' }
+        },
+        {
+          title: 'Lecteur Audio',
+          subtitle: 'Reprendre l\'écoute',
+          icon: 'play',
+          id: 'action_audio',
+          params: { href: '/audio/player' }
+        }
+      ]);
 
       // Deep Linking Support for professional redirection (Fixes 'screen doesn't exist')
       const handleDeepLink = (url: string | null) => {
@@ -137,7 +172,7 @@ function RootNavigator() {
           // Navigate to onboarding — Stack is already mounted so router works
           setTimeout(() => {
             router.replace('/onboarding' as any);
-          }, 500); // Slight delay to ensure navigation context is solid
+          }, 1000); // Keep the increased delay for safety
         }
       } catch (_) {
         // On error, just proceed to (tabs) normally
@@ -152,27 +187,27 @@ function RootNavigator() {
     return () => subscription.remove();
   }, [isLoading]);
 
-  return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="audio/player" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="weather/index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+  if (checking) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#060d1f',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      />
+    );
+  }
 
-      {/* Black overlay shown while checking — prevents any flash of (tabs) */}
-      {checking && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: '#060d1f',
-            zIndex: 9999,
-          }}
-        />
-      )}
-    </>
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="utiles/lesona" options={{ headerShown: false }} />
+      <Stack.Screen name="audio/player" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="weather/index" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    </Stack>
   );
 }

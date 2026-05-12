@@ -1,20 +1,21 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
+
 import { LinearGradient } from 'expo-linear-gradient';
 
 import NetInfo from '@react-native-community/netinfo';
 import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules } from '../../lib/mofonaina';
 import { useTranslation } from '../../lib/i18n';
 import { useSettings } from '../../lib/settings-context';
+import { PremiumAlert } from '@/components/ui/PremiumAlert';
+import { PremiumDatePicker } from '@/components/ui/PremiumDatePicker';
 
 const { width, height } = Dimensions.get('window');
 
 export default function MofonainaScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { settings: globalSettings } = useSettings();
   const [loading, setLoading] = useState(true);
@@ -24,6 +25,18 @@ export default function MofonainaScreen() {
   // Track selected date
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   const fetchMofonainaForDate = async (targetDate: Date) => {
     setLoading(true);
@@ -51,9 +64,19 @@ export default function MofonainaScreen() {
       
       const todayData = await getMofonainaForDate(currentDate);
       setMofonaina(todayData);
-      Alert.alert(t('success'), t('sync_complete') || 'Mise à jour réussie');
+      setAlertConfig({
+        visible: true,
+        title: t('success'),
+        message: t('sync_complete') || 'Mise à jour réussie',
+        type: 'success'
+      });
     } catch (e) {
-      Alert.alert(t('error'), t('sync_failed') || 'Échec de la mise à jour');
+      setAlertConfig({
+        visible: true,
+        title: t('error'),
+        message: t('sync_failed') || 'Échec de la mise à jour',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -109,7 +132,16 @@ export default function MofonainaScreen() {
   return (
     <View className="flex-1 bg-[#020617]">
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Stack.Screen options={{ headerShown: false }} />
+
+      <PremiumDatePicker
+        visible={showDatePicker}
+        currentDate={currentDate}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(date) => {
+          setCurrentDate(date);
+          setShowDatePicker(false);
+        }}
+      />
       
       {/* Background Header Image */}
       <View className="absolute top-0 left-0 right-0 h-[45%]">
@@ -157,16 +189,6 @@ export default function MofonainaScreen() {
           </View>
         </View>
       </SafeAreaView>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={currentDate}
-          mode="date"
-          display="default"
-          themeVariant="dark"
-          onChange={onDateChange}
-        />
-      )}
 
       <ScrollView 
         className="flex-1" 

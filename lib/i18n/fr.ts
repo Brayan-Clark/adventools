@@ -61,6 +61,8 @@ export const fr: TranslationSchema = {
   search_placeholder: "Numéro ou titre...",
   results_count: "résultats trouvés",
   no_results: "Aucun résultat trouvé",
+  what_are_you_looking_for: "Que recherchez-vous ?",
+  global_search_scope: "Cette recherche globale scanne uniquement :",
 
   // Hymnal
   my_hymnals: "Mes Recueils",

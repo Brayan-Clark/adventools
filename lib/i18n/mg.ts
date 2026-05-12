@@ -61,6 +61,8 @@ export const mg: TranslationSchema = {
   search_placeholder: "Laharana na lohateny...",
   results_count: "valiny hita",
   no_results: "Tsy misy valiny hita",
+  what_are_you_looking_for: "Inona no tadiavinao?",
+  global_search_scope: "Ity fikarohana ity dia mitady ao amin'ny:",
 
   // Hymnal
   my_hymnals: "Ny Fihirako",

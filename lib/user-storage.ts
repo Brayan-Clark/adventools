@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { loadDatabase } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { encryptData, decryptData } from './security';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -118,18 +119,44 @@ export async function setSetting(key: string, value: any) {
 // --- NOTES ---
 export async function getAllNotes() {
     const database = await initUserStorage();
+    // US-02: Performance — 2 queries instead of N+1
+    // 1. Load all notes in one query
     const notes: any[] = await database.getAllAsync('SELECT * FROM notes ORDER BY date DESC');
-    
-    // Enrich with attachments
-    for (let note of notes) {
-        const atts: any[] = await database.getAllAsync('SELECT * FROM attachments WHERE note_id = ?', [note.id]);
-        note.attachments = {
-            images: atts.filter(a => a.type === 'image').map(a => a.uri),
-            videos: atts.filter(a => a.type === 'video').map(a => a.uri),
-            voice: atts.filter(a => a.type === 'voice').map(a => ({ uri: a.uri, duration: a.duration }))
-        };
+    if (notes.length === 0) return [];
+
+    // 2. Load ALL attachments in a single batch query
+    const noteIds = notes.map(n => n.id);
+    const placeholders = noteIds.map(() => '?').join(',');
+    const allAtts: any[] = await database.getAllAsync(
+        `SELECT * FROM attachments WHERE note_id IN (${placeholders})`,
+        noteIds
+    );
+
+    // 3. Group attachments by note_id in memory (O(n) — no extra SQL)
+    const attsByNoteId: Record<string, any[]> = {};
+    for (const att of allAtts) {
+        if (!attsByNoteId[att.note_id]) attsByNoteId[att.note_id] = [];
+        attsByNoteId[att.note_id].push(att);
     }
-    return notes;
+
+    // 4. Merge into notes
+    const mappedNotes = notes.map(note => {
+        let content = note.content;
+        if (content) content = decryptData(content); // US-21: Decrypt
+        
+        const atts = attsByNoteId[note.id] || [];
+        return {
+            ...note,
+            content,
+            folder: note.folder_id, // US-22: Map DB column to property
+            attachments: {
+                images: atts.filter((a: any) => a.type === 'image').map((a: any) => a.uri),
+                videos: atts.filter((a: any) => a.type === 'video').map((a: any) => a.uri),
+                voice: atts.filter((a: any) => a.type === 'voice').map((a: any) => ({ uri: a.uri, duration: a.duration }))
+            }
+        };
+    });
+    return mappedNotes;
 }
 
 export async function saveNote(note: any) {
@@ -138,9 +165,11 @@ export async function saveNote(note: any) {
     const noteType = note.type || 'text';
     const noteDate = note.date || Date.now();
 
+    const encryptedContent = note.content ? encryptData(note.content) : '';
+
     await database.runAsync(
         'INSERT OR REPLACE INTO notes (id, type, title, content, color, folder_id, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [noteId, noteType, note.title || '', note.content || '', note.color || null, note.folder || null, noteDate]
+        [noteId, noteType, note.title || '', encryptedContent, note.color || null, note.folder || null, noteDate]
     );
     
     // Update attachments
@@ -207,6 +236,25 @@ export async function deleteNoteFromDb(id: string) {
     // 2. Delete from database
     await database.runAsync('DELETE FROM notes WHERE id = ?', [id]);
     await database.runAsync('DELETE FROM attachments WHERE note_id = ?', [id]);
+}
+
+// --- LESSON NOTES (Unified) ---
+export async function getLessonNote(lessonId: string, blockId: string) {
+  const database = await initUserStorage();
+  const id = `ln_${lessonId}_${blockId}`;
+  const row: any = await database.getFirstAsync('SELECT content FROM notes WHERE id = ?', [id]);
+  return row && row.content ? decryptData(row.content) : null;
+}
+
+export async function saveLessonNote(lessonId: string, blockId: string, content: string) {
+  const id = `ln_${lessonId}_${blockId}`;
+  await saveNote({
+    id,
+    type: 'lesson_note',
+    content,
+    title: `Note: Lesson ${lessonId}`,
+    date: Date.now()
+  });
 }
 
 // --- FOLDERS ---

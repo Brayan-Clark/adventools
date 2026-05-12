@@ -61,6 +61,8 @@ export interface TranslationSchema {
   search_placeholder: string;
   results_count: string;
   no_results: string;
+  what_are_you_looking_for: string;
+  global_search_scope: string;
 
   // Hymnal
   my_hymnals: string;

@@ -182,12 +182,13 @@ export class I18nManager {
     if (status === 'built-in' || !this.localManifest) return false;
 
     try {
-      if (!Array.isArray(this.localManifest?.languages)) return false;
-      const lang = this.localManifest?.languages.find(l => l.id === id);
+      if (!Array.isArray(this.localManifest.languages)) return false;
+      const lang = this.localManifest.languages.find(l => l.id === id);
       if (lang) {
         await FileSystem.deleteAsync(`${I18N_DIR}${lang.file}`, { idempotent: true });
         delete this.dynamicTranslations[id];
-        this.localManifest!!.languages = this.localManifest!!.languages.filter(l => l.id !== id);
+        // US-04: safe mutation — localManifest is confirmed non-null above
+        this.localManifest.languages = this.localManifest.languages.filter(l => l.id !== id);
         await AsyncStorage.setItem(LOCAL_MANIFEST_KEY, JSON.stringify(this.localManifest));
         return true;
       }

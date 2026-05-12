@@ -1,193 +1,119 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
-import { exportAllData, importData, migrateFromAsyncStorage } from './user-storage';
+import { exportAllData, importData } from './user-storage';
+import { encryptData, decryptData } from './security';
 
-export async function exportUserModifications() {
+const BACKUP_FILE_EXTENSION = '.advb';
+
+/**
+ * EXPORT COMPLET ET CHIFFRÉ DE L'APPLICATION
+ */
+export async function exportAllAppData() {
   try {
+    // 1. Collect all data from SQLite
     const backupData = await exportAllData();
 
-    const filename = `adventools_modifications_${new Date().toISOString().split('T')[0]}.json`;
-    const fileUri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || "") + filename;
+    // 2. Encrypt the data
+    const jsonString = JSON.stringify(backupData);
+    const encryptedData = encryptData(jsonString);
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData, null, 2));
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'application/json',
-      dialogTitle: 'Exporter les modifications',
-      UTI: 'public.json'
-    });
+    // 3. Save to a temporary file
+    const filename = `adventools_backup_${new Date().toISOString().split('T')[0]}${BACKUP_FILE_EXTENSION}`;
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+    await FileSystem.writeAsStringAsync(fileUri, encryptedData);
+
+    // 4. Share the encrypted file
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/octet-stream',
+        dialogTitle: 'Sauvegarde sécurisée Adventools',
+        UTI: 'public.data'
+      });
+    } else {
+      Alert.alert("Erreur", "Le partage n'est pas disponible sur cet appareil.");
+    }
   } catch (error) {
-    console.error("Export Error", error);
-    Alert.alert("Erreur", "Impossible d'exporter les données.");
+    console.error("Full Export Error", error);
+    Alert.alert("Erreur", "Impossible de créer la sauvegarde chiffrée.");
   }
 }
 
+/**
+ * LECTURE ET DÉCHIFFREMENT D'UN FICHIER DE SAUVEGARDE
+ */
 export async function readBackupFile() {
   try {
+    // 1. Pick the file
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/json',
+      type: ['application/octet-stream', 'application/json', '*/*'],
       copyToCacheDirectory: true
     });
 
     if (result.canceled) return null;
 
-    const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
-    return JSON.parse(fileContent);
+    // 2. Read the content
+    const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+
+    // 3. Attempt decryption
+    let jsonString = '';
+    if (content.startsWith('{')) {
+      // Legacy unencrypted backup
+      jsonString = content;
+    } else {
+      // Encrypted backup
+      jsonString = decryptData(content);
+    }
+
+    if (!jsonString || !jsonString.startsWith('{')) {
+      Alert.alert("Erreur", "Le fichier de sauvegarde est invalide, corrompu ou la clé de déchiffrement est incorrecte.");
+      return null;
+    }
+
+    const backup = JSON.parse(jsonString);
+    return backup;
   } catch (error) {
     console.error("Read Backup Error", error);
-    Alert.alert("Erreur", "Impossible de lire le fichier.");
+    Alert.alert("Erreur", "Impossible de lire ou déchiffrer le fichier de sauvegarde.");
     return null;
   }
 }
 
-export async function importUserModifications() {
-  // We will now handle this in the UI (modal.tsx) for a better experience with summary
-  // This old version is kept for compatibility or can be removed if fully replaced.
-  const data = await readBackupFile();
-  if (!data) return;
-
-  const entries = Object.entries(data);
-  const validPairs: [string, string][] = entries
-    .map(([key, value]) => [key, String(value)]);
-
-  if (validPairs.length === 0) {
-    Alert.alert("Erreur", "Le fichier est vide ou invalide.");
-    return;
-  }
-
-  Alert.alert(
-    "Confirmation",
-    `Voulez-vous importer ${validPairs.length} éléments ? Cela pourrait écraser vos modifications actuelles.`,
-    [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Importer",
-        onPress: async () => {
-          try {
-            await AsyncStorage.multiSet(validPairs);
-            Alert.alert("Succès", "Importation terminée avec succès !");
-          } catch (e) {
-            console.error(e);
-            Alert.alert("Erreur", "Échec de l'écriture dans le stockage.");
-          }
-        }
-      }
-    ]
-  );
-}
-export async function resetHymnCorrections() {
-  try {
-    const keys = await AsyncStorage.getAllKeys();
-    const hymnKeys = keys.filter(key => key.startsWith('hymne_edit_'));
-
-    if (hymnKeys.length === 0) {
-      Alert.alert("Information", "Aucune correction à réinitialiser.");
-      return;
-    }
-
-    Alert.alert(
-      "Réinitialisation",
-      `Voulez-vous supprimer les ${hymnKeys.length} corrections locales ? Cette action est irréversible.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Réinitialiser",
-          style: "destructive",
-          onPress: async () => {
-            await AsyncStorage.multiRemove(hymnKeys);
-            Alert.alert("Succès", "Toutes les corrections ont été effacées.");
-          }
-        }
-      ]
-    );
-  } catch (e) {
-    console.error(e);
-    Alert.alert("Erreur", "Impossible de réinitialiser les corrections.");
-  }
-}
-
 /**
- * EXPORT COMPLET DE L'APPLICATION
- */
-export async function exportAllAppData() {
-  try {
-    const backupData = await exportAllData();
-
-    const json = JSON.stringify(backupData, null, 2);
-    const filename = `adventools_backup_${new Date().toISOString().split('T')[0]}.json`;
-    const fileUri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || "") + filename;
-
-    await FileSystem.writeAsStringAsync(fileUri, json);
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'application/json',
-      dialogTitle: 'Sauvegarde complète Adventools',
-      UTI: 'public.json'
-    });
-  } catch (error) {
-    console.error("Full Export Error", error);
-    Alert.alert("Erreur", "Impossible de créer la sauvegarde.");
-  }
-}
-
-/**
- * IMPORT COMPLET DE L'APPLICATION
+ * RESTAURATION COMPLÈTE À PARTIR D'UN FICHIER
  */
 export async function importAllAppData() {
   try {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/json',
-      copyToCacheDirectory: true
-    });
-
-    if (result.canceled) return;
-
-    const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
-    const backup = JSON.parse(fileContent);
-
-    if (!backup.data || typeof backup.data !== 'object') {
-      Alert.alert("Erreur", "Format de sauvegarde invalide.");
-      return;
-    }
+    const backup = await readBackupFile();
+    if (!backup) return;
 
     Alert.alert(
-      "Restauration Complète",
-      `Cette action va restaurer vos données (notes, réglages, surlignages...). Vos données actuelles pourraient être écrasées. Continuer ?`,
+      "Restauration sécurisée",
+      "Voulez-vous restaurer vos données ? Vos données actuelles seront remplacées par celles de la sauvegarde.",
       [
         { text: "Annuler", style: "cancel" },
         {
           text: "Restaurer",
           onPress: async () => {
             try {
-              if (backup.version === "2.0") {
-                  // Direct SQLite import
-                  await importData(backup);
-              } else {
-                  // Legacy AsyncStorage import
-                  const entries = Object.entries(backup.data);
-                  const validPairs: [string, string][] = entries.map(([key, value]) => [key, String(value)]);
-                  await AsyncStorage.multiSet(validPairs);
-                  // Trigger migration on next run or now?
-                  await migrateFromAsyncStorage();
-              }
-              
+              await importData(backup);
               Alert.alert(
-                "Succès",
-                "Restauration terminée ! Il est conseillé de redémarrer l'application pour appliquer tous les changements.",
+                "Succès", 
+                "Vos données ont été restaurées avec succès ! Veuillez redémarrer l'application.",
                 [{ text: "OK" }]
               );
             } catch (e) {
               console.error(e);
-              Alert.alert("Erreur", "Échec de l'écriture des données restaureés.");
+              Alert.alert("Erreur", "Échec de l'importation des données dans la base de données.");
             }
           }
         }
       ]
     );
-
   } catch (error) {
     console.error("Full Import Error", error);
-    Alert.alert("Erreur", "Le fichier de sauvegarde est corrompu ou illisible.");
+    Alert.alert("Erreur", "Échec de la restauration.");
   }
 }

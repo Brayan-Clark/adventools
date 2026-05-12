@@ -1,4 +1,4 @@
-import { exportAllAppData, readBackupFile } from '@/lib/backup-utils';
+import { exportAllAppData, importAllAppData } from '@/lib/backup-utils';
 import { performUpdateCheck } from '@/lib/updater';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
@@ -494,8 +494,9 @@ export default function Settings() {
                 />
                 <SettingItem
                   icon={<Download size={18} color="#3b82f6" />}
-                  label={t('restore_summary')}
-                  onPress={handleStartImport}
+                  label="Restauration Sécurisée"
+                  value="Restaurer un fichier .advb"
+                  onPress={importAllAppData}
                   isLast
                 />
               </SettingsGroup>

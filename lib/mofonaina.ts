@@ -71,19 +71,38 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
     }
 
     if (shouldSync) {
-      try {
-        // Use a timestamp to bypass any server-side or network-level caching
-        const response = await fetch(`${API_BASE}/fiambenana?t=${Date.now()}`);
-        if (response.ok) {
-          const data: Mofonaina[] = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
-            await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
-            return data;
+      // US-06: Robust network management with timeout and retry
+      let attempt = 0;
+      const MAX_ATTEMPTS = 2;
+      let success = false;
+
+      while (attempt < MAX_ATTEMPTS && !success) {
+        attempt++;
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+          const response = await fetch(`${API_BASE}/fiambenana?t=${Date.now()}`, {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data: Mofonaina[] = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+              await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
+              await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
+              success = true;
+              return data;
+            }
+          }
+        } catch (fetchError) {
+          console.warn(`Mofonaina fetch attempt ${attempt} failed:`, fetchError);
+          if (attempt === MAX_ATTEMPTS) {
+            console.error('Final attempt failed, using cache.');
           }
         }
-      } catch (fetchError) {
-        console.error('Fetch failed in syncMofonaina, falling back to cache:', fetchError);
       }
     }
 
