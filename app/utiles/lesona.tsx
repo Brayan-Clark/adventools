@@ -709,12 +709,35 @@ export default function LesonaSekolySabata() {
 
       const prefix = `${selectedLang}-`;
       
-      // Try to load offline titles first
+      // Try to load offline titles — check with lang prefix first, then without
+      const offlineTitlesFileWithLang = `${LESSONS_DIR}titles_${selectedLang}_${q.id}.json`;
       const offlineTitlesFile = `${LESSONS_DIR}titles_${q.id}.json`;
-      FileSystem.readAsStringAsync(offlineTitlesFile).then(content => {
-        const offlineTitles = JSON.parse(content);
-        setLessonTitlesMap(prev => ({ ...prev, ...offlineTitles }));
-      }).catch(() => {
+
+      const tryLoadOfflineTitles = async () => {
+        // Try with lang prefix first (new format)
+        try {
+          const content = await FileSystem.readAsStringAsync(offlineTitlesFileWithLang);
+          const offlineTitles = JSON.parse(content);
+          if (Object.keys(offlineTitles).length > 0) {
+            setLessonTitlesMap(prev => ({ ...prev, ...offlineTitles }));
+            return true;
+          }
+        } catch (_) {}
+        // Try without lang prefix (legacy format)
+        try {
+          const content = await FileSystem.readAsStringAsync(offlineTitlesFile);
+          const offlineTitles = JSON.parse(content);
+          if (Object.keys(offlineTitles).length > 0) {
+            setLessonTitlesMap(prev => ({ ...prev, ...offlineTitles }));
+            return true;
+          }
+        } catch (_) {}
+        return false;
+      };
+
+      tryLoadOfflineTitles().then(foundOffline => {
+        if (foundOffline) return; // Already loaded from offline, done.
+
         // Fallback to fetching online if not found offline
         lessons.forEach((l: any) => {
           const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
@@ -930,6 +953,26 @@ export default function LesonaSekolySabata() {
             if (lessonJson) {
               let normalized = lessonJson;
               if (!lessonJson.segments && lessonJson.lessons) normalized = { ...lessonJson, segments: lessonJson.lessons };
+
+              // Fetch per-lesson cover from v2 API so it's available offline
+              // Each weekly lesson has its OWN unique cover image
+              if (!normalized.cover && lessonId) {
+                try {
+                  const qCleanForV2 = q.id.replace(/^[a-z]{2}-/, "").replace("ss-", "");
+                  let shortId = lessonId;
+                  if (shortId && shortId.length === 1) shortId = shortId.padStart(2, '0');
+                  const v2CoverUrl = `https://sabbath-school.adventech.io/api/v2/${selectedLang}/quarterlies/${qCleanForV2}/lessons/${shortId}/index.json`;
+                  const v2Res = await fetch(v2CoverUrl).catch(() => null);
+                  if (v2Res && v2Res.ok) {
+                    const v2Text = await v2Res.text();
+                    if (v2Text.trim().startsWith('{')) {
+                      const v2Data = JSON.parse(v2Text);
+                      if (v2Data.cover) normalized = { ...normalized, cover: v2Data.cover };
+                    }
+                  }
+                } catch (_) {}
+              }
+
               if (lessonId) {
                 lessonsData[lessonId] = normalized;
                 successCount++;
@@ -955,14 +998,19 @@ export default function LesonaSekolySabata() {
           collectedTitles[lId] = lessonsData[lId].title;
         }
       });
+      // Save titles with lang prefix (new format) AND without (legacy compat)
+      const downloadId2 = `${selectedLang}_${q.id}`;
+      await FileSystem.writeAsStringAsync(`${LESSONS_DIR}titles_${downloadId2}.json`, JSON.stringify(collectedTitles)).catch(() => {});
       await FileSystem.writeAsStringAsync(`${LESSONS_DIR}titles_${q.id}.json`, JSON.stringify(collectedTitles)).catch(() => {});
 
-      // Download Covers for offline use
+      // Download Covers for offline use — save with lang prefix and without (legacy compat)
       if (q.covers) {
         if (q.covers.landscape) {
+          await FileSystem.downloadAsync(q.covers.landscape, `${LESSONS_DIR}cover_${selectedLang}_${q.id}_landscape.png`).catch(() => {});
           await FileSystem.downloadAsync(q.covers.landscape, `${LESSONS_DIR}cover_${q.id}_landscape.png`).catch(() => {});
         }
         if (q.covers.portrait) {
+          await FileSystem.downloadAsync(q.covers.portrait, `${LESSONS_DIR}cover_${selectedLang}_${q.id}_portrait.png`).catch(() => {});
           await FileSystem.downloadAsync(q.covers.portrait, `${LESSONS_DIR}cover_${q.id}_portrait.png`).catch(() => {});
         }
       }
@@ -1512,31 +1560,13 @@ export default function LesonaSekolySabata() {
             {segment ? (
               <>
                 <View className="mb-8 rounded-[32px] overflow-hidden border border-white/10 relative shadow-xl shadow-black/30" style={{ minHeight: 250 }}>
-                  <Image 
-                    source={{ uri: readingLesson.cover || selectedQuarterly?.covers?.landscape || selectedQuarterly?.covers?.portrait }} 
+                  {/* readingLesson.cover = cover unique par semaine (v2 API), différent pour chaque leçon */}
+                  <Image
+                    source={{ uri: readingLesson.cover || selectedQuarterly?.covers?.landscape || selectedQuarterly?.covers?.portrait }}
                     style={{ position: 'absolute', width: '100%', height: '100%' }}
                     defaultSource={require('../../assets/images/icon.png')}
                     resizeMode="cover"
                   />
-                  {/* Local Cover Fallback overlay if offline */}
-                  {(() => {
-                    const localLandscape = `${LESSONS_DIR}cover_${selectedQuarterly?.id}_landscape.png`;
-                    const localPortrait = `${LESSONS_DIR}cover_${selectedQuarterly?.id}_portrait.png`;
-                    return (
-                      <View style={{ position: 'absolute', width: '100%', height: '100%' }}>
-                         <Image 
-                            source={{ uri: localLandscape }} 
-                            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 1 }}
-                            resizeMode="cover"
-                         />
-                         <Image 
-                            source={{ uri: localPortrait }} 
-                            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.5 }}
-                            resizeMode="cover"
-                         />
-                      </View>
-                    );
-                  })()}
                   <View className="absolute inset-0 bg-slate-950/60" />
                   <View className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-90" />
                   

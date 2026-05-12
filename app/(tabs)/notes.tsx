@@ -383,6 +383,8 @@ export default function Notes() {
     const [showHighlighter, setShowHighlighter] = useState(false);
     const [showFolderModal, setShowFolderModal] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
+    const [editingFolderName, setEditingFolderName] = useState<string | null>(null); // null = create mode, string = rename mode
+    const [folderActionSheet, setFolderActionSheet] = useState<string | null>(null); // folder name shown in action sheet
     const [selection, setSelection] = useState({ start: 0, end: 0 });
     const [showDrawModal, setShowDrawModal] = useState(false);
     const [showAttachments, setShowAttachments] = useState(false);
@@ -798,17 +800,16 @@ export default function Notes() {
                         <Text className={cn("font-bold text-sm", selectedFolder === "all" ? "text-white" : "text-slate-400")}>{t('all_notes')}</Text>
                     </TouchableOpacity>
                     {folders.map(f => (
-                        <TouchableOpacity key={f} onPress={() => setSelectedFolder(f)} onLongPress={() => {
-                            setConfirmConfig({
-                                visible: true, title: "Supprimer le dossier", message: `Voulez-vous supprimer le dossier "${f}" ?`, onConfirm: async () => {
-                                    const u = folders.filter(x => x !== f); setFolders(u); await saveFolders(u); if (selectedFolder === f) setSelectedFolder("all");
-                                }
-                            });
-                        }} className={cn("px-6 py-4 rounded-3xl mr-3 border", selectedFolder === f ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10")}>
+                        <TouchableOpacity
+                          key={f}
+                          onPress={() => setSelectedFolder(f)}
+                          onLongPress={() => setFolderActionSheet(f)}
+                          className={cn("px-6 py-4 rounded-3xl mr-3 border", selectedFolder === f ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10")}
+                        >
                             <Text className={cn("font-bold text-sm", selectedFolder === f ? "text-primary" : "text-slate-500")}>{f}</Text>
                         </TouchableOpacity>
                     ))}
-                    <TouchableOpacity onPress={() => setShowFolderModal(true)} className="w-14 h-14 rounded-[22px] bg-white/5 border border-dashed border-white/20 items-center justify-center"><Plus size={20} color="#94a3b8" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setEditingFolderName(null); setNewFolderName(""); setShowFolderModal(true); }} className="w-14 h-14 rounded-[22px] bg-white/5 border border-dashed border-white/20 items-center justify-center"><Plus size={20} color="#94a3b8" /></TouchableOpacity>
                 </ScrollView>
             </View>
 
@@ -970,19 +971,93 @@ export default function Notes() {
                 <View className="flex-1 bg-black/60 justify-end">
                     <View className="bg-[#0f172a] rounded-t-[40px] p-8">
                         <View className="flex-row justify-between items-center mb-8">
-                            <View><Text className="text-white font-bold text-2xl">Dossier</Text></View>
-                            <TouchableOpacity onPress={() => setShowFolderModal(false)}><X size={24} color="#94a3b8" /></TouchableOpacity>
-                        </View>
-                        <ScrollView className="max-h-[200px] mb-8">
-                            <View className="flex-row flex-wrap gap-3">
-                                <TouchableOpacity onPress={() => { if (editingNote) updateCurrentNoteState({ folder: undefined }); setShowFolderModal(false); }} className={cn("px-6 py-4 rounded-3xl border", !editingNote?.folder ? "bg-primary border-primary" : "bg-white/5 border-white/10")}><Text className={cn("font-bold text-sm", !editingNote?.folder ? "text-white" : "text-slate-400")}>Aucun</Text></TouchableOpacity>
-                                {folders.map(f => <TouchableOpacity key={f} onPress={() => { if (editingNote) updateCurrentNoteState({ folder: f }); setShowFolderModal(false); }} className={cn("px-6 py-4 rounded-3xl border", editingNote?.folder === f ? "bg-primary border-primary" : "bg-white/5 border-white/10")}><Text className={cn("font-bold text-sm", editingNote?.folder === f ? "text-white" : "text-slate-400")}>{f}</Text></TouchableOpacity>)}
+                            <View>
+                              <Text className="text-white font-bold text-2xl">
+                                {editingFolderName ? `Renommer "${editingFolderName}"` : 'Dossiers'}
+                              </Text>
+                              {!editingFolderName && <Text className="text-slate-500 text-xs mt-1">Maintenez appuyé une catégorie pour la renommer ou supprimer</Text>}
                             </View>
-                        </ScrollView>
-                        <View className="flex-row gap-3">
-                            <TextInput placeholder="Nouveau dossier" placeholderTextColor="#475569" className="flex-1 bg-white/5 p-5 rounded-3xl text-white font-bold" value={newFolderName} onChangeText={setNewFolderName} />
-                            <TouchableOpacity onPress={async () => { if (newFolderName) { const u = Array.from(new Set([...folders, newFolderName])); setFolders(u); await saveFolders(u); if (editingNote) updateCurrentNoteState({ folder: newFolderName }); } setShowFolderModal(false); setNewFolderName(""); }} className="w-16 bg-blue-600 rounded-3xl items-center justify-center"><Check size={24} color="white" /></TouchableOpacity>
+                            <TouchableOpacity onPress={() => { setShowFolderModal(false); setEditingFolderName(null); setNewFolderName(""); }}><X size={24} color="#94a3b8" /></TouchableOpacity>
                         </View>
+
+                        {/* Folder list — shown only in selection/create mode (not rename mode) */}
+                        {!editingFolderName && (
+                          <ScrollView className="max-h-[200px] mb-8">
+                            <View className="flex-row flex-wrap gap-3">
+                              <TouchableOpacity
+                                onPress={() => { if (editingNote) updateCurrentNoteState({ folder: undefined }); setShowFolderModal(false); }}
+                                className={cn("px-6 py-4 rounded-3xl border", !editingNote?.folder ? "bg-primary border-primary" : "bg-white/5 border-white/10")}
+                              >
+                                <Text className={cn("font-bold text-sm", !editingNote?.folder ? "text-white" : "text-slate-400")}>Aucun</Text>
+                              </TouchableOpacity>
+                              {folders.map(f => (
+                                <View key={f} className="flex-row items-center">
+                                  <TouchableOpacity
+                                    onPress={() => { if (editingNote) updateCurrentNoteState({ folder: f }); setShowFolderModal(false); }}
+                                    className={cn("px-6 py-4 rounded-l-3xl border-y border-l", editingNote?.folder === f ? "bg-primary border-primary" : "bg-white/5 border-white/10")}
+                                  >
+                                    <Text className={cn("font-bold text-sm", editingNote?.folder === f ? "text-white" : "text-slate-400")}>{f}</Text>
+                                  </TouchableOpacity>
+                                  {/* Edit button per folder */}
+                                  <TouchableOpacity
+                                    onPress={() => { setEditingFolderName(f); setNewFolderName(f); }}
+                                    className={cn("px-3 py-4 rounded-r-3xl border-y border-r items-center justify-center", editingNote?.folder === f ? "bg-primary/80 border-primary" : "bg-white/5 border-white/10")}
+                                  >
+                                    <Edit size={12} color={editingNote?.folder === f ? "white" : "#64748b"} />
+                                  </TouchableOpacity>
+                                </View>
+                              ))}
+                            </View>
+                          </ScrollView>
+                        )}
+
+                        {/* Input: create new OR rename existing */}
+                        <View className="flex-row gap-3">
+                            <TextInput
+                              placeholder={editingFolderName ? `Nouveau nom pour "${editingFolderName}"` : "Nouveau dossier..."}
+                              placeholderTextColor="#475569"
+                              className="flex-1 bg-white/5 p-5 rounded-3xl text-white font-bold"
+                              value={newFolderName}
+                              onChangeText={setNewFolderName}
+                              autoFocus={!!editingFolderName}
+                            />
+                            <TouchableOpacity
+                              onPress={async () => {
+                                if (!newFolderName.trim()) { setShowFolderModal(false); setEditingFolderName(null); setNewFolderName(""); return; }
+                                if (editingFolderName) {
+                                  // Rename: replace old name with new name everywhere
+                                  const trimmed = newFolderName.trim();
+                                  const u = folders.map(x => x === editingFolderName ? trimmed : x);
+                                  setFolders(u);
+                                  await saveFolders(u);
+                                  // Update notes that had the old folder name
+                                  const updatedNotes = notes.map(n => n.folder === editingFolderName ? { ...n, folder: trimmed } : n);
+                                  setNotes(updatedNotes);
+                                  await Promise.all(updatedNotes.filter(n => n.folder === trimmed && notes.find(o => o.id === n.id)?.folder === editingFolderName).map(n => saveNote(n)));
+                                  if (selectedFolder === editingFolderName) setSelectedFolder(trimmed);
+                                  if (editingNote?.folder === editingFolderName) updateCurrentNoteState({ folder: trimmed });
+                                  setEditingFolderName(null);
+                                } else {
+                                  // Create new
+                                  const trimmed = newFolderName.trim();
+                                  const u = Array.from(new Set([...folders, trimmed]));
+                                  setFolders(u);
+                                  await saveFolders(u);
+                                  if (editingNote) updateCurrentNoteState({ folder: trimmed });
+                                  setShowFolderModal(false);
+                                }
+                                setNewFolderName("");
+                              }}
+                              className="w-16 bg-blue-600 rounded-3xl items-center justify-center"
+                            >
+                              <Check size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                        {editingFolderName && (
+                          <TouchableOpacity onPress={() => { setEditingFolderName(null); setNewFolderName(""); }} className="mt-4 items-center">
+                            <Text className="text-slate-500 text-sm">Annuler le renommage</Text>
+                          </TouchableOpacity>
+                        )}
                         <View className="h-10" />
                     </View>
                 </View>
@@ -1051,6 +1126,95 @@ export default function Notes() {
                         <TouchableOpacity onPress={() => setShowNoteTypeModal(false)} className="py-5 bg-white/5 rounded-3xl items-center"><Text className="text-white/60 font-bold">{t('cancel')}</Text></TouchableOpacity>
                     </View>
                 </View>
+            </Modal>
+
+            {/* ── Folder Action Sheet (dark themed, replaces Alert.alert) ── */}
+            <Modal visible={!!folderActionSheet} transparent animationType="slide">
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setFolderActionSheet(null)}
+                  className="flex-1 bg-black/70 justify-end"
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={e => e.stopPropagation()}>
+                        <View className="bg-[#0f172a] rounded-t-[40px] p-8 border-t border-white/10">
+                            {/* Handle bar */}
+                            <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-6" />
+
+                            {/* Category name */}
+                            <View className="flex-row items-center mb-8">
+                                <View className="w-10 h-10 rounded-2xl bg-primary/10 items-center justify-center mr-4 border border-primary/20">
+                                    <Folder size={18} color="#3b82f6" />
+                                </View>
+                                <View>
+                                    <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Catégorie</Text>
+                                    <Text className="text-white text-xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{folderActionSheet}</Text>
+                                </View>
+                            </View>
+
+                            {/* Actions */}
+                            <View className="gap-3 mb-4">
+                                {/* Rename */}
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        const f = folderActionSheet!;
+                                        setFolderActionSheet(null);
+                                        setEditingFolderName(f);
+                                        setNewFolderName(f);
+                                        setShowFolderModal(true);
+                                    }}
+                                    className="flex-row items-center bg-white/5 border border-white/10 p-5 rounded-3xl"
+                                >
+                                    <View className="w-10 h-10 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                                        <Edit size={18} color="#60a5fa" />
+                                    </View>
+                                    <View className="flex-1">
+                                        <Text className="text-white font-bold text-base">Renommer</Text>
+                                        <Text className="text-slate-500 text-xs mt-0.5">Changer le nom de cette catégorie</Text>
+                                    </View>
+                                    <ChevronRight size={16} color="#475569" />
+                                </TouchableOpacity>
+
+                                {/* Delete */}
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        const f = folderActionSheet!;
+                                        setFolderActionSheet(null);
+                                        setConfirmConfig({
+                                            visible: true,
+                                            title: `Supprimer "${f}"`,
+                                            message: `Voulez-vous supprimer cette catégorie ? Les notes qu'elle contient ne seront pas supprimées.`,
+                                            onConfirm: async () => {
+                                                const u = folders.filter(x => x !== f);
+                                                setFolders(u);
+                                                await saveFolders(u);
+                                                if (selectedFolder === f) setSelectedFolder("all");
+                                            }
+                                        });
+                                    }}
+                                    className="flex-row items-center bg-red-500/5 border border-red-500/20 p-5 rounded-3xl"
+                                >
+                                    <View className="w-10 h-10 rounded-2xl bg-red-500/10 items-center justify-center mr-4">
+                                        <Trash2 size={18} color="#ef4444" />
+                                    </View>
+                                    <View className="flex-1">
+                                        <Text className="text-red-400 font-bold text-base">Supprimer</Text>
+                                        <Text className="text-slate-500 text-xs mt-0.5">Supprimer uniquement la catégorie</Text>
+                                    </View>
+                                    <ChevronRight size={16} color="#475569" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Cancel */}
+                            <TouchableOpacity
+                                onPress={() => setFolderActionSheet(null)}
+                                className="bg-white/5 border border-white/10 py-5 rounded-3xl items-center"
+                            >
+                                <Text className="text-slate-400 font-bold">Annuler</Text>
+                            </TouchableOpacity>
+                            <View className="h-6" />
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
             </Modal>
 
             <Modal visible={!!confirmConfig?.visible} transparent animationType="fade">
