@@ -120,9 +120,13 @@ export async function setSetting(key: string, value: any) {
 export async function getAllNotes() {
     const database = await initUserStorage();
     // US-02: Performance — 2 queries instead of N+1
+    // Exclude 'lesson_note' type — those belong to Sabbath School only (now in AsyncStorage)
     // 1. Load all notes in one query
-    const notes: any[] = await database.getAllAsync('SELECT * FROM notes ORDER BY date DESC');
+    const notes: any[] = await database.getAllAsync(
+        "SELECT * FROM notes WHERE type != 'lesson_note' ORDER BY date DESC"
+    );
     if (notes.length === 0) return [];
+
 
     // 2. Load ALL attachments in a single batch query
     const noteIds = notes.map(n => n.id);
@@ -238,24 +242,33 @@ export async function deleteNoteFromDb(id: string) {
     await database.runAsync('DELETE FROM attachments WHERE note_id = ?', [id]);
 }
 
-// --- LESSON NOTES (Unified) ---
-export async function getLessonNote(lessonId: string, blockId: string) {
-  const database = await initUserStorage();
-  const id = `ln_${lessonId}_${blockId}`;
-  const row: any = await database.getFirstAsync('SELECT content FROM notes WHERE id = ?', [id]);
-  return row && row.content ? decryptData(row.content) : null;
+// --- LESSON NOTES (School of Sabbath - ISOLATED from global Notes) ---
+// These are stored in AsyncStorage with a dedicated prefix.
+// They are NEVER written to the SQLite 'notes' table.
+// Deleting a global note will NEVER affect a lesson note and vice versa.
+export async function getLessonNote(lessonId: string, blockId: string): Promise<string | null> {
+  try {
+    const key = `@lesson_note_${lessonId}_${blockId}`;
+    return await AsyncStorage.getItem(key);
+  } catch (e) {
+    console.error('getLessonNote error', e);
+    return null;
+  }
 }
 
-export async function saveLessonNote(lessonId: string, blockId: string, content: string) {
-  const id = `ln_${lessonId}_${blockId}`;
-  await saveNote({
-    id,
-    type: 'lesson_note',
-    content,
-    title: `Note: Lesson ${lessonId}`,
-    date: Date.now()
-  });
+export async function saveLessonNote(lessonId: string, blockId: string, content: string): Promise<void> {
+  try {
+    const key = `@lesson_note_${lessonId}_${blockId}`;
+    if (!content || content.trim() === '') {
+      await AsyncStorage.removeItem(key);
+    } else {
+      await AsyncStorage.setItem(key, content);
+    }
+  } catch (e) {
+    console.error('saveLessonNote error', e);
+  }
 }
+
 
 // --- FOLDERS ---
 export async function getFolders() {
@@ -502,3 +515,4 @@ export async function migrateFromAsyncStorage() {
         console.error('Migration failed', e);
     }
 }
+

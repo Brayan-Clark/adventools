@@ -41,7 +41,6 @@ export const cleanSspmMarkdown = (md: string) => {
   if (!md) return "";
   return md
     .replace(/\\\\\n/g, '\n')
-    .replace(/\\?(\^)?\[([^\]]+)\]\(\s*(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})\s*\)/g, '$2')
     .replace(/<span[^>]*>([\s\S]*?)<\/span>/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/\{#.*?\}/g, '')
@@ -51,6 +50,23 @@ export const cleanSspmMarkdown = (md: string) => {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 };
+
+/**
+ * Strips all markdown artifacts (links, images, etc.) to produce clean plain text.
+ * Used for sharing and journal notes.
+ */
+export const stripMarkdownLinks = (md: string) => {
+  if (!md) return "";
+  return cleanSspmMarkdown(md)
+    // Strip SSPM object-style links: [text]({...})
+    .replace(/\\?(\^)?\[([^\]]+)\]\(\s*(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})\s*\)/g, '$2')
+    // Strip standard markdown links: [text](url) → text
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    // Strip image links: ![alt](url) → ''
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '');
+};
+
+
 
 /**
  * Parses various date formats to a Date object.

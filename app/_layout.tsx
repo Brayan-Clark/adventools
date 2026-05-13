@@ -5,6 +5,7 @@ import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useEffect, useState } from 'react';
 import { View, Platform, PermissionsAndroid } from 'react-native';
 import 'react-native-reanimated';
@@ -65,6 +66,9 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
+    // Force portrait orientation lock
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    
     // Bible metadata init on startup
     initBibleMetadata();
     // NOTE: Notification permission is handled once in RootNavigator.checkPermissions()

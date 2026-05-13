@@ -33,10 +33,11 @@ import {
   Video as VideoIcon,
   Mic,
   Database,
-  HardDrive
+  HardDrive,
+  Copy
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
-import { cleanSspmMarkdown, parseDate, formatDateRange } from '@/lib/utils';
+import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange } from '@/lib/utils';
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -307,15 +308,17 @@ export default function LesonaSekolySabata() {
 
   const openNoteForVerse = async (title: string) => {
     try {
+      // Look for an existing note in the global journal for this verse/lesson
       const allNotes = await getAllNotes();
       let existingNote = allNotes.find((n: any) => n.title === title);
       
       if (!existingNote) {
+        // New note: pre-fill with the verse content so the user can annotate it
         existingNote = {
           id: Date.now().toString() + Math.random().toString(),
           type: 'text',
           title: title,
-          content: `> ${verseContent}\n\n`,
+          content: verseContent ? `> ${verseContent}\n\n` : '',
           date: Date.now(),
           color: '#1e293b'
         };
@@ -351,6 +354,7 @@ export default function LesonaSekolySabata() {
   const handleSaveQuickNote = async () => {
     if (!editingQuickNote) return;
     try {
+      // Save to the global journal — this is the "Journal d'étude" from the verse modal
       await saveNote(editingQuickNote);
       setQuickNoteModalVisible(false);
       showToast(t('note_saved' as any) || "Note enregistrée dans votre journal.", 'success');
@@ -1340,7 +1344,7 @@ export default function LesonaSekolySabata() {
 
       if (segment.blocks && segment.blocks.length > 0) {
         const rawMarkdown = segment.blocks.map(b => extractTextRecursive(b)).join('\n\n');
-        cleanContent = cleanSspmMarkdown(rawMarkdown);
+        cleanContent = stripMarkdownLinks(rawMarkdown);
       } else if (segment.type === 'pdf' && segment.pdf) {
         cleanContent = segment.pdf.map(p => `${p.title}: ${p.src}`).join('\n');
       }
@@ -1370,7 +1374,7 @@ export default function LesonaSekolySabata() {
         // Clean title: 1Sam19 -> 1 Sam 19
         const formattedTitle = bibleKey.replace(/([0-9]+)/g, ' $1 ').replace(/\s+/g, ' ').trim();
         setVerseTitle(formattedTitle);
-        setVerseContent(cleanSspmMarkdown(fullText));
+        setVerseContent(stripMarkdownLinks(fullText));
         setVerseModalVisible(true);
         return false;
       }
@@ -1849,44 +1853,49 @@ export default function LesonaSekolySabata() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Verse Modal */}
-      <Modal
-        visible={verseModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setVerseModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/80 justify-end">
-          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10">
+      {/* Verse View Replacement - Absolute positioning for perfect selection support */}
+      {verseModalVisible && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+          <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[90%] shadow-2xl">
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-primary font-bold text-xl">{verseTitle}</Text>
-              <TouchableOpacity
-                onPress={() => setVerseModalVisible(false)}
-                className="w-10 h-10 rounded-full bg-white/5 items-center justify-center"
-              >
-                <X size={20} color="#94a3b8" />
-              </TouchableOpacity>
+              <View className="flex-1">
+                <Text className="text-primary font-bold text-xl">{verseTitle}</Text>
+              </View>
+              <View className="flex-row items-center">
+                <TouchableOpacity
+                  onPress={() => {
+                    import('expo-clipboard').then(Clipboard => {
+                      Clipboard.setStringAsync(verseContent);
+                      showToast(t('copied' as any) || "Copié !", 'success');
+                    });
+                  }}
+                  className="w-10 h-10 rounded-full bg-white/5 items-center justify-center mr-2"
+                >
+                  <Copy size={18} color="#94a3b8" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setVerseModalVisible(false)}
+                  className="w-10 h-10 rounded-full bg-white/5 items-center justify-center"
+                >
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <ScrollView className="max-h-[60vh] mb-4" showsVerticalScrollIndicator={false}>
-              <Markdown
-                style={{
-                  body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: globalSettings.fontFamily, fontStyle: 'italic' },
-                  strong: { color: '#f8fafc', fontWeight: 'bold' },
-                  heading3: { color: '#3b82f6', marginTop: 15, marginBottom: 5, fontFamily: 'Lexend_600SemiBold' }
-                }}
-                rules={{
-                  image: (node) => (
-                    <Image
-                      key={node.key}
-                      source={{ uri: node.attributes.src }}
-                      style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
-                      resizeMode="cover"
-                    />
-                  )
+            
+            <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+              <Text
+                selectable={true}
+                selectionColor="#3b82f6"
+                style={{ 
+                  color: '#f1f5f9', 
+                  fontSize: 18, 
+                  lineHeight: 28, 
+                  fontFamily: 'Lexend_400Regular',
+                  textAlign: 'left'
                 }}
               >
                 {verseContent}
-              </Markdown>
+              </Text>
             </ScrollView>
 
             <TouchableOpacity 
@@ -1901,7 +1910,7 @@ export default function LesonaSekolySabata() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
 
       {/* Quick Note Modal */}
       <Modal
@@ -1912,7 +1921,7 @@ export default function LesonaSekolySabata() {
       >
         <SafeAreaView className="flex-1 bg-black/80 justify-end">
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 justify-end">
-            <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[90%]">
+            <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[95%]">
               <View className="flex-row justify-between items-center mb-6">
                 <View className="flex-row items-center flex-1 mr-4">
                    <View className="w-10 h-10 rounded-2xl bg-primary/20 items-center justify-center mr-3">
@@ -1931,34 +1940,36 @@ export default function LesonaSekolySabata() {
                 </TouchableOpacity>
               </View>
               
-              <TextInput
-                className="text-slate-200 text-lg leading-7 mb-6 p-4 bg-white/5 rounded-3xl border border-white/10"
-                placeholder="Écrivez vos pensées..."
-                placeholderTextColor="#475569"
-                multiline
-                textAlignVertical="top"
-                autoFocus
-                style={{ fontFamily: 'Lexend_400Regular', minHeight: 200 }}
-                value={editingQuickNote?.content}
-                onChangeText={(t) => setEditingQuickNote({...editingQuickNote, content: t})}
-              />
+              <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+                <TextInput
+                  className="text-slate-200 text-lg leading-7 mb-6 p-4 bg-white/5 rounded-3xl border border-white/10"
+                  placeholder="Écrivez vos pensées..."
+                  placeholderTextColor="#475569"
+                  multiline
+                  textAlignVertical="top"
+                  autoFocus
+                  style={{ fontFamily: 'Lexend_400Regular', minHeight: 200 }}
+                  value={editingQuickNote?.content}
+                  onChangeText={(t) => setEditingQuickNote({...editingQuickNote, content: t})}
+                />
 
-              <View className="flex-row items-center mb-6">
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-                  <TouchableOpacity onPress={() => insertMarkdownToQuickNote('**', '**')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Bold size={18} color="#8b949e" /></TouchableOpacity>
-                  <TouchableOpacity onPress={() => insertMarkdownToQuickNote('*', '*')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Italic size={18} color="#8b949e" /></TouchableOpacity>
-                  <TouchableOpacity onPress={() => {
-                      const refNum = (editingQuickNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1;
-                      insertMarkdownToQuickNote(`[^${refNum}]`, '');
-                      setEditingQuickNote({ ...editingQuickNote, content: editingQuickNote.content + `\n\n[^${refNum}]: ` });
-                  }} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Footprints size={18} color="#8b949e" /></TouchableOpacity>
-                  
-                  <View className="w-[1px] h-8 bg-white/10 mx-2" />
-                  
-                  <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('image')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Camera size={18} color="#8b949e" /></TouchableOpacity>
-                  <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('video')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><VideoIcon size={18} color="#8b949e" /></TouchableOpacity>
-                </ScrollView>
-              </View>
+                <View className="flex-row items-center mb-6">
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                    <TouchableOpacity onPress={() => insertMarkdownToQuickNote('**', '**')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Bold size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => insertMarkdownToQuickNote('*', '*')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Italic size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => {
+                        const refNum = (editingQuickNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1;
+                        insertMarkdownToQuickNote(`[^${refNum}]`, '');
+                        setEditingQuickNote({ ...editingQuickNote, content: editingQuickNote.content + `\n\n[^${refNum}]: ` });
+                    }} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Footprints size={18} color="#8b949e" /></TouchableOpacity>
+                    
+                    <View className="w-[1px] h-8 bg-white/10 mx-2" />
+                    
+                    <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('image')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Camera size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('video')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><VideoIcon size={18} color="#8b949e" /></TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </ScrollView>
               
               <TouchableOpacity
                 onPress={handleSaveQuickNote}

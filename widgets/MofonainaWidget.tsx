@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { FlexWidget, TextWidget, ImageWidget } from 'react-native-android-widget';
 
 interface MofonainaWidgetProps {
   title: string;
@@ -10,54 +10,110 @@ interface MofonainaWidgetProps {
 export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProps) {
   return (
     <FlexWidget
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: 'adventools://mofonaina' }}
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0f172a', // Slate 900
         borderRadius: 24,
-        padding: 20,
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'flex-end',
       }}
     >
-      <TextWidget
-        text="🍞 Veille Matinale"
+      {/* Background image */}
+      <ImageWidget
+        image={require('../assets/images/mofonaina_bg.jpg')}
+        imageWidth={350}
+        imageHeight={200}
         style={{
-          fontSize: 12,
-          color: '#3b82f6', // Primary Blue
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-          marginBottom: 8,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: 24,
         }}
       />
-      <TextWidget
-        text={title || "Titre du jour"}
+
+      {/* Dark gradient overlay */}
+      <FlexWidget
         style={{
-          fontSize: 18,
-          color: '#ffffff',
-          fontWeight: 'bold',
-          marginBottom: 12,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: 24,
+          backgroundColor: '#00000099',
         }}
       />
-      <TextWidget
-        text={`"${verse}"`}
+
+      {/* Content */}
+      <FlexWidget
         style={{
-          fontSize: 14,
-          color: '#cbd5e1', // Slate 300
-          fontStyle: 'italic',
-          marginBottom: 8,
-          maxLines: 4,
-          truncate: 'END',
+          padding: 18,
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
         }}
-      />
-      <TextWidget
-        text={reference}
-        style={{
-          fontSize: 12,
-          color: '#94a3b8', // Slate 400
-          fontWeight: 'bold',
-        }}
-      />
+      >
+        {/* Badge */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 8,
+            backgroundColor: '#3b82f620',
+            borderRadius: 10,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            alignSelf: 'flex-start',
+          }}
+        >
+          <TextWidget
+            text="🌅  Veille Matinale"
+            style={{
+              fontSize: 10,
+              color: '#93c5fd',
+              fontWeight: 'bold',
+            }}
+          />
+        </FlexWidget>
+
+        {/* Title */}
+        <TextWidget
+          text={title || "Mofon'aina"}
+          style={{
+            fontSize: 16,
+            color: '#ffffff',
+            fontWeight: 'bold',
+            marginBottom: 6,
+            maxLines: 2,
+            truncate: 'END',
+          }}
+        />
+
+        {/* Verse */}
+        <TextWidget
+          text={verse}
+          style={{
+            fontSize: 12,
+            color: '#e2e8f0',
+            marginBottom: 8,
+            maxLines: 3,
+            truncate: 'END',
+          }}
+        />
+
+        {/* Reference */}
+        <TextWidget
+          text={`— ${reference}`}
+          style={{
+            fontSize: 11,
+            color: '#93c5fd',
+            fontWeight: 'bold',
+          }}
+        />
+      </FlexWidget>
     </FlexWidget>
   );
 }
