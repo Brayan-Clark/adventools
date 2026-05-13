@@ -17,18 +17,18 @@ function ShortcutButton({ emoji, label, color, bgColor, uri }: ShortcutButtonPro
       style={{
         flex: 1,
         marginHorizontal: 4,
-        height: 80,
+        paddingVertical: 12,
         backgroundColor: bgColor,
-        borderRadius: 20,
+        borderRadius: 24, // Pill shape
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <TextWidget text={emoji} style={{ fontSize: 26 }} />
+      <TextWidget text={emoji} style={{ fontSize: 24, marginBottom: 4 }} />
       <TextWidget
         text={label}
-        style={{ fontSize: 9, color, fontWeight: 'bold', marginTop: 4 }}
+        style={{ fontSize: 10, color, fontWeight: 'bold' }}
       />
     </FlexWidget>
   );
@@ -41,52 +41,51 @@ export function ShortcutsWidget() {
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: '#0f172a',
-        borderRadius: 24,
-        padding: 12,
+        borderRadius: 32,
+        padding: 16,
         flexDirection: 'column',
-        justifyContent: 'space-between',
       }}
     >
       {/* Title */}
       <TextWidget
         text="RACCOURCIS"
         style={{
-          fontSize: 9,
+          fontSize: 10,
           color: '#475569',
           fontWeight: 'bold',
           letterSpacing: 1,
-          marginBottom: 8,
+          marginBottom: 16,
         }}
       />
 
-      {/* Buttons row */}
-      <FlexWidget style={{ flexDirection: 'row', flex: 1 }}>
+      {/* Buttons row - Modern Pill Design */}
+      <FlexWidget style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
         <ShortcutButton
           emoji="📝"
           label="Notes"
-          color="#6ee7b7"
-          bgColor="#064e3b"
+          color="#ffffff"
+          bgColor="#065f46"
           uri="adventools://notes"
         />
         <ShortcutButton
           emoji="🎧"
           label="Audio"
-          color="#c4b5fd"
-          bgColor="#2e1065"
+          color="#ffffff"
+          bgColor="#5b21b6"
           uri="adventools://audio"
         />
         <ShortcutButton
           emoji="📖"
           label="Bible"
-          color="#fcd34d"
-          bgColor="#451a03"
+          color="#ffffff"
+          bgColor="#92400e"
           uri="adventools://(tabs)/bible"
         />
         <ShortcutButton
           emoji="📚"
           label="Leçons"
-          color="#fb923c"
-          bgColor="#431407"
+          color="#ffffff"
+          bgColor="#9a3412"
           uri="adventools://utiles/lesona"
         />
       </FlexWidget>

@@ -6,8 +6,6 @@ import { LesonaWidget } from './LesonaWidget';
 import { ShortcutsWidget } from './ShortcutsWidget';
 import { getMofonainaForDate } from '../lib/mofonaina';
 
-// Maps the profile_eds_class value (stored in AsyncStorage) to its
-// corresponding Adventech API identifier (e.g. "adult", "yad", "earliteen")
 const CLASS_TO_API_ID: Record<string, { id: string; label: string }> = {
   'Adulte':         { id: 'adult',      label: 'Adulte' },
   'Jeune Adulte':   { id: 'yad',        label: 'Jeune Adulte' },
@@ -22,7 +20,6 @@ const CLASS_TO_API_ID: Record<string, { id: string; label: string }> = {
 function getTodayLessonNumber(): string {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
-  // Sabbath School week runs Sat → Fri. Lesson starts on Saturday.
   const daysSinceSaturday = (dayOfWeek + 1) % 7;
   const weekOfMonth = Math.floor((today.getDate() - 1) / 7);
   return String(weekOfMonth + 1).padStart(2, '0');
@@ -70,61 +67,71 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
 
   let title = 'Leçon de la semaine';
   let lessonNumber = '';
-  let memoryVerse = '';
   let category = 'École du Sabbat';
   let weekRange = '';
+  let days: any[] = [];
 
   try {
-    // 1. Read user's preferred language
     const savedLang = await AsyncStorage.getItem('adventools_ss_selected_lang') ?? 'fr';
-
-    // 2. Read user's chosen EDS class
     const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Adulte';
     const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Adulte'];
     category = classInfo.label;
 
-    // 3. Get the current quarterly ID from cache (set by the app)
-    const cacheKey = `adventools_ss_${savedLang}_${classInfo.id}`;
+    const cacheKey = `adventools_ss_data_${savedLang}`;
     const cached = await AsyncStorage.getItem(cacheKey);
     
     if (cached) {
-      const data = JSON.parse(cached);
-      const quarterlies: any[] = Array.isArray(data) ? data : [];
-
-      // Find the current quarterly (most recent by date)
+      const quarterlies = JSON.parse(cached);
       const now = new Date();
       const current = quarterlies.find((q: any) => {
-        const start = q.start_date ? new Date(q.start_date) : null;
-        const end = q.end_date ? new Date(q.end_date) : null;
-        return start && end && now >= start && now <= end;
+        const start = new Date(q.startDate);
+        const end = new Date(q.endDate);
+        return now >= start && now <= end;
       }) ?? quarterlies[0];
 
       if (current) {
-        // 4. Get the lesson number for this week
-        lessonNumber = getTodayLessonNumber();
+        // Fetch lesson detail
+        const lUrl = `https://${current.index.includes('inverse') || current.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${current.index}/index.json`;
+        const qRes = await fetch(lUrl);
+        const qData = await qRes.json();
         
-        // 5. Try to fetch the current lesson details from the API
-        const apiLang = savedLang === 'fr' ? 'fr' : (savedLang === 'mg' ? 'mg' : 'en');
-        const lessonUrl = `https://sabbath-school.adventech.io/api/v2/${apiLang}/quarterlies/${current.id}/lessons/${lessonNumber}/index.json`;
-        
-        const response = await fetch(lessonUrl);
-        if (response.ok) {
-          const lessonData = await response.json();
-          title = lessonData.title ?? title;
+        const todayLesson = qData.lessons?.find((l: any) => {
+          const start = new Date(l.startDate);
+          const end = new Date(l.endDate);
+          return now >= start && now <= end;
+        });
+
+        if (todayLesson) {
+          const lId = todayLesson.id.split('-').pop();
+          const detailUrl = `https://${qData.index.includes('inverse') || qData.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${qData.index}/${lId}/index.json`;
+          const detailRes = await fetch(detailUrl);
+          const detailData = await detailRes.json();
           
-          // Extract start and end date for the week label
-          if (lessonData.start_date && lessonData.end_date) {
-            const start = new Date(lessonData.start_date);
-            const end = new Date(lessonData.end_date);
-            const fmt = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
-            weekRange = `${fmt(start)} – ${fmt(end)}`;
+          title = detailData.title || title;
+          lessonNumber = lId;
+          
+          if (detailData.startDate && detailData.endDate) {
+            weekRange = `${new Date(detailData.startDate).toLocaleDateString(savedLang)} - ${new Date(detailData.endDate).toLocaleDateString(savedLang)}`;
           }
 
-          // Extract memory verse from days (usually day 1 has it)
-          const days = lessonData.days ?? [];
-          if (days.length > 0 && days[0].read) {
-            memoryVerse = (days[0].read as string).substring(0, 120);
-          }
+          // Build days list for widget
+          const langLabels: any = {
+            mg: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+            fr: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+            en: ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+          };
+          const labels = langLabels[savedLang] || langLabels.en;
+
+          days = detailData.segments?.map((s: any, idx: number) => {
+            const sDate = new Date(s.date);
+            const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
+            return {
+              label: labels[idx] || '',
+              date: sDate.getDate().toString().padStart(2, '0'),
+              isToday,
+              title: s.title
+            };
+          }).slice(0, 7) || [];
         }
       }
     }
@@ -136,9 +143,9 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
     <LesonaWidget
       title={title}
       lessonNumber={lessonNumber}
-      memoryVerse={memoryVerse}
       category={category}
       weekRange={weekRange}
+      days={days}
     />
   );
 }

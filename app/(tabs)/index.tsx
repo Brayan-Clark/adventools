@@ -15,11 +15,6 @@ import { fetchWeather, WeatherInfo, getWeatherDisplay } from '@/lib/weather';
 import { getHistory, clearHistory } from '@/lib/user-storage';
 import * as LucideIcons from 'lucide-react-native';
 
-// New Premium Widgets
-import SabbathSchoolWidget from '@/components/widgets/SabbathSchoolWidget';
-import MofonainaWidget from '@/components/widgets/MofonainaWidget';
-import ShortcutsWidget from '@/components/widgets/ShortcutsWidget';
-
 export default function Home() {
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
@@ -251,43 +246,143 @@ export default function Home() {
           </View>
         </TouchableOpacity>
 
-        {/* New Premium Widgets Section */}
-        <MofonainaWidget data={mofonainaDaily} />
-        
-        <SabbathSchoolWidget />
+        {/* Mofon'aina Daily Reading Card */}
+        {mofonainaDaily && (
+          <TouchableOpacity
+            onPress={() => router.push('/mofonaina' as any)}
+            className="mb-10 bg-slate-900 rounded-[30px] border border-slate-800 shadow-xl overflow-hidden p-6"
+          >
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center flex-1">
+                {/* Weather icon — press → /weather (stopPropagation évite d'ouvrir mofon'aina) */}
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push('/weather' as any);
+                  }}
+                  activeOpacity={0.75}
+                  className="mr-3"
+                >
+                  <View className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 items-center justify-center">
+                    {weather ? (
+                      <View className="items-center">
+                        {(() => {
+                          const display = getWeatherDisplay(weather.conditionCode);
+                          const Icon = (LucideIcons as any)[display.name];
+                          return <Icon size={20} color={display.color} />;
+                        })()}
+                        <Text className="text-[9px] text-white font-bold mt-0.5">{weather.temp}°C</Text>
+                      </View>
+                    ) : weatherLoading ? (
+                      <View className="items-center justify-center">
+                        <ActivityIndicator size="small" color="#f97316" />
+                      </View>
+                    ) : (
+                      <View className="items-center justify-center">
+                        <LucideIcons.Cloud size={20} color="#475569" />
+                        <Text className="text-[7px] text-slate-600 font-bold mt-0.5">--°</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
 
-        <ShortcutsWidget />
+                <View className="flex-1">
+                  <Text className="text-[10px] font-bold uppercase text-orange-500 tracking-widest leading-3" style={{ fontFamily: 'Lexend_700Bold' }}>{t('fiambenana_maraina')}</Text>
+                  <Text className="text-white font-bold text-base mt-1" style={{ fontFamily: 'Lexend_700Bold' }}>{mofonainaDaily.lohateny_andro}</Text>
 
-        {/* Other Tools - Grid for less used features */}
-        <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">{t('more') || 'PLUS'}</Text>
+                  {/* CITY AND SUNRISE INFO */}
+                  {weather && (
+                    <View className="flex-row items-center mt-1">
+                      <LucideIcons.MapPin size={9} color="#64748b" />
+                      <Text className="text-[9px] text-slate-500 font-bold ml-1 mr-2">{weather.city}</Text>
+
+                      <LucideIcons.Sunrise size={9} color="#94a3b8" />
+                      <Text className="text-[9px] text-slate-400 font-bold ml-1">{weather.sunrise}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center ml-2">
+                <LucideIcons.ChevronRight size={16} color="#94a3b8" />
+              </View>
+            </View>
+
+            <View className="bg-slate-800/50 rounded-2xl p-4">
+              <Text className="text-slate-300 italic text-sm mb-2 leading-6" numberOfLines={2} style={{ fontFamily: 'Lexend_400Regular' }}>
+                "{mofonainaDaily.andininy_soratra_masina}"
+              </Text>
+              <Text className="text-orange-400 font-bold text-xs" style={{ fontFamily: 'Lexend_600SemiBold' }}>
+                {mofonainaDaily.toerana_soratra_masina}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Feature Grid */}
+        <Text className="text-[10px] font-bold uppercase text-slate-500 mb-6 ml-1 tracking-widest">{t('tools')}</Text>
         <View className="flex-row flex-wrap justify-between gap-y-5 mb-12">
+          <FeatureCard
+            href="/bible"
+            title={t('bible')}
+            subtitle={t('bible_subtitle')}
+            icon={<BookOpen color="#195de6" size={28} />}
+            bgColor="bg-blue-500/10"
+          />
           <FeatureCard
             href="/hymnes"
             title={t('hymns')}
             subtitle={t('hymns_subtitle')}
-            icon={<Music color="#ec4899" size={24} />}
+            icon={<Music color="#ec4899" size={28} />}
             bgColor="bg-pink-500/10"
           />
           <FeatureCard
             href="/pdf"
             title={t('pdf_reader')}
             subtitle={t('pdf_subtitle')}
-            icon={<FileText color="#f59e0b" size={24} />}
+            icon={<FileText color="#f59e0b" size={28} />}
             bgColor="bg-amber-500/10"
+          />
+          <FeatureCard
+            href="/notes"
+            title={t('notes')}
+            subtitle={t('notes_subtitle')}
+            icon={<StickyNote color="#10b981" size={28} />}
+            bgColor="bg-emerald-500/10"
+          />
+          <TouchableOpacity 
+            onPress={() => router.push('/utiles/lesona')}
+            className="w-[47%] bg-slate-900 rounded-[30px] p-6 border border-slate-800 shadow-xl"
+          >
+            <View className="w-14 h-14 rounded-2xl bg-red-500/10 items-center justify-center mb-5">
+              <BookOpen color="#ef4444" size={28} />
+            </View>
+            <View>
+              <Text className="font-bold text-white text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{t('sabbath_school_lessons')}</Text>
+              <Text className="text-xs text-slate-500" style={{ fontFamily: 'Lexend_400Regular' }}>{t('daily_study')}</Text>
+            </View>
+          </TouchableOpacity>
+          <FeatureCard
+            href="/audio"
+            title="Audio"
+            subtitle={t("podcasts_streaming")}
+            icon={<Headphones color="#06b6d4" size={28} />}
+            bgColor="bg-cyan-500/10"
           />
           <FeatureCard
             href="/video"
             title={t('video_and_tv')}
             subtitle={t('video_subtitle')}
-            icon={<Tv color="#ec4899" size={24} />}
+            icon={<Tv color="#ec4899" size={28} />}
             bgColor="bg-pink-500/10"
           />
           <FeatureCard
             href="/utiles"
             title={t('useful')}
             subtitle={t('useful_subtitle')}
-            icon={<LayoutGrid color="#8b5cf6" size={24} />}
+            icon={<LayoutGrid color="#8b5cf6" size={28} />}
             bgColor="bg-violet-500/10"
+            fullWidth={false}
           />
         </View>
 
