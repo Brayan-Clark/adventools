@@ -19,14 +19,14 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         borderRadius: 24,
         flexDirection: 'column',
         justifyContent: 'flex-end',
-        backgroundColor: '#000000',
+        backgroundColor: '#111827', // fallback dark
       }}
     >
-      {/* Background image */}
+      {/* Background image - Fill parent */}
       <ImageWidget
         image={backgroundImage || require('../assets/images/mofonaina_bg.jpg')}
-        imageWidth={400}
-        imageHeight={300}
+        imageWidth={600}
+        imageHeight={400}
         style={{
           position: 'absolute',
           top: 0,
@@ -37,93 +37,63 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         }}
       />
 
-      {/* Dark Overlay for text legibility - matching Image 3's moody look */}
+      {/* Dark Overlay - Using a single strong gradient-like layer */}
       <FlexWidget
         style={{
           position: 'absolute',
-          bottom: 0,
+          top: 0,
           left: 0,
           right: 0,
-          height: '100%',
-          borderRadius: 24,
-          backgroundColor: '#00000060', // General dimming
-        }}
-      />
-      <FlexWidget
-        style={{
-          position: 'absolute',
           bottom: 0,
-          left: 0,
-          right: 0,
-          height: '70%',
           borderRadius: 24,
-          backgroundColor: '#00000080', // Bottom gradient effect
+          backgroundColor: '#00000080', // Consistent semi-transparent black
         }}
       />
 
-      {/* Content Container */}
+      {/* Content Container - Not absolute, will be pushed to front by default in some RemoteViews implementations */}
       <FlexWidget
         style={{
-          padding: 18,
+          padding: 20,
+          paddingBottom: 24, // Extra space at bottom
           flexDirection: 'column',
           justifyContent: 'flex-end',
+          width: 'match_parent',
         }}
       >
-        {/* Date Label / Category */}
         <TextWidget
           text={new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           style={{
             fontSize: 10,
-            color: '#ffffffcc',
+            color: '#cbd5e1',
             marginBottom: 4,
-            fontWeight: 'normal',
           }}
         />
 
-        {/* Title - Large and Bold */}
         <TextWidget
           text={title || "Mofon'aina"}
           style={{
-            fontSize: 22,
+            fontSize: 20,
             color: '#ffffff',
             fontWeight: 'bold',
             marginBottom: 8,
             maxLines: 2,
-            truncate: 'END',
           }}
         />
 
-        {/* Verse Content - Premium feel */}
         <TextWidget
-          text={verse}
+          text={verse || "Ouvrez l'application pour charger le verset."}
           style={{
-            fontSize: 13,
-            color: '#e2e8f0',
-            marginBottom: 12,
+            fontSize: 12,
+            color: '#f1f5f9',
+            marginBottom: 10,
             maxLines: 3,
-            truncate: 'END',
-            lineHeight: 18,
+            lineHeight: 16,
           }}
         />
 
-        {/* Reference */}
         <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <FlexWidget
-            style={{
-              backgroundColor: '#fb923c',
-              borderRadius: 4,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              marginRight: 8,
-            }}
-          >
-            <TextWidget
-              text="VERSET"
-              style={{ fontSize: 7, color: '#000000', fontWeight: 'bold' }}
-            />
-          </FlexWidget>
           <TextWidget
-            text={reference}
+            text={reference || "Adventools"}
             style={{
               fontSize: 11,
               color: '#fb923c',

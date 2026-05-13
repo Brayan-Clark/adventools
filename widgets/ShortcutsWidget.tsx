@@ -44,22 +44,24 @@ export function ShortcutsWidget() {
         borderRadius: 32,
         padding: 16,
         flexDirection: 'column',
+        justifyContent: 'center',
       }}
     >
       {/* Title */}
       <TextWidget
         text="RACCOURCIS"
         style={{
-          fontSize: 10,
-          color: '#475569',
+          fontSize: 9,
+          color: '#64748b',
           fontWeight: 'bold',
-          letterSpacing: 1,
-          marginBottom: 16,
+          letterSpacing: 2,
+          marginBottom: 12,
+          textAlign: 'center',
         }}
       />
 
-      {/* Buttons row - Modern Pill Design */}
-      <FlexWidget style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
+      {/* Buttons row - Spread evenly */}
+      <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-between', alignItems: 'center' }}>
         <ShortcutButton
           emoji="📝"
           label="Notes"

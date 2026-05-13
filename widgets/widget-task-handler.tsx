@@ -8,14 +8,18 @@ import { ShortcutsWidget } from './ShortcutsWidget';
 import { getMofonainaForDate } from '../lib/mofonaina';
 
 const CLASS_TO_API_ID: Record<string, { id: string; label: string }> = {
+  'Lesona Lehibe (+ 35 taona)':        { id: 'adult',      label: 'Adulte' },
+  'Lesona Tanora zokiny (19-35 taona)': { id: 'yad',        label: 'Jeune Adulte' },
+  'Lesona Zatovo (15-18 taona)':       { id: 'earliteen',  label: 'Adolescent' },
+  'Lesona Mantoanto (13-14 taona)':     { id: 'earliteen',  label: 'Mantoanto' }, // Map to earliteen if no specific
+  'Lesona Tanora zandriny (10-12 taona)': { id: 'earliteen', label: 'Tanora Zandriny' },
+  'Lesona Ankizy (7-9 taona)':         { id: 'primary',    label: 'Ankizy' },
+  'Lesona Kilonga (4-6 taona)':        { id: 'kindergarten', label: 'Kilonga' },
+  'Lesona Zazakely (1-3 taona)':       { id: 'kindergarten', label: 'Zazakely' },
+  'Lesona Zaza minono (0-12 volana)':   { id: 'kindergarten', label: 'Zaza minono' },
+  // Fallback for French labels if any
   'Adulte':         { id: 'adult',      label: 'Adulte' },
   'Jeune Adulte':   { id: 'yad',        label: 'Jeune Adulte' },
-  'Adolescent':     { id: 'earliteen',  label: 'Adolescent' },
-  'Avant-garde':    { id: 'vanguard',   label: 'Avant-garde' },
-  'Temps réel':     { id: 'real-time',  label: 'Temps réel' },
-  'Auxiliaire':     { id: 'junior',     label: 'Auxiliaire' },
-  'Primaire':       { id: 'primary',    label: 'Primaire' },
-  'Jardin d\'enfants': { id: 'kindergarten', label: 'Jardin d\'enfants' },
 };
 
 function getTodayLessonNumber(): string {
@@ -78,52 +82,79 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
 
   try {
     const savedLang = await AsyncStorage.getItem('adventools_ss_selected_lang') ?? 'fr';
-    const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Adulte';
-    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Adulte'];
+    const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Lesona Lehibe (+ 35 taona)';
+    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
 
     const cacheKey = `adventools_ss_data_${savedLang}`;
-    const cached = await AsyncStorage.getItem(cacheKey);
+    let cached = await AsyncStorage.getItem(cacheKey);
+    let quarterlies: any[] = [];
     
     if (cached) {
-      const quarterlies = JSON.parse(cached);
+      quarterlies = JSON.parse(cached);
+    } else {
+      // Fetch fresh index if cache is empty
+      const subdomain = savedLang === 'en' ? 'absg' : 'inverse';
+      const url = `https://${subdomain}.sspmadventist.org/api/v3/${savedLang}/ss/index.json`;
+      const res = await fetch(url).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.groups) {
+          data.groups.forEach((g: any) => {
+             if (g.resources) quarterlies.push(...g.resources);
+          });
+        } else if (Array.isArray(data)) {
+          quarterlies = data;
+        }
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(quarterlies));
+      }
+    }
+
+    if (quarterlies.length > 0) {
       const now = new Date();
-      const current = quarterlies.find((q: any) => {
+      now.setHours(0, 0, 0, 0);
+
+      let preferredQuarterly = quarterlies.find((q: any) => {
         const start = new Date(q.startDate);
         const end = new Date(q.endDate);
-        return now >= start && now <= end;
-      }) ?? quarterlies[0];
+        const isCurrent = now >= start && now <= end;
+        const qId = q.id || q.index || '';
+        
+        if (classInfo.id === 'adult') {
+          return isCurrent && !qId.includes('-yad-') && !qId.includes('-earliteen-') && !qId.includes('-vanguard-') && !qId.includes('-cq-');
+        }
+        return isCurrent && qId.includes(`-${classInfo.id}-`);
+      });
 
-      if (current) {
-        // Filter by class if possible
-        const preferredQuarterly = quarterlies.find((q: any) => {
+      if (!preferredQuarterly) {
+        preferredQuarterly = quarterlies.find((q: any) => {
           const start = new Date(q.startDate);
           const end = new Date(q.endDate);
-          const isCurrent = now >= start && now <= end;
-          
-          if (classInfo.id === 'adult') {
-            // Adults usually have standard IDs like 'fr-2024-02'
-            return isCurrent && !q.id.includes('-yad-') && !q.id.includes('-earliteen-') && !q.id.includes('-vanguard-') && !q.id.includes('-cq-');
-          }
-          return isCurrent && q.id.includes(`-${classInfo.id}-`);
-        }) ?? current;
+          return now >= start && now <= end;
+        });
+      }
 
-        // Fetch lesson detail
+      preferredQuarterly = preferredQuarterly || quarterlies[0];
+
+      if (preferredQuarterly) {
         const lUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
         const qRes = await fetch(lUrl);
         const qData = await qRes.json();
         
-        coverImage = qData.cover || '';
+        coverImage = qData.cover || (qData.covers ? qData.covers.portrait : '');
 
-        const todayLesson = qData.lessons?.find((l: any) => {
+        const lessons = qData.lessons || qData.resources || [];
+        let todayLesson = lessons.find((l: any) => {
           const start = new Date(l.startDate);
           const end = new Date(l.endDate);
           return now >= start && now <= end;
         });
+        
+        if (!todayLesson && lessons.length > 0) todayLesson = lessons[0];
 
         if (todayLesson) {
           const lId = todayLesson.id.split('-').pop();
-          const detailUrl = `https://${qData.index.includes('inverse') || qData.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${qData.index}/${lId}/index.json`;
+          const detailUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
           const detailRes = await fetch(detailUrl);
           const detailData = await detailRes.json();
           
@@ -134,7 +165,6 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
             weekRange = `${new Date(detailData.startDate).toLocaleDateString(savedLang)} - ${new Date(detailData.endDate).toLocaleDateString(savedLang)}`;
           }
 
-          // Build days list for widget
           const langLabels: any = {
             mg: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
             fr: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
@@ -180,48 +210,76 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
 
   try {
     const savedLang = await AsyncStorage.getItem('adventools_ss_selected_lang') ?? 'fr';
-    const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Adulte';
-    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Adulte'];
+    const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Lesona Lehibe (+ 35 taona)';
+    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
 
     const cacheKey = `adventools_ss_data_${savedLang}`;
-    const cached = await AsyncStorage.getItem(cacheKey);
+    let cached = await AsyncStorage.getItem(cacheKey);
+    let quarterlies: any[] = [];
     
     if (cached) {
-      const quarterlies = JSON.parse(cached);
+      quarterlies = JSON.parse(cached);
+    } else {
+      const subdomain = savedLang === 'en' ? 'absg' : 'inverse';
+      const url = `https://${subdomain}.sspmadventist.org/api/v3/${savedLang}/ss/index.json`;
+      const res = await fetch(url).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.groups) {
+          data.groups.forEach((g: any) => {
+             if (g.resources) quarterlies.push(...g.resources);
+          });
+        } else if (Array.isArray(data)) {
+          quarterlies = data;
+        }
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(quarterlies));
+      }
+    }
+
+    if (quarterlies.length > 0) {
       const now = new Date();
-      const current = quarterlies.find((q: any) => {
+      now.setHours(0, 0, 0, 0);
+
+      let preferredQuarterly = quarterlies.find((q: any) => {
         const start = new Date(q.startDate);
         const end = new Date(q.endDate);
-        return now >= start && now <= end;
-      }) ?? quarterlies[0];
+        const isCurrent = now >= start && now <= end;
+        const qId = q.id || q.index || '';
+        
+        if (classInfo.id === 'adult') {
+          return isCurrent && !qId.includes('-yad-') && !qId.includes('-earliteen-') && !qId.includes('-vanguard-') && !qId.includes('-cq-');
+        }
+        return isCurrent && qId.includes(`-${classInfo.id}-`);
+      });
 
-      if (current) {
-        // Filter by class if possible
-        const preferredQuarterly = quarterlies.find((q: any) => {
+      if (!preferredQuarterly) {
+        preferredQuarterly = quarterlies.find((q: any) => {
           const start = new Date(q.startDate);
           const end = new Date(q.endDate);
-          const isCurrent = now >= start && now <= end;
-          
-          if (classInfo.id === 'adult') {
-            return isCurrent && !q.id.includes('-yad-') && !q.id.includes('-earliteen-') && !q.id.includes('-vanguard-') && !q.id.includes('-cq-');
-          }
-          return isCurrent && q.id.includes(`-${classInfo.id}-`);
-        }) ?? current;
+          return now >= start && now <= end;
+        });
+      }
 
+      preferredQuarterly = preferredQuarterly || quarterlies[0];
+
+      if (preferredQuarterly) {
         const lUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
         const qRes = await fetch(lUrl);
         const qData = await qRes.json();
         
-        const todayLesson = qData.lessons?.find((l: any) => {
+        const lessons = qData.lessons || qData.resources || [];
+        let todayLesson = lessons.find((l: any) => {
           const start = new Date(l.startDate);
           const end = new Date(l.endDate);
           return now >= start && now <= end;
         });
+        
+        if (!todayLesson && lessons.length > 0) todayLesson = lessons[0];
 
         if (todayLesson) {
           const lId = todayLesson.id.split('-').pop();
-          const detailUrl = `https://${qData.index.includes('inverse') || qData.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${qData.index}/${lId}/index.json`;
+          const detailUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
           const detailRes = await fetch(detailUrl);
           const detailData = await detailRes.json();
           
