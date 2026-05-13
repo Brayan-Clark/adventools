@@ -53,15 +53,27 @@ async function renderMofonaina(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
   let title = "Mofon'aina";
-  let verse = "Ouvrez l'application pour charger le verset du jour.";
+  let verse = "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio.";
   let reference = 'Adventools';
 
   try {
-    const data = await getMofonainaForDate(new Date());
-    if (data && data.lohateny_andro) {
-      title = data.lohateny_andro;
-      verse = data.andininy_soratra_masina;
-      reference = data.toerana_soratra_masina;
+    // 1. Try Cache first
+    let data = await getMofonainaForDate(new Date());
+    
+    // 2. If no cache, try direct API fetch (fallback for first run)
+    if (!data) {
+      const res = await fetch('https://jasemsoftware.tech/api/v1/fiambenana?t=' + Date.now()).catch(() => null);
+      if (res && res.ok) {
+        const all = await res.json();
+        const nowStr = new Date().toISOString().split('T')[0];
+        data = all.find((m: any) => m.daty && m.daty.startsWith(nowStr)) || all[0];
+      }
+    }
+
+    if (data) {
+      title = data.lohateny_andro || title;
+      verse = data.andininy_soratra_masina || verse;
+      reference = data.toerana_soratra_masina || reference;
     }
   } catch (error) {
     console.error('[Widget] Mofonaina fetch error:', error);
@@ -73,15 +85,15 @@ async function renderMofonaina(props: WidgetTaskHandlerProps) {
 async function renderLesona(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  let title = 'Leçon de la semaine';
+  let title = 'Lesona herinandro';
   let lessonNumber = '';
-  let category = 'École du Sabbat';
+  let category = 'Sekoly Sabata';
   let weekRange = '';
   let days: any[] = [];
   let coverImage = '';
 
   try {
-    const savedLang = await AsyncStorage.getItem('adventools_ss_selected_lang') ?? 'fr';
+    const savedLang = 'mg'; // FORCE Malagasy
     const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Lesona Lehibe (+ 35 taona)';
     const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
@@ -90,24 +102,18 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
     let cached = await AsyncStorage.getItem(cacheKey);
     let quarterlies: any[] = [];
     
-    if (cached) {
-      quarterlies = JSON.parse(cached);
-    } else {
-      // Fetch fresh index if cache is empty
-      const subdomain = savedLang === 'en' ? 'absg' : 'inverse';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/${savedLang}/ss/index.json`;
-      const res = await fetch(url).catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json();
-        if (data.groups) {
-          data.groups.forEach((g: any) => {
-             if (g.resources) quarterlies.push(...g.resources);
-          });
-        } else if (Array.isArray(data)) {
-          quarterlies = data;
-        }
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(quarterlies));
+    // Fetch fresh index for Malagasy
+    const url = `https://inverse.sspmadventist.org/api/v3/mg/ss/index.json?t=${Date.now()}`;
+    const res = await fetch(url).catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.groups) {
+        data.groups.forEach((g: any) => {
+           if (g.resources) quarterlies.push(...g.resources);
+        });
       }
+    } else if (cached) {
+      quarterlies = JSON.parse(cached);
     }
 
     if (quarterlies.length > 0) {
@@ -119,25 +125,18 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
         const end = new Date(q.endDate);
         const isCurrent = now >= start && now <= end;
         const qId = q.id || q.index || '';
-        
         if (classInfo.id === 'adult') {
           return isCurrent && !qId.includes('-yad-') && !qId.includes('-earliteen-') && !qId.includes('-vanguard-') && !qId.includes('-cq-');
         }
         return isCurrent && qId.includes(`-${classInfo.id}-`);
-      });
-
-      if (!preferredQuarterly) {
-        preferredQuarterly = quarterlies.find((q: any) => {
-          const start = new Date(q.startDate);
-          const end = new Date(q.endDate);
-          return now >= start && now <= end;
-        });
-      }
-
-      preferredQuarterly = preferredQuarterly || quarterlies[0];
+      }) || quarterlies.find((q: any) => {
+        const start = new Date(q.startDate);
+        const end = new Date(q.endDate);
+        return now >= start && now <= end;
+      }) || quarterlies[0];
 
       if (preferredQuarterly) {
-        const lUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
+        const lUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
         const qRes = await fetch(lUrl);
         const qData = await qRes.json();
         
@@ -148,38 +147,32 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
           const start = new Date(l.startDate);
           const end = new Date(l.endDate);
           return now >= start && now <= end;
-        });
-        
-        if (!todayLesson && lessons.length > 0) todayLesson = lessons[0];
+        }) || lessons[0];
 
         if (todayLesson) {
           const lId = todayLesson.id.split('-').pop();
-          const detailUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
+          const detailUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
           const detailRes = await fetch(detailUrl);
           const detailData = await detailRes.json();
           
-          title = detailData.title || title;
+          title = detailData.title || todayLesson.title || detailData.name || 'Lesona herinandro';
           lessonNumber = lId;
           
+          if (detailData.cover) coverImage = detailData.cover;
+          
           if (detailData.startDate && detailData.endDate) {
-            weekRange = `${new Date(detailData.startDate).toLocaleDateString(savedLang)} - ${new Date(detailData.endDate).toLocaleDateString(savedLang)}`;
+            weekRange = `${new Date(detailData.startDate).toLocaleDateString('mg-MG')} - ${new Date(detailData.endDate).toLocaleDateString('mg-MG')}`;
           }
 
-          const langLabels: any = {
-            mg: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
-            fr: ['Sam', 'Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
-            en: ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-          };
-          const labels = langLabels[savedLang] || langLabels.en;
-
+          const mgLabels = ['Sab', 'Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom'];
           days = detailData.segments?.map((s: any, idx: number) => {
             const sDate = new Date(s.date);
             const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
             return {
-              label: labels[idx] || '',
+              label: mgLabels[idx] || s.title?.substring(0, 3) || '',
               date: sDate.getDate().toString().padStart(2, '0'),
               isToday,
-              title: s.title
+              title: s.title || s.name || `Andro ${idx + 1}`
             };
           }).slice(0, 7) || [];
         }
@@ -205,11 +198,11 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
   let title = 'Chargement...';
-  let dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-  let category = 'École du Sabbat';
+  let dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
+  let category = 'Sekoly Sabata';
 
   try {
-    const savedLang = await AsyncStorage.getItem('adventools_ss_selected_lang') ?? 'fr';
+    const savedLang = 'mg'; // FORCE Malagasy as requested
     const edsClass = await AsyncStorage.getItem('profile_eds_class') ?? 'Lesona Lehibe (+ 35 taona)';
     const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
@@ -218,23 +211,18 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
     let cached = await AsyncStorage.getItem(cacheKey);
     let quarterlies: any[] = [];
     
-    if (cached) {
-      quarterlies = JSON.parse(cached);
-    } else {
-      const subdomain = savedLang === 'en' ? 'absg' : 'inverse';
-      const url = `https://${subdomain}.sspmadventist.org/api/v3/${savedLang}/ss/index.json`;
-      const res = await fetch(url).catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json();
-        if (data.groups) {
-          data.groups.forEach((g: any) => {
-             if (g.resources) quarterlies.push(...g.resources);
-          });
-        } else if (Array.isArray(data)) {
-          quarterlies = data;
-        }
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(quarterlies));
+    const url = `https://inverse.sspmadventist.org/api/v3/mg/ss/index.json`;
+    const res = await fetch(url).catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.groups) {
+        data.groups.forEach((g: any) => {
+           if (g.resources) quarterlies.push(...g.resources);
+        });
       }
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(quarterlies));
+    } else if (cached) {
+      quarterlies = JSON.parse(cached);
     }
 
     if (quarterlies.length > 0) {
@@ -264,7 +252,7 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
       preferredQuarterly = preferredQuarterly || quarterlies[0];
 
       if (preferredQuarterly) {
-        const lUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
+        const lUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
         const qRes = await fetch(lUrl);
         const qData = await qRes.json();
         
@@ -279,7 +267,7 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
 
         if (todayLesson) {
           const lId = todayLesson.id.split('-').pop();
-          const detailUrl = `https://${preferredQuarterly.index.includes('inverse') || preferredQuarterly.id.includes('-cq') ? 'inverse' : 'absg'}.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
+          const detailUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
           const detailRes = await fetch(detailUrl);
           const detailData = await detailRes.json();
           
