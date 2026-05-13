@@ -66,6 +66,7 @@ Bienvenue dans le tableau de bord de gestion de projet. Ce document sert de sour
 | ID | Tâche | Priorité | État |
 | :--- | :--- | :--- | :--- |
 | **US-35** | Widgets Écran d'accueil (Veille Matinale, Leçon, Raccourcis) | 🔥 Haute | ✅ Terminé |
+| **US-35.1** | Redesign Premium des Widgets (Inspiration UI) | ✨ Esthétique | ✅ Terminé |
 | **US-36** | Raccourcis d'application (App Shortcuts / Appui long) | ⭐ Moyenne | ✅ Terminé |
 | **US-37** | Mode sombre dynamique basé sur le système (US-UI) | 🎨 Moyenne | ❌ Annulé |
 

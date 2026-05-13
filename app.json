@@ -89,6 +89,14 @@
               "updatePeriodMillis": 3600000
             },
             {
+              "name": "LesonaAndro",
+              "label": "Leçon du Jour",
+              "minWidth": "180dp",
+              "minHeight": "180dp",
+              "description": "Votre leçon du jour en un coup d'œil",
+              "updatePeriodMillis": 3600000
+            },
+            {
               "name": "Shortcuts",
               "label": "Accès Rapide",
               "minWidth": "250dp",

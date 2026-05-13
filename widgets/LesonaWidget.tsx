@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { FlexWidget, TextWidget, ImageWidget } from 'react-native-android-widget';
 
 interface DayItem {
   label: string;
@@ -14,9 +14,10 @@ interface LesonaWidgetProps {
   category: string;
   weekRange: string;
   days: DayItem[];
+  coverImage?: string;
 }
 
-export function LesonaWidget({ title, lessonNumber, category, weekRange, days }: LesonaWidgetProps) {
+export function LesonaWidget({ title, lessonNumber, category, weekRange, days, coverImage }: LesonaWidgetProps) {
   return (
     <FlexWidget
       clickAction="OPEN_URI"
@@ -24,50 +25,77 @@ export function LesonaWidget({ title, lessonNumber, category, weekRange, days }:
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0f172a',
-        borderRadius: 28,
+        backgroundColor: '#1a2634',
+        borderRadius: 24,
         flexDirection: 'column',
-        padding: 16,
+        padding: 14,
       }}
     >
-      {/* Header Section */}
-      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <FlexWidget
-          style={{
-            backgroundColor: '#3b82f620',
-            borderRadius: 8,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-          }}
-        >
+      {/* Top Header Section with Cover and Info */}
+      <FlexWidget style={{ flexDirection: 'row', marginBottom: 16, alignItems: 'center' }}>
+        {/* Cover Image */}
+        {coverImage ? (
+          <ImageWidget
+            image={coverImage}
+            imageWidth={70}
+            imageHeight={100}
+            style={{
+              borderRadius: 12,
+              marginRight: 12,
+            }}
+          />
+        ) : (
+          <FlexWidget
+            style={{
+              width: 70,
+              height: 100,
+              backgroundColor: '#2d3a4b',
+              borderRadius: 12,
+              marginRight: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+             <TextWidget text="📖" style={{ fontSize: 24 }} />
+          </FlexWidget>
+        )}
+
+        {/* Lesson Info beside cover */}
+        <FlexWidget style={{ flex: 1, flexDirection: 'column' }}>
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+             <TextWidget
+              text={category?.toUpperCase() || 'ÉCOLE DU SABBAT'}
+              style={{ fontSize: 8, color: '#3b82f6', fontWeight: 'bold' }}
+            />
+          </FlexWidget>
+          
           <TextWidget
-            text="📖  ÉCOLE DU SABBAT"
-            style={{ fontSize: 9, color: '#60a5fa', fontWeight: 'bold' }}
+            text={title || 'Leçon de la semaine'}
+            style={{
+              fontSize: 18,
+              color: '#ffffff',
+              fontWeight: 'bold',
+              maxLines: 2,
+              truncate: 'END',
+            }}
+          />
+          <TextWidget
+            text={weekRange || 'Cette semaine'}
+            style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}
           />
         </FlexWidget>
-        <TextWidget
-          text={category || 'Adulte'}
-          style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}
-        />
+        
+        {/* Logo or Icon top right as in image */}
+        <FlexWidget style={{ width: 40, height: 40, opacity: 0.2 }}>
+           <ImageWidget 
+            image={require('../assets/images/icon.png')} 
+            imageWidth={40} 
+            imageHeight={40} 
+           />
+        </FlexWidget>
       </FlexWidget>
 
-      {/* Lesson Info */}
-      <TextWidget
-        text={title || 'Leçon de la semaine'}
-        style={{
-          fontSize: 16,
-          color: '#ffffff',
-          fontWeight: 'bold',
-          maxLines: 1,
-          truncate: 'END',
-        }}
-      />
-      <TextWidget
-        text={weekRange || 'Cette semaine'}
-        style={{ fontSize: 10, color: '#475569', marginTop: 2, marginBottom: 12 }}
-      />
-
-      {/* Week Days List - The "Premium" part from inspiration */}
+      {/* Daily Lessons List */}
       <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
         {days && days.map((day, index) => (
           <FlexWidget
@@ -76,28 +104,30 @@ export function LesonaWidget({ title, lessonNumber, category, weekRange, days }:
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingVertical: 6,
-              paddingHorizontal: 8,
-              marginBottom: 4,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              marginBottom: 6,
               borderRadius: 12,
-              backgroundColor: day.isToday ? '#3b82f6' : '#1e293b50',
+              backgroundColor: day.isToday ? '#3b82f6' : '#2d3a4b',
             }}
           >
             <TextWidget
               text={day.title || 'Lesona'}
               style={{
-                fontSize: 11,
-                color: day.isToday ? '#ffffff' : '#94a3b8',
+                fontSize: 12,
+                color: '#ffffff',
                 fontWeight: day.isToday ? 'bold' : 'normal',
                 flex: 1,
+                maxLines: 1,
+                truncate: 'END',
               }}
             />
             <TextWidget
-              text={`${day.label} ${day.date}`}
+              text={`${day.label}, ${day.date}`}
               style={{
                 fontSize: 10,
-                color: day.isToday ? '#ffffff90' : '#475569',
-                marginLeft: 8,
+                color: day.isToday ? '#ffffffcc' : '#94a3b8',
+                marginLeft: 10,
               }}
             />
           </FlexWidget>
@@ -106,17 +136,9 @@ export function LesonaWidget({ title, lessonNumber, category, weekRange, days }:
         {/* Fallback if no days */}
         {(!days || days.length === 0) && (
            <FlexWidget style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-             <TextWidget text="Ouvrez l'app pour voir la semaine" style={{ fontSize: 10, color: '#475569' }} />
+             <TextWidget text="Ouvrez l'app pour voir la semaine" style={{ fontSize: 12, color: '#94a3b8' }} />
            </FlexWidget>
         )}
-      </FlexWidget>
-
-      {/* Footer */}
-      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
-        <TextWidget
-          text="Étudier maintenant →"
-          style={{ fontSize: 10, color: '#3b82f6', fontWeight: 'bold' }}
-        />
       </FlexWidget>
     </FlexWidget>
   );

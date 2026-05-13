@@ -5,9 +5,10 @@ interface MofonainaWidgetProps {
   title: string;
   verse: string;
   reference: string;
+  backgroundImage?: string;
 }
 
-export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProps) {
+export function MofonainaWidget({ title, verse, reference, backgroundImage }: MofonainaWidgetProps) {
   return (
     <FlexWidget
       clickAction="OPEN_URI"
@@ -15,28 +16,28 @@ export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProp
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        borderRadius: 28,
+        borderRadius: 24,
         flexDirection: 'column',
         justifyContent: 'flex-end',
         backgroundColor: '#000000',
       }}
     >
-      {/* Background image - Using a beautiful nature fallback */}
+      {/* Background image */}
       <ImageWidget
-        image={require('../assets/images/mofonaina_bg.jpg')}
+        image={backgroundImage || require('../assets/images/mofonaina_bg.jpg')}
         imageWidth={400}
-        imageHeight={250}
+        imageHeight={300}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: 28,
+          borderRadius: 24,
         }}
       />
 
-      {/* Modern Gradient-like Overlay (using semi-transparent layers) */}
+      {/* Dark Overlay for text legibility - matching Image 3's moody look */}
       <FlexWidget
         style={{
           position: 'absolute',
@@ -44,8 +45,8 @@ export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProp
           left: 0,
           right: 0,
           height: '100%',
-          borderRadius: 28,
-          backgroundColor: '#00000060', // General dim
+          borderRadius: 24,
+          backgroundColor: '#00000060', // General dimming
         }}
       />
       <FlexWidget
@@ -54,51 +55,39 @@ export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProp
           bottom: 0,
           left: 0,
           right: 0,
-          height: '60%',
-          borderRadius: 28,
-          backgroundColor: '#000000aa', // Darker bottom for text contrast
+          height: '70%',
+          borderRadius: 24,
+          backgroundColor: '#00000080', // Bottom gradient effect
         }}
       />
 
       {/* Content Container */}
       <FlexWidget
         style={{
-          padding: 20,
+          padding: 18,
           flexDirection: 'column',
           justifyContent: 'flex-end',
         }}
       >
-        {/* Date / Label */}
-        <FlexWidget
+        {/* Date Label / Category */}
+        <TextWidget
+          text={new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 10,
-            backgroundColor: '#fb923c',
-            borderRadius: 8,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            alignSelf: 'flex-start',
+            fontSize: 10,
+            color: '#ffffffcc',
+            marginBottom: 4,
+            fontWeight: 'normal',
           }}
-        >
-          <TextWidget
-            text="🌅  VIGILE MATINALE"
-            style={{
-              fontSize: 9,
-              color: '#ffffff',
-              fontWeight: 'bold',
-            }}
-          />
-        </FlexWidget>
+        />
 
         {/* Title - Large and Bold */}
         <TextWidget
           text={title || "Mofon'aina"}
           style={{
-            fontSize: 18,
+            fontSize: 22,
             color: '#ffffff',
             fontWeight: 'bold',
-            marginBottom: 6,
+            marginBottom: 8,
             maxLines: 2,
             truncate: 'END',
           }}
@@ -110,27 +99,35 @@ export function MofonainaWidget({ title, verse, reference }: MofonainaWidgetProp
           style={{
             fontSize: 13,
             color: '#e2e8f0',
-            marginBottom: 10,
+            marginBottom: 12,
             maxLines: 3,
             truncate: 'END',
+            lineHeight: 18,
           }}
         />
 
-        {/* Footer with Reference and Icon */}
-        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Reference */}
+        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <FlexWidget
+            style={{
+              backgroundColor: '#fb923c',
+              borderRadius: 4,
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              marginRight: 8,
+            }}
+          >
+            <TextWidget
+              text="VERSET"
+              style={{ fontSize: 7, color: '#000000', fontWeight: 'bold' }}
+            />
+          </FlexWidget>
           <TextWidget
             text={reference}
             style={{
               fontSize: 11,
               color: '#fb923c',
               fontWeight: 'bold',
-            }}
-          />
-          <TextWidget
-            text="Lire la suite →"
-            style={{
-              fontSize: 10,
-              color: '#ffffff90',
             }}
           />
         </FlexWidget>
