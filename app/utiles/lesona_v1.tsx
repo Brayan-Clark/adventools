@@ -35,25 +35,11 @@ import {
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Image,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  Share as RNShare,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
-} from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 // Conditional import for PDF
 let Pdf: any;

@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function PdfViewer() {
   return (

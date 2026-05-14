@@ -5,11 +5,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, BookmarkPlus, Heart, MessageSquare, RefreshCw, Share2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StatusBar, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormattedBibleText } from '@/components/bible/formatted-text';
 import { fetchVerseContentById } from '@/lib/bible';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function VerDuJourPage() {
   const { t } = useTranslation();

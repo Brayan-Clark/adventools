@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, ImageBackground, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sunrise, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from '@/lib/i18n';
 import { Mofonaina } from '@/lib/mofonaina';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface Props {
   data: Mofonaina | null;

@@ -2,13 +2,15 @@ import { Audio } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, Pause, Play, Rewind, FastForward, SkipBack, SkipForward, Repeat, Heart, List, Share2, Radio as RadioIcon } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View, Alert, Image, Dimensions, Animated, Platform, PermissionsAndroid, FlatList } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View, Alert, Image, Dimensions, Animated, Platform, PermissionsAndroid, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 import { getSetting, setSetting } from '../../lib/user-storage';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 // Images par défaut
 const DEFAULT_BIBLE_IMAGE = require('../../assets/images/Livre.png');

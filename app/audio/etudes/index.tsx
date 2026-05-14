@@ -1,13 +1,15 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, BookOpen, Info, Search, Users } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../../lib/settings-context';
 import { useTranslation } from '../../../lib/i18n';
 
 import * as FileSystem from 'expo-file-system/legacy';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/etudes/manifest.json';
 const CACHE_FILE = `${FileSystem.documentDirectory}etudes/manifest_cache.json`;

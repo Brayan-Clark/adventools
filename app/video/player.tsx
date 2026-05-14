@@ -3,11 +3,13 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Info, Maximize, Play, Pause } from 'lucide-react-native';
 import React, { useState, useRef } from 'react';
-import { Text, TouchableOpacity, View, Dimensions, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, View, Dimensions, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const { width } = Dimensions.get('window');
 

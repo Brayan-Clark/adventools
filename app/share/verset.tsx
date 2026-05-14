@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Image, ImageBackground, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ImageBackground, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Use legacy import to avoid deprecation error
 import * as FileSystem from 'expo-file-system/legacy';
@@ -12,6 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 // ... (Rest of imports or constants)
 

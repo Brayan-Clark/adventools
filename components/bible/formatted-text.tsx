@@ -1,5 +1,7 @@
 import React from 'react';
-import { Text, TextStyle } from 'react-native';
+import { TextStyle } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface FormattedBibleTextProps {
   text: string;

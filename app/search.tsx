@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Search as SearchIcon, X, StickyNote, BookOpen, ChevronRight, History } from 'lucide-react-native';
@@ -10,6 +10,8 @@ import { initUserStorage } from '@/lib/user-storage';
 import { decryptData } from '@/lib/security';
 import * as FileSystem from 'expo-file-system/legacy';
 import { cleanSspmMarkdown } from '@/lib/utils';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;

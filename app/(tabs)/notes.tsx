@@ -14,7 +14,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Mic, Music, Palette, Pause, Play, Plus, Search, Share2, Square, StickyNote, Trash2, Undo2, Video, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -46,6 +46,8 @@ const NOTE_COLORS = [
 ];
 
 import { BackHandler } from 'react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const FULL_PALETTE = [
     '#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#f1f5f9',

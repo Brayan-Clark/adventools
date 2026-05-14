@@ -5,10 +5,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlertCircle, ArrowLeft, Bookmark, ChevronRight, FileText, Hash, Menu, Save, Search, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { saveHistory } from '@/lib/user-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 // Conditional import to avoid crash on Expo Go immediate import
 let Pdf: any;

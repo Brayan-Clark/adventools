@@ -8,9 +8,11 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Plus, Share2, Trash2, Type, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 
 import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function BibleReader() {
   const router = useRouter();

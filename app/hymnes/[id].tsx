@@ -8,9 +8,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, ChevronRight, Edit3, Heart, Music, Save, Share2, X, Grid3X3 } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function HymneDetail() {
   const router = useRouter();

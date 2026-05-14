@@ -1,12 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Play, Download, Search, Users, Trash2, Smartphone, CheckCircle, RefreshCcw } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../../lib/settings-context';
 import { useTranslation } from '../../../lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const SERIES_BASE_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/etudes/';
 

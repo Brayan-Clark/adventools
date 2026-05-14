@@ -41,23 +41,7 @@ import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange } fro
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Image,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  Share as RNShare,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
-} from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -166,6 +150,8 @@ import SegmentSelector from '@/components/lessons/SegmentSelector';
 import LessonHeader from '@/components/lessons/LessonHeader';
 import QuarterlyCard from '@/components/lessons/QuarterlyCard';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function LesonaSekolySabata() {
   const { t } = useTranslation();
@@ -1425,8 +1411,9 @@ export default function LesonaSekolySabata() {
                     </View>
                     <Markdown
                       style={{
-                        body: { color: '#94a3b8', fontSize: 13, lineHeight: 20, fontFamily: globalSettings.fontFamily },
-                        strong: { color: '#cbd5e1', fontWeight: 'bold' }
+                        body: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
+                        strong: { color: '#cbd5e1', fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : 'bold', fontFamily: globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold' },
+                        italic: { fontStyle: globalSettings.fontFamily !== 'System' ? 'normal' : 'italic' }
                       }}
                       rules={{
                         image: (node) => (
@@ -1452,8 +1439,6 @@ export default function LesonaSekolySabata() {
                         key={pdf.id || pIdx}
                         onPress={() => {
                           const fileName = pdf.src.split('/').pop() || 'document.pdf';
-                          // For now, navigate to viewer or open URL
-                          // Ideally we verify if downloaded or use public URL
                           router.push({
                             pathname: '/pdf/viewer',
                             params: {
@@ -1483,19 +1468,26 @@ export default function LesonaSekolySabata() {
                       const blockData = b.data || parentData;
 
                       if (b.markdown) {
+                        const isCustom = globalSettings.fontFamily !== 'System';
+                        const cFont = isCustom ? globalSettings.fontFamily : 'Lexend_400Regular';
+                        const cFontBold = isCustom ? globalSettings.fontFamily : 'Lexend_700Bold';
+                        const cFontSemiBold = isCustom ? globalSettings.fontFamily : 'Lexend_600SemiBold';
+                        const cWeightBold: any = isCustom ? 'normal' : 'bold';
+                        const cStyleItalic: any = isCustom ? 'normal' : 'italic';
+
                         content.push(
                           <Markdown
                             key={`${b.id || idx}_md`}
                             onLinkPress={(url) => handleLinkPress(url, blockData)}
                             style={{
-                              body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: 'Lexend_400Regular' },
-                              heading1: { color: '#f8fafc', fontWeight: 'bold', marginTop: 30, marginBottom: 15, fontFamily: 'Lexend_700Bold' },
-                              heading2: { color: '#60a5fa', fontWeight: 'bold', marginTop: 25, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                              heading3: { color: '#60a5fa', marginTop: 20, marginBottom: 10, fontFamily: 'Lexend_600SemiBold' },
-                              strong: { color: '#ffffff', fontWeight: 'bold', fontFamily: 'Lexend_700Bold' },
-                              italic: { fontStyle: 'italic', fontFamily: 'Lexend_400Regular' },
+                              body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: cFont, letterSpacing: globalSettings.letterSpacing || 0 },
+                              heading1: { color: '#f8fafc', fontWeight: cWeightBold, marginTop: 30, marginBottom: 15, fontFamily: cFontBold },
+                              heading2: { color: '#60a5fa', fontWeight: cWeightBold, marginTop: 25, marginBottom: 10, fontFamily: cFontSemiBold },
+                              heading3: { color: '#60a5fa', marginTop: 20, marginBottom: 10, fontFamily: cFontSemiBold },
+                              strong: { color: '#ffffff', fontWeight: cWeightBold, fontFamily: cFontBold },
+                              italic: { fontStyle: cStyleItalic, fontFamily: cFont },
                               blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 16, marginVertical: 12, borderRadius: 8 },
-                              link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: 'bold' },
+                              link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: cWeightBold },
                               paragraph: { marginBottom: 12 }
                             }}
                             rules={{
@@ -1888,9 +1880,8 @@ export default function LesonaSekolySabata() {
                 selectionColor="#3b82f6"
                 style={{ 
                   color: '#f1f5f9', 
-                  fontSize: 18, 
-                  lineHeight: 28, 
-                  fontFamily: 'Lexend_400Regular',
+                  fontSize: 18 * (globalSettings.fontSize / 16), 
+                  lineHeight: 28 * (globalSettings.fontSize / 16), 
                   textAlign: 'left'
                 }}
               >
@@ -1948,7 +1939,14 @@ export default function LesonaSekolySabata() {
                   multiline
                   textAlignVertical="top"
                   autoFocus
-                  style={{ fontFamily: 'Lexend_400Regular', minHeight: 200 }}
+                  style={{ 
+                    fontFamily: globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular', 
+                    fontSize: globalSettings.fontSize,
+                    lineHeight: globalSettings.fontSize * 1.5,
+                    fontStyle: globalSettings.fontFamily !== 'System' ? 'normal' : undefined,
+                    fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : undefined,
+                    minHeight: 200 
+                  }}
                   value={editingQuickNote?.content}
                   onChangeText={(t) => setEditingQuickNote({...editingQuickNote, content: t})}
                 />

@@ -3,13 +3,15 @@
  * Full-screen drawing canvas modal with color picker, eraser and undo.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, PanResponder, ScrollView, Text, TouchableOpacity, View, Image as RNImage } from 'react-native';
+import { Modal, PanResponder, ScrollView, TouchableOpacity, View, Image as RNImage } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
 import { Check, Edit, Eraser, Trash2, Undo2, X } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { saveFilePermanently } from '@/lib/utils';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface DrawModalProps {
   visible: boolean;

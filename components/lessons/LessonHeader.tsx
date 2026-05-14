@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity } from 'react-native';
 import { Headphones, PlayCircle, FileDown, Share } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { cleanSspmMarkdown } from '@/lib/utils';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface LessonHeaderProps {
   readingLesson: any;

@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BookOpen, Music, FileText, StickyNote, Headphones, Tv, LayoutGrid, Bookmark } from 'lucide-react-native';
 import { useTranslation } from '@/lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function ShortcutsWidget() {
   const router = useRouter();

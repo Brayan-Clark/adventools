@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Text } from 'react-native';
+import { View, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from '@/lib/i18n';
 import { getLessonNote, saveLessonNote } from '@/lib/user-storage';
+import { AppText as Text } from '@/components/ui/AppText';
+import { useSettings } from '@/lib/settings-context';
+
 
 interface QuestionBlockProps {
   block: any;
@@ -12,6 +15,7 @@ interface QuestionBlockProps {
 
 const QuestionBlock = ({ block, content, lessonId }: QuestionBlockProps) => {
   const { t } = useTranslation();
+  const { settings } = useSettings();
   const [note, setNote] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const saveTimeout = React.useRef<NodeJS.Timeout | null>(null);
@@ -74,7 +78,14 @@ const QuestionBlock = ({ block, content, lessonId }: QuestionBlockProps) => {
           textAlignVertical="top"
           value={note}
           onChangeText={saveNote}
-          style={{ fontFamily: 'Lexend_400Regular', minHeight: 120 }}
+          style={{ 
+            fontFamily: settings?.fontFamily !== 'System' ? settings?.fontFamily : 'Lexend_400Regular', 
+            fontSize: settings?.fontSize || 16,
+            lineHeight: (settings?.fontSize || 16) * 1.5,
+            fontStyle: settings?.fontFamily !== 'System' ? 'normal' : undefined,
+            fontWeight: settings?.fontFamily !== 'System' ? 'normal' : undefined,
+            minHeight: 120 
+          }}
         />
         {isSaved && (
           <View className="absolute bottom-4 right-4 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">

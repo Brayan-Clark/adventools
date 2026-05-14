@@ -6,10 +6,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, ChevronDown, ChevronRight, Globe, PlusCircle, Search, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function Bible() {
   const router = useRouter();

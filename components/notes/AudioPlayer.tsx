@@ -3,9 +3,11 @@
  * Self-contained voice note playback component.
  */
 import React, { useEffect, useState } from 'react';
-import { TouchableOpacity, View, Text } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { Audio } from 'expo-av';
 import { Pause, Play, Trash2 } from 'lucide-react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface AudioPlayerProps {
   uri: string;

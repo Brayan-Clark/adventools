@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Search, BookOpen, Music } from 'lucide-react-native';
 import React, { useState, useMemo } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../../../lib/settings-context';
 import { useTranslation } from '../../../lib/i18n';
@@ -9,6 +9,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 // Fast cached structure
 import BIBLE_STRUCTURE from '../../../assets/bible-audio-structure.json';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface BibleBook {
   id: number;

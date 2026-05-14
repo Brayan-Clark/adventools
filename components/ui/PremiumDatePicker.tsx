@@ -3,8 +3,10 @@
  * Replaces the system date picker to ensure 100% theme consistency.
  */
 import React, { useState } from 'react';
-import { Modal, Text, TouchableOpacity, View, StyleSheet, ScrollView } from 'react-native';
+import { Modal, TouchableOpacity, View, StyleSheet, ScrollView } from 'react-native';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface PremiumDatePickerProps {
   visible: boolean;

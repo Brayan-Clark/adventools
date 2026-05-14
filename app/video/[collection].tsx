@@ -1,12 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, PlayCircle, Search, Tv } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface VideoItem {
   id: string;

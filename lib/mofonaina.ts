@@ -99,9 +99,7 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
           }
         } catch (fetchError) {
           console.warn(`Mofonaina fetch attempt ${attempt} failed:`, fetchError);
-          if (attempt === MAX_ATTEMPTS) {
-            console.error('Final attempt failed, using cache.');
-          }
+          // Removed console.error to prevent intrusive UI toast when offline
         }
       }
     }

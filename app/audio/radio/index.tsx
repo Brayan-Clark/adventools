@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Radio as RadioIcon, WifiOff, PlayCircle, ListMusic, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NetInfo from '@react-native-community/netinfo';
@@ -19,6 +19,8 @@ interface RadioStation {
 }
 
 import * as FileSystem from 'expo-file-system/legacy';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const RADIOS_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/radios.json';
 const CACHE_FILE = `${FileSystem.documentDirectory}radios/manifest_cache.json`;

@@ -1,6 +1,8 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { parseDate } from '@/lib/utils';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface SegmentSelectorProps {
   segments: any[];

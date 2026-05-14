@@ -1,7 +1,7 @@
 import { Stack, router } from 'expo-router';
 import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,8 @@ import { useTranslation } from '../../lib/i18n';
 import { useSettings } from '../../lib/settings-context';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import { PremiumDatePicker } from '@/components/ui/PremiumDatePicker';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const { width, height } = Dimensions.get('window');
 

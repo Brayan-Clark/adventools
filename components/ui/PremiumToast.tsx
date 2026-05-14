@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export type ToastType = 'success' | 'error' | 'info';
 

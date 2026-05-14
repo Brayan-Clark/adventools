@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { CheckCircle, BookOpen, Download, Trash2 } from 'lucide-react-native';
 import { cleanSspmMarkdown, formatDateRange } from '@/lib/utils';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface QuarterlyCardProps {
   item: any;

@@ -1,12 +1,14 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Download, PlayCircle, Clock, Trash2, CheckCircle, Smartphone, Globe, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../../lib/settings-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface PodcastEpisode {
   id: string; 

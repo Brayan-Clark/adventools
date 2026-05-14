@@ -3,9 +3,11 @@
  * Displays a note in the list view with title, preview, folder badge and color.
  */
 import React from 'react';
-import { TouchableOpacity, View, Text, Image as RNImage } from 'react-native';
+import { TouchableOpacity, View, Image as RNImage } from 'react-native';
 import { Edit, Folder, X } from 'lucide-react-native';
 import { useTranslation } from '@/lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export interface Note {
   id: string;

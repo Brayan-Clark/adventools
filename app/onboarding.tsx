@@ -14,20 +14,11 @@ import {
   X,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Dimensions,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setSetting } from '@/lib/user-storage';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const { width } = Dimensions.get('window');
 const ONBOARDING_KEY = 'adventools_onboarding_done';

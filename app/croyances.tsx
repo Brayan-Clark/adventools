@@ -6,8 +6,10 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Quote, Sparkles, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, LayoutAnimation, Modal, Platform, ScrollView, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import { ActivityIndicator, Alert, LayoutAnimation, Modal, Platform, ScrollView, TouchableOpacity, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);

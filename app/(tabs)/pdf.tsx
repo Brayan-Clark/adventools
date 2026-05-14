@@ -7,9 +7,11 @@ import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, RefreshCw, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CacheManager } from '@/lib/cache-manager';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const ICON_MAP: Record<string, any> = {
   BookOpen,

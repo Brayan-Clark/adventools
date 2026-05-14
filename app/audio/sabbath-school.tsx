@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Headphones, Globe, RefreshCw, Search, X, Download, Trash2, AlertCircle, WifiOff } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Alert, Modal } from 'react-native';
+import { ScrollView, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 interface AudioItem {
   id: string;

@@ -3,8 +3,10 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Copy, ExternalLink, Facebook, Heart, Landmark, Mail, Sparkles } from 'lucide-react-native';
 import React from 'react';
-import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function DonateScreen() {
   const router = useRouter();

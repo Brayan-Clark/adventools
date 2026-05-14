@@ -3,8 +3,10 @@
  * Supports success, error, and info types with micro-animations.
  */
 import React from 'react';
-import { Modal, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Modal, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export type AlertType = 'success' | 'error' | 'info';
 

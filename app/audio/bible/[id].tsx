@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Play, Download, Headphones, CheckCircle, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Text, TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../../../lib/settings-context';
 import { useTranslation } from '../../../lib/i18n';
@@ -9,6 +9,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 // Audio mapping
 import BIBLE_AUDIO_MAP from '../../../assets/bible-audio-map.json';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const BIBLE_DIR = `${FileSystem.documentDirectory}bible-audio/`;
 const METADATA_FILE = `${BIBLE_DIR}metadata.json`;

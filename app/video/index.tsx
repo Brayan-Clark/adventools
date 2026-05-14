@@ -1,12 +1,14 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Folder, MonitorPlay, Music, BookOpen, AlertCircle } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 import { CacheManager } from '../../lib/cache-manager';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 const ICON_MAP = {
   MonitorPlay,

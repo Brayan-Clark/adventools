@@ -3,7 +3,7 @@ import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bookmark, BookOpen, ChevronRight, FileText, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Headphones, Tv, Search } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchVerseContentById } from '@/lib/bible';
@@ -14,6 +14,8 @@ import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
 import { fetchWeather, WeatherInfo, getWeatherDisplay } from '@/lib/weather';
 import { getHistory, clearHistory } from '@/lib/user-storage';
 import * as LucideIcons from 'lucide-react-native';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 export default function Home() {
   const router = useRouter();
@@ -146,7 +148,7 @@ export default function Home() {
             />
             <View>
               <Text className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">{greeting}</Text>
-              <Text className="text-lg uppercase font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{globalSettings.userName ? ` ${globalSettings.userName}` : `${t('welcome')} !`}</Text>
+              <Text className="text-base uppercase font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{globalSettings.userName ? ` ${globalSettings.userName}` : `${t('welcome')} !`}</Text>
             </View>
           </View>
           <View className="flex-row items-center gap-3">
@@ -225,10 +227,7 @@ export default function Home() {
 
             {currentReference ? (
               <View>
-                <Text className="text-white italic mb-6 leading-8" style={{
-                  fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
-                  fontSize: 20 * (globalSettings.fontSize / 18) // Scaling based on base size
-                }}>
+                <Text className="text-white mb-6 leading-8 text-lg">
                   "{verseText}"
                 </Text>
                 <View className="flex-row items-center">

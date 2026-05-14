@@ -4,8 +4,10 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlignLeft, ChevronLeft, Info, MoveHorizontal, Sparkles } from 'lucide-react-native';
 import React from 'react';
-import { Alert, PanResponder, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, PanResponder, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText as Text } from '@/components/ui/AppText';
+
 
 function ModernSlider({ value, min, max, onChange, step = 1 }: { value: number, min: number, max: number, onChange: (val: number) => void, step?: number }) {
   const [layoutWidth, setLayoutWidth] = React.useState(0);
