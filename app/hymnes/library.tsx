@@ -192,7 +192,7 @@ export default function Hymnes() {
           <TouchableOpacity onPress={handleBack} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{pageTitle || t('hymns')}</Text>
+          <Text className="text-2xl font-bold text-white">{pageTitle || t('hymns')}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/hymnes/store')}
@@ -303,7 +303,7 @@ export default function Hymnes() {
                   <Text className="text-pink-500 font-bold text-sm">{item.c_num}</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="font-bold text-white text-base" style={{ fontFamily: 'Lexend_600SemiBold' }} numberOfLines={1}>{item.c_title}</Text>
+                  <Text className="font-bold text-white text-base" numberOfLines={1}>{item.c_title}</Text>
                   <Text className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{item.c_categories?.split(' - ')[1] || item.c_categories || t('praise')}</Text>
                 </View>
                 <ChevronRightIcon size={16} color="#475569" />
@@ -333,7 +333,7 @@ export default function Hymnes() {
                 {hymnNumber.length === 0 ? (
                   <Text className="text-slate-700 text-5xl font-black italic">000</Text>
                 ) : (
-                  <Text className="text-white text-6xl font-black" style={{ fontFamily: 'Lexend_700Bold' }}>{hymnNumber}</Text>
+                  <Text className="text-white text-6xl font-black">{hymnNumber}</Text>
                 )}
               </View>
               
@@ -376,7 +376,7 @@ export default function Hymnes() {
                   ) : key === 'GO' ? (
                     <ChevronRight size={32} color="white" />
                   ) : (
-                    <Text className="text-white text-3xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{key}</Text>
+                    <Text className="text-white text-3xl font-bold">{key}</Text>
                   )}
                 </TouchableOpacity>
               ))}

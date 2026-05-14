@@ -78,6 +78,9 @@ export default function BibleSettings() {
     { label: 'Système', value: 'System' },
     { label: 'Arial', value: 'Arial' },
     { label: 'Serif', value: 'Serif' },
+    { label: 'Inter', value: 'Inter_400Regular' },
+    { label: 'Poppins', value: 'Poppins_400Regular' },
+    { label: 'Lora', value: 'Lora_400Regular' },
     { label: 'Rosemary', value: 'Rosemary' },
     { label: 'Alice', value: 'Alice' },
     { label: 'OpenSans', value: 'OpenSans' },
@@ -99,7 +102,7 @@ export default function BibleSettings() {
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10">
           <ChevronLeft size={20} color="#cbd5e1" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+        <Text className="text-xl font-bold text-white tracking-tight">
           Apparence
         </Text>
         <TouchableOpacity

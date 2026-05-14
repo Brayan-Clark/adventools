@@ -218,7 +218,7 @@ export default function Bible() {
           <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-slate-800">
             <ArrowLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('holy_bible')}</Text>
+          <Text className="text-2xl font-bold text-white">{t('holy_bible')}</Text>
         </View>
 
         <TouchableOpacity
@@ -354,7 +354,7 @@ export default function Bible() {
           <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-            <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>{t('choose_language')}</Text>
+            <Text className="text-xl font-bold text-white mb-8 text-center">{t('choose_language')}</Text>
 
             <TouchableOpacity
               onPress={() => { setShowLangPicker(false); router.push({ pathname: '/bible/store' as any }); }}
@@ -433,7 +433,6 @@ function BookGridItem({ book, lang, testamentName, colorIdx = 0 }: any) {
     >
       <Text
         className={`${c.text} text-[15px] font-medium text-center`}
-        style={{ fontFamily: 'Lexend_600SemiBold' }}
         numberOfLines={1}
         adjustsFontSizeToFit
       >

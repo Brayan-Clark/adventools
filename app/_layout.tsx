@@ -32,6 +32,9 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
+import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider, useSettings } from '@/lib/settings-context';
@@ -47,6 +50,15 @@ export default function RootLayout() {
     Lexend_400Regular,
     Lexend_700Bold,
     Lexend_600SemiBold,
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Lora_400Regular,
+    Lora_600SemiBold,
+    Lora_700Bold,
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
     'Alice': require('../assets/fonts/Alice.ttf'),
     'Allura': require('../assets/fonts/Allura.ttf'),
     'Choco': require('../assets/fonts/Chococooky.ttf'),

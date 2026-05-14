@@ -1,3 +1,4 @@
+import { useSettings } from '@/lib/settings-context';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useTranslation } from '@/lib/i18n';
 import { Tabs } from 'expo-router';
@@ -7,6 +8,15 @@ import React from 'react';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
+  const { settings } = useSettings();
+
+  let tabFont = 'Lexend_600SemiBold';
+  if (settings.fontFamily !== 'System') {
+    if (settings.fontFamily === 'Inter_400Regular') tabFont = 'Inter_600SemiBold';
+    else if (settings.fontFamily === 'Poppins_400Regular') tabFont = 'Poppins_600SemiBold';
+    else if (settings.fontFamily === 'Lora_400Regular') tabFont = 'Lora_600SemiBold';
+    else tabFont = settings.fontFamily;
+  }
 
   return (
     <Tabs
@@ -23,7 +33,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontFamily: 'Lexend_600SemiBold',
+          fontFamily: tabFont,
         }
       }}>
       <Tabs.Screen

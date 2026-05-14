@@ -1411,8 +1411,8 @@ export default function LesonaSekolySabata() {
                     </View>
                     <Markdown
                       style={{
-                        body: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
-                        strong: { color: '#cbd5e1', fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : 'bold', fontFamily: globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold' },
+                        body: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_400Regular' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_400Regular' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_400Regular' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
+                        strong: { color: '#cbd5e1', fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : 'bold', fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_700Bold' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_700Bold' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_700Bold' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold' },
                         italic: { fontStyle: globalSettings.fontFamily !== 'System' ? 'normal' : 'italic' }
                       }}
                       rules={{
@@ -1469,11 +1469,36 @@ export default function LesonaSekolySabata() {
 
                       if (b.markdown) {
                         const isCustom = globalSettings.fontFamily !== 'System';
-                        const cFont = isCustom ? globalSettings.fontFamily : 'Lexend_400Regular';
-                        const cFontBold = isCustom ? globalSettings.fontFamily : 'Lexend_700Bold';
-                        const cFontSemiBold = isCustom ? globalSettings.fontFamily : 'Lexend_600SemiBold';
-                        const cWeightBold: any = isCustom ? 'normal' : 'bold';
-                        const cStyleItalic: any = isCustom ? 'normal' : 'italic';
+                        let cFont = 'Lexend_400Regular';
+                        let cFontBold = 'Lexend_700Bold';
+                        let cFontSemiBold = 'Lexend_600SemiBold';
+                        let cWeightBold: any = 'bold';
+                        let cStyleItalic: any = 'italic';
+
+                        if (isCustom) {
+                           cFont = globalSettings.fontFamily;
+                           if (cFont === 'Inter_400Regular') {
+                             cFontBold = 'Inter_700Bold';
+                             cFontSemiBold = 'Inter_600SemiBold';
+                             cWeightBold = 'normal';
+                             cStyleItalic = 'normal';
+                           } else if (cFont === 'Poppins_400Regular') {
+                             cFontBold = 'Poppins_700Bold';
+                             cFontSemiBold = 'Poppins_600SemiBold';
+                             cWeightBold = 'normal';
+                             cStyleItalic = 'normal';
+                           } else if (cFont === 'Lora_400Regular') {
+                             cFontBold = 'Lora_700Bold';
+                             cFontSemiBold = 'Lora_600SemiBold';
+                             cWeightBold = 'normal';
+                             cStyleItalic = 'normal';
+                           } else {
+                             cFontBold = globalSettings.fontFamily;
+                             cFontSemiBold = globalSettings.fontFamily;
+                             cWeightBold = 'normal';
+                             cStyleItalic = 'normal';
+                           }
+                        }
 
                         content.push(
                           <Markdown

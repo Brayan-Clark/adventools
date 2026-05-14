@@ -77,11 +77,20 @@ export const AppText = React.forwardRef<RNText, AppTextProps>(({ style, variant,
 
   // 3. Determine Font Family
   let computedFontFamily = flattenedStyle.fontFamily;
+  const isBold = flattenedStyle.fontWeight === 'bold' || flattenedStyle.fontWeight === '700' || cls.includes('font-bold');
+  const isMedium = flattenedStyle.fontWeight === '500' || flattenedStyle.fontWeight === '600' || cls.includes('font-medium');
+
   if (globalFontFamily) {
-    computedFontFamily = globalFontFamily;
+    if (globalFontFamily === 'Inter_400Regular') {
+        computedFontFamily = isBold ? 'Inter_700Bold' : isMedium ? 'Inter_600SemiBold' : 'Inter_400Regular';
+    } else if (globalFontFamily === 'Poppins_400Regular') {
+        computedFontFamily = isBold ? 'Poppins_700Bold' : isMedium ? 'Poppins_600SemiBold' : 'Poppins_400Regular';
+    } else if (globalFontFamily === 'Lora_400Regular') {
+        computedFontFamily = isBold ? 'Lora_700Bold' : isMedium ? 'Lora_600SemiBold' : 'Lora_400Regular';
+    } else {
+        computedFontFamily = globalFontFamily;
+    }
   } else if (!computedFontFamily) {
-    const isBold = flattenedStyle.fontWeight === 'bold' || flattenedStyle.fontWeight === '700' || cls.includes('font-bold');
-    const isMedium = flattenedStyle.fontWeight === '500' || flattenedStyle.fontWeight === '600' || cls.includes('font-medium');
     computedFontFamily = isBold ? 'Lexend_700Bold' : isMedium ? 'Lexend_500Medium' : 'Lexend_400Regular';
   }
 

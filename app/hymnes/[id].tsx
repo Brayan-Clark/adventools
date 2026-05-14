@@ -175,7 +175,7 @@ export default function HymneDetail() {
           <ArrowLeft size={20} color="#94a3b8" />
         </TouchableOpacity>
         <View className="items-center">
-          <Text className="text-[14px] font-black uppercase tracking-[0.1em] text-pink-500" style={{ fontFamily: 'Lexend_700Bold' }}>Cantique {hymn.c_num}</Text>
+          <Text className="text-[14px] font-black uppercase tracking-[0.1em] text-pink-500">Cantique {hymn.c_num}</Text>
         </View>
         <View className="flex-row gap-2">
           {sameMelodyHymns.length > 0 && (
@@ -196,7 +196,7 @@ export default function HymneDetail() {
             <View className="w-20 h-20 rounded-[30px] bg-pink-500/10 items-center justify-center mb-8 border border-pink-500/20 shadow-2xl shadow-pink-500/20">
               <Music size={36} color="#ec4899" />
             </View>
-            <Text className="text-3xl font-bold text-white text-center uppercase mb-3 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+            <Text className="text-3xl font-bold text-white text-center uppercase mb-3 leading-tight">
               {hymn.c_title}
             </Text>
             <View className="flex-row items-center bg-slate-900 px-4 py-1.5 rounded-full border border-slate-800">
@@ -213,7 +213,7 @@ export default function HymneDetail() {
                 <TextInput
                   multiline
                   className="text-white text-lg leading-7"
-                  style={{ fontFamily: 'Lexend_400Regular', minHeight: 300 }}
+                  style={{ fontFamily: globalSettings.fontFamily === 'System' ? undefined : globalSettings.fontFamily, minHeight: 300 }}
                   value={editedContent}
                   onChangeText={setEditedContent}
                   autoFocus
@@ -245,10 +245,7 @@ export default function HymneDetail() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <Text className="leading-[40px] text-center text-slate-300" style={{
-                fontFamily: globalSettings.fontFamily === 'System' ? 'Lexend_400Regular' : globalSettings.fontFamily,
-                fontSize: globalSettings.fontSize + 2 // Base offset for hymns
-              }}>
+              <Text className="leading-[40px] text-center text-slate-300 text-lg">
                 {hymn.c_content}
               </Text>
             )}
@@ -314,7 +311,7 @@ export default function HymneDetail() {
                 {hymnNumber.length === 0 ? (
                   <Text className="text-slate-700 text-5xl font-black italic">000</Text>
                 ) : (
-                  <Text className="text-white text-6xl font-black" style={{ fontFamily: 'Lexend_700Bold' }}>{hymnNumber}</Text>
+                  <Text className="text-white text-6xl font-black">{hymnNumber}</Text>
                 )}
               </View>
               
@@ -357,7 +354,7 @@ export default function HymneDetail() {
                   ) : key === 'GO' ? (
                     <ChevronRight size={32} color="white" />
                   ) : (
-                    <Text className="text-white text-3xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>{key}</Text>
+                    <Text className="text-white text-3xl font-bold">{key}</Text>
                   )}
                 </TouchableOpacity>
               ))}
@@ -384,7 +381,7 @@ export default function HymneDetail() {
               <View className="w-10 h-10 rounded-full bg-pink-500/20 items-center justify-center mr-4">
                 <Music size={20} color="#ec4899" />
               </View>
-              <Text className="text-xl font-bold text-white uppercase tracking-widest" style={{ fontFamily: 'Lexend_700Bold' }}>Même Mélodie</Text>
+              <Text className="text-xl font-bold text-white uppercase tracking-widest">Même Mélodie</Text>
             </View>
 
             <Text className="text-slate-400 text-center mb-8 px-6 text-xs leading-5">Ces cantiques partagent la même mélodie que le chant actuel.</Text>

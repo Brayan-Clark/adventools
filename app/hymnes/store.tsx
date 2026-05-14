@@ -21,7 +21,7 @@ export default function HymneStore() {
             <ChevronLeft size={20} color="#94a3b8" />
           </TouchableOpacity>
           <View>
-            <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>Boutique Hymnes</Text>
+            <Text className="text-2xl font-bold text-white tracking-tight">Boutique Hymnes</Text>
             <Text className="text-slate-500 text-xs mt-1">Recueils disponibles en ligne</Text>
           </View>
         </View>

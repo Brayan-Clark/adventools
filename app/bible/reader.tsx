@@ -385,7 +385,7 @@ export default function BibleReader() {
           className="flex-1 items-center px-4"
         >
           <View className="items-center">
-            <Text className="text-white font-bold text-sm tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+            <Text className="text-white font-bold text-sm tracking-tight">
               {currentBookName} {chapter}
             </Text>
             <View className="flex-row items-center mt-0.5">
@@ -436,7 +436,7 @@ export default function BibleReader() {
                 onPress={() => setShowChapterPicker(true)}
                 className="bg-[#1a2233] border border-slate-700/50 rounded-2xl py-4 px-6 flex-row justify-center items-center shadow-lg"
               >
-                <Text className="text-lg font-bold text-white mr-3 tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+                <Text className="text-lg font-bold text-white mr-3 tracking-tight">
                   {currentBookName} {chapter}
                 </Text>
                 <ChevronDown size={20} color="#64748b" />
@@ -449,7 +449,7 @@ export default function BibleReader() {
                 <Text className="text-[10px] font-bold uppercase text-[#195de6] tracking-[0.3em] mb-3">
                   {testamentName || (Number(testament) === 3 ? 'Testamenta Vaovao' : Number(testament) === 2 ? 'Apokrif' : 'Testamenta Taloha')}
                 </Text>
-                <Text className="text-[26px] font-bold text-white text-center mb-6 leading-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
+                <Text className="text-[26px] font-bold text-white text-center mb-6 leading-tight">
                   {currentBookName} {chapter}
                 </Text>
                 <View className="h-[4px] w-8 bg-[#195de6] rounded-full mx-auto opacity-80" />
@@ -774,7 +774,6 @@ export default function BibleReader() {
                 fontSize: 22,
                 lineHeight: 34,
                 color: '#cbd5e1',
-                fontFamily: 'Lexend_400Regular',
                 textAlign: 'center'
               }}>
                 {(() => {
@@ -875,7 +874,7 @@ export default function BibleReader() {
         >
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[80%] border-t border-slate-800">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-            <Text className="text-xl font-bold text-white mb-6 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Signets - {currentBookName} {chapter}</Text>
+            <Text className="text-xl font-bold text-white mb-6 text-center">Signets - {currentBookName} {chapter}</Text>
 
             {Object.keys(bookmarks).length > 0 ? (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -926,7 +925,7 @@ export default function BibleReader() {
             <TouchableOpacity className="flex-1" onPress={() => setShowLangPicker(false)} />
             <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[70%] border-t border-slate-700">
               <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
-              <Text className="text-xl font-bold text-white mb-8 text-center" style={{ fontFamily: 'Lexend_700Bold' }}>Choisir une langue</Text>
+              <Text className="text-xl font-bold text-white mb-8 text-center">Choisir une langue</Text>
 
               <TouchableOpacity
                 onPress={() => { setShowLangPicker(false); router.push({ pathname: '/bible/store' as any }); }}
@@ -980,11 +979,11 @@ export default function BibleReader() {
             
             <View className="flex-row justify-center items-center mb-6 gap-4">
               <TouchableOpacity onPress={() => setPickerStep('chapter')} className="px-4 py-2">
-                <Text className={cn("text-lg font-bold", pickerStep === 'chapter' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Chapitre</Text>
+                <Text className={cn("text-lg font-bold", pickerStep === 'chapter' ? "text-white underline" : "text-slate-500")}>Chapitre</Text>
               </TouchableOpacity>
               <Text className="text-slate-700 font-bold">/</Text>
               <TouchableOpacity onPress={() => setPickerStep('verse')} className="px-4 py-2">
-                 <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")} style={{ fontFamily: 'Lexend_700Bold' }}>Verset</Text>
+                 <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")}>Verset</Text>
               </TouchableOpacity>
             </View>
 
