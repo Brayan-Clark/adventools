@@ -176,12 +176,13 @@ async function renderMofonaina(props: WidgetTaskHandlerProps) {
 async function renderLesona(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  let title        = 'Lesona herinandro';
-  let lessonNumber = '';
-  let category     = 'Sekoly Sabata';
-  let weekRange    = '';
-  let days: any[]  = [];
-  let coverImage   = '';
+  let quarterlyTitle = 'Sekoly Sabata';
+  let lessonTitle    = 'Lesona herinandro';
+  let lessonNumber   = '';
+  let category       = 'Sekoly Sabata';
+  let weekRange      = '';
+  let days: any[]    = [];
+  let coverImage     = '';
 
   try {
     // 1. Read class preference from SQLite (where settings are stored after migration)
@@ -239,8 +240,9 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
       const lessonData  = allLessons[lessonId] || allLessons[weekNum.toString()];
 
       if (lessonData) {
-        title      = lessonData.title || title;
-        coverImage = lessonData.cover || coverImage;
+        quarterlyTitle = pq.title || quarterlyTitle;
+        lessonTitle    = lessonData.title || lessonTitle;
+        coverImage     = lessonData.cover || coverImage;
 
         if (lessonData.startDate && lessonData.endDate) {
           const s = parseDate(lessonData.startDate);
@@ -268,8 +270,9 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
       const dRes = await fetch(detailUrl).catch(() => null);
       if (dRes?.ok) {
         const d = await dRes.json();
-        title      = d.title      || title;
-        coverImage = d.cover      || coverImage;
+        quarterlyTitle = pq.title || quarterlyTitle;
+        lessonTitle    = d.title      || lessonTitle;
+        coverImage     = d.cover      || coverImage;
 
         if (d.startDate && d.endDate) {
           const s = parseDate(d.startDate);
@@ -296,7 +299,8 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
 
   props.renderWidget(
     <LesonaWidget
-      title={title} lessonNumber={lessonNumber} category={category}
+      quarterlyTitle={quarterlyTitle} lessonTitle={lessonTitle}
+      lessonNumber={lessonNumber} category={category}
       weekRange={weekRange} days={days} coverImage={coverImage}
     />
   );
@@ -311,6 +315,7 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
   let title    = 'Lesona anio';
   const dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
   let category = 'Sekoly Sabata';
+  let coverImage = '';
 
   try {
     const edsClass: string =
@@ -330,6 +335,7 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
     const pq = matchQuarterly(quarterlies, classInfo.suffix, now);
     if (!pq) throw new Error('No quarterly');
 
+    coverImage = pq.covers?.landscape || pq.cover || '';
     const weekNum  = calcWeekNumber(pq.startDate, now);
     const lessonId = weekNum.toString().padStart(2, '0');
     const downloadId = `${lang}_${pq.id}`;
@@ -372,5 +378,5 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
     console.error('[Widget] LesonaAndro error:', e);
   }
 
-  props.renderWidget(<LesonaAndroWidget title={title} date={dateStr} category={category} />);
+  props.renderWidget(<LesonaAndroWidget title={title} date={dateStr} category={category} coverImage={coverImage} />);
 }

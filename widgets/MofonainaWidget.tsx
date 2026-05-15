@@ -33,93 +33,88 @@ export function MofonainaWidget({
   }
 
   return (
-    // The native rn_widget.xml now has android:padding="8dp" which creates the
-    // transparent gap needed for rounded corners to be visible on the launcher.
-    // No React-side margin needed.
-    <>
-      <OverlapWidget
+    <OverlapWidget
+      style={{
+        width: 'match_parent',
+        height: 'match_parent',
+        borderRadius: RADIUS,
+      }}
+    >
+      {/* 1. Background image — server-side cropped to widget size */}
+      <ImageWidget
+        image={bgUrl as any}
+        imageWidth={widgetWidth}
+        imageHeight={widgetHeight}
+        radius={RADIUS}
         style={{
           width: 'match_parent',
           height: 'match_parent',
+        }}
+      />
+
+      {/* 2. Semi-transparent dark overlay + all text */}
+      <FlexWidget
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'adventools://mofonaina' }}
+        style={{
+          width: 'match_parent',
+          height: 'match_parent',
+          padding: 20,
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#00000099',
           borderRadius: RADIUS,
         }}
       >
-        {/* 1. Background image — server-side cropped to widget size */}
-        <ImageWidget
-          image={bgUrl as any}
-          imageWidth={widgetWidth}
-          imageHeight={widgetHeight}
-          radius={RADIUS}
+        <TextWidget
+          text={dateStr.toUpperCase()}
           style={{
-            width: 'match_parent',
-            height: 'match_parent',
+            fontSize: 11,
+            color: '#fb923c',
+            fontWeight: 'bold',
+            marginBottom: 8,
+            letterSpacing: 1,
+            textAlign: 'center',
           }}
         />
 
-        {/* 2. Semi-transparent dark overlay + all text */}
-        <FlexWidget
-          clickAction="OPEN_URI"
-          clickActionData={{ uri: 'adventools://mofonaina' }}
+        <TextWidget
+          text={title || "Mofon'aina"}
           style={{
-            width: 'match_parent',
-            height: 'match_parent',
-            padding: 20,
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: '#00000099',
-            borderRadius: RADIUS,
+            fontSize: 22,
+            color: '#ffffff',
+            fontWeight: 'bold',
+            marginBottom: 10,
+            textAlign: 'center',
+            maxLines: 2,
+            truncate: 'END',
           }}
-        >
-          <TextWidget
-            text={dateStr.toUpperCase()}
-            style={{
-              fontSize: 11,
-              color: '#fb923c',
-              fontWeight: 'bold',
-              marginBottom: 8,
-              letterSpacing: 1,
-              textAlign: 'center',
-            }}
-          />
+        />
 
-          <TextWidget
-            text={title || "Mofon'aina"}
-            style={{
-              fontSize: 22,
-              color: '#ffffff',
-              fontWeight: 'bold',
-              marginBottom: 10,
-              textAlign: 'center',
-              maxLines: 2,
-              truncate: 'END',
-            }}
-          />
+        <TextWidget
+          text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
+          style={{
+            fontSize: 14,
+            color: '#e2e8f0',
+            textAlign: 'center',
+            marginBottom: 10,
+            maxLines: 4,
+            truncate: 'END',
+          }}
+        />
 
-          <TextWidget
-            text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
-            style={{
-              fontSize: 14,
-              color: '#e2e8f0',
-              textAlign: 'center',
-              marginBottom: 10,
-              maxLines: 4,
-              truncate: 'END',
-            }}
-          />
-
-          <TextWidget
-            text={reference || 'Adventools'}
-            style={{
-              fontSize: 12,
-              color: '#fb923c',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              truncate: 'END',
-            }}
-          />
-        </FlexWidget>
-      </OverlapWidget>
-    </>
+        <TextWidget
+          text={reference || 'Adventools'}
+          style={{
+            fontSize: 12,
+            color: '#fb923c',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            truncate: 'END',
+          }}
+        />
+      </FlexWidget>
+    </OverlapWidget>
   );
 }

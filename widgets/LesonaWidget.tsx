@@ -9,7 +9,8 @@ interface DayItem {
 }
 
 interface LesonaWidgetProps {
-  title: string;
+  quarterlyTitle: string;
+  lessonTitle: string;
   lessonNumber: string;
   category: string;
   weekRange: string;
@@ -18,7 +19,8 @@ interface LesonaWidgetProps {
 }
 
 export function LesonaWidget({
-  title,
+  quarterlyTitle,
+  lessonTitle,
   lessonNumber,
   category,
   weekRange,
@@ -37,69 +39,71 @@ export function LesonaWidget({
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#1a2634',
+        backgroundColor: '#101720',
         borderRadius: RADIUS,
         flexDirection: 'column',
-        padding: 14,
+        padding: 16,
         overflow: 'hidden',
       }}
     >
-        {/* ── Header: Cover + Lesson Info ── */}
-        <FlexWidget style={{ flexDirection: 'row', marginBottom: 14, alignItems: 'center' }}>
+        {/* ── Header: Cover + Quarterly & Lesson Info ── */}
+        <FlexWidget style={{ flexDirection: 'row', marginBottom: 18, alignItems: 'flex-start' }}>
           {/* Cover image or placeholder */}
           {coverImage ? (
             <ImageWidget
               image={coverImage}
-              imageWidth={60}
-              imageHeight={90}
-              radius={10}
-              style={{ marginRight: 12 }}
+              imageWidth={65}
+              imageHeight={95}
+              radius={8}
+              style={{ marginRight: 16 }}
             />
           ) : (
             <FlexWidget
               style={{
-                width: 60,
-                height: 90,
-                backgroundColor: '#2d3a4b',
-                borderRadius: 10,
-                marginRight: 12,
+                width: 65,
+                height: 95,
+                backgroundColor: '#1e293b',
+                borderRadius: 8,
+                marginRight: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <TextWidget text="📖" style={{ fontSize: 22 }} />
+              <TextWidget text="📖" style={{ fontSize: 24 }} />
             </FlexWidget>
           )}
 
-          {/* Lesson meta */}
+          {/* Titles meta */}
           <FlexWidget style={{ flex: 1, flexDirection: 'column' }}>
             <TextWidget
-              text={(category || 'ÉCOLE DU SABBAT').toUpperCase()}
+              text={quarterlyTitle || 'École du Sabbat'}
               style={{
-                fontSize: 9,
-                color: '#3b82f6',
+                fontSize: 18,
+                color: '#ffffff',
                 fontWeight: 'bold',
-                marginBottom: 4,
+                maxLines: 2,
                 truncate: 'END',
-                maxLines: 1,
+                lineHeight: 22,
               }}
             />
             <TextWidget
-              text={title || 'Leçon de la semaine'}
+              text={lessonTitle || 'Leçon de la semaine'}
               style={{
-                fontSize: 16,
-                color: '#ffffff',
-                fontWeight: 'bold',
-                maxLines: 3,
+                fontSize: 12,
+                color: '#94a3b8',
+                marginTop: 4,
+                maxLines: 1,
                 truncate: 'END',
               }}
             />
-            {!!weekRange && (
-              <TextWidget
-                text={weekRange}
-                style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}
-              />
-            )}
+            <TextWidget
+              text={weekRange || ''}
+              style={{
+                fontSize: 10,
+                color: '#64748b',
+                marginTop: 2,
+              }}
+            />
           </FlexWidget>
         </FlexWidget>
 
@@ -112,17 +116,17 @@ export function LesonaWidget({
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
-                  marginBottom: 4,
-                  borderRadius: 10,
-                  backgroundColor: day.isToday ? '#3b82f6' : '#2d3a4b',
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  marginBottom: 6,
+                  borderRadius: 12,
+                  backgroundColor: day.isToday ? '#3b82f6' : '#1e293b',
                 }}
               >
                 <TextWidget
                   text={day.title || 'Lesona'}
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     color: '#ffffff',
                     fontWeight: day.isToday ? 'bold' : 'normal',
                     flex: 1,
@@ -133,9 +137,9 @@ export function LesonaWidget({
                 <TextWidget
                   text={`${day.label} ${day.date}`}
                   style={{
-                    fontSize: 10,
+                    fontSize: 11,
                     color: day.isToday ? '#ffffffcc' : '#94a3b8',
-                    marginLeft: 8,
+                    marginLeft: 12,
                   }}
                 />
               </FlexWidget>
@@ -144,12 +148,11 @@ export function LesonaWidget({
             <FlexWidget style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <TextWidget
                 text="Sokafy ny fampiharana mba hijery ny lesona"
-                style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center' }}
+                style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}
               />
             </FlexWidget>
           )}
         </FlexWidget>
-      </FlexWidget>
     </FlexWidget>
   );
 }
