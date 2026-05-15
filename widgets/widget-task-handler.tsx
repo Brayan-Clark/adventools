@@ -10,30 +10,34 @@ import { getMofonainaForDate } from '../lib/mofonaina';
 import * as SQLite from 'expo-sqlite';
 
 // ────────────────────────────────────────────────────────────────────────────────
-// CONSTANTS — mirrors lesona.tsx
+// CONSTANTS
 // ────────────────────────────────────────────────────────────────────────────────
 const OFFLINE_LESSONS_PREFIX = 'adventools_ss_offline_';
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
 
-const CLASS_TO_API_ID: Record<string, { id: string; label: string }> = {
-  'Lesona Lehibe (+ 35 taona)':           { id: 'adult',       label: 'Sekoly Sabata' },
-  'Lesona Tanora zokiny (19-35 taona)':   { id: 'yad',         label: 'Tanora Zokiny' },
-  'Lesona Zatovo (15-18 taona)':          { id: 'earliteen',   label: 'Zatovo' },
-  'Lesona Mantoanto (13-14 taona)':       { id: 'earliteen',   label: 'Mantoanto' },
-  'Lesona Tanora zandriny (10-12 taona)': { id: 'earliteen',   label: 'Tanora Zandriny' },
-  'Lesona Ankizy (7-9 taona)':            { id: 'primary',     label: 'Ankizy' },
-  'Lesona Kilonga (4-6 taona)':           { id: 'kindergarten',label: 'Kilonga' },
-  'Lesona Zazakely (1-3 taona)':          { id: 'kindergarten',label: 'Zazakely' },
-  'Lesona Zaza minono (0-12 volana)':     { id: 'kindergarten',label: 'Zaza minono' },
-};
-
 const MG_DAY_LABELS = ['Sab', 'Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom'];
+
+// Class label → API quarterly ID suffix pattern
+// Based on real API data:
+//   Lesona Lehibe     → IDs like "mg-ss-2026-02"        (no suffix)
+//   Tanora Zokiny     → IDs like "mg-ss-2026-02-cq"     (ends with -cq)
+const CLASS_TO_SUFFIX: Record<string, { suffix: string; label: string }> = {
+  'Lesona Lehibe (+ 35 taona)':           { suffix: 'adult', label: 'Sekoly Sabata' },
+  'Lesona Tanora zokiny (19-35 taona)':   { suffix: 'cq',    label: 'Tanora Zokiny' },
+  'Lesona Zatovo (15-18 taona)':          { suffix: 'earliteen', label: 'Zatovo' },
+  'Lesona Mantoanto (13-14 taona)':       { suffix: 'earliteen', label: 'Mantoanto' },
+  'Lesona Tanora zandriny (10-12 taona)': { suffix: 'earliteen', label: 'Tanora Zandriny' },
+  'Lesona Ankizy (7-9 taona)':            { suffix: 'primary',   label: 'Ankizy' },
+  'Lesona Kilonga (4-6 taona)':           { suffix: 'kindergarten', label: 'Kilonga' },
+  'Lesona Zazakely (1-3 taona)':          { suffix: 'kindergarten', label: 'Zazakely' },
+  'Lesona Zaza minono (0-12 volana)':     { suffix: 'kindergarten', label: 'Zaza minono' },
+};
 
 // ────────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ────────────────────────────────────────────────────────────────────────────────
 
-/** Read a setting value from SQLite (mirrors getSetting in user-storage.ts) */
+/** Read a value from the SQLite settings table (mirrors getSetting in user-storage.ts) */
 async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
   try {
     const db = await SQLite.openDatabaseAsync('adventools_user.db');
@@ -41,13 +45,11 @@ async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
     if (row?.value) {
       try { return JSON.parse(row.value) as T; } catch { return row.value as unknown as T; }
     }
-  } catch (e) {
-    // DB may not exist yet on very first launch
-  }
+  } catch (_) { /* DB may not exist on very first run */ }
   return defaultValue;
 }
 
-/** Parse DD/MM/YYYY or ISO date strings (API returns both formats) */
+/** Parse DD/MM/YYYY OR ISO date strings */
 function parseDate(dateStr: string): Date {
   if (!dateStr) return new Date(0);
   if (dateStr.includes('/')) {
@@ -57,20 +59,69 @@ function parseDate(dateStr: string): Date {
   return new Date(dateStr);
 }
 
+/**
+ * Calculate the current week number (1-based) within a quarterly,
+ * given the quarterly's start date. Each week starts on Saturday.
+ */
+function calcWeekNumber(quarterlyStartDate: string, now: Date): number {
+  const start = parseDate(quarterlyStartDate);
+  // Normalize both to midnight
+  start.setHours(0, 0, 0, 0);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs   = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 1;
+  return Math.floor(diffDays / 7) + 1;
+}
+
+/** Match a quarterly from the list based on the user's class selection */
+function matchQuarterly(quarterlies: any[], suffix: string, now: Date): any | null {
+  // Find current quarterlies (date range covers today)
+  const current = quarterlies.filter((q: any) => {
+    if (!q.startDate || !q.endDate) return false;
+    const s = parseDate(q.startDate);
+    const e = parseDate(q.endDate);
+    e.setHours(23, 59, 59, 999);
+    return now >= s && now <= e;
+  });
+
+  if (current.length === 0) return quarterlies[0] || null;
+
+  const qId = (q: any) => (q.id || q.index || '').toLowerCase();
+
+  if (suffix === 'adult') {
+    // Adult: IDs that have NO special suffix (-cq, -earliteen, -primary, -kindergarten)
+    return (
+      current.find((q: any) => {
+        const id = qId(q);
+        return !id.endsWith('-cq') && !id.includes('-earliteen')
+          && !id.includes('-primary') && !id.includes('-kindergarten')
+          && !id.includes('-yad');
+      }) || current[0]
+    );
+  }
+
+  if (suffix === 'cq') {
+    // Tanora Zokiny: IDs that END with -cq
+    return current.find((q: any) => qId(q).endsWith('-cq')) || current[0];
+  }
+
+  // Other classes: look for suffix in the ID
+  return (
+    current.find((q: any) => qId(q).includes(`-${suffix}`)) || current[0]
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 // ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────────
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   switch (props.widgetInfo.widgetName) {
-    case 'Mofonaina':
-      await renderMofonaina(props);
-      break;
-    case 'Lesona':
-      await renderLesona(props);
-      break;
-    case 'LesonaAndro':
-      await renderLesonaAndro(props);
-      break;
+    case 'Mofonaina':   await renderMofonaina(props);   break;
+    case 'Lesona':      await renderLesona(props);      break;
+    case 'LesonaAndro': await renderLesonaAndro(props); break;
     case 'Shortcuts':
       if (props.widgetAction !== 'WIDGET_DELETED') {
         props.renderWidget(<ShortcutsWidget />);
@@ -80,36 +131,32 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// MOFONAINA WIDGET
+// MOFONAINA
 // ────────────────────────────────────────────────────────────────────────────────
 async function renderMofonaina(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  let title = "Mofon'aina";
-  let verse = "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio.";
+  let title     = "Mofon'aina";
+  let verse     = "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio.";
   let reference = 'Adventools';
 
   try {
-    // 1. Try cached local data first
     let data = await getMofonainaForDate(new Date());
-
-    // 2. Fallback to direct API
     if (!data) {
       const res = await fetch('https://jasemsoftware.tech/api/v1/fiambenana?t=' + Date.now()).catch(() => null);
-      if (res && res.ok) {
-        const all = await res.json();
-        const nowStr = new Date().toISOString().split('T')[0];
-        data = all.find((m: any) => m.daty && m.daty.startsWith(nowStr)) || all[0];
+      if (res?.ok) {
+        const all   = await res.json();
+        const today = new Date().toISOString().split('T')[0];
+        data = all.find((m: any) => m.daty?.startsWith(today)) || all[0];
       }
     }
-
     if (data) {
-      title = data.lohateny_andro || title;
-      verse = data.andininy_soratra_masina || verse;
-      reference = data.toerana_soratra_masina || reference;
+      title     = data.lohateny_andro            || title;
+      verse     = data.andininy_soratra_masina   || verse;
+      reference = data.toerana_soratra_masina    || reference;
     }
-  } catch (error) {
-    console.error('[Widget] Mofonaina fetch error:', error);
+  } catch (e) {
+    console.error('[Widget] Mofonaina error:', e);
   }
 
   const widgetWidth  = props.widgetInfo.width  > 0 ? props.widgetInfo.width  : 300;
@@ -117,346 +164,212 @@ async function renderMofonaina(props: WidgetTaskHandlerProps) {
 
   props.renderWidget(
     <MofonainaWidget
-      title={title}
-      verse={verse}
-      reference={reference}
-      widgetWidth={widgetWidth}
-      widgetHeight={widgetHeight}
+      title={title} verse={verse} reference={reference}
+      widgetWidth={widgetWidth} widgetHeight={widgetHeight}
     />
   );
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// LESONA WIDGET  (weekly overview)
+// LESONA  (weekly overview)
 // ────────────────────────────────────────────────────────────────────────────────
 async function renderLesona(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  let title       = 'Lesona herinandro';
+  let title        = 'Lesona herinandro';
   let lessonNumber = '';
-  let category    = 'Sekoly Sabata';
-  let weekRange   = '';
-  let days: any[] = [];
-  let coverImage  = '';
+  let category     = 'Sekoly Sabata';
+  let weekRange    = '';
+  let days: any[]  = [];
+  let coverImage   = '';
 
   try {
-    // ── 1. Read user class preference from SQLite ──────────────────────────
-    const globalSettings = await readSqliteSetting<any>('app_global_settings', {});
-    // The class is stored either at top-level or nested
+    // 1. Read class preference from SQLite (where settings are stored after migration)
     const edsClass: string =
-      globalSettings?.edsClass ||
-      globalSettings?.lessonCategory ||
+      (await readSqliteSetting<string>('profile_eds_class', '')) ||
       (await AsyncStorage.getItem('profile_eds_class')) ||
       'Lesona Lehibe (+ 35 taona)';
 
-    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
+    const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
 
     const lang = 'mg';
-    const now  = new Date();
-    now.setHours(0, 0, 0, 0);
+    const now  = new Date(); now.setHours(0, 0, 0, 0);
 
-    // ── 2. Load quarterly list from AsyncStorage cache ──────────────────────
-    const storageKey = `adventools_ss_data_${lang}`;
-    const cached     = await AsyncStorage.getItem(storageKey);
+    // 2. Load quarterly list
+    const storageKey  = `adventools_ss_data_${lang}`;
+    const cached      = await AsyncStorage.getItem(storageKey);
     let   quarterlies: any[] = cached ? JSON.parse(cached) : [];
 
-    // Refresh from API if empty
     if (quarterlies.length === 0) {
-      const url = `https://inverse.sspmadventist.org/api/v3/${lang}/ss/index.json?t=${Date.now()}`;
-      const res = await fetch(url).catch(() => null);
-      if (res && res.ok) {
+      const res = await fetch(`https://inverse.sspmadventist.org/api/v3/${lang}/ss/index.json`).catch(() => null);
+      if (res?.ok) {
         const data = await res.json();
-        if (data.groups) {
-          data.groups.forEach((g: any) => {
-            if (g.resources) quarterlies.push(...g.resources);
-          });
-        }
-        // Persist so next time we have a cache
+        (data.groups || []).forEach((g: any) => {
+          if (g.resources) quarterlies.push(...g.resources);
+        });
         await AsyncStorage.setItem(storageKey, JSON.stringify(quarterlies));
       }
     }
 
-    if (quarterlies.length === 0) throw new Error('No quarterly data');
+    if (!quarterlies.length) throw new Error('No quarterlies');
 
-    // ── 3. Find the currently active quarterly for this class ───────────────
-    let preferredQuarterly = quarterlies.find((q: any) => {
-      if (!q.startDate || !q.endDate) return false;
-      const start = parseDate(q.startDate);
-      const end   = parseDate(q.endDate);
-      const isCurrent = now >= start && now <= end;
-      const qId = (q.id || q.index || '').toLowerCase();
+    // 3. Match the right quarterly for the user's class
+    const pq = matchQuarterly(quarterlies, classInfo.suffix, now);
+    if (!pq) throw new Error('No matching quarterly');
 
-      if (classInfo.id === 'adult') {
-        // Adult lesson: exclude youth/children IDs
-        return isCurrent && !qId.includes('-yad-') && !qId.includes('-cq-')
-          && !qId.includes('-earliteen-') && !qId.includes('-vanguard-')
-          && !qId.includes('-primary-') && !qId.includes('-kindergarten-');
-      }
-      return isCurrent && qId.includes(`-${classInfo.id}-`);
-    }) || quarterlies.find((q: any) => {
-      if (!q.startDate || !q.endDate) return false;
-      const start = parseDate(q.startDate);
-      const end   = parseDate(q.endDate);
-      return now >= start && now <= end;
-    }) || quarterlies[0];
+    // Cover from quarterly list item
+    coverImage = pq.covers?.portrait || pq.cover || '';
 
-    if (!preferredQuarterly) throw new Error('No matching quarterly');
-
-    const qId        = preferredQuarterly.id;
+    const qId        = pq.id;
     const downloadId = `${lang}_${qId}`;
 
-    // ── 4. Try local offline file first (what the user downloaded) ──────────
-    const offlineFilePath = `${LESSONS_DIR}${downloadId}.json`;
-    const offlineInfo     = await FileSystem.getInfoAsync(offlineFilePath).catch(() => null);
-    let   quarterlyDetail: any = null;
+    // 4. Calculate the current lesson number from the quarterly start date
+    const weekNum     = calcWeekNumber(pq.startDate, now);
+    const lessonId    = weekNum.toString().padStart(2, '0');
+    lessonNumber      = lessonId;
+
+    // 5a. Try offline file first
+    const offlinePath = `${LESSONS_DIR}${downloadId}.json`;
+    const offlineInfo = await FileSystem.getInfoAsync(offlinePath).catch(() => null);
 
     if (offlineInfo?.exists) {
-      // User has downloaded this quarterly — use local data!
-      const rawOffline = await FileSystem.readAsStringAsync(offlineFilePath);
-      const allLessons: Record<string, any> = JSON.parse(rawOffline);
+      const raw         = await FileSystem.readAsStringAsync(offlinePath);
+      const allLessons  = JSON.parse(raw);
+      const lessonData  = allLessons[lessonId] || allLessons[weekNum.toString()];
 
-      // Get quarterly metadata from AsyncStorage cache
-      const detailCacheKey = `adventools_ss_q_detail_${downloadId}`;
-      const detailCached   = await AsyncStorage.getItem(detailCacheKey);
-      quarterlyDetail = detailCached ? JSON.parse(detailCached) : null;
+      if (lessonData) {
+        title      = lessonData.title || title;
+        coverImage = lessonData.cover || coverImage;
 
-      if (quarterlyDetail) {
-        coverImage = quarterlyDetail.covers?.portrait || quarterlyDetail.cover || '';
-        const lessons: any[] = quarterlyDetail.lessons || [];
-
-        // Find the current week's lesson
-        const todayLesson = lessons.find((l: any) => {
-          if (!l.startDate || !l.endDate) return false;
-          const s = parseDate(l.startDate);
-          const e = parseDate(l.endDate);
-          e.setHours(23, 59, 59, 999);
-          return now >= s && now <= e;
-        }) || lessons[0];
-
-        if (todayLesson) {
-          const lId = (todayLesson.id || '').split('-').pop() || '01';
-          lessonNumber = lId;
-
-          // Get lesson content from the offline file
-          const offlineLessonKey = `${OFFLINE_LESSONS_PREFIX}${lang}_${qId}_${lId}.json`;
-          const lessonData: any = allLessons[lId] || allLessons[offlineLessonKey] || null;
-
-          if (lessonData) {
-            title     = lessonData.title || todayLesson.title || title;
-            coverImage = lessonData.cover || coverImage;
-
-            if (lessonData.startDate && lessonData.endDate) {
-              const s = parseDate(lessonData.startDate);
-              const e = parseDate(lessonData.endDate);
-              weekRange = `${s.getDate()}/${s.getMonth()+1} - ${e.getDate()}/${e.getMonth()+1}`;
-            }
-
-            const segments: any[] = lessonData.segments || lessonData.days || [];
-            days = segments.map((s: any, idx: number) => {
-              const sDate   = s.date ? parseDate(s.date) : now;
-              const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
-              return {
-                label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
-                date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
-                isToday,
-                title:   s.title || s.name || `Andro ${idx+1}`,
-              };
-            }).slice(0, 7);
-          } else {
-            // Offline file exists but lesson not found — use lesson metadata
-            title = todayLesson.title || title;
-          }
+        if (lessonData.startDate && lessonData.endDate) {
+          const s = parseDate(lessonData.startDate);
+          const e = parseDate(lessonData.endDate);
+          weekRange = `${s.getDate()}/${s.getMonth()+1} – ${e.getDate()}/${e.getMonth()+1}`;
         }
+
+        const segments: any[] = lessonData.segments || lessonData.days || [];
+        days = segments.map((s: any, idx: number) => {
+          const sDate   = s.date ? parseDate(s.date) : now;
+          const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
+          return {
+            label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
+            date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
+            isToday,
+            title:   s.title || s.name || `Andro ${idx+1}`,
+          };
+        }).slice(0, 7);
       }
     }
 
-    // ── 5. Fallback: fetch from API if no offline data ─────────────────────
-    if (!quarterlyDetail) {
-      const lUrl  = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`;
-      const qRes  = await fetch(lUrl).catch(() => null);
-      if (qRes && qRes.ok) {
-        const qData = await qRes.json();
-        coverImage  = qData.covers?.portrait || qData.cover || '';
-        const lessons: any[] = qData.lessons || qData.resources || [];
+    // 5b. Fallback: fetch lesson detail from API
+    if (!days.length) {
+      const detailUrl = `https://inverse.sspmadventist.org/api/v3/${pq.index}/${lessonId}/index.json`;
+      const dRes = await fetch(detailUrl).catch(() => null);
+      if (dRes?.ok) {
+        const d = await dRes.json();
+        title      = d.title      || title;
+        coverImage = d.cover      || coverImage;
 
-        const todayLesson = lessons.find((l: any) => {
-          if (!l.startDate || !l.endDate) return false;
-          const s = parseDate(l.startDate);
-          const e = parseDate(l.endDate);
-          e.setHours(23, 59, 59, 999);
-          return now >= s && now <= e;
-        }) || lessons[0];
-
-        if (todayLesson) {
-          if (todayLesson.cover) coverImage = todayLesson.cover;
-          const lId = (todayLesson.id || '').split('-').pop() || '01';
-          lessonNumber = lId;
-
-          const detailUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
-          const detailRes = await fetch(detailUrl).catch(() => null);
-          if (detailRes && detailRes.ok) {
-            const detailData = await detailRes.json();
-            title      = detailData.title || todayLesson.title || title;
-            coverImage = detailData.cover || todayLesson.cover || coverImage;
-
-            if (detailData.startDate && detailData.endDate) {
-              const s = parseDate(detailData.startDate);
-              const e = parseDate(detailData.endDate);
-              weekRange = `${s.getDate()}/${s.getMonth()+1} - ${e.getDate()}/${e.getMonth()+1}`;
-            }
-
-            const segments: any[] = detailData.segments || detailData.days || [];
-            days = segments.map((s: any, idx: number) => {
-              const sDate   = s.date ? parseDate(s.date) : now;
-              const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
-              return {
-                label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
-                date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
-                isToday,
-                title:   s.title || s.name || `Andro ${idx+1}`,
-              };
-            }).slice(0, 7);
-          }
+        if (d.startDate && d.endDate) {
+          const s = parseDate(d.startDate);
+          const e = parseDate(d.endDate);
+          weekRange = `${s.getDate()}/${s.getMonth()+1} – ${e.getDate()}/${e.getMonth()+1}`;
         }
+
+        const segments: any[] = d.segments || d.days || [];
+        days = segments.map((s: any, idx: number) => {
+          const sDate   = s.date ? parseDate(s.date) : now;
+          const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
+          return {
+            label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
+            date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
+            isToday,
+            title:   s.title || s.name || `Andro ${idx+1}`,
+          };
+        }).slice(0, 7);
       }
     }
-  } catch (error) {
-    console.error('[Widget] Lesona fetch error:', error);
+  } catch (e) {
+    console.error('[Widget] Lesona error:', e);
   }
 
   props.renderWidget(
     <LesonaWidget
-      title={title}
-      lessonNumber={lessonNumber}
-      category={category}
-      weekRange={weekRange}
-      days={days}
-      coverImage={coverImage}
+      title={title} lessonNumber={lessonNumber} category={category}
+      weekRange={weekRange} days={days} coverImage={coverImage}
     />
   );
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// LESONA ANDRO WIDGET  (today's lesson only)
+// LESONA ANDRO  (today only)
 // ────────────────────────────────────────────────────────────────────────────────
 async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
-  let title    = "Lesona anio";
-  let dateStr  = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
+  let title    = 'Lesona anio';
+  const dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
   let category = 'Sekoly Sabata';
 
   try {
-    const globalSettings = await readSqliteSetting<any>('app_global_settings', {});
     const edsClass: string =
-      globalSettings?.edsClass ||
-      globalSettings?.lessonCategory ||
+      (await readSqliteSetting<string>('profile_eds_class', '')) ||
       (await AsyncStorage.getItem('profile_eds_class')) ||
       'Lesona Lehibe (+ 35 taona)';
 
-    const classInfo = CLASS_TO_API_ID[edsClass] ?? CLASS_TO_API_ID['Lesona Lehibe (+ 35 taona)'];
+    const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
     category = classInfo.label;
 
     const lang = 'mg';
-    const now  = new Date();
-    now.setHours(0, 0, 0, 0);
+    const now  = new Date(); now.setHours(0, 0, 0, 0);
 
-    const storageKey  = `adventools_ss_data_${lang}`;
-    const cached      = await AsyncStorage.getItem(storageKey);
+    const cached      = await AsyncStorage.getItem(`adventools_ss_data_${lang}`);
     let   quarterlies = cached ? JSON.parse(cached) : [];
 
-    if (quarterlies.length === 0) {
-      const res = await fetch(`https://inverse.sspmadventist.org/api/v3/${lang}/ss/index.json`).catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json();
-        if (data.groups) data.groups.forEach((g: any) => { if (g.resources) quarterlies.push(...g.resources); });
-        await AsyncStorage.setItem(storageKey, JSON.stringify(quarterlies));
+    const pq = matchQuarterly(quarterlies, classInfo.suffix, now);
+    if (!pq) throw new Error('No quarterly');
+
+    const weekNum  = calcWeekNumber(pq.startDate, now);
+    const lessonId = weekNum.toString().padStart(2, '0');
+    const downloadId = `${lang}_${pq.id}`;
+
+    let todaySegTitle: string | null = null;
+
+    // Try offline
+    const offlinePath = `${LESSONS_DIR}${downloadId}.json`;
+    const info = await FileSystem.getInfoAsync(offlinePath).catch(() => null);
+    if (info?.exists) {
+      const raw        = await FileSystem.readAsStringAsync(offlinePath);
+      const allLessons = JSON.parse(raw);
+      const lessonData = allLessons[lessonId] || allLessons[weekNum.toString()];
+      if (lessonData?.segments) {
+        const todaySeg = lessonData.segments.find((s: any) => {
+          if (!s.date) return false;
+          const d = parseDate(s.date);
+          return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
+        });
+        todaySegTitle = todaySeg?.title || lessonData.title;
       }
     }
 
-    let preferredQuarterly = quarterlies.find((q: any) => {
-      if (!q.startDate || !q.endDate) return false;
-      const start = parseDate(q.startDate);
-      const end   = parseDate(q.endDate);
-      const isCurrent = now >= start && now <= end;
-      const qId = (q.id || q.index || '').toLowerCase();
-      if (classInfo.id === 'adult') return isCurrent && !qId.includes('-yad-') && !qId.includes('-cq-');
-      return isCurrent && qId.includes(`-${classInfo.id}-`);
-    }) || quarterlies.find((q: any) => {
-      if (!q.startDate || !q.endDate) return false;
-      return now >= parseDate(q.startDate) && now <= parseDate(q.endDate);
-    }) || quarterlies[0];
-
-    if (preferredQuarterly) {
-      const qId        = preferredQuarterly.id;
-      const downloadId = `${lang}_${qId}`;
-      const offlinePath = `${LESSONS_DIR}${downloadId}.json`;
-      const offlineInfo = await FileSystem.getInfoAsync(offlinePath).catch(() => null);
-
-      let todaySegmentTitle: string | null = null;
-
-      if (offlineInfo?.exists) {
-        const detailCached = await AsyncStorage.getItem(`adventools_ss_q_detail_${downloadId}`);
-        if (detailCached) {
-          const qDetail = JSON.parse(detailCached);
-          const lessons: any[] = qDetail.lessons || [];
-          const todayLesson = lessons.find((l: any) => {
-            if (!l.startDate || !l.endDate) return false;
-            const s = parseDate(l.startDate); const e = parseDate(l.endDate);
-            e.setHours(23,59,59,999);
-            return now >= s && now <= e;
-          }) || lessons[0];
-
-          if (todayLesson) {
-            const lId = (todayLesson.id || '').split('-').pop() || '01';
-            const rawOffline = await FileSystem.readAsStringAsync(offlinePath);
-            const allLessons: any = JSON.parse(rawOffline);
-            const lessonData = allLessons[lId];
-            if (lessonData?.segments) {
-              const todaySeg = lessonData.segments.find((s: any) => {
-                if (!s.date) return false;
-                const d = parseDate(s.date);
-                return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
-              });
-              todaySegmentTitle = todaySeg?.title || lessonData.title;
-            }
-          }
-        }
+    // Fallback: API
+    if (!todaySegTitle) {
+      const dRes = await fetch(`https://inverse.sspmadventist.org/api/v3/${pq.index}/${lessonId}/index.json`).catch(() => null);
+      if (dRes?.ok) {
+        const d = await dRes.json();
+        const todaySeg = (d.segments || []).find((s: any) => {
+          if (!s.date) return false;
+          const sd = parseDate(s.date);
+          return sd.getDate() === now.getDate() && sd.getMonth() === now.getMonth();
+        });
+        todaySegTitle = todaySeg?.title || d.title;
       }
-
-      if (!todaySegmentTitle) {
-        // Fetch from API
-        const qRes = await fetch(`https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/index.json`).catch(() => null);
-        if (qRes && qRes.ok) {
-          const qData  = await qRes.json();
-          const lessons: any[] = qData.lessons || [];
-          const todayLesson = lessons.find((l: any) => {
-            if (!l.startDate || !l.endDate) return false;
-            const s = parseDate(l.startDate); const e = parseDate(l.endDate);
-            e.setHours(23,59,59,999);
-            return now >= s && now <= e;
-          }) || lessons[0];
-          if (todayLesson) {
-            const lId = (todayLesson.id || '').split('-').pop();
-            const dRes = await fetch(`https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`).catch(() => null);
-            if (dRes && dRes.ok) {
-              const dData = await dRes.json();
-              const todaySeg = (dData.segments || []).find((s: any) => {
-                if (!s.date) return false;
-                const d = parseDate(s.date);
-                return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
-              });
-              todaySegmentTitle = todaySeg?.title || dData.title;
-            }
-          }
-        }
-      }
-
-      if (todaySegmentTitle) title = todaySegmentTitle;
     }
-  } catch (error) {
-    console.error('[Widget] LesonaAndro fetch error:', error);
+
+    if (todaySegTitle) title = todaySegTitle;
+  } catch (e) {
+    console.error('[Widget] LesonaAndro error:', e);
   }
 
   props.renderWidget(<LesonaAndroWidget title={title} date={dateStr} category={category} />);

@@ -24,37 +24,19 @@ export function MofonainaWidget({
     month: 'long',
   });
 
-  // ─── KEY FIX FOR BORDERS ────────────────────────────────────────────────────
-  // Android Launcher clips any widget content that reaches the exact edge of
-  // the bounding box, making rounded corners invisible.
-  // Solution: wrap everything in a FlexWidget with a small margin so the actual
-  // card never touches the outer boundary → rounded corners become visible.
-  const OUTER_MARGIN = 6;  // dp — enough to show the card shadow + rounding
   const RADIUS = 20;
 
-  // Image size: exact inner area after margins (prevents any overflow)
-  const imgW = widgetWidth  - OUTER_MARGIN * 2;
-  const imgH = widgetHeight - OUTER_MARGIN * 2;
-
-  // Crop the image server-side to exact widget inner dimensions so it fills
-  // without ever overflowing (simulates resizeMode="cover" natively)
+  // Crop the image server-side to exact widget dimensions (simulates resizeMode="cover")
   let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d';
   if (bgUrl.includes('unsplash.com')) {
-    bgUrl = bgUrl.split('?')[0] + `?q=80&w=${Math.round(imgW * 2)}&h=${Math.round(imgH * 2)}&fit=crop`;
+    bgUrl = bgUrl.split('?')[0] + `?q=80&w=${Math.round(widgetWidth * 2)}&h=${Math.round(widgetHeight * 2)}&fit=crop`;
   }
 
   return (
-    // Outer transparent wrapper — provides the visible gap between widget
-    // content and the launcher's clip boundary
-    <FlexWidget
-      style={{
-        width: 'match_parent',
-        height: 'match_parent',
-        margin: OUTER_MARGIN,
-        borderRadius: RADIUS,
-        backgroundColor: '#00000000', // fully transparent
-      }}
-    >
+    // The native rn_widget.xml now has android:padding="8dp" which creates the
+    // transparent gap needed for rounded corners to be visible on the launcher.
+    // No React-side margin needed.
+    <>
       <OverlapWidget
         style={{
           width: 'match_parent',
@@ -62,11 +44,11 @@ export function MofonainaWidget({
           borderRadius: RADIUS,
         }}
       >
-        {/* 1. Background image — pre-cropped to exact inner size */}
+        {/* 1. Background image — server-side cropped to widget size */}
         <ImageWidget
           image={bgUrl as any}
-          imageWidth={imgW}
-          imageHeight={imgH}
+          imageWidth={widgetWidth}
+          imageHeight={widgetHeight}
           radius={RADIUS}
           style={{
             width: 'match_parent',
@@ -138,6 +120,6 @@ export function MofonainaWidget({
           />
         </FlexWidget>
       </OverlapWidget>
-    </FlexWidget>
+    </>
   );
 }

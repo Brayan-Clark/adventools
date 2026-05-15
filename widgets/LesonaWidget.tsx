@@ -28,34 +28,22 @@ export function LesonaWidget({
   // ─── KEY FIX FOR BORDERS ────────────────────────────────────────────────────
   // Same outer-margin technique as MofonainaWidget to prevent Android Launcher
   // from clipping the rounded corners of the card.
-  const OUTER_MARGIN = 6;
   const RADIUS = 20;
 
   return (
-    // Outer transparent gap — this is what makes the rounded corners visible
     <FlexWidget
+      clickAction="OPEN_URI"
+      clickActionData={{ uri: 'adventools://utiles/lesona' }}
       style={{
-        width: 'match_parent',
         height: 'match_parent',
-        margin: OUTER_MARGIN,
+        width: 'match_parent',
+        backgroundColor: '#1a2634',
         borderRadius: RADIUS,
-        backgroundColor: '#00000000',
+        flexDirection: 'column',
+        padding: 14,
+        overflow: 'hidden',
       }}
     >
-      {/* The actual card */}
-      <FlexWidget
-        clickAction="OPEN_URI"
-        clickActionData={{ uri: 'adventools://utiles/lesona' }}
-        style={{
-          height: 'match_parent',
-          width: 'match_parent',
-          backgroundColor: '#1a2634',
-          borderRadius: RADIUS,
-          flexDirection: 'column',
-          padding: 14,
-          overflow: 'hidden',
-        }}
-      >
         {/* ── Header: Cover + Lesson Info ── */}
         <FlexWidget style={{ flexDirection: 'row', marginBottom: 14, alignItems: 'center' }}>
           {/* Cover image or placeholder */}
