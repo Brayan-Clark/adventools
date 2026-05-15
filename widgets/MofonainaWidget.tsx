@@ -8,38 +8,39 @@ interface MofonainaWidgetProps {
   backgroundImage?: string;
   widgetWidth?: number;
   widgetHeight?: number;
-  fontSizeMultiplier?: number;
 }
 
-export function MofonainaWidget({ title, verse, reference, backgroundImage, widgetWidth = 800, widgetHeight = 800, fontSizeMultiplier = 1 }: MofonainaWidgetProps) {
+export function MofonainaWidget({ title, verse, reference, backgroundImage, widgetWidth = 300, widgetHeight = 300 }: MofonainaWidgetProps) {
   const dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
   
-  // Calculate a size large enough to cover the widget while maintaining aspect ratio
-  // If the widget is wide, use width for both to ensure it covers height too (square crop basically)
-  const maxDim = Math.max(widgetWidth, widgetHeight) * 1.5; // Multiply by 1.5 to ensure full bleed coverage
+  // Use Unsplash API to crop the image server-side to match the exact widget bounds!
+  // This perfectly simulates resizeMode="cover" without overflowing Android layouts.
+  let optimizedBg = backgroundImage || 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d';
+  if (optimizedBg.includes('unsplash.com')) {
+    // Remove existing query params and add exact width/height with crop
+    optimizedBg = optimizedBg.split('?')[0] + `?q=80&w=${Math.round(widgetWidth * 2)}&h=${Math.round(widgetHeight * 2)}&fit=crop`;
+  }
 
   return (
     <OverlapWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        borderRadius: 24,
-        backgroundColor: '#000000',
       }}
     >
-      {/* 1. Background image - Full Coverage */}
+      {/* 1. Background image - Exact Bounds + Rounded Corners */}
       <ImageWidget
-        image={backgroundImage || require('../assets/images/mofonaina_bg.jpg')}
-        imageWidth={maxDim}
-        imageHeight={maxDim}
+        image={optimizedBg as any}
+        imageWidth={widgetWidth}
+        imageHeight={widgetHeight}
+        radius={24}
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          borderRadius: 24,
         }}
       />
 
-      {/* 2. Content Layer with dark overlay */}
+      {/* 2. Content Layer with dark overlay - Exact Bounds */}
       <FlexWidget
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'adventools://mofonaina' }}
@@ -50,14 +51,14 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage, widg
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#00000095',
+          backgroundColor: '#00000099', // Dark overlay
           borderRadius: 24,
         }}
       >
         <TextWidget
           text={dateStr.toUpperCase()}
           style={{
-            fontSize: 9 * fontSizeMultiplier,
+            fontSize: 12, // Increased from 9
             color: '#fb923c',
             fontWeight: 'bold',
             marginBottom: 8,
@@ -69,33 +70,36 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage, widg
         <TextWidget
           text={title || "Mofon'aina"}
           style={{
-            fontSize: 18 * fontSizeMultiplier,
+            fontSize: 22, // Increased from 18
             color: '#ffffff',
             fontWeight: 'bold',
             marginBottom: 12,
             textAlign: 'center',
             maxLines: 2,
+            truncate: 'END',
           }}
         />
 
         <TextWidget
           text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
           style={{
-            fontSize: 12 * fontSizeMultiplier,
+            fontSize: 15, // Increased from 12
             color: '#e2e8f0',
             textAlign: 'center',
             marginBottom: 12,
             maxLines: 4,
+            truncate: 'END',
           }}
         />
 
         <TextWidget
           text={reference || "Adventools"}
           style={{
-            fontSize: 10 * fontSizeMultiplier,
+            fontSize: 12, // Increased from 10
             color: '#fb923c',
             fontWeight: 'bold',
             textAlign: 'center',
+            truncate: 'END',
           }}
         />
       </FlexWidget>
