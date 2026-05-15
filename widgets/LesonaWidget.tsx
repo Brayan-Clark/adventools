@@ -43,6 +43,7 @@ export function LesonaWidget({
         borderRadius: RADIUS,
         flexDirection: 'column',
         padding: 16,
+        paddingBottom: 24,
         overflow: 'hidden',
       }}
     >
@@ -108,7 +109,7 @@ export function LesonaWidget({
         </FlexWidget>
 
         {/* ── Days list ── */}
-        <ListWidget style={{ width: 'match_parent', height: 'match_parent' }}>
+        <ListWidget style={{ width: 'match_parent', height: 'match_parent', marginTop: 12 }}>
           {days && days.length > 0 ? (
             days.map((day, index) => (
               <FlexWidget

@@ -59,7 +59,8 @@ export function MofonainaWidget({
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          padding: 20,
+          paddingHorizontal: 24,
+          paddingVertical: 32,
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
@@ -82,10 +83,10 @@ export function MofonainaWidget({
         <TextWidget
           text={title || "Mofon'aina"}
           style={{
-            fontSize: 22,
+            fontSize: 20,
             color: '#ffffff',
             fontWeight: 'bold',
-            marginBottom: 10,
+            marginBottom: 8,
             textAlign: 'center',
             maxLines: 2,
             truncate: 'END',
