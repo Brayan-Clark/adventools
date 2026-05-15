@@ -6,11 +6,18 @@ interface MofonainaWidgetProps {
   verse: string;
   reference: string;
   backgroundImage?: string;
+  widgetWidth?: number;
+  widgetHeight?: number;
+  fontSizeMultiplier?: number;
 }
 
-export function MofonainaWidget({ title, verse, reference, backgroundImage }: MofonainaWidgetProps) {
+export function MofonainaWidget({ title, verse, reference, backgroundImage, widgetWidth = 800, widgetHeight = 800, fontSizeMultiplier = 1 }: MofonainaWidgetProps) {
   const dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
   
+  // Calculate a size large enough to cover the widget while maintaining aspect ratio
+  // If the widget is wide, use width for both to ensure it covers height too (square crop basically)
+  const maxDim = Math.max(widgetWidth, widgetHeight) * 1.5; // Multiply by 1.5 to ensure full bleed coverage
+
   return (
     <OverlapWidget
       style={{
@@ -23,9 +30,8 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
       {/* 1. Background image - Full Coverage */}
       <ImageWidget
         image={backgroundImage || require('../assets/images/mofonaina_bg.jpg')}
-        imageWidth={800}
-        imageHeight={800}
-        contentMode="center"
+        imageWidth={maxDim}
+        imageHeight={maxDim}
         style={{
           width: 'match_parent',
           height: 'match_parent',
@@ -51,7 +57,7 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         <TextWidget
           text={dateStr.toUpperCase()}
           style={{
-            fontSize: 9,
+            fontSize: 9 * fontSizeMultiplier,
             color: '#fb923c',
             fontWeight: 'bold',
             marginBottom: 8,
@@ -63,7 +69,7 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         <TextWidget
           text={title || "Mofon'aina"}
           style={{
-            fontSize: 18,
+            fontSize: 18 * fontSizeMultiplier,
             color: '#ffffff',
             fontWeight: 'bold',
             marginBottom: 12,
@@ -75,7 +81,7 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         <TextWidget
           text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
           style={{
-            fontSize: 12,
+            fontSize: 12 * fontSizeMultiplier,
             color: '#e2e8f0',
             textAlign: 'center',
             marginBottom: 12,
@@ -86,7 +92,7 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         <TextWidget
           text={reference || "Adventools"}
           style={{
-            fontSize: 10,
+            fontSize: 10 * fontSizeMultiplier,
             color: '#fb923c',
             fontWeight: 'bold',
             textAlign: 'center',

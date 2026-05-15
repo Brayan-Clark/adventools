@@ -79,7 +79,30 @@ async function renderMofonaina(props: WidgetTaskHandlerProps) {
     console.error('[Widget] Mofonaina fetch error:', error);
   }
 
-  props.renderWidget(<MofonainaWidget title={title} verse={verse} reference={reference} />);
+  let fontSizeStr = await AsyncStorage.getItem('settings_state').catch(() => null);
+  let fontSizeMultiplier = 1;
+  if (fontSizeStr) {
+    try {
+      const parsed = JSON.parse(fontSizeStr);
+      if (parsed?.fontSize) {
+        fontSizeMultiplier = parsed.fontSize / 16;
+      }
+    } catch(e) {}
+  }
+  
+  const widgetWidth = props.widgetInfo.width > 0 ? props.widgetInfo.width : 300;
+  const widgetHeight = props.widgetInfo.height > 0 ? props.widgetInfo.height : 300;
+
+  props.renderWidget(
+    <MofonainaWidget 
+      title={title} 
+      verse={verse} 
+      reference={reference} 
+      widgetWidth={widgetWidth} 
+      widgetHeight={widgetHeight} 
+      fontSizeMultiplier={fontSizeMultiplier}
+    />
+  );
 }
 
 async function renderLesona(props: WidgetTaskHandlerProps) {
