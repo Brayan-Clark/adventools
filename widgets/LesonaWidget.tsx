@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget, ImageWidget } from 'react-native-android-widget';
+import { FlexWidget, TextWidget, ImageWidget, ListWidget } from 'react-native-android-widget';
 
 interface DayItem {
   label: string;
@@ -52,18 +52,18 @@ export function LesonaWidget({
           {coverImage ? (
             <ImageWidget
               image={coverImage}
-              imageWidth={65}
-              imageHeight={95}
-              radius={8}
+              imageWidth={70}
+              imageHeight={105}
+              radius={6}
               style={{ marginRight: 16 }}
             />
           ) : (
             <FlexWidget
               style={{
-                width: 65,
-                height: 95,
+                width: 70,
+                height: 105,
                 backgroundColor: '#1e293b',
-                borderRadius: 8,
+                borderRadius: 6,
                 marginRight: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -108,7 +108,7 @@ export function LesonaWidget({
         </FlexWidget>
 
         {/* ── Days list ── */}
-        <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
+        <ListWidget style={{ width: 'match_parent', height: 'match_parent' }}>
           {days && days.length > 0 ? (
             days.map((day, index) => (
               <FlexWidget
@@ -121,6 +121,7 @@ export function LesonaWidget({
                   marginBottom: 6,
                   borderRadius: 12,
                   backgroundColor: day.isToday ? '#3b82f6' : '#1e293b',
+                  width: 'match_parent',
                 }}
               >
                 <TextWidget
@@ -152,7 +153,7 @@ export function LesonaWidget({
               />
             </FlexWidget>
           )}
-        </FlexWidget>
+        </ListWidget>
     </FlexWidget>
   );
 }
