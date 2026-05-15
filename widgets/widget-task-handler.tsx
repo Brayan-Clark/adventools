@@ -144,12 +144,16 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
 
         const lessons = qData.lessons || qData.resources || [];
         let todayLesson = lessons.find((l: any) => {
+          if (!l.startDate || !l.endDate) return false;
           const start = new Date(l.startDate);
           const end = new Date(l.endDate);
+          // End of the week is actually Friday/Saturday, extend by 1 day just in case
+          end.setHours(23, 59, 59, 999);
           return now >= start && now <= end;
         }) || lessons[0];
 
         if (todayLesson) {
+          if (todayLesson.cover) coverImage = todayLesson.cover;
           const lId = todayLesson.id.split('-').pop();
           const detailUrl = `https://inverse.sspmadventist.org/api/v3/${preferredQuarterly.index}/${lId}/index.json`;
           const detailRes = await fetch(detailUrl);
@@ -159,20 +163,24 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
           lessonNumber = lId;
           
           if (detailData.cover) coverImage = detailData.cover;
+          else if (todayLesson.cover) coverImage = todayLesson.cover;
           
           if (detailData.startDate && detailData.endDate) {
             weekRange = `${new Date(detailData.startDate).toLocaleDateString('mg-MG')} - ${new Date(detailData.endDate).toLocaleDateString('mg-MG')}`;
           }
 
           const mgLabels = ['Sab', 'Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom'];
-          days = detailData.segments?.map((s: any, idx: number) => {
-            const sDate = new Date(s.date);
+          const availableSegments = detailData.segments || detailData.days || detailData.lessons || [];
+          
+          days = availableSegments.map((s: any, idx: number) => {
+            const sDate = s.date ? new Date(s.date) : new Date();
             const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
+            const rawTitle = s.title || s.name || `Andro ${idx + 1}`;
             return {
-              label: mgLabels[idx] || s.title?.substring(0, 3) || '',
-              date: sDate.getDate().toString().padStart(2, '0'),
+              label: mgLabels[idx] || rawTitle.substring(0, 3) || '',
+              date: s.date ? sDate.getDate().toString().padStart(2, '0') : '--',
               isToday,
-              title: s.title || s.name || `Andro ${idx + 1}`
+              title: rawTitle
             };
           }).slice(0, 7) || [];
         }

@@ -84,15 +84,6 @@ export function LesonaWidget({ title, lessonNumber, category, weekRange, days, c
             style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}
           />
         </FlexWidget>
-        
-        {/* Logo or Icon top right as in image */}
-        <FlexWidget style={{ width: 40, height: 40, opacity: 0.2 }}>
-           <ImageWidget 
-            image={require('../assets/images/icon.png')} 
-            imageWidth={40} 
-            imageHeight={40} 
-           />
-        </FlexWidget>
       </FlexWidget>
 
       {/* Daily Lessons List */}

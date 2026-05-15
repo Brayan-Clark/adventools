@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget, ImageWidget } from 'react-native-android-widget';
+import { FlexWidget, TextWidget, ImageWidget, OverlapWidget } from 'react-native-android-widget';
 
 interface MofonainaWidgetProps {
   title: string;
@@ -9,12 +9,10 @@ interface MofonainaWidgetProps {
 }
 
 export function MofonainaWidget({ title, verse, reference, backgroundImage }: MofonainaWidgetProps) {
-  const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dateStr = new Date().toLocaleDateString('mg-MG', { weekday: 'long', day: 'numeric', month: 'long' });
   
   return (
-    <FlexWidget
-      clickAction="OPEN_URI"
-      clickActionData={{ uri: 'adventools://mofonaina' }}
+    <OverlapWidget
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -22,46 +20,32 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         backgroundColor: '#000000',
       }}
     >
-      {/* 1. Background image - Absolute Layer 0 */}
+      {/* 1. Background image - Full Coverage */}
       <ImageWidget
         image={backgroundImage || require('../assets/images/mofonaina_bg.jpg')}
-        imageWidth={600}
-        imageHeight={400}
+        imageWidth={800}
+        imageHeight={800}
+        contentMode="center"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          width: 'match_parent',
+          height: 'match_parent',
           borderRadius: 24,
         }}
       />
 
-      {/* 2. Dark Overlay - Absolute Layer 1 */}
+      {/* 2. Content Layer with dark overlay */}
       <FlexWidget
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'adventools://mofonaina' }}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderRadius: 24,
-          backgroundColor: '#00000095', // Increased darkness for guaranteed visibility
-        }}
-      />
-
-      {/* 3. Content Layer - Absolute Layer 2 (TOP) */}
-      <FlexWidget
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          width: 'match_parent',
+          height: 'match_parent',
           padding: 20,
           flexDirection: 'column',
-          justifyContent: 'center', // Center content for safety
+          justifyContent: 'center',
           alignItems: 'center',
+          backgroundColor: '#00000095',
+          borderRadius: 24,
         }}
       >
         <TextWidget
@@ -89,14 +73,13 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
         />
 
         <TextWidget
-          text={verse || "Verset du jour"}
+          text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
           style={{
             fontSize: 12,
             color: '#e2e8f0',
             textAlign: 'center',
             marginBottom: 12,
             maxLines: 4,
-            lineHeight: 16,
           }}
         />
 
@@ -110,6 +93,6 @@ export function MofonainaWidget({ title, verse, reference, backgroundImage }: Mo
           }}
         />
       </FlexWidget>
-    </FlexWidget>
+    </OverlapWidget>
   );
 }
