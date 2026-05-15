@@ -39,6 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+!/android/app/src/main/res/layout/rn_widget.xml
+!/android/app/src/main/res/layout-night/rn_widget.xml
 
 # skills
 .agents
