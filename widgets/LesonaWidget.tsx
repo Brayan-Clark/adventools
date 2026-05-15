@@ -17,119 +17,150 @@ interface LesonaWidgetProps {
   coverImage?: string;
 }
 
-export function LesonaWidget({ title, lessonNumber, category, weekRange, days, coverImage }: LesonaWidgetProps) {
+export function LesonaWidget({
+  title,
+  lessonNumber,
+  category,
+  weekRange,
+  days,
+  coverImage,
+}: LesonaWidgetProps) {
+  // ─── KEY FIX FOR BORDERS ────────────────────────────────────────────────────
+  // Same outer-margin technique as MofonainaWidget to prevent Android Launcher
+  // from clipping the rounded corners of the card.
+  const OUTER_MARGIN = 6;
+  const RADIUS = 20;
+
   return (
+    // Outer transparent gap — this is what makes the rounded corners visible
     <FlexWidget
-      clickAction="OPEN_URI"
-      clickActionData={{ uri: 'adventools://utiles/lesona' }}
       style={{
-        height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#1a2634',
-        borderRadius: 24,
-        flexDirection: 'column',
-        padding: 14,
+        height: 'match_parent',
+        margin: OUTER_MARGIN,
+        borderRadius: RADIUS,
+        backgroundColor: '#00000000',
       }}
     >
-      {/* Top Header Section with Cover and Info */}
-      <FlexWidget style={{ flexDirection: 'row', marginBottom: 16, alignItems: 'center' }}>
-        {/* Cover Image */}
-        {coverImage ? (
-          <ImageWidget
-            image={coverImage}
-            imageWidth={70}
-            imageHeight={100}
-            style={{
-              borderRadius: 12,
-              marginRight: 12,
-            }}
-          />
-        ) : (
-          <FlexWidget
-            style={{
-              width: 70,
-              height: 100,
-              backgroundColor: '#2d3a4b',
-              borderRadius: 12,
-              marginRight: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-             <TextWidget text="📖" style={{ fontSize: 24 }} />
-          </FlexWidget>
-        )}
-
-        {/* Lesson Info beside cover */}
-        <FlexWidget style={{ flex: 1, flexDirection: 'column' }}>
-          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-             <TextWidget
-              text={category?.toUpperCase() || 'ÉCOLE DU SABBAT'}
-              style={{ fontSize: 8, color: '#3b82f6', fontWeight: 'bold' }}
+      {/* The actual card */}
+      <FlexWidget
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'adventools://utiles/lesona' }}
+        style={{
+          height: 'match_parent',
+          width: 'match_parent',
+          backgroundColor: '#1a2634',
+          borderRadius: RADIUS,
+          flexDirection: 'column',
+          padding: 14,
+          overflow: 'hidden',
+        }}
+      >
+        {/* ── Header: Cover + Lesson Info ── */}
+        <FlexWidget style={{ flexDirection: 'row', marginBottom: 14, alignItems: 'center' }}>
+          {/* Cover image or placeholder */}
+          {coverImage ? (
+            <ImageWidget
+              image={coverImage}
+              imageWidth={60}
+              imageHeight={90}
+              radius={10}
+              style={{ marginRight: 12 }}
             />
-          </FlexWidget>
-          
-          <TextWidget
-            text={title || 'Leçon de la semaine'}
-            style={{
-              fontSize: 18,
-              color: '#ffffff',
-              fontWeight: 'bold',
-              maxLines: 2,
-              truncate: 'END',
-            }}
-          />
-          <TextWidget
-            text={weekRange || 'Cette semaine'}
-            style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}
-          />
-        </FlexWidget>
-      </FlexWidget>
-
-      {/* Daily Lessons List */}
-      <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
-        {days && days.map((day, index) => (
-          <FlexWidget
-            key={index}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              marginBottom: 6,
-              borderRadius: 12,
-              backgroundColor: day.isToday ? '#3b82f6' : '#2d3a4b',
-            }}
-          >
-            <TextWidget
-              text={day.title || 'Lesona'}
+          ) : (
+            <FlexWidget
               style={{
-                fontSize: 12,
-                color: '#ffffff',
-                fontWeight: day.isToday ? 'bold' : 'normal',
-                flex: 1,
+                width: 60,
+                height: 90,
+                backgroundColor: '#2d3a4b',
+                borderRadius: 10,
+                marginRight: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <TextWidget text="📖" style={{ fontSize: 22 }} />
+            </FlexWidget>
+          )}
+
+          {/* Lesson meta */}
+          <FlexWidget style={{ flex: 1, flexDirection: 'column' }}>
+            <TextWidget
+              text={(category || 'ÉCOLE DU SABBAT').toUpperCase()}
+              style={{
+                fontSize: 9,
+                color: '#3b82f6',
+                fontWeight: 'bold',
+                marginBottom: 4,
+                truncate: 'END',
                 maxLines: 1,
+              }}
+            />
+            <TextWidget
+              text={title || 'Leçon de la semaine'}
+              style={{
+                fontSize: 16,
+                color: '#ffffff',
+                fontWeight: 'bold',
+                maxLines: 3,
                 truncate: 'END',
               }}
             />
-            <TextWidget
-              text={`${day.label}, ${day.date}`}
-              style={{
-                fontSize: 10,
-                color: day.isToday ? '#ffffffcc' : '#94a3b8',
-                marginLeft: 10,
-              }}
-            />
+            {!!weekRange && (
+              <TextWidget
+                text={weekRange}
+                style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}
+              />
+            )}
           </FlexWidget>
-        ))}
-        
-        {/* Fallback if no days */}
-        {(!days || days.length === 0) && (
-           <FlexWidget style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-             <TextWidget text="Ouvrez l'app pour voir la semaine" style={{ fontSize: 12, color: '#94a3b8' }} />
-           </FlexWidget>
-        )}
+        </FlexWidget>
+
+        {/* ── Days list ── */}
+        <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
+          {days && days.length > 0 ? (
+            days.map((day, index) => (
+              <FlexWidget
+                key={index}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  marginBottom: 4,
+                  borderRadius: 10,
+                  backgroundColor: day.isToday ? '#3b82f6' : '#2d3a4b',
+                }}
+              >
+                <TextWidget
+                  text={day.title || 'Lesona'}
+                  style={{
+                    fontSize: 12,
+                    color: '#ffffff',
+                    fontWeight: day.isToday ? 'bold' : 'normal',
+                    flex: 1,
+                    maxLines: 1,
+                    truncate: 'END',
+                  }}
+                />
+                <TextWidget
+                  text={`${day.label} ${day.date}`}
+                  style={{
+                    fontSize: 10,
+                    color: day.isToday ? '#ffffffcc' : '#94a3b8',
+                    marginLeft: 8,
+                  }}
+                />
+              </FlexWidget>
+            ))
+          ) : (
+            <FlexWidget style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <TextWidget
+                text="Sokafy ny fampiharana mba hijery ny lesona"
+                style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center' }}
+              />
+            </FlexWidget>
+          )}
+        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );
