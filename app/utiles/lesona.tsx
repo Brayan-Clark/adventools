@@ -839,7 +839,9 @@ export default function LesonaSekolySabata() {
               await FileSystem.writeAsStringAsync(`${LESSONS_DIR}${storageKey}`, JSON.stringify(lessonJson));
               
               // Map to lessonsData for the quarterly summary file
-              lessonsData[lessonId] = lessonJson;
+              if (lessonId) {
+                lessonsData[lessonId] = lessonJson;
+              }
               successCount++;
             }
           } catch (le) { 
@@ -1629,7 +1631,7 @@ export default function LesonaSekolySabata() {
             isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${selectedQuarterly.id}`)}
             isCurrent={isQuarterlyCurrent(selectedQuarterly)}
             downloadingAll={downloadingAll}
-            t={t}
+            t={t as any}
           />
 
           <View className="flex-row items-center justify-between mt-8 mb-6 ml-1">
@@ -1736,7 +1738,7 @@ export default function LesonaSekolySabata() {
                   width={width}
                   isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${item.id}`)}
                   onPress={() => fetchQuarterlyDetail(item.id, item.index)}
-                  t={t}
+                  t={t as any}
                 />
               ))}
             </View>
@@ -1835,7 +1837,9 @@ export default function LesonaSekolySabata() {
         )}
       </View>
 
-      {renderContent()}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {renderContent()}
+      </KeyboardAvoidingView>
 
       {/* Language Picker Modal */}
       <Modal
