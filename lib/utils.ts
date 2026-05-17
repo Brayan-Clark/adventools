@@ -39,7 +39,7 @@ export const saveFilePermanently = async (
  */
 export const cleanSspmMarkdown = (md: string) => {
   if (!md) return "";
-  return md
+  let cleaned = md
     // Strip SSPM style tags like ^[Text]({"style":...}) and keep the text bold
     .replace(/\\?\^?\[([^\]]+)\]\(\s*\{[^)]*\}\s*\)/g, '**$1**')
     .replace(/\\\\\n/g, '\n')
@@ -51,6 +51,15 @@ export const cleanSspmMarkdown = (md: string) => {
     .replace(/Lesson\s*(?=\d)/gi, 'Week ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // Extend sspmBible links to include trailing sequential references
+  // Example: [Deutéronome 4:7-10](sspmBible://Deuteronome4:7-10);8:2,3 -> [Deutéronome 4:7-10; 8:2,3](sspmBible://Deuteronome4:7-10;8:2,3)
+  cleaned = cleaned.replace(/\[([^\]]+)\]\((sspmBible:\/\/[^)]+)\);\s*([0-9]+:[0-9\-,\s]+|[0-9]+:[0-9]+|[0-9]+-[0-9]+|[0-9]+)/g, (match, text, url, suffix) => {
+    const cleanSuffix = suffix.trim();
+    return `[${text}; ${cleanSuffix}](${url};${cleanSuffix})`;
+  });
+
+  return cleaned;
 };
 
 /**

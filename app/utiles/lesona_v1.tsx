@@ -1305,17 +1305,114 @@ export default function LesonaSekolySabata() {
 
   const handleLinkPress = (url: string, data?: any) => {
     if (url.startsWith('sspmBible://')) {
-      const bibleKey = url.replace('sspmBible://', '');
+      const bibleKey = decodeURIComponent(url.replace('sspmBible://', ''));
+      
+      // Look up and format the verses
+      let combinedText = "";
+      const matchedKeys: string[] = [];
+      
       if (data?.bible?.[bibleKey]) {
         const verseObj = data.bible[bibleKey];
-        const fullText = extractTextRecursive(verseObj);
-
-        // Clean title: 1Sam19 -> 1 Sam 19
-        const formattedTitle = bibleKey.replace(/([0-9]+)/g, ' $1 ').replace(/\s+/g, ' ').trim();
+        combinedText = extractTextRecursive(verseObj);
+        matchedKeys.push(bibleKey);
+      } else {
+        const normTarget = bibleKey.toLowerCase().replace(/[\s\.]/g, '');
+        const exactNormKey = Object.keys(data?.bible || {}).find(k => 
+          k.toLowerCase().replace(/[\s\.]/g, '') === normTarget
+        );
+        if (exactNormKey) {
+          combinedText = extractTextRecursive(data.bible[exactNormKey]);
+          matchedKeys.push(exactNormKey);
+        } else {
+          const bookMatch = bibleKey.match(/^([0-9]*\s*[a-zA-Z\s\.]+)/);
+          const bookPrefix = bookMatch ? bookMatch[1].replace(/[\s\.]/g, '') : '';
+          
+          const parts = bibleKey.split(/[;]+/);
+          let currentBook = bookPrefix;
+          
+          parts.forEach(part => {
+            let cleanPart = part.trim();
+            if (!cleanPart) return;
+            
+            const startsWithBook = /^[0-9]*\s*[a-zA-Z]/.test(cleanPart);
+            if (!startsWithBook && currentBook) {
+              cleanPart = currentBook + cleanPart;
+            } else {
+              const partBookMatch = cleanPart.match(/^([0-9]*\s*[a-zA-Z\s\.]+)/);
+              if (partBookMatch) {
+                currentBook = partBookMatch[1].replace(/[\s\.]/g, '');
+              }
+            }
+            
+            const normPart = cleanPart.toLowerCase().replace(/[\s\.]/g, '');
+            
+            const foundKey = Object.keys(data?.bible || {}).find(k => {
+              const normKey = k.toLowerCase().replace(/[\s\.]/g, '');
+              return normKey === normPart || normPart.includes(normKey) || normKey.includes(normPart);
+            });
+            
+            if (foundKey) {
+              const partText = extractTextRecursive(data.bible[foundKey]);
+              if (partText) {
+                combinedText += (combinedText ? "\n\n" : "") + `**${foundKey}**\n${partText}`;
+                matchedKeys.push(foundKey);
+              }
+            } else {
+              const refMatch = cleanPart.match(/^([a-zA-Z0-9]+)\s*([0-9]+):([0-9,\-]+)$/);
+              if (refMatch) {
+                const book = refMatch[1];
+                const chapter = refMatch[2];
+                const versesStr = refMatch[3];
+                const individualVerses = versesStr.split(',');
+                
+                individualVerses.forEach(vStr => {
+                  const compositeRef = `${book}${chapter}:${vStr}`;
+                  const normComp = compositeRef.toLowerCase().replace(/[\s\.]/g, '');
+                  const foundCompKey = Object.keys(data?.bible || {}).find(k => 
+                    k.toLowerCase().replace(/[\s\.]/g, '') === normComp
+                  );
+                  if (foundCompKey) {
+                    const partText = extractTextRecursive(data.bible[foundCompKey]);
+                    if (partText) {
+                      combinedText += (combinedText ? "\n\n" : "") + `**${foundCompKey}**\n${partText}`;
+                      matchedKeys.push(foundCompKey);
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+      
+      if (combinedText) {
+        const formattedTitle = bibleKey
+          .replace(/([a-zA-Z]+)([0-9]+)/g, '$1 $2') // Space between book and chapter
+          .replace(/;\s*([0-9]+)/g, '; $1') // Space after semicolon
+          .replace(/\s+/g, ' ')
+          .trim();
         setVerseTitle(formattedTitle);
-        setVerseContent(cleanSspmMarkdown(fullText));
+        setVerseContent(cleanSspmMarkdown(combinedText));
         setVerseModalVisible(true);
         return false;
+      } else {
+        const parsed = bibleKey.match(/^([0-9]*\s*[a-zA-Z]+)\s*([0-9]+)(?::([0-9]+))?/);
+        if (parsed) {
+          const bookName = parsed[1].trim();
+          const chapter = parseInt(parsed[2], 10);
+          const verse = parsed[3] ? parseInt(parsed[3], 10) : 1;
+          
+          router.push({
+            pathname: '/bible/reader',
+            params: {
+              bookName: bookName,
+              chapter: chapter,
+              verse: verse,
+              lang: selectedLang
+            }
+          });
+          return false;
+        }
       }
     }
     Linking.openURL(url).catch(() => { });

@@ -4,7 +4,6 @@ import { useSettings } from '@/lib/settings-context';
 import { deleteNoteFromDb, getAllNotes, getFolders, saveFolders, saveHistory, saveNote } from '@/lib/user-storage';
 import { cn, saveFilePermanently } from '@/lib/utils';
 import { AudioPlayer, VideoPlayer, DrawModal, NoteCard } from '@/components/notes';
-import type { Note } from '@/components/notes';
 import { Audio } from 'expo-av';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
@@ -14,7 +13,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Mic, Music, Palette, Pause, Play, Plus, Search, Share2, Square, StickyNote, Trash2, Undo2, Video, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -477,10 +476,55 @@ export default function Notes() {
     };
 
     const processContent = (text: string) => {
-        let output = text.replace(BIBLE_REGEX, (match, b, c, v) => `[${match}](#verse:${encodeURIComponent(b.trim())}/${c}/${v ? v.trim() : ''})`);
+        if (!text) return "";
+        let output = "";
+        let lastIndex = 0;
+        
+        // Reset BIBLE_REGEX index
+        BIBLE_REGEX.lastIndex = 0;
+        let match;
+        
+        while ((match = BIBLE_REGEX.exec(text)) !== null) {
+            const matchIndex = match.index;
+            
+            // Append everything between last match and current match
+            output += text.substring(lastIndex, matchIndex);
+            
+            let matchedText = match[0];
+            let book = match[1];
+            let chapter = match[2];
+            let verses = match[3] || "";
+            
+            let currentEnd = BIBLE_REGEX.lastIndex;
+            
+            // Look ahead for sequential suffixes (e.g. "; 14:12,16" or "; 8:2,3")
+            const suffixRegex = /^\s*;\s*(\d+\s*:\s*[\d\s\-,]+|\d+\s*:\s*\d+|\d+\s*-\s*\d+|\d+)/;
+            let suffixMatch;
+            
+            let combinedVerses = verses;
+            
+            while ((suffixMatch = suffixRegex.exec(text.substring(currentEnd))) !== null) {
+                const consumedSuffix = suffixMatch[0];
+                matchedText += consumedSuffix;
+                combinedVerses += ";" + suffixMatch[1].trim().replace(/\s+/g, '');
+                currentEnd += consumedSuffix.length;
+            }
+            
+            // Generate link
+            output += `[${matchedText}](#verse:${encodeURIComponent(book.trim())}/${chapter}/${encodeURIComponent(combinedVerses)})`;
+            
+            // Advance lastIndex and update regex lastIndex to skip consumed suffix
+            lastIndex = currentEnd;
+            BIBLE_REGEX.lastIndex = currentEnd;
+        }
+        
+        output += text.substring(lastIndex);
+        
+        // Footnotes, mark highlights, etc.
         output = output.replace(/\[\^(\d+)\](?!\:)/g, (match, ref) => `[${ref}](#footnote-ref:${ref})`);
         output = output.replace(/^\[\^(\d+)\]:\s*(.*)$/gm, (match, ref, text) => `[${text}](#footnote-def:${ref})`);
         output = output.replace(/<mark style="background-color:\s*(#[a-fA-F0-9]+)">([\s\S]*?)<\/mark>/gi, (match, color, content) => `[${content}](#highlight:${color})`);
+        
         return output;
     };
 
@@ -540,7 +584,7 @@ export default function Notes() {
     const handleVerseClick = (url: string) => {
         if (url.startsWith('#verse:')) {
             const parts = url.replace('#verse:', '').split('/');
-            setDetectedVerse({ book: decodeURIComponent(parts[0]), chapter: parts[1], verses: parts[2] || "" });
+            setDetectedVerse({ book: decodeURIComponent(parts[0]), chapter: parts[1], verses: decodeURIComponent(parts[2] || "") });
             return false;
         }
         if (url.startsWith('#highlight:') || url.startsWith('#inline-') || url.startsWith('#footnote-')) return false;
@@ -861,17 +905,38 @@ export default function Notes() {
                 </View>
             </Modal>
 
-            <Modal visible={!!detectedVerse} animationType="slide" transparent>
-                <SafeAreaView className="flex-1 bg-black/60 justify-end">
-                    <View className="bg-slate-900 m-4 rounded-[40px] p-8">
+            <Modal visible={!!detectedVerse} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setDetectedVerse(null)}>
+                <View className="flex-1 bg-black/75 justify-end">
+                    <TouchableOpacity activeOpacity={1} onPress={() => setDetectedVerse(null)} className="absolute inset-0" />
+                    <View className="bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl" style={{ maxHeight: '85%' }}>
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-white font-bold text-xl">{detectedVerse?.book} {detectedVerse?.chapter}:{detectedVerse?.verses}</Text>
-                            <TouchableOpacity onPress={() => setDetectedVerse(null)}><X size={20} color="#94a3b8" /></TouchableOpacity>
+                            <View className="flex-1 mr-4">
+                                <Text className="text-white font-bold text-xl">
+                                    {detectedVerse ? `${detectedVerse.book} ${detectedVerse.chapter}:${detectedVerse.verses.replace(/;\s*/g, '; ')}` : ""}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setDetectedVerse(null)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
+                                <X size={20} color="#94a3b8" />
+                            </TouchableOpacity>
                         </View>
-                        <ScrollView className="max-h-[250px] mb-8">{verseLoading ? <ActivityIndicator color="#3b82f6" /> : <Text className="text-slate-200 text-lg leading-7 italic">"{verseContent}"</Text>}</ScrollView>
-                        <TouchableOpacity onPress={() => { if (currentVerseBookId) router.push({ pathname: "/bible/reader", params: { bookId: String(currentVerseBookId), bookName: detectedVerse?.book || '', chapter: String(detectedVerse?.chapter || '1'), verse: String((detectedVerse?.verses || "").split(/[-,]/)[0] || "1"), lang: globalSettings.bibleVersion, testament: "1" } }); setDetectedVerse(null); }} className="bg-blue-600 py-5 rounded-3xl items-center"><Text className="text-white font-bold text-lg">Ouvrir dans la Bible</Text></TouchableOpacity>
+                        <ScrollView className="mb-8" showsVerticalScrollIndicator={false}>
+                            {verseLoading ? (
+                                <ActivityIndicator color="#3b82f6" className="py-8" />
+                            ) : (
+                                <Markdown
+                                    style={{
+                                        body: { color: '#cbd5e1', fontSize: 17, lineHeight: 28, fontFamily: 'Lexend_400Regular' },
+                                        strong: { color: '#3b82f6', fontWeight: 'bold', fontFamily: 'Lexend_700Bold' },
+                                        paragraph: { marginBottom: 12 }
+                                    }}
+                                >
+                                    {(verseContent || "").replace(/^(\d+)\.\s+/gm, '$1\\. ')}
+                                </Markdown>
+                            )}
+                        </ScrollView>
+                        <TouchableOpacity onPress={() => { if (currentVerseBookId) router.push({ pathname: "/bible/reader", params: { bookId: String(currentVerseBookId), bookName: detectedVerse?.book || '', chapter: String(detectedVerse?.chapter || '1'), verse: String((detectedVerse?.verses || "").split(/[-,;]/)[0] || "1"), lang: globalSettings.bibleVersion, testament: "1" } }); setDetectedVerse(null); }} className="bg-blue-600 py-5 rounded-3xl items-center"><Text className="text-white font-bold text-lg">Ouvrir dans la Bible</Text></TouchableOpacity>
                     </View>
-                </SafeAreaView>
+                </View>
             </Modal>
 
             <Modal visible={showColorPrompt} transparent animationType="slide">

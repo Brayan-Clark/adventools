@@ -249,15 +249,47 @@ export async function fetchVerseContent(lang: string, bookName: string, chapter:
   try {
     const bibles = await getAvailableBibles();
 
-    // 1. Try to find the specifically requested bible
-    // 2. If not found, try to find ANY bible that is NOT the default if it exists (user's preferred installed)
-    // 3. Fallback to DEFAULT_BIBLE
     const config = bibles.find(b => b.id === lang)
       || bibles.find(b => b.id !== DEFAULT_BIBLE.id)
       || DEFAULT_BIBLE;
 
-    // Cloud bibles are in 'bibles/' subfolder, built-in is in 'bibles' (passed to loadDatabase)
-    // Actually loadDatabase adds 'SQLite/' prefix automatically.
+    // Handle composite sequential references (e.g. 33-34;14:12,16)
+    if (verses && verses.includes(';')) {
+      const parts = verses.split(';');
+      let combinedText = "";
+      let lastBookId: any = null;
+      let lastBookName: any = null;
+      
+      for (const part of parts) {
+        let partChapter = chapter;
+        let partVerses = part;
+        
+        if (part.includes(':')) {
+          const colonParts = part.split(':');
+          partChapter = colonParts[0];
+          partVerses = colonParts[1];
+        }
+        
+        const partResult = await fetchVerseContent(lang, bookName, partChapter, partVerses, stripNotes);
+        if (partResult && partResult.text) {
+          const formattedHeader = part.includes(':') ? `${partResult.bookName} ${partChapter}:${partVerses}` : `${partResult.bookName} ${partChapter}:${partVerses}`;
+          combinedText += (combinedText ? "\n\n" : "") + `**${formattedHeader}**\n${partResult.text}`;
+          lastBookId = partResult.bookId || lastBookId;
+          lastBookName = partResult.bookName || lastBookName;
+        }
+      }
+      
+      if (combinedText) {
+        return {
+          text: combinedText,
+          bookId: lastBookId,
+          bookName: lastBookName,
+          bibleId: config.id,
+          bibleName: config.name
+        };
+      }
+    }
+
     const subfolder = 'bibles';
     const db = await loadDatabase(config.file, DB_SOURCES[config.file], subfolder);
     const schema = await getBibleSchema(db);
