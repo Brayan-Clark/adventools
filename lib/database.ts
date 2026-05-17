@@ -121,12 +121,23 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
       }
 
       if (shouldCopy && assetSource) {
+        // Delete the existing corrupted/empty file first to ensure a clean copy
+        if (finalInfo.exists) {
+          await FileSystem.deleteAsync(dbPath, { idempotent: true });
+        }
+
         const asset = await Asset.fromModule(assetSource).downloadAsync();
-        if (asset.localUri) {
-          await FileSystem.copyAsync({
-            from: asset.localUri,
-            to: dbPath,
-          });
+        const uriToCopy = asset.localUri || asset.uri;
+        
+        if (uriToCopy) {
+          if (uriToCopy.startsWith('http')) {
+            await FileSystem.downloadAsync(uriToCopy, dbPath);
+          } else {
+            await FileSystem.copyAsync({
+              from: uriToCopy,
+              to: dbPath,
+            });
+          }
           
           // After copying, set the new version
           if (expectedVersion > 0) {
@@ -134,6 +145,8 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
             await newDb.execAsync(`PRAGMA user_version = ${expectedVersion};`);
             await newDb.closeAsync();
           }
+        } else {
+          throw new Error(`Failed to resolve asset URI for ${finalDbName}`);
         }
       } else if (!info.exists && !assetSource) {
         console.log(`Database ${finalDbName} not found, will be created fresh.`);
@@ -143,16 +156,26 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
       throw error;
     }
 
-    let db;
+    let db: SQLite.SQLiteDatabase;
     try {
       // expo-sqlite openDatabaseAsync expects a relative path from the SQLite folder
       const openPath = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
-      db = await SQLite.openDatabaseAsync(openPath);
+      
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          db = await SQLite.openDatabaseAsync(openPath);
+          // Verify database integrity
+          await db.execAsync("PRAGMA user_version;");
+          break;
+        } catch (e: any) {
+          retries--;
+          if (retries === 0) throw e;
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
 
-      // Verify database integrity
-      await db.execAsync("PRAGMA user_version;");
-
-      const wrapped = wrapDatabase(db);
+      const wrapped = wrapDatabase(db!);
       dbConnections[cacheKey] = wrapped;
       return wrapped;
     } catch (error: any) {

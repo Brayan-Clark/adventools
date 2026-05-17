@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Radio as RadioIcon, WifiOff, PlayCircle, ListMusic, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NetInfo from '@react-native-community/netinfo';
@@ -39,6 +39,15 @@ export default function RadioScreen() {
   useEffect(() => {
     fetchStations();
   }, []);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/audio');
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [router]);
 
   const fetchStations = async () => {
     try {
@@ -111,7 +120,7 @@ export default function RadioScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 pt-4 pb-4 border-b border-slate-800/50">
         <TouchableOpacity 
-          onPress={() => router.back()}
+          onPress={() => router.replace('/audio')}
           className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center p-0"
         >
           <ChevronLeft size={20} color="#f8fafc" />

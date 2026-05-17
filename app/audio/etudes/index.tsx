@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, BookOpen, Info, Search, Users } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
-import { FlatList, TextInput, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, View, Image, ActivityIndicator, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { useSettings } from '../../../lib/settings-context';
@@ -34,6 +34,15 @@ export default function EtudesCategoriesScreen() {
   useEffect(() => {
     checkOffline();
   }, [categories]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/audio');
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [router]);
 
   const loadManifest = async () => {
     try {
@@ -148,7 +157,7 @@ export default function EtudesCategoriesScreen() {
       <View className="px-6 py-4 border-b border-slate-800/30">
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity 
-            onPress={() => router.back()}
+            onPress={() => router.replace('/audio')}
             className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 items-center justify-center"
           >
             <ChevronLeft size={20} color="#f8fafc" />

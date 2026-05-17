@@ -7,7 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, RefreshCw, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, TouchableOpacity, View, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CacheManager } from '@/lib/cache-manager';
 import { AppText as Text } from '@/components/ui/AppText';
@@ -64,6 +64,19 @@ export default function PDFLibrary() {
     loadRecentPdfs();
     loadUserDepartments();
   }, []);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedCategory) {
+        setSelectedCategory(null);
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [selectedCategory]);
 
   const loadUserDepartments = async () => {
     try {
@@ -268,11 +281,18 @@ export default function PDFLibrary() {
 
       <View className="px-6 py-4 flex-row justify-between items-center">
         <View className="flex-row items-center">
-          {selectedCategory && (
-            <TouchableOpacity onPress={() => setSelectedCategory(null)} className="mr-4 w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700">
-              <ArrowLeft size={20} color="#94a3b8" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            onPress={() => {
+              if (selectedCategory) {
+                setSelectedCategory(null);
+              } else {
+                router.navigate('/');
+              }
+            }} 
+            className="mr-4 w-10 h-10 rounded-full bg-slate-800 items-center justify-center border border-slate-700"
+          >
+            <ArrowLeft size={20} color="#94a3b8" />
+          </TouchableOpacity>
           <View>
             <Text className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Lexend_700Bold' }}>
               {selectedCategory ? selectedCategory.title : t('library')}

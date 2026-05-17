@@ -27,10 +27,8 @@ export function LesonaWidget({
   days,
   coverImage,
 }: LesonaWidgetProps) {
-  // ─── KEY FIX FOR BORDERS ────────────────────────────────────────────────────
-  // Same outer-margin technique as MofonainaWidget to prevent Android Launcher
-  // from clipping the rounded corners of the card.
-  const RADIUS = 20;
+  // Android Launcher will clip or apply its own radius.
+  // Using 0 prevents inner-radius clipping bugs.
 
   return (
     <FlexWidget
@@ -40,7 +38,7 @@ export function LesonaWidget({
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: '#101720',
-        borderRadius: RADIUS,
+        borderRadius: 0,
         flexDirection: 'column',
         padding: 16,
         paddingBottom: 24,

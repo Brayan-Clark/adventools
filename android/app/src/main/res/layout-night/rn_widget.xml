@@ -1,45 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  ULTRA-ROBUST FIX FOR CLIPPING:
-  Instead of putting the 'background' ID on the root (which launchers often manipulate),
-  we use a dummy root and put the background ID on a NESTED container with a large margin.
-  This creates a "Force Field" around the widget content that no launcher can clip.
--->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:layout_margin="0dp"
+    android:padding="0dp">
 
-    <FrameLayout
-        android:id="@android:id/background"
+    <ImageView
+        android:id="@+id/rn_widget_image_light"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="12dp">
+        android:background="@android:color/transparent"
+        android:scaleType="matrix"
+        android:visibility="visible" />
 
-        <ImageView
-            android:id="@+id/rn_widget_image_light"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent"
-            android:scaleType="matrix"
-            android:visibility="visible" />
+    <ImageView
+        android:id="@+id/rn_widget_image_dark"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:scaleType="matrix"
+        android:visibility="gone" />
 
-        <ImageView
-            android:id="@+id/rn_widget_image_dark"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent"
-            android:scaleType="matrix"
-            android:visibility="gone" />
+    <FrameLayout
+        android:id="@+id/rn_widget_clickable_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-        <FrameLayout
-            android:id="@+id/rn_widget_clickable_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+    <FrameLayout
+        android:id="@+id/rn_widget_collection_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-        <FrameLayout
-            android:id="@+id/rn_widget_collection_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-    </FrameLayout>
 </FrameLayout>

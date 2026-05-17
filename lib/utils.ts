@@ -40,6 +40,8 @@ export const saveFilePermanently = async (
 export const cleanSspmMarkdown = (md: string) => {
   if (!md) return "";
   return md
+    // Strip SSPM style tags like ^[Text]({"style":...}) and keep the text bold
+    .replace(/\\?\^?\[([^\]]+)\]\(\s*\{[^)]*\}\s*\)/g, '**$1**')
     .replace(/\\\\\n/g, '\n')
     .replace(/<span[^>]*>([\s\S]*?)<\/span>/g, '$1')
     .replace(/<[^>]+>/g, '')

@@ -24,7 +24,7 @@ export function MofonainaWidget({
     month: 'long',
   });
 
-  const RADIUS = 20;
+  const RADIUS = 0;
 
   // Crop the image server-side to exact widget dimensions (simulates resizeMode="cover")
   let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d';

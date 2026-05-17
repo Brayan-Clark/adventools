@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Headphones, Globe, RefreshCw, Search, X, Download, Trash2, AlertCircle, WifiOff } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScrollView, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Alert, Modal } from 'react-native';
+import { ScrollView, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Alert, Modal, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -88,6 +88,15 @@ export default function SabbathSchoolAudioScreen() {
   useEffect(() => {
     initAndLoad();
   }, [mediaLang]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      router.replace('/audio');
+      return true;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [router]);
 
   // Reconcile: scan disk and rebuild downloadedMedia from actual files.
   // This self-heals the metadata if it gets out of sync after restart/crash.
@@ -303,7 +312,7 @@ export default function SabbathSchoolAudioScreen() {
     <SafeAreaView className="flex-1 bg-background-dark" edges={['top']}>
       <View className="bg-slate-950 px-5 pt-3 pb-3 border-b border-white/5">
         <View className="flex-row items-center justify-between mb-4">
-            <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><ChevronLeft size={16} color="#f8fafc" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace('/audio')} className="w-8 h-8 rounded-lg bg-slate-900 items-center justify-center border border-white/10"><ChevronLeft size={16} color="#f8fafc" /></TouchableOpacity>
             <View className="flex-row items-center gap-2">
                 <Text className="text-white font-black text-base" style={{ fontFamily: fontFamilyBold }}>École du Sabbat</Text>
                 {isOffline && <View className="bg-amber-500/20 px-2 py-0.5 rounded-full flex-row items-center gap-1 border border-amber-500/30"><WifiOff size={9} color="#f59e0b" /><Text className="text-amber-500 text-[8px] font-bold">HORS-LIGNE</Text></View>}

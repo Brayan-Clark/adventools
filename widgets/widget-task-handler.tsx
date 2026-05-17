@@ -15,7 +15,7 @@ import * as SQLite from 'expo-sqlite';
 const OFFLINE_LESSONS_PREFIX = 'adventools_ss_offline_';
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
 
-const MG_DAY_LABELS = ['Sab', 'Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom'];
+const MG_DAY_LABELS = ['Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom', 'Sab'];
 
 // Class label → API quarterly ID suffix pattern
 // Based on real API data:
@@ -255,7 +255,7 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
           const sDate   = s.date ? parseDate(s.date) : now;
           const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
           return {
-            label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
+            label:   s.date ? MG_DAY_LABELS[sDate.getDay()] : `D${idx+1}`,
             date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
             isToday,
             title:   s.title || s.name || `Andro ${idx+1}`,
@@ -285,7 +285,7 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
           const sDate   = s.date ? parseDate(s.date) : now;
           const isToday = sDate.getDate() === now.getDate() && sDate.getMonth() === now.getMonth();
           return {
-            label:   MG_DAY_LABELS[idx] || `D${idx+1}`,
+            label:   s.date ? MG_DAY_LABELS[sDate.getDay()] : `D${idx+1}`,
             date:    s.date ? sDate.getDate().toString().padStart(2,'0') : '--',
             isToday,
             title:   s.title || s.name || `Andro ${idx+1}`,
