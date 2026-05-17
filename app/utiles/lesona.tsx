@@ -2,6 +2,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { checkMobileDataWarning } from '@/lib/data-saver';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -700,9 +701,11 @@ export default function LesonaSekolySabata() {
 
   const downloadFullQuarterly = async (q: Quarterly) => {
     if (downloadingAll) return;
-    setDownloadingAll(true);
-    let successCount = 0;
-    try {
+
+    checkMobileDataWarning("Téléchargement complet du Trimestre", async () => {
+      setDownloadingAll(true);
+      let successCount = 0;
+      try {
       const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true });
@@ -870,9 +873,10 @@ export default function LesonaSekolySabata() {
         message: t('download_failed'),
         type: 'error'
       });
-    } finally {
-      setDownloadingAll(false);
-    }
+      } finally {
+        setDownloadingAll(false);
+      }
+    });
   };
 
   const deleteQuarterly = async (qId: string) => {
@@ -1395,7 +1399,7 @@ export default function LesonaSekolySabata() {
             />
           </View>
 
-          <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
+          <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets={true} keyboardShouldPersistTaps="handled">
             {segment ? (
               <>
                 <LessonHeader 
@@ -1837,7 +1841,7 @@ export default function LesonaSekolySabata() {
         )}
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {renderContent()}
       </KeyboardAvoidingView>
 

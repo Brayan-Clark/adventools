@@ -2,8 +2,8 @@ import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X, Globe } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
 import { Alert, Image, ImageBackground, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Use legacy import to avoid deprecation error
@@ -13,6 +13,8 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { AppText as Text } from '@/components/ui/AppText';
+import NetInfo from '@react-native-community/netinfo';
+import { checkMobileDataWarning } from '@/lib/data-saver';
 
 
 // ... (Rest of imports or constants)
@@ -36,17 +38,69 @@ const PRESET_IMAGES = [
   require('../../assets/images/backgrounds/bg_05.jpg'),
 ];
 
+const ONLINE_IMAGES = [
+  {
+    id: 'mountain-lake',
+    preview: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'peaks',
+    preview: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'deep-forest',
+    preview: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'nebula',
+    preview: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'golden-sunset',
+    preview: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'ocean-waves',
+    preview: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'misty-valley',
+    preview: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1080&q=75'
+  },
+  {
+    id: 'sand-dunes',
+    preview: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=150&h=150&q=60',
+    full: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1080&h=1080&q=75'
+  }
+];
+
 
 
 export default function ShareVerse() {
   const { verseText, verseRef } = useLocalSearchParams();
   const router = useRouter();
-  const [bgType, setBgType] = useState<'gradient' | 'image' | 'custom'>('gradient');
+  const [bgType, setBgType] = useState<'gradient' | 'image' | 'custom' | 'online'>('gradient');
   const [selectedBg, setSelectedBg] = useState(0);
   const [selectedImg, setSelectedImg] = useState(0);
+  const [selectedOnlineImg, setSelectedOnlineImg] = useState(0);
   const [customImage, setCustomImage] = useState<string | null>(null);
   const cardRef = React.useRef(null);
   const [capturing, setCapturing] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(!!state.isConnected);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Default text if none provided
   const text = verseText ? decodeURIComponent(verseText as string) : "Car Dieu a tant aimé le monde qu'il a donné son Fils unique...";
@@ -105,6 +159,16 @@ export default function ShareVerse() {
           style: "cancel"
         }
       ]
+    );
+  };
+
+  const handleSelectOnlineImage = (index: number) => {
+    checkMobileDataWarning(
+      "Chargement de Fond en Ligne",
+      () => {
+        setBgType('online');
+        setSelectedOnlineImg(index);
+      }
     );
   };
 
@@ -243,7 +307,13 @@ export default function ShareVerse() {
               </LinearGradient>
             ) : (
               <ImageBackground
-                source={bgType === 'custom' ? { uri: customImage! } : PRESET_IMAGES[selectedImg]}
+                source={
+                  bgType === 'custom' 
+                    ? { uri: customImage! } 
+                    : bgType === 'online'
+                    ? { uri: ONLINE_IMAGES[selectedOnlineImg].full }
+                    : PRESET_IMAGES[selectedImg]
+                }
                 className="flex-1 p-8 justify-center items-center"
               >
                 {/* Dark overlay for readability */}
@@ -289,6 +359,12 @@ export default function ShareVerse() {
           <View className="flex-row items-center mt-6 mb-4 ml-1">
             <ImageIcon size={14} color="#64748b" />
             <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest ml-2">Images de fond</Text>
+            {isOnline && (
+              <View className="bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full ml-3 flex-row items-center gap-1">
+                <Globe size={8} color="#22d3ee" />
+                <Text className="text-cyan-400 text-[8px] font-black uppercase tracking-wider">Premium en ligne</Text>
+              </View>
+            )}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2 px-2">
             <TouchableOpacity
@@ -300,11 +376,24 @@ export default function ShareVerse() {
 
             {PRESET_IMAGES.map((img, index) => (
               <TouchableOpacity
-                key={index}
+                key={`preset-${index}`}
                 onPress={() => { setBgType('image'); setSelectedImg(index); }}
                 className={`w-14 h-14 rounded-xl mr-3 border-2 ${bgType === 'image' && selectedImg === index ? 'border-white scale-110' : 'border-transparent'} overflow-hidden shadow-lg`}
               >
                 <Image source={img} className="flex-1 w-full h-full" resizeMode="cover" />
+              </TouchableOpacity>
+            ))}
+
+            {isOnline && ONLINE_IMAGES.map((img, index) => (
+              <TouchableOpacity
+                key={`online-${index}`}
+                onPress={() => handleSelectOnlineImage(index)}
+                className={`w-14 h-14 rounded-xl mr-3 border-2 ${bgType === 'online' && selectedOnlineImg === index ? 'border-cyan-400 scale-110' : 'border-transparent'} overflow-hidden shadow-lg relative`}
+              >
+                <Image source={{ uri: img.preview }} className="flex-1 w-full h-full" resizeMode="cover" />
+                <View className="absolute bottom-0 left-0 right-0 bg-cyan-950/80 items-center py-0.5">
+                  <Text className="text-cyan-400 text-[6px] font-black uppercase tracking-wider">Web</Text>
+                </View>
               </TouchableOpacity>
             ))}
 

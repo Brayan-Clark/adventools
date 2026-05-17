@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 import { AppText as Text } from '@/components/ui/AppText';
+import { checkMobileDataWarning } from '@/lib/data-saver';
 
 
 interface AudioItem {
@@ -242,22 +243,24 @@ export default function SabbathSchoolAudioScreen() {
   };
 
   const downloadAudio = async (item: AudioItem) => {
-    const key = item.id;
-    try {
-      const fileUri = `${SS_AUDIO_DIR}${key}.mp3`;
-      const dl = FileSystem.createDownloadResumable(item.src, fileUri, {}, (dp) => {
-          setDownloadingProgress(prev => ({ ...prev, [key]: dp.totalBytesWritten / dp.totalBytesExpectedToWrite }));
-      });
-      const result = await dl.downloadAsync();
-      if (result && result.status === 200) {
-        setDownloadedMedia(prev => {
-            const next = { ...prev, [key]: true };
-            FileSystem.writeAsStringAsync(SS_METADATA_FILE, JSON.stringify(next)).catch(() => {});
-            return next;
+    checkMobileDataWarning("Téléchargement d'Audio", async () => {
+      const key = item.id;
+      try {
+        const fileUri = `${SS_AUDIO_DIR}${key}.mp3`;
+        const dl = FileSystem.createDownloadResumable(item.src, fileUri, {}, (dp) => {
+            setDownloadingProgress(prev => ({ ...prev, [key]: dp.totalBytesWritten / dp.totalBytesExpectedToWrite }));
         });
-      }
-    } catch (e) { Alert.alert(t('error'), t('download_failed')); }
-    setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
+        const result = await dl.downloadAsync();
+        if (result && result.status === 200) {
+          setDownloadedMedia(prev => {
+              const next = { ...prev, [key]: true };
+              FileSystem.writeAsStringAsync(SS_METADATA_FILE, JSON.stringify(next)).catch(() => {});
+              return next;
+          });
+        }
+      } catch (e) { Alert.alert(t('error'), t('download_failed')); }
+      setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
+    });
   };
 
   const deleteAudio = (item: AudioItem) => {
@@ -278,7 +281,13 @@ export default function SabbathSchoolAudioScreen() {
 
   const playAudio = (item: AudioItem) => {
     const isLocal = downloadedMedia[item.id] === true;
-    router.push({ pathname: '/audio/player', params: { title: item.title, artist: item.artist, artwork: item.image, url: isLocal ? `${SS_AUDIO_DIR}${item.id}.mp3` : item.src, isLocal: isLocal ? 'true' : 'false', subtext: item.quarterlyTitle } });
+    if (isLocal) {
+      router.push({ pathname: '/audio/player', params: { title: item.title, artist: item.artist, artwork: item.image, url: `${SS_AUDIO_DIR}${item.id}.mp3`, isLocal: 'true', subtext: item.quarterlyTitle } });
+    } else {
+      checkMobileDataWarning("Lecture d'Audio en Continu (Streaming)", () => {
+        router.push({ pathname: '/audio/player', params: { title: item.title, artist: item.artist, artwork: item.image, url: item.src, isLocal: 'false', subtext: item.quarterlyTitle } });
+      });
+    }
   };
 
   const filteredItems = useMemo(() => {

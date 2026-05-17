@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from '@/components/ui/AppText';
+import { checkMobileDataWarning } from '@/lib/data-saver';
 
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/manifest.json';
@@ -70,59 +71,61 @@ export default function BibleStore() {
   const downloadBible = async (version: BibleConfig) => {
     if (!version.url) return;
 
-    try {
-      setDownloading(prev => ({ ...prev, [version.id]: 0 }));
+    checkMobileDataWarning("Téléchargement de Bible", async () => {
+      try {
+        setDownloading(prev => ({ ...prev, [version.id]: 0 }));
 
-      const docDir = FileSystem.documentDirectory;
-      const dbDir = `${docDir}SQLite/bibles`;
+        const docDir = FileSystem.documentDirectory;
+        const dbDir = `${docDir}SQLite/bibles`;
 
-      const dirInfo = await FileSystem.getInfoAsync(dbDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
-      }
-
-      const fileUri = `${dbDir}/${version.file}`;
-
-      const downloadResumable = FileSystem.createDownloadResumable(
-        version.url,
-        fileUri,
-        {},
-        (downloadProgress) => {
-          const progress = downloadProgress.totalBytesExpectedToWrite > 0
-            ? downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite
-            : 0;
-          setDownloading(prev => ({ ...prev, [version.id]: Math.round(progress * 100) }));
+        const dirInfo = await FileSystem.getInfoAsync(dbDir);
+        if (!dirInfo.exists) {
+          await FileSystem.makeDirectoryAsync(dbDir, { intermediates: true });
         }
-      );
 
-      const downloadRes = await downloadResumable.downloadAsync();
+        const fileUri = `${dbDir}/${version.file}`;
 
-      if (!downloadRes || downloadRes.status !== 200) {
-        throw new Error(`Download failed with status ${downloadRes?.status}`);
+        const downloadResumable = FileSystem.createDownloadResumable(
+          version.url!,
+          fileUri,
+          {},
+          (downloadProgress) => {
+            const progress = downloadProgress.totalBytesExpectedToWrite > 0
+              ? downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite
+              : 0;
+            setDownloading(prev => ({ ...prev, [version.id]: Math.round(progress * 100) }));
+          }
+        );
+
+        const downloadRes = await downloadResumable.downloadAsync();
+
+        if (!downloadRes || downloadRes.status !== 200) {
+          throw new Error(`Download failed with status ${downloadRes?.status}`);
+        }
+
+        // Update installed list in AsyncStorage
+        const stored = await AsyncStorage.getItem('adventools_bibles_installed');
+        let currentInstalled = stored ? JSON.parse(stored) : [];
+
+        // Remove if already exists (update)
+        currentInstalled = currentInstalled.filter((b: any) => b.id !== version.id);
+        currentInstalled.push(version);
+
+        await AsyncStorage.setItem('adventools_bibles_installed', JSON.stringify(currentInstalled));
+
+        setInstalled(prev => [...prev.filter(b => b.id !== version.id), version]);
+        Alert.alert("Succès", `La bible ${version.name} a été installée.`);
+      } catch (e) {
+        console.error(e);
+        Alert.alert("Erreur", "Le téléchargement a échoué.");
+      } finally {
+        setDownloading(prev => {
+          const next = { ...prev };
+          delete next[version.id];
+          return next;
+        });
       }
-
-      // Update installed list in AsyncStorage
-      const stored = await AsyncStorage.getItem('adventools_bibles_installed');
-      let currentInstalled = stored ? JSON.parse(stored) : [];
-
-      // Remove if already exists (update)
-      currentInstalled = currentInstalled.filter((b: any) => b.id !== version.id);
-      currentInstalled.push(version);
-
-      await AsyncStorage.setItem('adventools_bibles_installed', JSON.stringify(currentInstalled));
-
-      setInstalled(prev => [...prev.filter(b => b.id !== version.id), version]);
-      Alert.alert("Succès", `La bible ${version.name} a été installée.`);
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Erreur", "Le téléchargement a échoué.");
-    } finally {
-      setDownloading(prev => {
-        const next = { ...prev };
-        delete next[version.id];
-        return next;
-      });
-    }
+    });
   };
 
   const deleteBible = async (versionId: string) => {

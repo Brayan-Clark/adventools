@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 import { AppText as Text } from '@/components/ui/AppText';
+import { checkMobileDataWarning } from '@/lib/data-saver';
 
 
 interface VideoClip {
@@ -224,22 +225,24 @@ export default function SabbathSchoolVideoScreen() {
   };
 
   const downloadVideo = async (item: VideoClip) => {
-    const key = item.id;
-    try {
-      const fileUri = `${SS_VIDEO_DIR}${key}.mp4`;
-      const dl = FileSystem.createDownloadResumable(item.src, fileUri, {}, (dp) => {
-          setDownloadingProgress(prev => ({ ...prev, [key]: dp.totalBytesWritten / dp.totalBytesExpectedToWrite }));
-      });
-      const result = await dl.downloadAsync();
-      if (result && result.status === 200) {
-        setDownloadedVideos(prev => {
-            const next = { ...prev, [key]: true };
-            FileSystem.writeAsStringAsync(SS_VIDEO_METADATA, JSON.stringify(next)).catch(() => {});
-            return next;
+    checkMobileDataWarning("Téléchargement de Vidéo", async () => {
+      const key = item.id;
+      try {
+        const fileUri = `${SS_VIDEO_DIR}${key}.mp4`;
+        const dl = FileSystem.createDownloadResumable(item.src, fileUri, {}, (dp) => {
+            setDownloadingProgress(prev => ({ ...prev, [key]: dp.totalBytesWritten / dp.totalBytesExpectedToWrite }));
         });
-      }
-    } catch (e) { Alert.alert(t('error'), t('download_failed')); }
-    setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
+        const result = await dl.downloadAsync();
+        if (result && result.status === 200) {
+          setDownloadedVideos(prev => {
+              const next = { ...prev, [key]: true };
+              FileSystem.writeAsStringAsync(SS_VIDEO_METADATA, JSON.stringify(next)).catch(() => {});
+              return next;
+          });
+        }
+      } catch (e) { Alert.alert(t('error'), t('download_failed')); }
+      setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
+    });
   };
 
   const deleteVideo = (item: VideoClip) => {
@@ -260,7 +263,13 @@ export default function SabbathSchoolVideoScreen() {
 
   const playVideo = (item: VideoClip) => {
     const isLocal = downloadedVideos[item.id] === true;
-    router.push({ pathname: '/video/player', params: { title: item.title, url: isLocal ? `${SS_VIDEO_DIR}${item.id}.mp4` : item.src, thumbnail: item.image } });
+    if (isLocal) {
+      router.push({ pathname: '/video/player', params: { title: item.title, url: `${SS_VIDEO_DIR}${item.id}.mp4`, thumbnail: item.image } });
+    } else {
+      checkMobileDataWarning("Lecture de Vidéo en Continu (Streaming)", () => {
+        router.push({ pathname: '/video/player', params: { title: item.title, url: item.src, thumbnail: item.image } });
+      });
+    }
   };
 
   const filteredClips = useMemo(() => {
