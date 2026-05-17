@@ -59,6 +59,18 @@ const SS_LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
 ];
 
+const getShareSignature = (lang: string) => {
+  switch (lang?.toLowerCase()) {
+    case 'mg':
+      return "Nakana tao amin'ny Adventools";
+    case 'fr':
+      return "Extrait de l'application Adventools";
+    case 'en':
+    default:
+      return "Retrieved from Adventools";
+  }
+};
+
 const getApiBase = (lang: string) => `https://inverse.sspmadventist.org/api/v3/${lang}/ss`;
 const getAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${lang}/ss`;
 const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
@@ -1280,9 +1292,11 @@ export default function LesonaSekolySabata() {
       const dayId = (segment.name && typeof segment.name === 'string') ? segment.name : (activeSegmentIdx + 1).toString();
       const url = `${WEB_BASE}/${quarterlyId}/${lessonId}/${dayId}`;
 
+      const signature = getShareSignature(selectedLang);
+
       await RNShare.share({
         title: segment.title,
-        message: `${segment.title}\n\n${cleanContent}\n\nNakana tao amin'ny Adventools\n${url}`,
+        message: `${segment.title}\n\n${cleanContent}\n\n${signature}`,
       });
     } catch (error) {
       console.error(error);

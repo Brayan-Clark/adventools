@@ -2,7 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X, Globe } from 'lucide-react-native';
+import { Copy, Download, Facebook, Image as ImageIcon, Instagram, MessageCircle, Palette, Share2, X, Globe, RefreshCw } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
 import { Alert, Image, ImageBackground, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,47 +38,31 @@ const PRESET_IMAGES = [
   require('../../assets/images/backgrounds/bg_05.jpg'),
 ];
 
-const ONLINE_IMAGES = [
-  {
-    id: 'mountain-lake',
-    preview: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'peaks',
-    preview: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'deep-forest',
-    preview: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'nebula',
-    preview: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'golden-sunset',
-    preview: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'ocean-waves',
-    preview: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'misty-valley',
-    preview: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1080&h=1080&q=75'
-  },
-  {
-    id: 'sand-dunes',
-    preview: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=150&h=150&q=60',
-    full: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1080&h=1080&q=75'
-  }
+const IMAGE_POOL = [
+  'photo-1470071459604-3b5ec3a7fe05', // Mountain lake
+  'photo-1464822759023-fed622ff2c3b', // Peaks
+  'photo-1448375240586-882707db888b', // Deep forest
+  'photo-1506318137071-a8e063b4bec0', // Nebula
+  'photo-1475924156734-496f6cac6ec1', // Golden sunset
+  'photo-1507525428034-b723cf961d3e', // Ocean waves
+  'photo-1506744038136-46273834b3fb', // Misty valley
+  'photo-1509316975850-ff9c5deb0cd9', // Sand dunes
+  'photo-1454496522488-7a8e488e8606', // Snowy peaks
+  'photo-1469474968028-56623f02e42e', // Valley trail
+  'photo-1502082553048-f009c37129b9', // Majestic tree
+  'photo-1518495973542-4542c06a5843', // Sun rays in forest
+  'photo-1472214222541-d510753a4907', // Green valley
+  'photo-1501854140801-50d01698950b', // Mountain landscape
+  'photo-1441974231531-c6227db76b6e', // Sunlit trees
+  'photo-1470770841072-f978cf4d019e', // Lakeside dock at sunset
+  'photo-1513836279014-a89f7a76ae86', // Sunlight through misty forest
+  'photo-1475113548554-5a36f1f523d6', // Birds flying over lake
+  'photo-1532274402911-5a369e4c4bb5', // Tuscan hills at sunrise
+  'photo-1447752875215-b2761acb3c5d', // Wooden bridge in forest
+  'photo-1500485035595-cbe6f645feb1', // Red sunset clouds
+  'photo-1505761671935-60b3a7424bab', // Morning fog
+  'photo-1497436072909-60f360e1d4b1', // Crystal water pebbles
+  'photo-1500627869374-13cd993b1115'  // Green mountains
 ];
 
 
@@ -94,8 +78,25 @@ export default function ShareVerse() {
   const cardRef = React.useRef(null);
   const [capturing, setCapturing] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
+  const [onlineImages, setOnlineImages] = useState<{ id: string; preview: string; full: string }[]>([]);
+
+  const refreshOnlineImages = () => {
+    const shuffled = [...IMAGE_POOL].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 8).map((id, index) => ({
+      id: `online-${index}-${id}`,
+      preview: `https://images.unsplash.com/${id}?auto=format&fit=crop&w=150&h=150&q=60`,
+      full: `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1080&h=1080&q=75`
+    }));
+    setOnlineImages(selected);
+  };
 
   useEffect(() => {
+    refreshOnlineImages();
+    // Get initial network state
+    NetInfo.fetch().then(state => {
+      setIsOnline(!!state.isConnected);
+    });
+    // Subscribe to network changes
     const unsubscribe = NetInfo.addEventListener(state => {
       setIsOnline(!!state.isConnected);
     });
@@ -310,8 +311,8 @@ export default function ShareVerse() {
                 source={
                   bgType === 'custom' 
                     ? { uri: customImage! } 
-                    : bgType === 'online'
-                    ? { uri: ONLINE_IMAGES[selectedOnlineImg].full }
+                    : bgType === 'online' && onlineImages[selectedOnlineImg]
+                    ? { uri: onlineImages[selectedOnlineImg].full }
                     : PRESET_IMAGES[selectedImg]
                 }
                 className="flex-1 p-8 justify-center items-center"
@@ -360,9 +361,17 @@ export default function ShareVerse() {
             <ImageIcon size={14} color="#64748b" />
             <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest ml-2">Images de fond</Text>
             {isOnline && (
-              <View className="bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full ml-3 flex-row items-center gap-1">
-                <Globe size={8} color="#22d3ee" />
-                <Text className="text-cyan-400 text-[8px] font-black uppercase tracking-wider">Premium en ligne</Text>
+              <View className="flex-row items-center ml-3">
+                <View className="bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full flex-row items-center gap-1">
+                  <Globe size={8} color="#22d3ee" />
+                  <Text className="text-cyan-400 text-[8px] font-black uppercase tracking-wider">Premium en ligne</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={refreshOnlineImages} 
+                  className="ml-2 w-5 h-5 rounded-full bg-cyan-500/10 items-center justify-center border border-cyan-500/20 active:scale-95"
+                >
+                  <RefreshCw size={10} color="#22d3ee" />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -384,13 +393,17 @@ export default function ShareVerse() {
               </TouchableOpacity>
             ))}
 
-            {isOnline && ONLINE_IMAGES.map((img, index) => (
+            {isOnline && onlineImages.map((img, index) => (
               <TouchableOpacity
                 key={`online-${index}`}
                 onPress={() => handleSelectOnlineImage(index)}
                 className={`w-14 h-14 rounded-xl mr-3 border-2 ${bgType === 'online' && selectedOnlineImg === index ? 'border-cyan-400 scale-110' : 'border-transparent'} overflow-hidden shadow-lg relative`}
               >
-                <Image source={{ uri: img.preview }} className="flex-1 w-full h-full" resizeMode="cover" />
+                <Image 
+                  source={{ uri: img.preview }} 
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover" 
+                />
                 <View className="absolute bottom-0 left-0 right-0 bg-cyan-950/80 items-center py-0.5">
                   <Text className="text-cyan-400 text-[6px] font-black uppercase tracking-wider">Web</Text>
                 </View>

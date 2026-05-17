@@ -64,6 +64,18 @@ const SS_LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
 ];
 
+const getShareSignature = (lang: string) => {
+  switch (lang?.toLowerCase()) {
+    case 'mg':
+      return "Nakana tao amin'ny Adventools";
+    case 'fr':
+      return "Extrait de l'application Adventools";
+    case 'en':
+    default:
+      return "Retrieved from Adventools";
+  }
+};
+
 const getApiBase = (lang: string) => `https://inverse.sspmadventist.org/api/v3/${lang}/ss`;
 const getAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${lang}/ss`;
 const getStorageKey = (lang: string) => `adventools_ss_data_${lang}`;
@@ -1347,9 +1359,11 @@ export default function LesonaSekolySabata() {
       const dayId = (segment.name && typeof segment.name === 'string') ? segment.name : (activeSegmentIdx + 1).toString();
       const url = `${WEB_BASE}/${quarterlyId}/${lessonId}/${dayId}`;
 
+      const signature = getShareSignature(selectedLang);
+
       await RNShare.share({
         title: segment.title,
-        message: `${segment.title}\n\n${cleanContent}\n\nNakana tao amin'ny Adventools\n${url}`,
+        message: `${segment.title}\n\n${cleanContent}\n\n${signature}`,
       });
     } catch (error) {
       console.error(error);
@@ -1908,18 +1922,24 @@ export default function LesonaSekolySabata() {
             </View>
             
             <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
-              <Text
-                selectable={true}
-                selectionColor="#3b82f6"
-                style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: 18 * (globalSettings.fontSize / 16), 
-                  lineHeight: 28 * (globalSettings.fontSize / 16), 
-                  textAlign: 'left'
+              <Markdown
+                style={{
+                  body: { 
+                    color: '#f1f5f9', 
+                    fontSize: 18 * (globalSettings.fontSize / 16), 
+                    lineHeight: 28 * (globalSettings.fontSize / 16), 
+                    textAlign: 'left',
+                    fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_400Regular' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_400Regular' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_400Regular' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular'
+                  },
+                  strong: { 
+                    color: '#3b82f6', 
+                    fontWeight: 'bold',
+                    fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_700Bold' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_700Bold' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_700Bold' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold'
+                  }
                 }}
               >
                 {verseContent}
-              </Text>
+              </Markdown>
             </ScrollView>
 
             <TouchableOpacity 
