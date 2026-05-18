@@ -39,13 +39,24 @@ const CLASS_TO_SUFFIX: Record<string, { suffix: string; label: string }> = {
 
 /** Read a value from the SQLite settings table (mirrors getSetting in user-storage.ts) */
 async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
+  let db: SQLite.SQLiteDatabase | null = null;
   try {
-    const db = await SQLite.openDatabaseAsync('adventools_user.db');
+    db = await SQLite.openDatabaseAsync('adventools_user.db');
+    // Enable WAL mode to allow concurrent read/write operations from both the app and the widget
+    await db.execAsync("PRAGMA journal_mode = WAL;");
     const row: any = await db.getFirstAsync('SELECT value FROM settings WHERE key = ?', [key]);
     if (row?.value) {
       try { return JSON.parse(row.value) as T; } catch { return row.value as unknown as T; }
     }
-  } catch (_) { /* DB may not exist on very first run */ }
+  } catch (_) { /* DB may not exist on very first run */ } finally {
+    if (db) {
+      try {
+        await db.closeAsync();
+      } catch (e) {
+        console.error('[Widget] Failed to close SQLite database:', e);
+      }
+    }
+  }
   return defaultValue;
 }
 

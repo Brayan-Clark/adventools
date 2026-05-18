@@ -635,24 +635,63 @@ export default function LesonaSekolySabata() {
 
     try {
       const titles: Record<string, string> = {};
+      
+      // Load cached titles from AsyncStorage first
+      const cacheKey = `adventools_ss_lesson_titles_${selectedLang}_${q.id}`;
+      const cachedTitlesStr = await AsyncStorage.getItem(cacheKey);
+      let cachedTitles: Record<string, string> = {};
+      if (cachedTitlesStr) {
+        try {
+          cachedTitles = JSON.parse(cachedTitlesStr);
+        } catch (_) {}
+      }
+
       lessons.forEach((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
-        if (lId && l.title) titles[lId] = l.title;
+        if (lId) {
+          const lTitle = cachedTitles[lId] || l.title || l.name || "";
+          if (lTitle) titles[lId] = lTitle;
+        }
       });
       setLessonTitlesMap(titles);
 
       const prefix = `${selectedLang}-`;
+      
+      // Helper function to check if a title is a generic placeholder and needs a fetch
+      const isPlaceholderTitle = (tName: string): boolean => {
+        const low = tName.trim().toLowerCase();
+        return !low || 
+               low.includes('herinandro') || 
+               low.includes('semaine') || 
+               low.includes('week') || 
+               low.includes('part') ||
+               low.includes('lesson') ||
+               low.includes('leçon') ||
+               low.includes('lecon') ||
+               low.includes('andro') ||
+               !!low.match(/^(lesson|leçon|lecon|andro|week|herinandro|semaine)\s*\d+/i);
+      };
+
       const lessonsToFetch = lessons.filter((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
         if (!lId) return false;
+        
+        // If we already have a real title in cachedTitles (not a placeholder), don't fetch
+        if (cachedTitles[lId] && !isPlaceholderTitle(cachedTitles[lId])) {
+          return false;
+        }
+
         const currentTitle = titles[lId] || '';
-        return currentTitle.includes('Herinandro') || currentTitle.includes('Semaine') || currentTitle.includes('Week') || currentTitle.includes('Part');
+        return isPlaceholderTitle(currentTitle);
       });
+
+      if (lessonsToFetch.length === 0) return;
 
       // US-14: Batch fetch titles (3 at a time) to avoid network saturation
       const batchSize = 3;
+      let hasNewTitles = false;
       for (let i = 0; i < lessonsToFetch.length; i += batchSize) {
         const batch = lessonsToFetch.slice(i, i + batchSize);
         await Promise.all(batch.map(async (l: any) => {
@@ -676,7 +715,11 @@ export default function LesonaSekolySabata() {
             if (text.trim().startsWith('{')) {
               const lJson = JSON.parse(text);
               if (lJson.title) {
-                setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanSspmMarkdown(lJson.title) }));
+                const cleanedTitle = cleanSspmMarkdown(lJson.title);
+                titles[lId] = cleanedTitle;
+                cachedTitles[lId] = cleanedTitle;
+                hasNewTitles = true;
+                setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanedTitle }));
               }
             }
           } catch (e) {
@@ -687,6 +730,10 @@ export default function LesonaSekolySabata() {
         if (i + batchSize < lessonsToFetch.length) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
+      }
+
+      if (hasNewTitles) {
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(cachedTitles));
       }
     } catch (e) {
       console.error("Error loading titles", e);
