@@ -1,4 +1,5 @@
 import TrackPlayer, { Event } from 'react-native-track-player';
+import { getSetting } from './user-storage';
 
 export default async function PlaybackService() {
 
@@ -27,9 +28,9 @@ export default async function PlaybackService() {
     // If the track changed and it's not a manual skip
     if (event.track !== undefined && event.lastTrack !== undefined) {
       try {
-        const { default: AsyncStorage } = require('@react-native-async-storage/async-storage');
-        const autoPlay = await AsyncStorage.getItem('audio_autoplay');
-        if (autoPlay === 'false') {
+        const autoPlay = await getSetting<any>('audio_autoplay', false);
+        const isAutoPlayDisabled = autoPlay === false || autoPlay === 'false';
+        if (isAutoPlayDisabled) {
           await TrackPlayer.pause();
         }
       } catch (e) {

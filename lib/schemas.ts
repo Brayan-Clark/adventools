@@ -28,7 +28,17 @@ export const QuarterlyItemSchema = z.object({
   groupTitle: z.string().optional().default(""),
 });
 
-export const ContentBlockSchema = z.lazy(() => z.object({
+export interface ContentBlock {
+  id?: string;
+  type: string;
+  markdown?: string;
+  items?: ContentBlock[];
+  data?: any;
+  image?: string;
+  caption?: string;
+}
+
+export const ContentBlockSchema: z.ZodType<ContentBlock> = z.lazy(() => z.object({
   id: z.string().optional(),
   type: z.string(),
   markdown: z.string().optional(),

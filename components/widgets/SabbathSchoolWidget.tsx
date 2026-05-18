@@ -173,7 +173,7 @@ export default function SabbathSchoolWidget() {
               {currentLesson?.title || "Leçon de la semaine"}
             </Text>
             <Text className="text-primary/70 text-xs mt-2 font-bold">
-              {t('open_lesson')} →
+              {t('open_lesson' as any)} →
             </Text>
           </View>
         </View>

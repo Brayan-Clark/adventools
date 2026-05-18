@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget, ImageWidget, OverlapWidget } from 'react-native-android-widget';
 
-const RADIUS = 15;
+const RADIUS = 0;
 
 interface LesonaAndroWidgetProps {
   title: string;

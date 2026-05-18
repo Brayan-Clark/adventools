@@ -146,13 +146,17 @@ export default function AudioPlayerScreen() {
   })) : []);
   const currentIndex = useRef<number>(params.index ? parseInt(params.index) : -1);
   const [autoPlay, setAutoPlay] = useState(false);
+  const autoPlayRef = useRef(autoPlay);
+  useEffect(() => {
+    autoPlayRef.current = autoPlay;
+  }, [autoPlay]);
 
   // Persistent Auto Play Setting
   useEffect(() => {
     const loadAutoPlay = async () => {
       try {
-        const val = await getSetting<boolean>('audio_autoplay', false);
-        setAutoPlay(val);
+        const val = await getSetting<any>('audio_autoplay', false);
+        setAutoPlay(val === true || val === 'true');
       } catch (e) { }
     };
     loadAutoPlay();
@@ -323,9 +327,10 @@ export default function AudioPlayerScreen() {
             if (status.didJustFinish && !status.isLooping) {
               // Read from storage for latest autoplay state
               try {
-                const val = await getSetting<boolean>('audio_autoplay', false);
-                if (val) {
-                  handleTrackFinish();
+                const val = await getSetting<any>('audio_autoplay', false);
+                const isAutoPlayEnabled = val === true || val === 'true';
+                if (isAutoPlayEnabled) {
+                  handleTrackFinish(true);
                 } else {
                   await newSound.pauseAsync();
                 }
@@ -451,9 +456,9 @@ export default function AudioPlayerScreen() {
     return true;
   };
 
-  const handleTrackFinish = () => {
-
-    if (autoPlay && playlist.current.length > 0 && currentIndex.current < playlist.current.length - 1) {
+  const handleTrackFinish = (forceAutoPlay?: boolean) => {
+    const isAuto = forceAutoPlay !== undefined ? forceAutoPlay : autoPlayRef.current;
+    if (isAuto && playlist.current.length > 0 && currentIndex.current < playlist.current.length - 1) {
       playNext();
     }
   };

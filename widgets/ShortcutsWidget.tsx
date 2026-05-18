@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget, ColorProp } from 'react-native-android-widget';
 
-const RADIUS = 24; // Matches premium Android 12+ system widget corner radius
+const RADIUS = 0; // Matches premium Android 12+ system widget corner radius
 
 interface ShortcutButtonProps {
   icon: string;

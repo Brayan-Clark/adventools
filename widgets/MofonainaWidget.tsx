@@ -24,7 +24,7 @@ export function MofonainaWidget({
     month: 'long',
   });
 
-  const RADIUS = 24; // Premium modern rounded corner radius
+  const RADIUS = 0; // Premium modern rounded corner radius
 
   // Crop the image server-side to exact widget dimensions (simulates resizeMode="cover")
   let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8';

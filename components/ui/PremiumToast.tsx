@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,9 +17,11 @@ interface PremiumToastProps {
 export const PremiumToast = ({ visible, message, type = 'success', onHide }: PremiumToastProps) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(-20)).current;
+  const [shouldRender, setShouldRender] = useState(visible);
 
   useEffect(() => {
     if (visible) {
+      setShouldRender(true);
       Animated.parallel([
         Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(translateY, { toValue: 0, duration: 300, useNativeDriver: true }),
@@ -39,10 +41,13 @@ export const PremiumToast = ({ visible, message, type = 'success', onHide }: Pre
     Animated.parallel([
       Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: -20, duration: 300, useNativeDriver: true }),
-    ]).start(() => onHide());
+    ]).start(() => {
+      setShouldRender(false);
+      onHide();
+    });
   };
 
-  if (!visible && opacity._value === 0) return null;
+  if (!shouldRender) return null;
 
   const getIcon = () => {
     switch (type) {

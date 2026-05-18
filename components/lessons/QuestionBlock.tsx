@@ -18,7 +18,7 @@ const QuestionBlock = ({ block, content, lessonId }: QuestionBlockProps) => {
   const { settings } = useSettings();
   const [note, setNote] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  const saveTimeout = React.useRef<NodeJS.Timeout | null>(null);
+  const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     const loadNote = async () => {

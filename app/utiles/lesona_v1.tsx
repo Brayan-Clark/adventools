@@ -1,5 +1,6 @@
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
+import { useToast } from '@/lib/toast-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
@@ -219,6 +220,7 @@ const QuestionBlock = ({ block, content, lessonId }: { block: any, content: Reac
 
 export default function LesonaSekolySabata() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { settings: globalSettings } = useSettings();
@@ -816,10 +818,10 @@ export default function LesonaSekolySabata() {
       await AsyncStorage.setItem(`adventools_ss_q_detail_${downloadId}`, JSON.stringify(q));
 
       setDownloadedQuarterlies(prev => prev.includes(downloadId) ? prev : [...prev, downloadId]);
-      Alert.alert(t('success'), `${t('download_success')} (${successCount} leçons)`);
+      showToast(`${t('download_success')} (${successCount} leçons)`, 'success');
     } catch (e) {
       console.error(e);
-      Alert.alert(t('error'), t('download_failed'));
+      showToast(t('download_failed'), 'error');
     } finally {
       setDownloadingAll(false);
     }
@@ -844,10 +846,10 @@ export default function LesonaSekolySabata() {
               }
               await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
               setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
-              Alert.alert(t('success'), t('delete_success'));
+              showToast(t('delete_success'), 'success');
             } catch (e) {
               console.error(e);
-              Alert.alert(t('error'), t('delete_doc_error'));
+              showToast(t('delete_doc_error'), 'error');
             }
           }
         }
@@ -1170,7 +1172,7 @@ export default function LesonaSekolySabata() {
       autoSelectSegment(normalizedData);
     } catch (e: any) {
       console.error("Error fetching weekly lesson", e);
-      Alert.alert(t('error'), `${t('no_content')}: ${e.message}`);
+      showToast(`${t('no_content')}: ${e.message}`, 'error');
     } finally {
       setLoading(false);
     }

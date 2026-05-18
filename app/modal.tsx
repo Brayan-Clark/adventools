@@ -1,4 +1,4 @@
-import { exportAllAppData, importAllAppData } from '@/lib/backup-utils';
+import { exportAllAppData, importAllAppData, readBackupFile } from '@/lib/backup-utils';
 import { performUpdateCheck } from '@/lib/updater';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';

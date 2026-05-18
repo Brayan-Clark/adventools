@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, CloudDownload, Info, RefreshCcw, Search, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { useToast } from '@/lib/toast-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from '@/components/ui/AppText';
 import { checkMobileDataWarning } from '@/lib/data-saver';
@@ -15,6 +16,7 @@ const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/
 
 export default function BibleStore() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [manifest, setManifest] = useState<BibleConfig[]>([]);
   const [installed, setInstalled] = useState<BibleConfig[]>([]);
@@ -114,10 +116,10 @@ export default function BibleStore() {
         await AsyncStorage.setItem('adventools_bibles_installed', JSON.stringify(currentInstalled));
 
         setInstalled(prev => [...prev.filter(b => b.id !== version.id), version]);
-        Alert.alert("Succès", `La bible ${version.name} a été installée.`);
+        showToast(`La bible ${version.name} a été installée.`, 'success');
       } catch (e) {
         console.error(e);
-        Alert.alert("Erreur", "Le téléchargement a échoué.");
+        showToast("Le téléchargement a échoué.", 'error');
       } finally {
         setDownloading(prev => {
           const next = { ...prev };
@@ -131,7 +133,7 @@ export default function BibleStore() {
   const deleteBible = async (versionId: string) => {
     // Prevent deleting the default built-in bible
     if (versionId === 'MG') {
-      Alert.alert("Information", "La version officielle ne peut pas être supprimée.");
+      showToast("La version officielle ne peut pas être supprimée.", 'info');
       return;
     }
 
