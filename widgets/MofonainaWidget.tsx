@@ -24,10 +24,10 @@ export function MofonainaWidget({
     month: 'long',
   });
 
-  const RADIUS = 0;
+  const RADIUS = 24; // Premium modern rounded corner radius
 
   // Crop the image server-side to exact widget dimensions (simulates resizeMode="cover")
-  let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d';
+  let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8';
   if (bgUrl.includes('unsplash.com')) {
     bgUrl = bgUrl.split('?')[0] + `?q=80&w=${Math.round(widgetWidth * 2)}&h=${Math.round(widgetHeight * 2)}&fit=crop`;
   }
@@ -52,7 +52,7 @@ export function MofonainaWidget({
         }}
       />
 
-      {/* 2. Semi-transparent dark overlay + all text */}
+      {/* 2. Frosted glass semi-transparent dark overlay + clean crisp border + all text */}
       <FlexWidget
         clickAction="OPEN_URI"
         clickActionData={{ uri: 'adventools://mofonaina' }}
@@ -60,59 +60,61 @@ export function MofonainaWidget({
           width: 'match_parent',
           height: 'match_parent',
           paddingHorizontal: 24,
-          paddingVertical: 32,
+          paddingVertical: 28,
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#00000099',
+          backgroundColor: '#0c111daa', // Frosted 66% slate-950
+          borderWidth: 1,
+          borderColor: '#ffffff1a',     // 10% white glow border for elegant glass edge
           borderRadius: RADIUS,
         }}
       >
         <TextWidget
           text={dateStr.toUpperCase()}
           style={{
-            fontSize: 11,
-            color: '#fb923c',
+            fontSize: 10,
+            color: '#fb923c', // Warm amber-gold date
             fontWeight: 'bold',
             marginBottom: 8,
-            letterSpacing: 1,
+            letterSpacing: 2,
             textAlign: 'center',
           }}
         />
 
         <TextWidget
           text={title || "Mofon'aina"}
+          maxLines={2}
+          truncate="END"
           style={{
-            fontSize: 20,
-            color: '#ffffff',
+            fontSize: 19,
+            color: '#ffffff', // Pristine white title
             fontWeight: 'bold',
             marginBottom: 8,
             textAlign: 'center',
-            maxLines: 2,
-            truncate: 'END',
           }}
         />
 
         <TextWidget
           text={verse || "Sokafy ny fampiharana mba hamakiana ny tenin'Andriamanitra anio."}
+          maxLines={4}
+          truncate="END"
           style={{
-            fontSize: 14,
-            color: '#e2e8f0',
+            fontSize: 13,
+            color: '#e2e8f0', // Clean slate-200 text for maximum reading contrast
             textAlign: 'center',
-            marginBottom: 10,
-            maxLines: 4,
-            truncate: 'END',
+            marginBottom: 12,
           }}
         />
 
         <TextWidget
           text={reference || 'Adventools'}
+          truncate="END"
           style={{
-            fontSize: 12,
-            color: '#fb923c',
+            fontSize: 11,
+            color: '#fb923c', // Amber gold reference
             fontWeight: 'bold',
             textAlign: 'center',
-            truncate: 'END',
           }}
         />
       </FlexWidget>

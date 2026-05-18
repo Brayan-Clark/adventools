@@ -50,7 +50,7 @@ export function LesonaWidget({
           {/* Cover image or placeholder */}
           {coverImage ? (
             <ImageWidget
-              image={coverImage}
+              image={coverImage as any}
               imageWidth={70}
               imageHeight={105}
               radius={6}
@@ -76,23 +76,22 @@ export function LesonaWidget({
           <FlexWidget style={{ flex: 1, flexDirection: 'column' }}>
             <TextWidget
               text={quarterlyTitle || 'École du Sabbat'}
+              maxLines={2}
+              truncate="END"
               style={{
                 fontSize: 18,
                 color: '#ffffff',
                 fontWeight: 'bold',
-                maxLines: 2,
-                truncate: 'END',
-                lineHeight: 22,
               }}
             />
             <TextWidget
               text={lessonTitle || 'Leçon de la semaine'}
+              maxLines={1}
+              truncate="END"
               style={{
                 fontSize: 12,
                 color: '#94a3b8',
                 marginTop: 4,
-                maxLines: 1,
-                truncate: 'END',
               }}
             />
             <TextWidget
@@ -123,17 +122,18 @@ export function LesonaWidget({
                   width: 'match_parent',
                 }}
               >
-                <TextWidget
-                  text={day.title || 'Lesona'}
-                  style={{
-                    fontSize: 13,
-                    color: '#ffffff',
-                    fontWeight: day.isToday ? 'bold' : 'normal',
-                    flex: 1,
-                    maxLines: 1,
-                    truncate: 'END',
-                  }}
-                />
+                <FlexWidget style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <TextWidget
+                    text={day.title || 'Lesona'}
+                    maxLines={1}
+                    truncate="END"
+                    style={{
+                      fontSize: 13,
+                      color: '#ffffff',
+                      fontWeight: day.isToday ? 'bold' : 'normal',
+                    }}
+                  />
+                </FlexWidget>
                 <TextWidget
                   text={`${day.label} ${day.date}`}
                   style={{
