@@ -231,7 +231,8 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
         (data.groups || []).forEach((g: any) => {
           if (g.resources) quarterlies.push(...g.resources);
         });
-        await AsyncStorage.setItem(storageKey, JSON.stringify(quarterlies));
+        // Removed to prevent AsyncStorage corruption in background tasks
+        // await AsyncStorage.setItem(storageKey, JSON.stringify(quarterlies));
       }
     }
 

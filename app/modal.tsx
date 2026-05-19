@@ -75,6 +75,12 @@ export default function Settings() {
   const [installedBibles, setInstalledBibles] = useState<any[]>([]);
   const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
 
+  // Security
+  const [isPinModalVisible, setIsPinModalVisible] = useState(false);
+  const [existingPin, setExistingPin] = useState<string | null>(null);
+  const [oldPinInput, setOldPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+
   const EDS_CLASSES = [
     "Lesona Zaza minono (0-12 volana)",
     "Lesona Zazakely (1-3 taona)",
@@ -231,6 +237,22 @@ export default function Settings() {
         }
       ]
     );
+  };
+
+  const handleChangePin = async () => {
+    if (existingPin && oldPinInput !== existingPin) {
+      Alert.alert("Erreur", "L'ancien code PIN est incorrect.");
+      return;
+    }
+    if (newPinInput.length >= 4) {
+      await AsyncStorage.setItem('adventools_note_lock_pin', newPinInput);
+      setNewPinInput('');
+      setOldPinInput('');
+      setIsPinModalVisible(false);
+      Alert.alert(t('success'), "Le code PIN de vos notes a été modifié avec succès.");
+    } else {
+      Alert.alert("Erreur", "Le code PIN doit contenir au moins 4 caractères.");
+    }
   };
 
   const handleStartImport = async () => {
@@ -499,6 +521,22 @@ export default function Settings() {
                   label="Restauration Sécurisée"
                   value="Restaurer un fichier .advb"
                   onPress={importAllAppData}
+                  isLast
+                />
+              </SettingsGroup>
+
+              <SettingsGroup title="Sécurité">
+                <SettingItem
+                  icon={<Shield size={18} color="#f59e0b" />}
+                  label="Modifier le code PIN des notes"
+                  value="Pour les notes verrouillées"
+                  onPress={async () => {
+                    const pin = await AsyncStorage.getItem('adventools_note_lock_pin');
+                    setExistingPin(pin);
+                    setOldPinInput('');
+                    setNewPinInput('');
+                    setIsPinModalVisible(true);
+                  }}
                   isLast
                 />
               </SettingsGroup>
@@ -978,6 +1016,56 @@ export default function Settings() {
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* PIN Modification Modal */}
+      <Modal visible={isPinModalVisible} transparent animationType="fade" statusBarTranslucent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40} className="flex-1">
+          <View className="flex-1 bg-black/60 justify-center px-6">
+            <View className="bg-slate-900 border border-slate-800 rounded-[32px] p-6">
+              <Text className="text-white font-bold text-lg mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>Code PIN des notes</Text>
+              <Text className="text-slate-500 text-xs mb-4">Ce code unique protège toutes vos notes verrouillées.</Text>
+              {existingPin ? (
+                <View className="mb-4">
+                  <Text className="text-slate-400 text-xs mb-2">Ancien code PIN :</Text>
+                  <TextInput
+                    className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white font-bold tracking-widest text-center text-xl"
+                    value={oldPinInput}
+                    onChangeText={setOldPinInput}
+                    placeholder="Ancien PIN"
+                    placeholderTextColor="#64748b"
+                    keyboardType="numeric"
+                    secureTextEntry
+                    maxLength={8}
+                    autoFocus
+                  />
+                </View>
+              ) : null}
+              <View className="mb-6">
+                <Text className="text-slate-400 text-xs mb-2">Nouveau code PIN :</Text>
+                <TextInput
+                  className="bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white font-bold tracking-widest text-center text-xl"
+                  value={newPinInput}
+                  onChangeText={setNewPinInput}
+                  placeholder="Nouveau PIN"
+                  placeholderTextColor="#64748b"
+                  keyboardType="numeric"
+                  secureTextEntry
+                  maxLength={8}
+                  autoFocus={!existingPin}
+                />
+              </View>
+              <View className="flex-row gap-3">
+                <TouchableOpacity onPress={() => setIsPinModalVisible(false)} className="flex-1 p-4 rounded-2xl border border-slate-700 items-center">
+                  <Text className="text-slate-400 font-medium">{t('cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleChangePin} className="flex-1 p-4 rounded-2xl bg-amber-500 items-center">
+                  <Text className="text-white font-bold">{t('save')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
     </SafeAreaView>

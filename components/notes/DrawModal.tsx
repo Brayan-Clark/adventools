@@ -198,6 +198,8 @@ export const DrawModal = ({ visible, onClose, onSave, initialUri }: DrawModalPro
     }
   };
 
+  const bg = BACKGROUNDS.find(b => b.id === bgId) || BACKGROUNDS[0];
+
   const renderStroke = (s: Stroke, key: number) => {
     if (s.tool === 'calligraphy') {
       return (
@@ -214,7 +216,7 @@ export const DrawModal = ({ visible, onClose, onSave, initialUri }: DrawModalPro
       <Path
         key={key}
         d={buildSmoothPath(s.points)}
-        stroke={s.color}
+        stroke={s.tool === 'eraser' ? bg.color : s.color}
         strokeWidth={s.width}
         strokeOpacity={s.opacity}
         strokeLinecap={s.linecap}
@@ -227,7 +229,6 @@ export const DrawModal = ({ visible, onClose, onSave, initialUri }: DrawModalPro
   // Derive display values from state (for UI rendering only)
   const tool        = TOOLS.find(t => t.id === activeTool) || TOOLS[0];
   const isEraser    = activeTool === 'eraser';
-  const bg          = BACKGROUNDS.find(b => b.id === bgId) || BACKGROUNDS[0];
   const strokeColor = isEraser ? bg.color : color;
   const strokeWidth = SIZE_PRESETS[sizeIndex] * tool.widthMul;
 
@@ -267,7 +268,7 @@ export const DrawModal = ({ visible, onClose, onSave, initialUri }: DrawModalPro
         <ViewShot ref={viewShotRef} style={{ flex: 1, backgroundColor: bg.color }} options={{ format: 'jpg', quality: 0.95 }}>
           <View className="flex-1" {...panResponder.panHandlers}>
             {initialUri && (
-              <RNImage source={{ uri: initialUri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.5 }} resizeMode="contain" />
+              <RNImage source={{ uri: initialUri }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 1 }} resizeMode="cover" />
             )}
             <Svg style={{ flex: 1 }}>
               <G>{strokes.map((s, i) => renderStroke(s, i))}</G>

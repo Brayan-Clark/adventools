@@ -96,8 +96,8 @@ export const NoteCard = ({ note, onPress, onDelete }: NoteCardProps) => {
         <View className="mb-4">
           <RNImage
             source={{ uri: note.attachments?.images![note.attachments!.images!.length - 1] }}
-            className="w-full h-48 rounded-3xl bg-white"
-            resizeMode="contain"
+            className="w-full h-48 rounded-3xl"
+            resizeMode="cover"
           />
           <View className="absolute top-3 left-3 bg-purple-600 px-3 py-1 rounded-full shadow-lg">
             <Text className="text-[8px] text-white font-bold uppercase tracking-widest">Dessin</Text>

@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Print from 'expo-print';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Lock, Mic, Music, Palette, Paperclip, Pause, Play, Plus, Pin, Printer, Redo2, Search, Share2, Square, StickyNote, Trash2, Undo2, Unlock, Video, X } from 'lucide-react-native';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Lock, Mic, Music, Palette, Paperclip, Pause, Play, Plus, Pin, Printer, Redo2, Search, Share2, Square, Star, StickyNote, Trash2, Undo2, Unlock, User, Video, X, Maximize2, Minimize2, Pointer, Activity, Zap } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
@@ -76,9 +76,9 @@ const NOTE_COLORS = [
     { label: 'Violet', value: '#4c1d95', border: '#5b21b6' },
 ];
 
-import { BackHandler } from 'react-native';
+import { LaserPointerOverlay } from '@/components/notes/LaserPointerOverlay';
 import { AppText as Text } from '@/components/ui/AppText';
-
+import { BackHandler } from 'react-native';
 
 const FULL_PALETTE = [
     '#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#f1f5f9',
@@ -335,12 +335,19 @@ export default function Notes() {
     const [pinCode, setPinCode] = useState<string>("");
     const [isPinCodeModalVisible, setIsPinCodeModalVisible] = useState(false);
     const [lockedNoteToUnlock, setLockedNoteToUnlock] = useState<Note | null>(null);
+    const [lockedNoteToDelete, setLockedNoteToDelete] = useState<Note | null>(null);
+    const [isChangePinModalVisible, setIsChangePinModalVisible] = useState(false);
+    const [changePinOldInput, setChangePinOldInput] = useState("");
+    const [changePinNewInput, setChangePinNewInput] = useState("");
     const [pinInput, setPinInput] = useState<string>("");
     const [isSettingPinCode, setIsSettingPinCode] = useState(false);
 
     const [editingNote, setEditingNote] = useState<Note | null>(null);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [showHighlighter, setShowHighlighter] = useState(false);
+    const [laserMode, setLaserMode] = useState<'off' | 'dot' | 'trail_red' | 'trail_highlight'>('off');
+    
+    // --- Selection and Modals ---
     const [showFolderModal, setShowFolderModal] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     const [editingFolderName, setEditingFolderName] = useState<string | null>(null); // null = create mode, string = rename mode
@@ -485,32 +492,159 @@ export default function Notes() {
     const handlePrintNote = async () => {
         if (!editingNote) return;
         try {
-            let htmlContent = editingNote.content
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/# (.*?)\n/g, '<h1>$1</h1>\n')
-                .replace(/## (.*?)\n/g, '<h2>$1</h2>\n')
-                .replace(/- \[( |x)\] (.*?)\n/g, (m, check, text) => `<li><input type="checkbox" ${check === 'x' ? 'checked' : ''}> ${text}</li>\n`)
-                .replace(/- (.*?)\n/g, '<li>$1</li>\n')
-                .replace(/\n\n/g, '<br><br>');
+            // 1. Process standard elements (verses, highlights, footnotes) via processContent
+            let processed = processContent(editingNote.content);
+
+            // 2. Parse inline media markdown
+            processed = processed
+                .replace(/\[image:\s*([^\]]+)\]/gi, (m, uri) => `<img src="${uri.trim()}" style="display: block; max-width: 100%; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />`)
+                .replace(/\[video:\s*([^\]]+)\]/gi, (m, uri) => `<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; color: #64748b; font-size: 14px; margin: 15px 0; font-family: sans-serif;">🎥 Vidéo : ${uri.trim().split('/').pop()}</div>`)
+                .replace(/\[audio:\s*([^\]]+)\]/gi, (m, uri) => `<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 18px; color: #64748b; font-size: 14px; margin: 10px 0; font-family: sans-serif; display: flex; align-items: center; gap: 8px;">🎵 Audio : ${uri.trim().split('/').pop()}</div>`);
+
+            // 3. Parse headers
+            processed = processed
+                .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+
+            // 4. Custom Link elements (verses, highlights, footnotes)
+            // Highlight: [content](#highlight:color)
+            processed = processed.replace(/\[([^\]]+)\]\(#highlight:([^\)]+)\)/gi, (m, content, color) => `<mark style="background-color: ${color}; color: #1e293b; padding: 2px 6px; border-radius: 4px; font-weight: 500;">${content}</mark>`);
+            
+            // Verse: [content](#verse:url)
+            processed = processed.replace(/\[([^\]]+)\]\(#verse:([^\)]+)\)/gi, (m, content, url) => `<a href="#" style="color: #3b82f6; text-decoration: none; font-weight: 600; border-bottom: 1px dashed #3b82f6;">${content}</a>`);
+            
+            // Footnote ref: [ref](#footnote-ref:ref)
+            processed = processed.replace(/\[([^\]]+)\]\(#footnote-ref:([^\)]+)\)/gi, (m, ref, val) => `<sup><a href="#footnote-def-${val}" style="color: #3b82f6; text-decoration: none; font-weight: bold; font-size: 10px; margin-left: 2px;">${ref}</a></sup>`);
+            
+            // Footnote def: [content](#footnote-def:ref)
+            processed = processed.replace(/\[([^\]]+)\]\(#footnote-def:([^\)]+)\)/gi, (m, content, ref) => `<div id="footnote-def-${ref}" style="margin-top: 20px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: #64748b; font-style: italic;"><strong style="color: #3b82f6; margin-right: 4px;">${ref}.</strong>${content}</div>`);
+
+            // 5. Parse checklists (⬜ checklist, ✅ ~~checklist~~)
+            processed = processed
+                .replace(/^⬜ (.*?)$/gm, '<li><input type="checkbox" disabled style="margin-right: 8px; transform: scale(1.1);"> $1</li>')
+                .replace(/^✅ ~~(.*?)~~$/gim, '<li><input type="checkbox" checked disabled style="margin-right: 8px; transform: scale(1.1);"> <del style="color: #94a3b8;">$1</del></li>');
+
+            // 6. Parse regular bullet lists (starts with - or *)
+            processed = processed.replace(/^[-\*] (?!<input)(.*?)$/gm, '<li>$1</li>');
+
+            // Group consecutive <li> items into <ul> lists
+            processed = processed.replace(/((?:<li>.*?<\/li>\s*)+)/gs, '<ul style="padding-left: 20px; margin: 10px 0;">$1</ul>');
+
+            // 7. Inline markup (Bold, Italic, Code)
+            processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            processed = processed.replace(/__(.*?)__/g, '<strong>$1</strong>');
+            processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            processed = processed.replace(/_(.*?)_/g, '<em>$1</em>');
+            processed = processed.replace(/`(.*?)`/g, '<code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 14px;">$1</code>');
+
+            // 8. Paragraph formatting for plain text blocks
+            const lines = processed.split('\n');
+            const htmlLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return '';
+                if (trimmed.startsWith('<h') || 
+                    trimmed.startsWith('</h') || 
+                    trimmed.startsWith('<ul') || 
+                    trimmed.startsWith('</ul') || 
+                    trimmed.startsWith('<li') || 
+                    trimmed.startsWith('<div') || 
+                    trimmed.startsWith('</div') || 
+                    trimmed.startsWith('<img') || 
+                    trimmed.startsWith('<blockquote') ||
+                    trimmed.startsWith('</blockquote')) {
+                    return line;
+                }
+                return `<p style="margin: 10px 0; font-size: 16px; line-height: 1.6; color: #334155;">${line}</p>`;
+            });
+            const htmlContent = htmlLines.filter(Boolean).join('\n');
+
+            // Find other attachments that were not printed inline
+            const printedImages = new Set<string>();
+            const inlineImageMatches = [...editingNote.content.matchAll(/\[image:\s*([^\]]+)\]/gi)];
+            inlineImageMatches.forEach(m => printedImages.add(m[1].trim()));
+
+            const otherImagesHtml = editingNote.attachments?.images
+                ?.filter(img => !printedImages.has(img.trim()))
+                ?.map(img => `<img src="${img}" style="display: block; max-width: 100%; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" />`)
+                ?.join('') || '';
 
             const template = `
                 <html>
                     <head>
                         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
                         <style>
-                            body { font-family: -apple-system, system-ui, sans-serif; padding: 40px; color: #1e293b; background: white; }
-                            h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 5px; }
-                            .date { color: #64748b; font-size: 14px; margin-bottom: 30px; font-weight: 500; }
-                            .content { font-size: 16px; line-height: 1.6; }
-                            img { max-width: 100%; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                            body {
+                                font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                                padding: 50px;
+                                color: #1e293b;
+                                background: white;
+                                max-width: 800px;
+                                margin: 0 auto;
+                            }
+                            h1 {
+                                font-size: 28px;
+                                color: #0f172a;
+                                margin-top: 0;
+                                margin-bottom: 8px;
+                                font-weight: 700;
+                            }
+                            h2 {
+                                font-size: 20px;
+                                color: #1e293b;
+                                margin-top: 25px;
+                                margin-bottom: 12px;
+                                border-bottom: 1px solid #f1f5f9;
+                                padding-bottom: 6px;
+                            }
+                            h3 {
+                                font-size: 17px;
+                                color: #334155;
+                                margin-top: 20px;
+                                margin-bottom: 8px;
+                            }
+                            .date {
+                                color: #94a3b8;
+                                font-size: 13px;
+                                margin-bottom: 30px;
+                                text-transform: uppercase;
+                                letter-spacing: 1px;
+                            }
+                            .content {
+                                font-size: 16px;
+                                line-height: 1.7;
+                                color: #334155;
+                            }
+                            p {
+                                margin: 0 0 16px 0;
+                            }
+                            ul {
+                                padding-left: 24px;
+                                margin-bottom: 16px;
+                            }
+                            li {
+                                margin-bottom: 6px;
+                            }
+                            blockquote {
+                                border-left: 4px solid #cbd5e1;
+                                padding-left: 16px;
+                                margin: 20px 0;
+                                color: #64748b;
+                                font-style: italic;
+                            }
+                            img {
+                                max-width: 100%;
+                                border-radius: 16px;
+                                margin-top: 20px;
+                                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+                            }
                         </style>
                     </head>
                     <body>
                         <h1>${editingNote.title || 'Note sans titre'}</h1>
                         <div class="date">${new Date(editingNote.date).toLocaleString('fr-FR')}</div>
                         <div class="content">${htmlContent}</div>
-                        ${editingNote.attachments?.images?.map(img => `<img src="${img}" />`).join('') || ''}
+                        ${otherImagesHtml}
                     </body>
                 </html>
             `;
@@ -602,7 +736,9 @@ export default function Notes() {
             const notesWithBg = await Promise.all(savedNotes.map(async (n) => {
                 const styleStr = await AsyncStorage.getItem(`@note_bg_style_${n.id}`);
                 const bgStyle = styleStr ? JSON.parse(styleStr) : undefined;
-                return { ...n, bgStyle };
+                const textStyleStr = await AsyncStorage.getItem(`@note_text_style_${n.id}`);
+                const textStyle = textStyleStr ? JSON.parse(textStyleStr) : undefined;
+                return { ...n, bgStyle, textStyle };
             }));
 
             setNotes(notesWithBg);
@@ -659,6 +795,7 @@ export default function Notes() {
         if (isEmpty) {
             await deleteNoteFromDb(editingNote.id);
             await AsyncStorage.removeItem(`@note_bg_style_${editingNote.id}`);
+            await AsyncStorage.removeItem(`@note_text_style_${editingNote.id}`);
             setNotes(notes.filter(n => n.id !== editingNote.id));
             return;
         }
@@ -666,6 +803,11 @@ export default function Notes() {
         await saveNote(editingNote);
         if (editingNote.bgStyle) {
             await AsyncStorage.setItem(`@note_bg_style_${editingNote.id}`, JSON.stringify(editingNote.bgStyle));
+        }
+        if (editingNote.textStyle) {
+            await AsyncStorage.setItem(`@note_text_style_${editingNote.id}`, JSON.stringify(editingNote.textStyle));
+        } else {
+            await AsyncStorage.removeItem(`@note_text_style_${editingNote.id}`);
         }
         
         const exists = notes.find(n => n.id === editingNote.id);
@@ -731,6 +873,16 @@ export default function Notes() {
                 setAlertConfig({ visible: true, title: "Code PIN incorrect", message: "Le code saisi est invalide.", type: 'error' });
                 setPinInput("");
             }
+        } else if (lockedNoteToDelete) {
+            if (pinInput === pinCode) {
+                const note = lockedNoteToDelete;
+                setLockedNoteToDelete(null);
+                setIsPinCodeModalVisible(false);
+                performDeleteNote(note);
+            } else {
+                setAlertConfig({ visible: true, title: "Code PIN incorrect", message: "Le code saisi est invalide.", type: 'error' });
+                setPinInput("");
+            }
         }
     };
 
@@ -764,10 +916,8 @@ export default function Notes() {
         }
     };
 
-    const deleteNote = (id: string) => {
-        const note = notes.find(n => n.id === id);
-        if (!note) return;
-
+    const performDeleteNote = (note: Note) => {
+        const id = note.id;
         if (note.isTrash || selectedFolder === 'trash') {
             setAlertConfig({
                 visible: true,
@@ -777,6 +927,7 @@ export default function Notes() {
                 onConfirm: async () => {
                     await deleteNoteFromDb(id);
                     await AsyncStorage.removeItem(`@note_bg_style_${id}`);
+                    await AsyncStorage.removeItem(`@note_text_style_${id}`);
                     setNotes(notes.filter(n => n.id !== id));
                 }
             });
@@ -793,6 +944,20 @@ export default function Notes() {
                 }
             });
         }
+    };
+
+    const deleteNote = (id: string) => {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+
+        if (note.isLocked && pinCode) {
+            setLockedNoteToDelete(note);
+            setPinInput("");
+            setIsPinCodeModalVisible(true);
+            return;
+        }
+
+        performDeleteNote(note);
     };
 
     const addNote = () => {
@@ -1111,6 +1276,9 @@ export default function Notes() {
                         <Text className="text-4xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_journal')}</Text>
                     </View>
                     <View className="flex-row items-center gap-3">
+                        <TouchableOpacity onPress={() => { setChangePinOldInput(""); setChangePinNewInput(""); setIsChangePinModalVisible(true); }} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center">
+                            <Lock size={18} color={pinCode ? "#f59e0b" : "#8b949e"} />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => setSearch(prev => { if (prev === '__SEARCH__') return ''; return '__SEARCH__'; })} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center">
                             <Search size={20} color="#8b949e" />
                         </TouchableOpacity>
@@ -1372,7 +1540,7 @@ export default function Notes() {
                             </View>
                         )}
                         <ViewShot ref={noteViewShotRef} style={{ flex: 1, backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }} options={{ format: "jpg", quality: 0.95 }}>
-                            <ScrollView ref={scrollViewRef} className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                            <ScrollView ref={scrollViewRef} className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} scrollEnabled={laserMode === 'off'}>
                                 {editingNote && (
                                     <View className="relative flex-1" style={{ minHeight: '100%' }}>
                                         <PaperBackground pattern={editingNote.bgStyle?.pattern || 'blank'} color={editingNote.bgStyle?.color || '#0d1117'} />
@@ -1406,7 +1574,7 @@ export default function Notes() {
                                         )}
                                         {editingNote.type === 'draw' && editingNote.attachments?.images?.length ? (
                                             <View className="mb-10 z-10">
-                                                <TouchableOpacity onPress={() => setSelectedImage(editingNote.attachments!.images![editingNote.attachments!.images!.length - 1])}><RNImage source={{ uri: editingNote.attachments.images[editingNote.attachments.images.length - 1] }} className="w-full aspect-square rounded-[40px] bg-white" resizeMode="contain" /></TouchableOpacity>
+                                                <TouchableOpacity onPress={() => setSelectedImage(editingNote.attachments!.images![editingNote.attachments!.images!.length - 1])}><RNImage source={{ uri: editingNote.attachments.images[editingNote.attachments.images.length - 1] }} className="w-full aspect-square rounded-[40px]" resizeMode="cover" /></TouchableOpacity>
                                                 <TouchableOpacity onPress={() => setShowDrawModal(true)} className="absolute bottom-4 right-4 bg-purple-600 w-12 h-12 rounded-full items-center justify-center shadow-lg"><Palette size={20} color="white" /></TouchableOpacity>
                                             </View>
                                         ) : null}
@@ -1420,6 +1588,9 @@ export default function Notes() {
                                     </View>
                                 )}
                             </ScrollView>
+                            {isPreviewMode && laserMode !== 'off' && (
+                                <LaserPointerOverlay type={laserMode} />
+                            )}
                         </ViewShot>
                         {!isPreviewMode && editingNote && (
                             <View className={cn("px-4 py-2 flex-row justify-between items-center border-t border-white/5", isDark ? "bg-[#161b22]" : "bg-[#f1f5f9]")}>
@@ -1458,6 +1629,23 @@ export default function Notes() {
                                     <View className="w-[1px] h-8 bg-white/10 mx-2.5 self-center" />
                                     <TouchableOpacity onPress={() => setShowHighlighter(!showHighlighter)} className={cn("w-11 h-11 rounded-xl items-center justify-center", showHighlighter ? "bg-primary/20" : "bg-white/5")}><Highlighter size={18} color={showHighlighter ? "#60a5fa" : "#8b949e"} /></TouchableOpacity>
                                 </ScrollView>
+                            </SafeAreaView>
+                        )}
+                        {isPreviewMode && editingNote && (
+                            <SafeAreaView edges={['bottom']} style={{ zIndex: 1010 }} className="absolute bottom-6 self-center bg-[#1c2128]/90 px-4 py-3 rounded-full border border-white/10 flex-row gap-4 items-center shadow-xl">
+                                <TouchableOpacity onPress={() => setLaserMode('off')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'off' ? "bg-white/20" : "bg-transparent")}>
+                                    <X size={20} color={laserMode === 'off' ? "white" : "#94a3b8"} />
+                                </TouchableOpacity>
+                                <View className="w-[1px] h-6 bg-white/10" />
+                                <TouchableOpacity onPress={() => setLaserMode('dot')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'dot' ? "bg-red-500/20" : "bg-transparent")}>
+                                    <Pointer size={20} color={laserMode === 'dot' ? "#ef4444" : "#94a3b8"} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setLaserMode('trail_red')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_red' ? "bg-red-500/20" : "bg-transparent")}>
+                                    <Activity size={20} color={laserMode === 'trail_red' ? "#ef4444" : "#94a3b8"} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setLaserMode('trail_highlight')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_highlight' ? "bg-yellow-400/20" : "bg-transparent")}>
+                                    <Zap size={20} color={laserMode === 'trail_highlight' ? "#facc15" : "#94a3b8"} />
+                                </TouchableOpacity>
                             </SafeAreaView>
                         )}
                     </KeyboardAvoidingView>
@@ -1832,7 +2020,7 @@ export default function Notes() {
                             ))}
                             <View className="flex-row justify-between gap-4">
                                 <TouchableOpacity 
-                                    onPress={() => { setIsPinCodeModalVisible(false); setLockedNoteToUnlock(null); }}
+                                    onPress={() => { setIsPinCodeModalVisible(false); setLockedNoteToUnlock(null); setLockedNoteToDelete(null); }}
                                     className="flex-1 h-16 rounded-2xl items-center justify-center"
                                 >
                                     <Text className="text-slate-500 font-bold text-sm">Annuler</Text>
@@ -1862,6 +2050,76 @@ export default function Notes() {
                         )}
                     </View>
                 </View>
+            </Modal>
+
+            {/* Change PIN Modal */}
+            <Modal visible={isChangePinModalVisible} transparent animationType="fade" statusBarTranslucent={true}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+                    <View className="flex-1 bg-black/60 justify-center px-6">
+                        <View className="bg-[#1c2128] border border-white/10 rounded-[32px] p-6 shadow-2xl">
+                            <Text className="text-white font-bold text-lg mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>Sécurité du Journal</Text>
+                            <Text className="text-slate-400 text-xs mb-6">Ce code unique protège vos notes verrouillées.</Text>
+                            
+                            {pinCode ? (
+                                <View className="mb-4">
+                                    <Text className="text-slate-400 text-xs mb-2">Ancien code PIN :</Text>
+                                    <TextInput
+                                        className="bg-white/5 border border-white/10 p-4 rounded-2xl text-white font-bold tracking-widest text-center text-xl"
+                                        value={changePinOldInput}
+                                        onChangeText={setChangePinOldInput}
+                                        placeholder="Ancien PIN"
+                                        placeholderTextColor="#475569"
+                                        keyboardType="numeric"
+                                        secureTextEntry
+                                        maxLength={8}
+                                    />
+                                </View>
+                            ) : null}
+
+                            <View className="mb-6">
+                                <Text className="text-slate-400 text-xs mb-2">Nouveau code PIN :</Text>
+                                <TextInput
+                                    className="bg-white/5 border border-white/10 p-4 rounded-2xl text-white font-bold tracking-widest text-center text-xl"
+                                    value={changePinNewInput}
+                                    onChangeText={setChangePinNewInput}
+                                    placeholder="Nouveau PIN"
+                                    placeholderTextColor="#475569"
+                                    keyboardType="numeric"
+                                    secureTextEntry
+                                    maxLength={8}
+                                />
+                            </View>
+
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity 
+                                    onPress={() => setIsChangePinModalVisible(false)} 
+                                    className="flex-1 p-4 rounded-2xl border border-white/10 items-center justify-center"
+                                >
+                                    <Text className="text-slate-400 font-medium">{t('cancel') || 'Annuler'}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={async () => {
+                                        if (pinCode && changePinOldInput !== pinCode) {
+                                            setAlertConfig({ visible: true, title: "Erreur", message: "L'ancien code PIN est incorrect.", type: 'error' });
+                                            return;
+                                        }
+                                        if (changePinNewInput.length < 4) {
+                                            setAlertConfig({ visible: true, title: "Code trop court", message: "Le code PIN doit comporter au moins 4 chiffres.", type: 'error' });
+                                            return;
+                                        }
+                                        setPinCode(changePinNewInput);
+                                        await AsyncStorage.setItem('adventools_note_lock_pin', changePinNewInput);
+                                        setIsChangePinModalVisible(false);
+                                        setAlertConfig({ visible: true, title: "Code PIN modifié", message: "Le code PIN a été mis à jour avec succès.", type: 'success' });
+                                    }} 
+                                    className="flex-1 p-4 rounded-2xl bg-amber-500 items-center justify-center"
+                                >
+                                    <Text className="text-white font-bold">{t('save') || 'Enregistrer'}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
