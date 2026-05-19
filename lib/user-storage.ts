@@ -90,6 +90,19 @@ export async function initUserStorage() {
     CREATE INDEX IF NOT EXISTS idx_bible_markup_query ON bible_markup(type, lang, book_id, chapter);
   `);
   
+  try {
+    await db.execAsync("ALTER TABLE notes ADD COLUMN is_pinned INTEGER DEFAULT 0;");
+  } catch (_) {}
+  try {
+    await db.execAsync("ALTER TABLE notes ADD COLUMN is_locked INTEGER DEFAULT 0;");
+  } catch (_) {}
+  try {
+    await db.execAsync("ALTER TABLE notes ADD COLUMN is_trash INTEGER DEFAULT 0;");
+  } catch (_) {}
+  try {
+    await db.execAsync("ALTER TABLE notes ADD COLUMN deleted_at INTEGER;");
+  } catch (_) {}
+
   return db;
 }
 
@@ -153,6 +166,10 @@ export async function getAllNotes() {
             ...note,
             content,
             folder: note.folder_id, // US-22: Map DB column to property
+            isPinned: !!note.is_pinned,
+            isLocked: !!note.is_locked,
+            isTrash: !!note.is_trash,
+            deletedAt: note.deleted_at || undefined,
             attachments: {
                 images: atts.filter((a: any) => a.type === 'image').map((a: any) => a.uri),
                 videos: atts.filter((a: any) => a.type === 'video').map((a: any) => a.uri),
@@ -171,9 +188,14 @@ export async function saveNote(note: any) {
 
     const encryptedContent = note.content ? encryptData(note.content) : '';
 
+    const isPinnedVal = note.isPinned ? 1 : 0;
+    const isLockedVal = note.isLocked ? 1 : 0;
+    const isTrashVal = note.isTrash ? 1 : 0;
+    const deletedAtVal = note.deletedAt || null;
+
     await database.runAsync(
-        'INSERT OR REPLACE INTO notes (id, type, title, content, color, folder_id, date) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [noteId, noteType, note.title || '', encryptedContent, note.color || null, note.folder || null, noteDate]
+        'INSERT OR REPLACE INTO notes (id, type, title, content, color, folder_id, date, is_pinned, is_locked, is_trash, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [noteId, noteType, note.title || '', encryptedContent, note.color || null, note.folder || null, noteDate, isPinnedVal, isLockedVal, isTrashVal, deletedAtVal]
     );
     
     // Update attachments

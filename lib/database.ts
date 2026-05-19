@@ -166,7 +166,7 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
         try {
           db = await SQLite.openDatabaseAsync(openPath);
           // Verify database integrity and enable WAL mode to allow concurrent operations with background widget tasks
-          await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA user_version;");
+          await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000; PRAGMA user_version;");
           break;
         } catch (e: any) {
           retries--;

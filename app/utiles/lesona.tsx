@@ -4,11 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { checkMobileDataWarning } from '@/lib/data-saver';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { Audio } from 'expo-av';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   ArrowLeft,
   BookOpen,
+  Check,
   CheckCircle,
   ChevronRight,
   Download,
@@ -17,6 +20,7 @@ import {
   Languages,
   RefreshCw,
   Share,
+  Square,
   Trash2,
   X,
   PlayCircle,
@@ -41,7 +45,7 @@ import { getAllNotes, saveNote } from '@/lib/user-storage';
 import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange } from '@/lib/utils';
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -225,12 +229,51 @@ export default function LesonaSekolySabata() {
 
   const clearStorage = async () => {
     try {
-      await FileSystem.deleteAsync(LESSONS_DIR, { idempotent: true });
-      await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true });
-      setDownloadedQuarterlies([]);
-      setStorageInfo({ totalSize: 0, count: 0 });
+      const protectedFiles = new Set<string>();
+      
+      // 1. Collect all protected files from downloaded quarterlies
+      for (const downloadId of downloadedQuarterlies) {
+        const jsonPath = `${LESSONS_DIR}${downloadId}.json`;
+        protectedFiles.add(jsonPath);
+        
+        try {
+          const content = await FileSystem.readAsStringAsync(jsonPath);
+          // Simple regex to find all local FileSystem URIs inside the JSON
+          const matches = content.match(/file:\/\/[^"]+ss_offline\/[^"\\]+/g);
+          if (matches) {
+            matches.forEach(m => protectedFiles.add(m));
+          }
+        } catch (e) {
+          // File might not exist or error reading
+        }
+      }
+      
+      // 2. Iterate over directory and delete non-protected files
+      const files = await FileSystem.readDirectoryAsync(LESSONS_DIR);
+      let deletedCount = 0;
+      for (const f of files) {
+        const fullPath = `${LESSONS_DIR}${f}`;
+        if (!protectedFiles.has(fullPath)) {
+          await FileSystem.deleteAsync(fullPath, { idempotent: true });
+          deletedCount++;
+        }
+      }
+      
+      // 3. Re-calculate remaining storage size
+      const newFiles = await FileSystem.readDirectoryAsync(LESSONS_DIR);
+      let total = 0;
+      for (const f of newFiles) {
+        if (f.endsWith('.json') && f !== 'storage_info.json') {
+           const info = await FileSystem.getInfoAsync(LESSONS_DIR + f);
+           if (info.exists) {
+             total += (info as any).size || 0;
+           }
+        }
+      }
+      
+      setStorageInfo({ totalSize: total, count: downloadedQuarterlies.length });
       setStorageModalVisible(false);
-      showToast("Cache vidé avec succès", 'success');
+      showToast(`${deletedCount} fichiers temporaires purgés`, 'success');
     } catch (e) {
       console.error(e);
       showToast(t('error'), 'error');
@@ -305,6 +348,67 @@ export default function LesonaSekolySabata() {
   const [quickNoteModalVisible, setQuickNoteModalVisible] = useState(false);
   const [editingQuickNote, setEditingQuickNote] = useState<any>(null);
 
+  // Quick Note Voice Recording
+  const [quickRecording, setQuickRecording] = useState<any>(null);
+  const [isQuickRecording, setIsQuickRecording] = useState(false);
+  const [quickRecordDuration, setQuickRecordDuration] = useState(0);
+  const quickRecordIntervalRef = useRef<any>(null);
+  const [showQuickVoiceModal, setShowQuickVoiceModal] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (quickRecordIntervalRef.current) {
+        clearInterval(quickRecordIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startQuickRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Microphone bloqué", "L'autorisation du micro est nécessaire pour enregistrer.");
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      if (quickRecording) { 
+        try { await quickRecording.stopAndUnloadAsync(); } catch (e) { } 
+      }
+      const { recording: newRecording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setQuickRecording(newRecording);
+      setIsQuickRecording(true);
+      setQuickRecordDuration(0);
+      if (quickRecordIntervalRef.current) clearInterval(quickRecordIntervalRef.current);
+      quickRecordIntervalRef.current = setInterval(() => setQuickRecordDuration(prev => prev + 1), 1000);
+    } catch (err) {
+      console.error("Start Quick Recording error:", err);
+      setIsQuickRecording(false);
+      setQuickRecording(null);
+    }
+  };
+
+  const stopQuickRecording = async (save: boolean = true) => {
+    if (!quickRecording) return;
+    try {
+      if (quickRecordIntervalRef.current) clearInterval(quickRecordIntervalRef.current);
+      setIsQuickRecording(false);
+      await (quickRecording as Audio.Recording).stopAndUnloadAsync();
+      const uri = (quickRecording as Audio.Recording).getURI();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      if (save && uri && editingQuickNote) {
+        const pUri = await saveFilePermanently(uri, 'voice');
+        const tag = `[audio: ${pUri}]`;
+        insertMarkdownToQuickNote(tag, '');
+      }
+    } catch (e) { 
+      console.error("Stop Quick Recording Error", e); 
+    } finally {
+      setQuickRecording(null); 
+      setQuickRecordDuration(0); 
+      setShowQuickVoiceModal(false);
+    }
+  };
+
   const openNoteForVerse = async (title: string) => {
     try {
       // Look for an existing note in the global journal for this verse/lesson
@@ -371,22 +475,36 @@ export default function LesonaSekolySabata() {
 
   const pickAndInsertMediaToQuickNote = async (type: 'image' | 'video' | 'audio') => {
     try {
-      let options: any = {
-        mediaTypes: type === 'image' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-        allowsEditing: type === 'image',
-        quality: 0.8,
-      };
+      if (type === 'audio') {
+        const r = await DocumentPicker.getDocumentAsync({
+          type: 'audio/*',
+          copyToCacheDirectory: true
+        });
 
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') return;
+        if (!r.canceled && editingQuickNote && r.assets && r.assets.length > 0) {
+          const asset = r.assets[0];
+          const permanentUri = await saveFilePermanently(asset.uri, 'voice');
+          const tag = `[audio: ${permanentUri}]`;
+          insertMarkdownToQuickNote(tag, '');
+        }
+      } else {
+        let options: any = {
+          mediaTypes: type === 'image' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
+          allowsEditing: type === 'image',
+          quality: 0.8,
+        };
 
-      const r = await ImagePicker.launchImageLibraryAsync(options);
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') return;
 
-      if (!r.canceled && editingQuickNote) {
-        const asset = r.assets[0];
-        const permanentUri = await saveFilePermanently(asset.uri, type === 'audio' ? 'voice' : (type === 'video' ? 'video' : 'image'));
-        const tag = `[${type}: ${permanentUri}]`;
-        insertMarkdownToQuickNote(tag, '');
+        const r = await ImagePicker.launchImageLibraryAsync(options);
+
+        if (!r.canceled && editingQuickNote) {
+          const asset = r.assets[0];
+          const permanentUri = await saveFilePermanently(asset.uri, type === 'video' ? 'video' : 'image');
+          const tag = `[${type}: ${permanentUri}]`;
+          insertMarkdownToQuickNote(tag, '');
+        }
       }
     } catch (e) {
       console.error(e);
@@ -2154,16 +2272,20 @@ export default function LesonaSekolySabata() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
                     <TouchableOpacity onPress={() => insertMarkdownToQuickNote('**', '**')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Bold size={18} color="#8b949e" /></TouchableOpacity>
                     <TouchableOpacity onPress={() => insertMarkdownToQuickNote('*', '*')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Italic size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => insertMarkdownToQuickNote('# ', '')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Heading size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => insertMarkdownToQuickNote('- ', '')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><List size={18} color="#8b949e" /></TouchableOpacity>
                     <TouchableOpacity onPress={() => {
                         const refNum = (editingQuickNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1;
                         insertMarkdownToQuickNote(`[^${refNum}]`, '');
                         setEditingQuickNote({ ...editingQuickNote, content: editingQuickNote.content + `\n\n[^${refNum}]: ` });
                     }} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Footprints size={18} color="#8b949e" /></TouchableOpacity>
                     
-                    <View className="w-[1px] h-8 bg-white/10 mx-2" />
+                    <View className="w-[1px] h-8 bg-white/10 mx-2 self-center" />
                     
                     <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('image')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Camera size={18} color="#8b949e" /></TouchableOpacity>
                     <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('video')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><VideoIcon size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => pickAndInsertMediaToQuickNote('audio')} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Music size={18} color="#8b949e" /></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setShowQuickVoiceModal(true)} className="w-12 h-12 bg-white/5 rounded-2xl items-center justify-center mr-2"><Mic size={18} color="#8b949e" /></TouchableOpacity>
                   </ScrollView>
                 </View>
               </ScrollView>
@@ -2177,6 +2299,24 @@ export default function LesonaSekolySabata() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Quick Note Voice Recording Modal */}
+      <Modal visible={showQuickVoiceModal} transparent animationType="slide">
+          <SafeAreaView className="flex-1 bg-black/50 justify-end">
+              <View className="bg-[#1c2128] m-4 rounded-[40px] p-8 border border-white/10 items-center shadow-2xl">
+                  <Text className="text-white/40 font-bold text-xs uppercase tracking-[4px] mb-8">Enregistreur Vocal d'Étude</Text>
+                  <View className="items-center mb-10">
+                      <Text className="text-5xl font-mono text-white mb-2">{Math.floor(quickRecordDuration / 60)}:{String(quickRecordDuration % 60).padStart(2, '0')}</Text>
+                      <Text className="text-red-500 animate-pulse font-bold text-xs">{isQuickRecording ? "ENREGISTREMENT EN COURS" : "PRÊT"}</Text>
+                  </View>
+                  <View className="flex-row gap-6 items-center">
+                      <TouchableOpacity onPress={() => isQuickRecording ? stopQuickRecording(false) : setShowQuickVoiceModal(false)} className="w-16 h-16 rounded-full bg-white/5 items-center justify-center"><X size={24} color="#94a3b8" /></TouchableOpacity>
+                      <TouchableOpacity onPress={isQuickRecording ? () => stopQuickRecording(true) : startQuickRecording} className={`w-24 h-24 rounded-full items-center justify-center ${isQuickRecording ? "bg-red-500" : "bg-primary"}`}>{isQuickRecording ? <Square size={32} color="white" fill="white" /> : <Mic size={40} color="white" />}</TouchableOpacity>
+                      <TouchableOpacity onPress={() => isQuickRecording ? stopQuickRecording(true) : null} disabled={!isQuickRecording} className={`w-16 h-16 rounded-full bg-white/5 items-center justify-center ${!isQuickRecording ? "opacity-20" : ""}`}><Check size={24} color={isQuickRecording ? "#3b82f6" : "#94a3b8"} /></TouchableOpacity>
+                  </View>
+              </View>
+          </SafeAreaView>
       </Modal>
       {/* Storage Management Modal */}
       <Modal visible={storageModalVisible} transparent animationType="slide">
@@ -2222,9 +2362,9 @@ export default function LesonaSekolySabata() {
                 onPress={() => {
                   setAlertConfig({
                     visible: true,
-                    title: "Tout supprimer ?",
-                    message: "Ceci effacera toutes les leçons téléchargées. Vous devrez les retélécharger pour les consulter hors-ligne.",
-                    type: 'error',
+                    title: "Nettoyer le cache ?",
+                    message: "Ceci effacera tous les fichiers temporaires de lecture pour libérer de l'espace. Vos leçons explicitement téléchargées hors-ligne ne seront pas supprimées.",
+                    type: 'info',
                     onConfirm: clearStorage
                   });
                 }}

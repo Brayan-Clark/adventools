@@ -11,14 +11,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Mic, Music, Palette, Pause, Play, Plus, Search, Share2, Square, StickyNote, Trash2, Undo2, Video, X } from 'lucide-react-native';
+import * as Print from 'expo-print';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Lock, Mic, Music, Palette, Paperclip, Pause, Play, Plus, Pin, Printer, Redo2, Search, Share2, Square, StickyNote, Trash2, Undo2, Unlock, Video, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sharing from 'expo-sharing';
 
 // --- STYLES & CONSTANTS ---
 
@@ -29,6 +32,35 @@ const HIGHLIGHT_COLORS = [
     { id: 'red', bg: 'rgba(248, 113, 113, 0.3)', text: '#f87171', border: 'rgba(248, 113, 113, 0.4)' },
     { id: 'purple', bg: 'rgba(167, 139, 250, 0.3)', text: '#a78bfa', border: 'rgba(167, 139, 250, 0.4)' },
     { id: 'cyan', bg: 'rgba(34, 211, 238, 0.3)', text: '#22d3ee', border: 'rgba(34, 211, 238, 0.4)' },
+];
+
+const TEXT_FONTS = [
+    { id: 'Lexend_400Regular', label: 'Lexend', preview: 'Aa' },
+    { id: 'Inter_400Regular', label: 'Inter', preview: 'Aa' },
+    { id: 'Poppins_400Regular', label: 'Poppins', preview: 'Aa' },
+    { id: 'OpenSans', label: 'Open Sans', preview: 'Aa' },
+    { id: 'Lora_400Regular', label: 'Lora', preview: 'Aa' },
+    { id: 'Serif', label: 'Serif', preview: 'Aa' },
+    { id: 'Alice', label: 'Alice', preview: 'Aa' },
+    { id: 'Comfortaa', label: 'Comfortaa', preview: 'Aa' },
+    { id: 'Monospace', label: 'Mono', preview: 'Aa' },
+    { id: 'Comic', label: 'Comic', preview: 'Aa' },
+    { id: 'Allura', label: 'Allura', preview: 'Aa' },
+    { id: 'Rosemary', label: 'Rosemary', preview: 'Aa' },
+];
+
+const TEXT_SIZES = [
+    { id: 16, label: 'Petit' },
+    { id: 18, label: 'Normal' },
+    { id: 20, label: 'Grand' },
+    { id: 24, label: 'Énorme' }
+];
+
+const TEXT_ALIGNS = [
+    { id: 'left', label: 'Gauche' },
+    { id: 'center', label: 'Centré' },
+    { id: 'right', label: 'Droite' },
+    { id: 'justify', label: 'Justifié' }
 ];
 
 const NOTE_COLORS = [
@@ -63,35 +95,67 @@ const NOTE_TEMPLATES = [
     {
         id: 'blank',
         title: 'Note Vierge',
-        icon: 'StickyNote',
-        description: 'Une page blanche pour vos pensées spontanées.',
+        icon: '\uD83D\uDCDD',
+        description: 'Une page blanche pour vos pens\u00e9es spontan\u00e9es.',
         content: '',
         color: '#1e293b'
     },
     {
         id: 'bible_study',
-        title: 'Étude Biblique',
-        icon: 'BookOpen',
-        description: 'Structure SOAP pour approfondir les Écritures.',
-        content: '# 📖 Étude Biblique\n\n**Verset Clé :** \n\n## 📝 Observation\n*Qu\'est-ce que ce passage dit ?*\n\n\n## 💡 Application\n*Comment puis-je appliquer cela aujourd\'hui ?*\n\n\n## 🙏 Prière\n*Ma réponse à Dieu...*\n',
+        title: '\u00c9tude Biblique (SOAP)',
+        icon: '\uD83D\uDCDA',
+        description: 'M\u00e9thode SOAP pour approfondir les \u00c9critures.',
+        content: `# \uD83D\uDCDA \u00c9tude Biblique\n\n**Passage :** \n**Version :**  \n**Date :** ${new Date().toLocaleDateString('fr-FR')}\n\n---\n\n## S — Scripture (\u00c9criture)\n> *Copiez ici le verset ou le passage qui vous a touch\u00e9...*\n\n\n## O — Observation\n*Qu\'est-ce que ce passage dit exactement ? Qui ? Quoi ? O\u00f9 ? Quand ?*\n\n\n## A — Application\n*Comment ce passage s\'applique-t-il \u00e0 ma vie aujourd\'hui ?*\n\n\n## P — Pray\u00e8re\n*Ma r\u00e9ponse \u00e0 Dieu en lien avec ce que j\'ai lu...*\n\n---\n> "Votre parole est une lampe \u00e0 mes pieds, et une lumi\u00e8re sur mon sentier." — Psaume 119:105\n`,
         color: '#1e3a8a'
     },
     {
         id: 'sermon',
-        title: 'Prédication',
-        icon: 'Mic',
-        description: 'Prenez des notes structurées pendant le culte.',
-        content: '# ⛪ Notes de Prédication\n**Date :** ' + new Date().toLocaleDateString() + '\n**Prédicateur :** \n**Thème :** \n\n## 🔑 Points Clés\n- \n\n## 📜 Versets Cités\n- \n\n## ✨ Réflexion Personnelle\n\n',
+        title: 'Notes de Pr\u00e9dication',
+        icon: '\u26EA',
+        description: 'Prenez des notes structur\u00e9es pendant le culte.',
+        content: `# \u26EA Notes de Pr\u00e9dication\n\n**Date :** ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n**Pr\u00e9dicateur :**\n**Th\u00e8me principal :**\n**Texte de base :**\n\n---\n\n## \uD83D\uDD11 Introduction\n\n\n## \uD83D\uDCD6 Points Principaux\n\n### 1.\n\n### 2.\n\n### 3.\n\n## \uD83D\uDCDC Versets Cit\u00e9s\n- \n- \n\n## \u2728 Conclusion & Appel\n\n\n## \uD83C\uDF31 Application Personnelle\n*Ce que je dois mettre en pratique cette semaine :*\n\n`,
         color: '#4c1d95'
     },
     {
         id: 'journal',
-        title: 'Réflexion du Jour',
-        icon: 'Footprints',
+        title: 'Journal Spirituel',
+        icon: '\u2600\uFE0F',
         description: 'Enregistrez votre marche avec Dieu quotidiennement.',
-        content: '# ☀️ Ma Journée avec le Seigneur\n\n## 🙌 Gratitude\n*Aujourd\'hui, je suis reconnaissant pour :*\n\n\n## 💪 Défis & Victoires\n\n\n## 🎯 Engagement\n*Demain, je souhaite...*\n',
+        content: `# \u2600\uFE0F Journal du ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}\n\n## \uD83D\uDE4C Gratitude\n*Aujourd\'hui, je suis reconnaissant pour :*\n1. \n2. \n3. \n\n## \uD83D\uDCD6 Lecture du Jour\n**Passage :**\n*Ce qui m\'a touch\u00e9 :*\n\n\n## \uD83D\uDE4F Pri\u00e8re du Matin\n\n\n## \uD83D\uDCAA D\u00e9fis & Victoires\n*Ce que j\'ai v\u00e9cu aujourd\'hui :*\n\n\n## \uD83C\uDFAF Engagement de Demain\n*Demain, par la gr\u00e2ce de Dieu, je veux...\n\n`,
         color: '#064e3b'
-    }
+    },
+    {
+        id: 'prayer',
+        title: 'Journal de Pri\u00e8re',
+        icon: '\uD83D\uDE4F',
+        description: 'Suivez vos demandes et vos r\u00e9ponses de Dieu.',
+        content: `# \uD83D\uDE4F Journal de Pri\u00e8re — ${new Date().toLocaleDateString('fr-FR')}\n\n## \uD83D\uDCCB Demandes\n| Sujet | Date | Statut |\n|---|---|---|\n| | ${new Date().toLocaleDateString('fr-FR')} | En attente |\n| | | |\n\n## \u2705 R\u00e9ponses Re\u00e7ues\n*Les fid\u00e9lit\u00e9s que j\'ai vues :*\n\n\n## \uD83D\uDC97 Intercession\n*Je prie pour :*\n- \n- \n\n## \uD83E\uDD1D Ma Confiance\n> "Ne vous inqui\u00e9tez de rien; mais en toute chose faites connaitre vos besoins \u00e0 Dieu." — Phil 4:6\n\n`,
+        color: '#7c3aed'
+    },
+    {
+        id: 'sabbath',
+        title: 'Pr\u00e9paration du Sabbat',
+        icon: '\u2728',
+        description: 'Pr\u00e9parez votre c\u0153ur et votre maison pour le Sabbat.',
+        content: `# \u2728 Pr\u00e9paration du Sabbat\n\n**Date :** Vendredi ${new Date().toLocaleDateString('fr-FR')}\n**Coucher du soleil :**\n\n---\n\n## \uD83C\uDFE0 Pr\u00e9paration Pratique\n- [ ] M\u00e9nage et maison pr\u00eate\n- [ ] Rep\u00e0s pr\u00e9par\u00e9s\n- [ ] V\u00eatements sortis\n- [ ] \u00c9tude de la le\u00e7on termin\u00e9e\n\n## \uD83D\uDCDA \u00c9tude de la Le\u00e7on\n**Le\u00e7on N\u00b0 :** \n**Th\u00e8me :**\n*Mes r\u00e9flexions :*\n\n\n## \uD83D\uDE4F Pr\u00e8re d\'Entr\u00e9e dans le Sabbat\n\n\n## \uD83C\uDF1F Ce Que J\'Attends de Ce Sabbat\n\n`,
+        color: '#b45309'
+    },
+    {
+        id: 'evangelism',
+        title: 'Rapport d\'\u00c9vang\u00e9lisation',
+        icon: '\uD83C\uDF0D',
+        description: 'Documentez vos contacts et visites missionnaires.',
+        content: `# \uD83C\uDF0D Rapport d\'\u00c9vang\u00e9lisation\n\n**Date :** ${new Date().toLocaleDateString('fr-FR')}\n**Zone / Quartier :**\n\n---\n\n## \uD83D\uDC65 Contacts Rencontr\u00e9s\n| Nom | Adresse | Besoin | Suivi |\n|---|---|---|---|\n| | | | |\n| | | | |\n\n## \uD83D\uDCDA Litt\u00e9rature Distribu\u00e9e\n- \n\n## \uD83D\uDE4F Pri\u00e8res Partag\u00e9es\n- \n\n## \uD83D\uDCCB Prochaines \u00c9tapes\n- [ ] \n- [ ] \n\n## \uD83D\uDCA1 R\u00e9flexion\n*Ce que Dieu m\'a enseign\u00e9 aujourd\'hui :*\n\n`,
+        color: '#065f46'
+    },
+    {
+        id: 'meeting',
+        title: 'Notes de R\u00e9union',
+        icon: '\uD83D\uDCC5',
+        description: 'Comptes-rendus pour comit\u00e9s et r\u00e9unions d\'\u00e9glise.',
+        content: `# \uD83D\uDCC5 Notes de R\u00e9union\n\n**Titre :**\n**Date :** ${new Date().toLocaleDateString('fr-FR')}\n**Lieu :**\n**Pr\u00e9sid\u00e9 par :**\n**Participants :**\n\n---\n\n## \uD83D\uDCCB Ordre du Jour\n1. \n2. \n3. \n\n## \uD83D\uDDE3\uFE0F D\u00e9lances & D\u00e9cisions\n| N\u00b0 | Sujet | D\u00e9cision | Responsable | D\u00e9lai |\n|---|---|---|---|---|\n| 1 | | | | |\n\n## \uD83D\uDCCC Points \u00e0 Suivre\n- [ ] \n\n## \uD83D\uDDD3\uFE0F Prochaine R\u00e9union\n**Date :**\n**Ordre du jour pr\u00e9vu :**\n\n`,
+        color: '#1e293b'
+    },
 ];
 
 // Helper to convert HSV to HEX (simplified)
@@ -118,7 +182,137 @@ interface Note {
         videos?: string[];
         voice?: { uri: string, duration?: number }[];
     };
+    bgStyle?: {
+        color: string;
+        pattern: 'blank' | 'ruled' | 'grid' | 'dotted';
+    };
+    textStyle?: {
+        fontFamily?: string;
+        fontSize?: number;
+        textAlign?: 'left' | 'center' | 'right' | 'justify';
+    };
+    isPinned?: boolean;
+    isLocked?: boolean;
+    isTrash?: boolean;
+    deletedAt?: number;
 }
+
+const PAPER_PATTERNS = [
+    { id: 'blank', label: 'Vierge', icon: 'StickyNote' },
+    { id: 'ruled', label: 'Ligné', icon: 'List' },
+    { id: 'grid', label: 'Quadrillé', icon: 'LayoutGrid' },
+    { id: 'dotted', label: 'Points', icon: 'Heading' }
+];
+
+const PAPER_COLORS = [
+    { label: 'Sombre Classique', value: '#0d1117', isDark: true },
+    { label: 'Slate Ardoise', value: '#1e293b', isDark: true },
+    { label: 'Émeraude Profond', value: '#042f24', isDark: true },
+    { label: 'Bleu Royal', value: '#0f172a', isDark: true },
+    { label: 'Papier Sepia', value: '#fcf8eb', isDark: false },
+    { label: 'Papier Ivoire', value: '#fcfaf2', isDark: false },
+    { label: 'Nuage Clair', value: '#f8fafc', isDark: false },
+];
+
+const isColorDark = (hexColor?: string) => {
+    if (!hexColor) return true;
+    const c = hexColor.substring(1);
+    if (c.length === 3) {
+        const r = parseInt(c[0] + c[0], 16);
+        const g = parseInt(c[1] + c[1], 16);
+        const b = parseInt(c[2] + c[2], 16);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
+    }
+    const rgb = parseInt(c, 16);
+    if (isNaN(rgb)) return true;
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = (rgb >> 0) & 0xff;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
+};
+
+const PaperBackground = ({ pattern, color }: { pattern: 'blank' | 'ruled' | 'grid' | 'dotted', color: string }) => {
+    if (pattern === 'blank') return null;
+    const isDark = isColorDark(color);
+    const strokeColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    const dotColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
+
+    return (
+        <View className="absolute inset-0 pointer-events-none" style={{ backgroundColor: color }}>
+            {pattern === 'ruled' && (
+                <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                    {Array.from({ length: 150 }).map((_, i) => (
+                        <Path key={i} d={`M0,${(i + 1) * 36} L2000,${(i + 1) * 36}`} stroke={strokeColor} strokeWidth="1" />
+                    ))}
+                </Svg>
+            )}
+            {pattern === 'grid' && (
+                <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                    {Array.from({ length: 100 }).map((_, i) => (
+                        <React.Fragment key={i}>
+                            <Path d={`M0,${(i + 1) * 28} L2000,${(i + 1) * 28}`} stroke={strokeColor} strokeWidth="1" />
+                            <Path d={`M${(i + 1) * 28},0 L${(i + 1) * 28},4000`} stroke={strokeColor} strokeWidth="1" />
+                        </React.Fragment>
+                    ))}
+                </Svg>
+            )}
+            {pattern === 'dotted' && (
+                <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                    {Array.from({ length: 120 }).map((_, r) => 
+                        Array.from({ length: 30 }).map((_, c) => (
+                            <Path key={`${r}-${c}`} d={`M${(c + 1) * 28},${(r + 1) * 28} h0.1`} stroke={dotColor} strokeWidth="2.5" strokeLinecap="round" />
+                        ))
+                    )}
+                </Svg>
+            )}
+        </View>
+    );
+};
+
+// Map each font to its bold variant (or itself if no bold variant loaded)
+const FONT_BOLD_MAP: Record<string, string> = {
+    'Lexend_400Regular': 'Lexend_700Bold',
+    'Inter_400Regular': 'Inter_700Bold',
+    'Poppins_400Regular': 'Poppins_700Bold',
+    'Lora_400Regular': 'Lora_700Bold',
+    // Fonts without separate bold variant - will use fontWeight synthetically
+    'OpenSans': 'OpenSans',
+    'Serif': 'Serif',
+    'Alice': 'Alice',
+    'Comfortaa': 'Comfortaa',
+    'Monospace': 'Monospace',
+    'Comic': 'Comic',
+    'Allura': 'Allura',
+    'Rosemary': 'Rosemary',
+};
+
+const FONT_HAS_BOLD_VARIANT = new Set([
+    'Lexend_400Regular', 'Inter_400Regular', 'Poppins_400Regular', 'Lora_400Regular'
+]);
+
+const getMarkdownStyles = (isDark: boolean, fontFamily: string = 'Lexend_400Regular') => {
+    const boldFont = FONT_BOLD_MAP[fontFamily] || fontFamily;
+    const hasBoldVariant = FONT_HAS_BOLD_VARIANT.has(fontFamily);
+    return {
+    body: { color: isDark ? '#e2e8f0' : '#1e293b', fontSize: 18, lineHeight: 32, fontFamily },
+    heading1: { color: isDark ? '#ffffff' : '#0f172a', fontSize: 28, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), marginTop: 20, marginBottom: 10 },
+    heading2: { color: isDark ? '#60a5fa' : '#2563eb', fontSize: 24, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), marginTop: 15, marginBottom: 8 },
+    heading3: { color: isDark ? '#60a5fa' : '#2563eb', fontSize: 20, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('600' as any), marginTop: 12, marginBottom: 6 },
+    strong: { fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), color: isDark ? '#ffffff' : '#0f172a' },
+    em: { fontStyle: 'italic' as any, color: isDark ? '#a1a1aa' : '#4b5563', fontFamily },
+    link: { color: isDark ? '#60a5fa' : '#2563eb', textDecorationLine: 'none' as any, fontWeight: 'bold' as any },
+    list_item: { color: isDark ? '#cbd5e1' : '#334155', marginBottom: 5, fontFamily },
+    blockquote: { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderLeftColor: '#3b82f6', borderLeftWidth: 4, paddingHorizontal: 15, paddingVertical: 10, marginVertical: 10, borderRadius: 8 },
+    code_inline: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)', color: isDark ? '#fbbf24' : '#b45309', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontFamily: 'Monospace', fontSize: 16 },
+    code_block: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+    fence: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+    table: { borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', borderRadius: 8 },
+    tr: { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' },
+    th: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)', color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' as any, padding: 8, fontFamily: hasBoldVariant ? boldFont : fontFamily },
+    td: { color: isDark ? '#cbd5e1' : '#334155', padding: 8, fontFamily },
+    hr: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', height: 1, marginVertical: 20 }
+    };
+};
 
 // --- HELPERS ---
 
@@ -136,6 +330,13 @@ export default function Notes() {
     const [folders, setFolders] = useState<string[]>([]);
     const [selectedFolder, setSelectedFolder] = useState<string>("all");
     const [search, setSearch] = useState("");
+
+    // Premium Lock / Pin / Trash States
+    const [pinCode, setPinCode] = useState<string>("");
+    const [isPinCodeModalVisible, setIsPinCodeModalVisible] = useState(false);
+    const [lockedNoteToUnlock, setLockedNoteToUnlock] = useState<Note | null>(null);
+    const [pinInput, setPinInput] = useState<string>("");
+    const [isSettingPinCode, setIsSettingPinCode] = useState(false);
 
     const [editingNote, setEditingNote] = useState<Note | null>(null);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -178,8 +379,167 @@ export default function Notes() {
         onConfirm?: () => void;
     }>({ visible: false, title: '', message: '', type: 'info' });
 
+    const [historyState, setHistoryState] = useState<{ stack: string[], index: number }>({ stack: [], index: -1 });
+    const lastNoteIdRef = useRef<string | null>(null);
+    const historyTimeoutRef = useRef<any>(null);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+            setIsKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+            setIsKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (editingNote) {
+            if (lastNoteIdRef.current !== editingNote.id) {
+                lastNoteIdRef.current = editingNote.id;
+                setHistoryState({
+                    stack: [editingNote.content || ''],
+                    index: 0
+                });
+            }
+        } else {
+            lastNoteIdRef.current = null;
+            setHistoryState({ stack: [], index: -1 });
+        }
+    }, [editingNote?.id]);
+
+    useEffect(() => {
+        return () => {
+            if (historyTimeoutRef.current) {
+                clearTimeout(historyTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const pushHistoryState = (newContent: string, immediate: boolean = false) => {
+        if (historyTimeoutRef.current) {
+            clearTimeout(historyTimeoutRef.current);
+            historyTimeoutRef.current = null;
+        }
+
+        const performPush = () => {
+            setHistoryState(prev => {
+                const { stack, index } = prev;
+                if (index >= 0 && stack[index] === newContent) return prev;
+
+                const sliced = stack.slice(0, index + 1);
+                const nextStack = [...sliced, newContent];
+                if (nextStack.length > 100) {
+                    nextStack.shift();
+                }
+                return {
+                    stack: nextStack,
+                    index: nextStack.length - 1
+                };
+            });
+        };
+
+        if (immediate) {
+            performPush();
+        } else {
+            historyTimeoutRef.current = setTimeout(() => {
+                performPush();
+            }, 800);
+        }
+    };
+
+    const undo = () => {
+        const { stack, index } = historyState;
+        if (index > 0) {
+            const prevContent = stack[index - 1];
+            setHistoryState(prev => ({ ...prev, index: prev.index - 1 }));
+            updateCurrentNoteState({ content: prevContent });
+        }
+    };
+
+    const redo = () => {
+        const { stack, index } = historyState;
+        if (index < stack.length - 1) {
+            const nextContent = stack[index + 1];
+            setHistoryState(prev => ({ ...prev, index: prev.index + 1 }));
+            updateCurrentNoteState({ content: nextContent });
+        }
+    };
+
     const textInputRef = useRef<TextInput>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const noteViewShotRef = useRef<any>(null);
     const { settings: globalSettings } = useSettings();
+
+    const isDark = isColorDark(editingNote?.bgStyle?.color);
+    const textColorClass = isDark ? "text-slate-200" : "text-slate-900";
+    const placeholderColor = isDark ? "#475569" : "#a1a1aa";
+    const activeFont = editingNote?.textStyle?.fontFamily || 'Lexend_400Regular';
+    const dynamicMarkdownStyles = getMarkdownStyles(isDark, activeFont);
+
+    const handlePrintNote = async () => {
+        if (!editingNote) return;
+        try {
+            let htmlContent = editingNote.content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/# (.*?)\n/g, '<h1>$1</h1>\n')
+                .replace(/## (.*?)\n/g, '<h2>$1</h2>\n')
+                .replace(/- \[( |x)\] (.*?)\n/g, (m, check, text) => `<li><input type="checkbox" ${check === 'x' ? 'checked' : ''}> ${text}</li>\n`)
+                .replace(/- (.*?)\n/g, '<li>$1</li>\n')
+                .replace(/\n\n/g, '<br><br>');
+
+            const template = `
+                <html>
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+                        <style>
+                            body { font-family: -apple-system, system-ui, sans-serif; padding: 40px; color: #1e293b; background: white; }
+                            h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 5px; }
+                            .date { color: #64748b; font-size: 14px; margin-bottom: 30px; font-weight: 500; }
+                            .content { font-size: 16px; line-height: 1.6; }
+                            img { max-width: 100%; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${editingNote.title || 'Note sans titre'}</h1>
+                        <div class="date">${new Date(editingNote.date).toLocaleString('fr-FR')}</div>
+                        <div class="content">${htmlContent}</div>
+                        ${editingNote.attachments?.images?.map(img => `<img src="${img}" />`).join('') || ''}
+                    </body>
+                </html>
+            `;
+            await Print.printAsync({ html: template });
+        } catch (e) {
+            console.error("Failed to print PDF", e);
+            setAlertConfig({ visible: true, title: "Erreur", message: "Impossible de créer le PDF de la note.", type: 'error' });
+        }
+    };
+
+
+    const handleShareNoteImage = async () => {
+        if (noteViewShotRef.current) {
+            try {
+                const uri = await noteViewShotRef.current.capture();
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(uri, {
+                        mimeType: 'image/jpeg',
+                        dialogTitle: editingNote?.title || 'Partager ma note',
+                    });
+                } else {
+                    setAlertConfig({ visible: true, title: "Partage indisponible", message: "Le partage n'est pas disponible sur votre appareil.", type: 'error' });
+                }
+            } catch (e) {
+                console.error("Failed to capture and share note", e);
+                setAlertConfig({ visible: true, title: "Erreur", message: "Impossible de générer l'image de la note.", type: 'error' });
+            }
+        }
+    };
 
     // --- CORE LOGIC ---
 
@@ -237,8 +597,18 @@ export default function Notes() {
                 getAllNotes(),
                 getFolders()
             ]);
-            setNotes(savedNotes);
+            
+            // Load custom bg styles for each note in parallel
+            const notesWithBg = await Promise.all(savedNotes.map(async (n) => {
+                const styleStr = await AsyncStorage.getItem(`@note_bg_style_${n.id}`);
+                const bgStyle = styleStr ? JSON.parse(styleStr) : undefined;
+                return { ...n, bgStyle };
+            }));
+
+            setNotes(notesWithBg);
             setFolders(savedFolders);
+            const savedPin = await AsyncStorage.getItem('adventools_note_lock_pin');
+            if (savedPin) setPinCode(savedPin);
         } catch (e) { console.error(e); }
     };
 
@@ -288,11 +658,16 @@ export default function Notes() {
         
         if (isEmpty) {
             await deleteNoteFromDb(editingNote.id);
+            await AsyncStorage.removeItem(`@note_bg_style_${editingNote.id}`);
             setNotes(notes.filter(n => n.id !== editingNote.id));
             return;
         }
 
         await saveNote(editingNote);
+        if (editingNote.bgStyle) {
+            await AsyncStorage.setItem(`@note_bg_style_${editingNote.id}`, JSON.stringify(editingNote.bgStyle));
+        }
+        
         const exists = notes.find(n => n.id === editingNote.id);
         const updated = exists ? notes.map(n => n.id === editingNote.id ? editingNote : n) : [editingNote, ...notes];
         setNotes(updated);
@@ -312,17 +687,112 @@ export default function Notes() {
         }
     };
 
-    const deleteNote = (id: string) => {
-        setAlertConfig({
-            visible: true,
-            title: "Supprimer la note",
-            message: "Êtes-vous sûr de vouloir supprimer cette réflexion ? Cette action est irréversible.",
-            type: 'error',
-            onConfirm: async () => {
-                await deleteNoteFromDb(id);
-                setNotes(notes.filter(n => n.id !== id));
+
+    const handleToggleLock = async () => {
+        if (!editingNote) return;
+        
+        if (editingNote.isLocked) {
+            updateCurrentNoteState({ isLocked: false });
+            setAlertConfig({ visible: true, title: "Note déverrouillée", message: "Cette note n'est plus chiffrée.", type: 'success' });
+        } else {
+            if (!pinCode) {
+                setIsSettingPinCode(true);
+                setPinInput("");
+                setIsPinCodeModalVisible(true);
+            } else {
+                updateCurrentNoteState({ isLocked: true });
+                setAlertConfig({ visible: true, title: "Note verrouillée", message: "Cette note est désormais chiffrée. Elle n'affichera aucun aperçu dans le journal principal.", type: 'success' });
             }
-        });
+        }
+    };
+
+    const handleSubmitPin = async () => {
+        if (pinInput.length < 4) {
+            setAlertConfig({ visible: true, title: "Code trop court", message: "Le code PIN doit comporter au moins 4 chiffres.", type: 'error' });
+            return;
+        }
+
+        if (isSettingPinCode) {
+            setPinCode(pinInput);
+            await AsyncStorage.setItem('adventools_note_lock_pin', pinInput);
+            setIsSettingPinCode(false);
+            setIsPinCodeModalVisible(false);
+            updateCurrentNoteState({ isLocked: true });
+            setAlertConfig({ visible: true, title: "Code PIN configuré", message: "Votre code PIN a été enregistré avec succès et la note a été verrouillée.", type: 'success' });
+        } else if (lockedNoteToUnlock) {
+            if (pinInput === pinCode) {
+                const note = lockedNoteToUnlock;
+                setLockedNoteToUnlock(null);
+                setIsPinCodeModalVisible(false);
+                setEditingNote(note);
+                setIsPreviewMode(true);
+                addToHistory(note);
+            } else {
+                setAlertConfig({ visible: true, title: "Code PIN incorrect", message: "Le code saisi est invalide.", type: 'error' });
+                setPinInput("");
+            }
+        }
+    };
+
+    const restoreNote = async (note: Note) => {
+        const updated = { ...note, isTrash: false, deletedAt: undefined };
+        await saveNote(updated);
+        setNotes(notes.map(n => n.id === note.id ? updated : n));
+        setAlertConfig({ visible: true, title: "Note restaurée", message: "Votre note a été réintégrée dans votre journal principal.", type: 'success' });
+    };
+
+    const handleNoteClick = (n: Note) => {
+        if (selectedFolder === 'trash') {
+            setAlertConfig({
+                visible: true,
+                title: "Restaurer la note",
+                message: "Voulez-vous restaurer cette réflexion dans votre journal principal ?",
+                type: 'info',
+                onConfirm: () => restoreNote(n)
+            });
+            return;
+        }
+
+        if (n.isLocked) {
+            setLockedNoteToUnlock(n);
+            setPinInput("");
+            setIsPinCodeModalVisible(true);
+        } else {
+            setEditingNote(n);
+            setIsPreviewMode(true);
+            addToHistory(n);
+        }
+    };
+
+    const deleteNote = (id: string) => {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+
+        if (note.isTrash || selectedFolder === 'trash') {
+            setAlertConfig({
+                visible: true,
+                title: "Supprimer définitivement",
+                message: "Voulez-vous supprimer définitivement cette réflexion ? Les fichiers joints seront également purgés.",
+                type: 'error',
+                onConfirm: async () => {
+                    await deleteNoteFromDb(id);
+                    await AsyncStorage.removeItem(`@note_bg_style_${id}`);
+                    setNotes(notes.filter(n => n.id !== id));
+                }
+            });
+        } else {
+            setAlertConfig({
+                visible: true,
+                title: "Déplacer dans la corbeille",
+                message: "Cette note sera déplacée dans la corbeille. Vous pourrez la restaurer à tout moment.",
+                type: 'info',
+                onConfirm: async () => {
+                    const updated = { ...note, isTrash: true, deletedAt: Date.now() };
+                    await saveNote(updated);
+                    setNotes(notes.map(n => n.id === id ? updated : n));
+                }
+            });
+        }
     };
 
     const addNote = () => {
@@ -380,7 +850,7 @@ export default function Notes() {
                 : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
             if (status !== 'granted') {
-                Alert.alert("Permission refusée", "L'accès à la caméra ou à la galerie est nécessaire.");
+                setAlertConfig({ visible: true, title: "Permission refusée", message: "L'accès à la caméra ou à la galerie est nécessaire.", type: 'error' });
                 return;
             }
 
@@ -415,7 +885,7 @@ export default function Notes() {
             }
         } catch (e) {
             console.error(e);
-            Alert.alert("Erreur", "Impossible d'accéder aux médias.");
+            setAlertConfig({ visible: true, title: "Erreur", message: "Impossible d'accéder aux médias.", type: 'error' });
         }
     };
 
@@ -423,7 +893,7 @@ export default function Notes() {
         try {
             const { status } = await Audio.requestPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert("Microphone bloqué", "L'autorisation du micro est nécessaire pour enregistrer.");
+                setAlertConfig({ visible: true, title: "Microphone bloqué", message: "L'autorisation du micro est nécessaire pour enregistrer.", type: 'error' });
                 return;
             }
             await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -472,6 +942,7 @@ export default function Notes() {
         const prev = editingNote.content;
         const newContent = prev.substring(0, start) + before + prev.substring(start, end) + after + prev.substring(end);
         updateCurrentNoteState({ content: newContent });
+        pushHistoryState(newContent, true);
         setTimeout(() => textInputRef.current?.focus(), 100);
     };
 
@@ -520,6 +991,10 @@ export default function Notes() {
         
         output += text.substring(lastIndex);
         
+        // Checkboxes replacement
+        output = output.replace(/-\s*\[\s*\]\s*(.*)/g, '⬜ $1');
+        output = output.replace(/-\s*\[x\]\s*(.*)/gi, '✅ ~~$1~~');
+        
         // Footnotes, mark highlights, etc.
         output = output.replace(/\[\^(\d+)\](?!\:)/g, (match, ref) => `[${ref}](#footnote-ref:${ref})`);
         output = output.replace(/^\[\^(\d+)\]:\s*(.*)$/gm, (match, ref, text) => `[${text}](#footnote-def:${ref})`);
@@ -548,9 +1023,27 @@ export default function Notes() {
             return (
                 <Markdown
                     key={index}
-                    style={markdownStyles as any}
+                    style={{
+                        ...dynamicMarkdownStyles,
+                        body: {
+                            ...(dynamicMarkdownStyles.body as any || {}),
+                            fontFamily: activeFont,
+                            fontSize: editingNote?.textStyle?.fontSize || 18,
+                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                        }
+                    } as any}
                     onLinkPress={handleVerseClick}
                     rules={{
+                        // Override italic to avoid Android system font fallback
+                        em: (node, children, parent, styles) => (
+                            <Text key={node.key} style={{
+                                fontFamily: activeFont,
+                                fontSize: editingNote?.textStyle?.fontSize || 18,
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                letterSpacing: 0.4,
+                                opacity: 0.85,
+                            }}>{children}</Text>
+                        ),
                         link: (node, children, parent, styles) => {
                             const url = node.attributes.href;
                             if (url.startsWith('#highlight:')) {
@@ -593,51 +1086,96 @@ export default function Notes() {
 
     const filteredNotes = notes.filter(n => {
         const m = (n.title + n.content).toLowerCase().includes(search.toLowerCase());
+        if (selectedFolder === 'trash') {
+            return m && !!n.isTrash;
+        }
+        if (n.isTrash) return false;
         return selectedFolder === 'all' ? m : m && n.folder === selectedFolder;
+    }).sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.date - a.date;
     });
 
-    const markdownStyles = {
-        body: { color: '#e2e8f0', fontSize: 18, lineHeight: 30, fontFamily: 'Lexend_400Regular' },
-        heading1: { color: '#ffffff', fontSize: 28, fontFamily: 'Lexend_700Bold', marginTop: 20, marginBottom: 10 },
-        heading2: { color: '#60a5fa', fontSize: 24, fontFamily: 'Lexend_700Bold', marginTop: 15, marginBottom: 8 },
-        heading3: { color: '#60a5fa', fontSize: 20, fontFamily: 'Lexend_600SemiBold', marginTop: 12, marginBottom: 6 },
-        strong: { fontFamily: 'Lexend_700Bold', color: '#ffffff' },
-        em: { fontStyle: 'italic', color: '#cbd5e1', fontFamily: 'Lexend_400Regular' },
-        link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: 'bold' },
-        list_item: { color: '#cbd5e1', marginBottom: 5, fontFamily: 'Lexend_400Regular' },
-        blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, paddingHorizontal: 15, paddingVertical: 10, marginVertical: 10, borderRadius: 8 },
-        code_inline: { backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#fbbf24', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 16 },
-        code_block: { backgroundColor: '#0f172a', color: '#94a3b8', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
-        fence: { backgroundColor: '#0f172a', color: '#94a3b8', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
-        table: { borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 8 },
-        tr: { borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.1)' },
-        th: { backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', fontWeight: 'bold', padding: 8, fontFamily: 'Lexend_700Bold' },
-        td: { color: '#cbd5e1', padding: 8, fontFamily: 'Lexend_400Regular' },
-        hr: { backgroundColor: 'rgba(255, 255, 255, 0.1)', height: 1, marginVertical: 20 }
-    };
+    // markdownStyles has been made dynamic (dynamicMarkdownStyles)
 
     return (
         <SafeAreaView className="flex-1 bg-[#020617]">
             <StatusBar style="light" />
 
             <View className="px-6 pt-6">
-                <View className="flex-row justify-between items-center mb-8">
-                    <View>
+                {/* Title row */}
+                <View className="flex-row justify-between items-center mb-4">
+                    <View className="flex-1">
                         <Text className="text-white/40 text-[10px] font-bold uppercase tracking-[4px] mb-1">{t('study_journal')}</Text>
                         <Text className="text-4xl font-bold text-white" style={{ fontFamily: 'Lexend_700Bold' }}>{t('my_journal')}</Text>
                     </View>
-                    <TouchableOpacity onPress={addNote} className="w-16 h-16 rounded-[24px] bg-primary items-center justify-center shadow-2xl shadow-primary/40 border border-white/20">
-                        <Plus size={32} color="white" />
-                    </TouchableOpacity>
+                    <View className="flex-row items-center gap-3">
+                        <TouchableOpacity onPress={() => setSearch(prev => { if (prev === '__SEARCH__') return ''; return '__SEARCH__'; })} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center">
+                            <Search size={20} color="#8b949e" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={addNote} className="w-14 h-14 rounded-[22px] bg-primary items-center justify-center shadow-2xl shadow-primary/40 border border-white/20">
+                            <Plus size={28} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                <View className="flex-row items-center bg-white/5 border border-white/10 rounded-[28px] px-6 h-16 mb-8">
-                    <Search size={20} color="#475569" />
-                    <TextInput placeholder={t('search_note_placeholder')} placeholderTextColor="#475569" className="flex-1 ml-4 text-white text-base" value={search} onChangeText={setSearch} />
-                    {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><X size={20} color="#475569" /></TouchableOpacity>}
-                </View>
+                {/* Collapsible search bar */}
+                {search === '__SEARCH__' || (search !== '__SEARCH__' && search.length > 0) ? (
+                    <View className="flex-row items-center bg-white/5 border border-white/10 rounded-[28px] px-6 h-14 mb-4">
+                        <Search size={18} color="#475569" />
+                        <TextInput
+                            placeholder={t('search_note_placeholder')}
+                            placeholderTextColor="#475569"
+                            className="flex-1 ml-4 text-white text-base"
+                            value={search === '__SEARCH__' ? '' : search}
+                            onChangeText={v => setSearch(v || '__SEARCH__')}
+                            autoFocus
+                        />
+                        <TouchableOpacity onPress={() => setSearch('')}><X size={18} color="#475569" /></TouchableOpacity>
+                    </View>
+                ) : null}
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
+                {/* Stats row — compact inline */}
+                {(() => {
+                    const activeNotes = notes.filter(n => !n.isTrash);
+                    if (activeNotes.length === 0) return null;
+                    const totalWords = activeNotes.reduce((acc, n) => acc + (n.content ? n.content.trim().split(/\s+/).filter(Boolean).length : 0), 0);
+                    const pinnedCount = activeNotes.filter(n => n.isPinned).length;
+                    const lockedCount = activeNotes.filter(n => n.isLocked).length;
+                    const thisWeek = activeNotes.filter(n => Date.now() - n.date < 7 * 24 * 60 * 60 * 1000).length;
+                    return (
+                        <View className="flex-row bg-white/5 border border-white/8 rounded-3xl px-4 py-3 mb-5 items-center">
+                            <View className="flex-1 items-center">
+                                <Text className="text-white font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{activeNotes.length}</Text>
+                                <Text className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Notes</Text>
+                            </View>
+                            <View className="w-[1px] h-8 bg-white/10" />
+                            <View className="flex-1 items-center">
+                                <Text className="text-blue-400 font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{totalWords >= 1000 ? `${(totalWords/1000).toFixed(1)}k` : totalWords}</Text>
+                                <Text className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Mots</Text>
+                            </View>
+                            <View className="w-[1px] h-8 bg-white/10" />
+                            <View className="flex-1 items-center">
+                                <Text className="text-yellow-400 font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{pinnedCount}</Text>
+                                <Text className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Pin</Text>
+                            </View>
+                            <View className="w-[1px] h-8 bg-white/10" />
+                            <View className="flex-1 items-center">
+                                <Text className="text-purple-400 font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{lockedCount}</Text>
+                                <Text className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Sécurité</Text>
+                            </View>
+                            <View className="w-[1px] h-8 bg-white/10" />
+                            <View className="flex-1 items-center">
+                                <Text className="text-green-400 font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{thisWeek}</Text>
+                                <Text className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Semaine</Text>
+                            </View>
+                        </View>
+                    );
+                })()}
+
+                {/* Folder tabs */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
                     <TouchableOpacity onPress={() => setSelectedFolder("all")} className={cn("px-6 py-4 rounded-3xl mr-3 border", selectedFolder === "all" ? "bg-primary border-primary" : "bg-white/5 border-white/10")}>
                         <Text className={cn("font-bold text-sm", selectedFolder === "all" ? "text-white" : "text-slate-400")}>{t('all_notes')}</Text>
                     </TouchableOpacity>
@@ -651,15 +1189,20 @@ export default function Notes() {
                             <Text className={cn("font-bold text-sm", selectedFolder === f ? "text-primary" : "text-slate-500")}>{f}</Text>
                         </TouchableOpacity>
                     ))}
+                    <TouchableOpacity onPress={() => setSelectedFolder("trash")} className={cn("px-6 py-4 rounded-3xl mr-3 border flex-row items-center", selectedFolder === "trash" ? "bg-red-500/20 border-red-500" : "bg-white/5 border-white/10")}>
+                        <Trash2 size={14} color={selectedFolder === "trash" ? "#ef4444" : "#64748b"} className="mr-2" />
+                        <Text className={cn("font-bold text-sm", selectedFolder === "trash" ? "text-red-400" : "text-slate-400")}>Corbeille</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => { setEditingFolderName(null); setNewFolderName(""); setShowFolderModal(true); }} className="w-14 h-14 rounded-[22px] bg-white/5 border border-dashed border-white/20 items-center justify-center"><Plus size={20} color="#94a3b8" /></TouchableOpacity>
                 </ScrollView>
             </View>
 
             <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+
                 {filteredNotes.length > 0 ? (
                     <View className="flex-row gap-4">
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 === 0).map(n => <NoteCard key={n.id} note={n} onPress={() => { setEditingNote(n); setIsPreviewMode(true); addToHistory(n); }} onDelete={() => deleteNote(n.id)} />)}</View>
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 !== 0).map(n => <NoteCard key={n.id} note={n} onPress={() => { setEditingNote(n); setIsPreviewMode(true); addToHistory(n); }} onDelete={() => deleteNote(n.id)} />)}</View>
+                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 === 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} />)}</View>
+                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 !== 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} />)}</View>
                     </View>
                 ) : (
                     <View className="w-full items-center py-32 opacity-20"><StickyNote size={80} color="#94a3b8" /><Text className="text-white font-bold text-xl mt-6">{t('no_notes_found')}</Text></View>
@@ -667,30 +1210,157 @@ export default function Notes() {
             </ScrollView>
 
             <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent onRequestClose={closeNote}>
-                <View className="flex-1 bg-[#0d1117]">
-                    <SafeAreaView edges={['top']} className="bg-[#0d1117] border-b border-white/5">
+                <View style={{ backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }} className="flex-1">
+                    <SafeAreaView edges={['top']} className={cn("border-b", isDark ? "bg-[#0d1117] border-white/5" : "bg-[#f8fafc] border-black/5")} style={{ backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }}>
                         <View className="flex-row justify-between items-center px-6 py-4">
-                            <TouchableOpacity onPress={closeNote} className="w-12 h-12 rounded-full bg-white/5 items-center justify-center border border-white/10"><X size={24} color="#94a3b8" /></TouchableOpacity>
                             <View className="flex-row items-center gap-2">
-                                <TouchableOpacity onPress={() => setShowColorPicker(!showColorPicker)} className={cn("w-12 h-12 rounded-full items-center justify-center", showColorPicker ? "bg-primary/20" : "bg-white/5")}>
-                                    <Palette size={20} color={showColorPicker ? "#60a5fa" : "#8b949e"} />
+                                <TouchableOpacity onPress={closeNote} className={cn("w-12 h-12 rounded-full items-center justify-center border", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}><X size={24} color={isDark ? "#94a3b8" : "#475569"} /></TouchableOpacity>
+                                {!isPreviewMode && (
+                                    <>
+                                        <TouchableOpacity 
+                                            onPress={() => updateCurrentNoteState({ isPinned: !editingNote?.isPinned })} 
+                                            className={cn("w-12 h-12 rounded-full items-center justify-center border", editingNote?.isPinned ? "bg-blue-500/20 border-blue-500/40" : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"))}
+                                        >
+                                            <Pin size={20} color={editingNote?.isPinned ? "#60a5fa" : (isDark ? "#8b949e" : "#475569")} fill={editingNote?.isPinned ? "#60a5fa" : "transparent"} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            onPress={handleToggleLock} 
+                                            className={cn("w-12 h-12 rounded-full items-center justify-center border", editingNote?.isLocked ? "bg-amber-500/20 border-amber-500/40" : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"))}
+                                        >
+                                            {editingNote?.isLocked ? <Lock size={20} color="#f59e0b" /> : <Unlock size={20} color={isDark ? "#8b949e" : "#475569"} />}
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                            </View>
+                            <View className="flex-row items-center gap-2">
+                                {isPreviewMode && (
+                                    <>
+                                        <TouchableOpacity onPress={handlePrintNote} className={cn("w-12 h-12 rounded-full items-center justify-center border mr-2", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                                            <Printer size={20} color={isDark ? "#8b949e" : "#475569"} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={handleShareNoteImage} className={cn("w-12 h-12 rounded-full items-center justify-center border", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                                            <Share2 size={20} color={isDark ? "#8b949e" : "#475569"} />
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                                {!isPreviewMode && (
+                                    <>
+                                        <TouchableOpacity 
+                                            onPress={() => setShowAttachments(!showAttachments)} 
+                                            className={cn("w-12 h-12 rounded-full items-center justify-center border", showAttachments ? "bg-primary/20 border-primary/40" : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"))}
+                                        >
+                                            <Paperclip size={20} color={showAttachments ? "#60a5fa" : (isDark ? "#8b949e" : "#475569")} />
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                                <TouchableOpacity onPress={() => setShowColorPicker(!showColorPicker)} className={cn("w-12 h-12 rounded-full items-center justify-center border", showColorPicker ? "bg-primary/20 border-primary/40" : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10"))}>
+                                    <Palette size={20} color={showColorPicker ? "#60a5fa" : (isDark ? "#8b949e" : "#475569")} />
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={async () => { if (!isPreviewMode) await handleSaveNote(); setIsPreviewMode(!isPreviewMode); }}
-                                    className={cn("px-6 py-3 rounded-3xl border-2", isPreviewMode ? "bg-white/5 border-white/10" : "bg-primary/20 border-primary")}
+                                    className={cn("px-6 py-3 rounded-3xl border-2", isPreviewMode ? (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10") : "bg-primary/20 border-primary")}
                                 >
-                                    <Text className={cn("text-xs font-bold", isPreviewMode ? "text-white" : "text-primary")}>{isPreviewMode ? t('edit').toUpperCase() : t('finish').toUpperCase()}</Text>
+                                    <Text className={cn("text-xs font-bold", isPreviewMode ? (isDark ? "text-white" : "text-slate-800") : "text-primary")}>{isPreviewMode ? t('edit').toUpperCase() : t('finish').toUpperCase()}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </SafeAreaView>
-                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : (isKeyboardVisible ? 'padding' : undefined)} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : (isKeyboardVisible ? 50 : 0)} className="flex-1">
                         {showColorPicker && (
-                            <View className="px-6 py-4 bg-white/5 border-b border-white/5">
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2">
-                                    {NOTE_COLORS.map(c => <TouchableOpacity key={c.value} onPress={() => updateCurrentNoteState({ color: c.value })} style={{ backgroundColor: c.value }} className={cn("w-12 h-12 rounded-full border-2 mr-3", editingNote?.color === c.value ? "border-white" : "border-transparent")} />)}
-                                    <TouchableOpacity onPress={() => { setCustomColorInput(editingNote?.color || "#"); setColorPromptType('note'); setShowColorPrompt(true); }} className="w-12 h-12 rounded-full border-2 border-dashed border-white/40 items-center justify-center"><Plus size={20} color="white" /></TouchableOpacity>
+                            <View className={cn("px-6 py-5 border-b", isDark ? "bg-[#161b22] border-white/5" : "bg-[#f1f5f9] border-black/5")}>
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-slate-500")}>Couleur de la Fiche (Dashboard)</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4">
+                                    {NOTE_COLORS.map(c => (
+                                        <TouchableOpacity 
+                                            key={c.value} 
+                                            onPress={() => updateCurrentNoteState({ color: c.value })} 
+                                            style={{ backgroundColor: c.value }} 
+                                            className={cn("w-10 h-10 rounded-full border-2 mr-3", editingNote?.color === c.value ? (isDark ? "border-white" : "border-slate-800") : "border-transparent")} 
+                                        />
+                                    ))}
                                 </ScrollView>
+
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-slate-500")}>Couleur de Page (Arrière-plan)</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4">
+                                    {PAPER_COLORS.map(c => (
+                                        <TouchableOpacity 
+                                            key={c.value} 
+                                            onPress={() => {
+                                                const currentBg = editingNote?.bgStyle || { color: '#0d1117', pattern: 'blank' };
+                                                updateCurrentNoteState({ bgStyle: { ...currentBg, color: c.value } });
+                                            }} 
+                                            style={{ backgroundColor: c.value }} 
+                                            className={cn("w-10 h-10 rounded-full border-2 mr-3 justify-center items-center", (editingNote?.bgStyle?.color || '#0d1117') === c.value ? (isDark ? "border-white" : "border-slate-800") : "border-white/10")}
+                                        >
+                                            {(!isColorDark(c.value)) && <View className="w-1.5 h-1.5 rounded-full bg-slate-800" />}
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-slate-500")}>Motif de Page</Text>
+                                <View className="flex-row gap-3 py-1">
+                                    {PAPER_PATTERNS.map(p => {
+                                        const isActive = (editingNote?.bgStyle?.pattern || 'blank') === p.id;
+                                        return (
+                                            <TouchableOpacity
+                                                key={p.id}
+                                                onPress={() => {
+                                                    const currentBg = editingNote?.bgStyle || { color: '#0d1117', pattern: 'blank' };
+                                                    updateCurrentNoteState({ bgStyle: { ...currentBg, pattern: p.id as any } });
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2.5 rounded-2xl border flex-row items-center",
+                                                    isActive 
+                                                        ? (isDark ? "bg-primary/20 border-primary" : "bg-primary/10 border-primary") 
+                                                        : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5")
+                                                )}
+                                            >
+                                                <Text className={cn("text-xs font-bold", isActive ? "text-primary" : (isDark ? "text-slate-400" : "text-slate-600"))}>{p.label}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+
+                                {/* Typography Options */}
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-3 mt-4", isDark ? "text-white/40" : "text-slate-500")}>Police du Texte</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    <View className="flex-row gap-3 py-1 mb-2">
+                                    {TEXT_FONTS.map(f => {
+                                        const isActive = (editingNote?.textStyle?.fontFamily || 'Lexend_400Regular') === f.id;
+                                        return (
+                                            <TouchableOpacity key={f.id} onPress={() => { const currentTs = editingNote?.textStyle || {}; updateCurrentNoteState({ textStyle: { ...currentTs, fontFamily: f.id as any } }); }} className={cn("w-20 py-3 rounded-2xl border items-center", isActive ? (isDark ? "bg-primary/20 border-primary" : "bg-primary/10 border-primary") : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5"))}>
+                                                <Text style={{ fontFamily: f.id, fontSize: 20 }} className={cn(isActive ? "text-primary" : (isDark ? "text-white" : "text-slate-800"))}>{f.preview}</Text>
+                                                <Text style={{ fontFamily: 'Lexend_400Regular', fontSize: 9 }} className={cn("mt-1 font-bold uppercase tracking-wider", isActive ? "text-primary" : (isDark ? "text-white/40" : "text-slate-500"))}>{f.label}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                    </View>
+                                </ScrollView>
+
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2 mt-4", isDark ? "text-white/40" : "text-slate-500")}>Taille & Alignement</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1">
+                                    {TEXT_SIZES.map(s => {
+                                        const isActive = (editingNote?.textStyle?.fontSize || 20) === s.id;
+                                        return (
+                                            <TouchableOpacity key={`sz_${s.id}`} onPress={() => { const currentTs = editingNote?.textStyle || {}; updateCurrentNoteState({ textStyle: { ...currentTs, fontSize: s.id } }); }} className={cn("px-4 py-2.5 rounded-2xl border mr-3", isActive ? (isDark ? "bg-primary/20 border-primary" : "bg-primary/10 border-primary") : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5"))}>
+                                                <Text className={cn("text-xs font-bold", isActive ? "text-primary" : (isDark ? "text-slate-400" : "text-slate-600"))}>{s.label}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                    <View className="w-[1px] h-6 bg-white/10 mx-2 self-center" />
+                                    {TEXT_ALIGNS.map(a => {
+                                        const isActive = (editingNote?.textStyle?.textAlign || 'left') === a.id;
+                                        return (
+                                            <TouchableOpacity key={`al_${a.id}`} onPress={() => { const currentTs = editingNote?.textStyle || {}; updateCurrentNoteState({ textStyle: { ...currentTs, textAlign: a.id as any } }); }} className={cn("w-10 h-10 rounded-2xl border mr-3 items-center justify-center", isActive ? (isDark ? "bg-primary/20 border-primary" : "bg-primary/10 border-primary") : (isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5"))}>
+                                                {a.id === 'left' && <AlignLeft size={16} color={isActive ? "#3b82f6" : "#8b949e"} />}
+                                                {a.id === 'center' && <AlignCenter size={16} color={isActive ? "#3b82f6" : "#8b949e"} />}
+                                                {a.id === 'right' && <AlignRight size={16} color={isActive ? "#3b82f6" : "#8b949e"} />}
+                                                {a.id === 'justify' && <AlignJustify size={16} color={isActive ? "#3b82f6" : "#8b949e"} />}
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </ScrollView>
+
                             </View>
                         )}
                         {showHighlighter && !isPreviewMode && (
@@ -701,70 +1371,94 @@ export default function Notes() {
                                 </ScrollView>
                             </View>
                         )}
-                        <ScrollView className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="handled">
-                            {editingNote && (
-                                <>
-                                    <View className="mb-6">
-                                        <Text className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1">{new Date(editingNote.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
-                                        <View className="flex-row items-start justify-between">
-                                            <TextInput placeholder={t('note_title_placeholder')} placeholderTextColor="#475569" className="text-3xl font-bold text-white flex-1 mr-4" multiline style={{ fontFamily: 'Lexend_700Bold' }} value={editingNote.title} onChangeText={t => updateCurrentNoteState({ title: t })} />
-                                            <TouchableOpacity onPress={() => setShowFolderModal(true)} className="bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl flex-row items-center mt-1"><Folder size={14} color="#3b82f6" className="mr-2" /><Text className="text-white/60 text-xs font-bold">{editingNote.folder || t('category')}</Text></TouchableOpacity>
-                                        </View>
-                                    </View>
-                                    {showAttachments && (
-                                        <View className="mb-10 bg-white/5 rounded-[40px] p-8 border border-white/10">
-                                            <View className="flex-row justify-between items-center mb-8">
-                                                <Text className="text-white/40 font-bold text-xs uppercase tracking-widest">Pièces Jointes</Text>
-                                                <View className="flex-row gap-3">
-                                                    <TouchableOpacity onPress={() => pickMedia(false, 'All')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><LayoutGrid size={18} color="#3b82f6" /></TouchableOpacity>
-                                                    <TouchableOpacity onPress={() => pickMedia(true, 'Images')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Camera size={18} color="#3b82f6" /></TouchableOpacity>
-                                                    <TouchableOpacity onPress={() => pickMedia(true, 'Videos')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Video size={18} color="#3b82f6" /></TouchableOpacity>
-                                                    <TouchableOpacity onPress={() => { setRecordMode('attachment'); setShowVoiceModal(true); }} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Mic size={18} color="#3b82f6" /></TouchableOpacity>
-                                                </View>
+                        <ViewShot ref={noteViewShotRef} style={{ flex: 1, backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }} options={{ format: "jpg", quality: 0.95 }}>
+                            <ScrollView ref={scrollViewRef} className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                                {editingNote && (
+                                    <View className="relative flex-1" style={{ minHeight: '100%' }}>
+                                        <PaperBackground pattern={editingNote.bgStyle?.pattern || 'blank'} color={editingNote.bgStyle?.color || '#0d1117'} />
+                                        
+                                        <View className="mb-6 z-10">
+                                            <Text className={cn("text-[10px] font-bold uppercase tracking-widest mb-1", isDark ? "text-white/30" : "text-slate-400")}>{new Date(editingNote.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
+                                            <View className="flex-row items-start justify-between">
+                                                <TextInput placeholder={t('note_title_placeholder')} placeholderTextColor={placeholderColor} className={cn("text-3xl font-bold flex-1 mr-4", textColorClass)} multiline style={{ fontFamily: 'Lexend_700Bold' }} value={editingNote.title} onChangeText={t => updateCurrentNoteState({ title: t })} />
+                                                <TouchableOpacity onPress={() => setShowFolderModal(true)} className={cn("border px-4 py-2.5 rounded-2xl flex-row items-center mt-1", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5")}><Folder size={14} color="#3b82f6" className="mr-2" /><Text className={cn("text-xs font-bold", isDark ? "text-white/60" : "text-slate-600")}>{editingNote.folder || t('category')}</Text></TouchableOpacity>
                                             </View>
-                                            <ScrollView horizontal className="mb-4">{editingNote.attachments?.videos?.map((u, i) => (
-                                                <TouchableOpacity key={i} className="mr-4"><View className="w-24 h-24 rounded-2xl bg-black items-center justify-center border border-white/20"><Play size={20} color="white" /></View><TouchableOpacity onPress={() => { const nv = editingNote.attachments?.videos?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, videos: nv } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
-                                            ))}</ScrollView>
-                                            <ScrollView horizontal className="mb-4">{editingNote.attachments?.images?.map((u, i) => (
-                                                <TouchableOpacity key={i} onPress={() => setSelectedImage(u)} className="mr-4"><RNImage source={{ uri: u }} className="w-24 h-24 rounded-2xl" /><TouchableOpacity onPress={() => { const ni = editingNote.attachments?.images?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, images: ni } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
-                                            ))}</ScrollView>
-                                            {editingNote.attachments?.voice?.map((v, i) => <AudioPlayer key={i} uri={v.uri} onDelete={() => { const nv = editingNote.attachments?.voice?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, voice: nv } }); }} />)}
                                         </View>
-                                    )}
-                                    {editingNote.type === 'draw' && editingNote.attachments?.images?.length ? (
-                                        <View className="mb-10">
-                                            <TouchableOpacity onPress={() => setSelectedImage(editingNote.attachments!.images![editingNote.attachments!.images!.length - 1])}><RNImage source={{ uri: editingNote.attachments.images[editingNote.attachments.images.length - 1] }} className="w-full aspect-square rounded-[40px] bg-white" resizeMode="contain" /></TouchableOpacity>
-                                            <TouchableOpacity onPress={() => setShowDrawModal(true)} className="absolute bottom-4 right-4 bg-purple-600 w-12 h-12 rounded-full items-center justify-center shadow-lg"><Palette size={20} color="white" /></TouchableOpacity>
-                                        </View>
-                                    ) : null}
-                                    {isPreviewMode ? (
-                                        <View className="pb-32">{renderNoteContent(editingNote.content)}</View>
-                                    ) : (
-                                        <TextInput ref={textInputRef} multiline textAlignVertical="top" placeholder={t('note_content_placeholder')} placeholderTextColor="#475569" className="text-xl text-slate-200 leading-8 min-h-[400px] mb-40" style={{ fontFamily: 'Lexend_400Regular' }} value={editingNote.content || ""} onChangeText={t => updateCurrentNoteState({ content: t })} onSelectionChange={e => setSelection(e.nativeEvent.selection)} />
-                                    )}
-                                </>
-                            )}
-                        </ScrollView>
+                                        {showAttachments && (
+                                            <View className={cn("mb-10 rounded-[40px] p-8 border z-10", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                                                <View className="flex-row justify-between items-center mb-8">
+                                                    <Text className={cn("font-bold text-xs uppercase tracking-widest", isDark ? "text-white/40" : "text-slate-500")}>Pièces Jointes</Text>
+                                                    <View className="flex-row gap-3">
+                                                        <TouchableOpacity onPress={() => pickMedia(false, 'All')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><LayoutGrid size={18} color="#3b82f6" /></TouchableOpacity>
+                                                        <TouchableOpacity onPress={() => pickMedia(true, 'Images')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Camera size={18} color="#3b82f6" /></TouchableOpacity>
+                                                        <TouchableOpacity onPress={() => pickMedia(true, 'Videos')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Video size={18} color="#3b82f6" /></TouchableOpacity>
+                                                        <TouchableOpacity onPress={() => { setRecordMode('attachment'); setShowVoiceModal(true); }} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Mic size={18} color="#3b82f6" /></TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                                <ScrollView horizontal className="mb-4">{editingNote.attachments?.videos?.map((u, i) => (
+                                                    <TouchableOpacity key={i} className="mr-4"><View className="w-24 h-24 rounded-2xl bg-black items-center justify-center border border-white/20"><Play size={20} color="white" /></View><TouchableOpacity onPress={() => { const nv = editingNote.attachments?.videos?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, videos: nv } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
+                                                ))}</ScrollView>
+                                                <ScrollView horizontal className="mb-4">{editingNote.attachments?.images?.map((u, i) => (
+                                                    <TouchableOpacity key={i} onPress={() => setSelectedImage(u)} className="mr-4"><RNImage source={{ uri: u }} className="w-24 h-24 rounded-2xl" /><TouchableOpacity onPress={() => { const ni = editingNote.attachments?.images?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, images: ni } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
+                                                ))}</ScrollView>
+                                                {editingNote.attachments?.voice?.map((v, i) => <AudioPlayer key={i} uri={v.uri} onDelete={() => { const nv = editingNote.attachments?.voice?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, voice: nv } }); }} />)}
+                                            </View>
+                                        )}
+                                        {editingNote.type === 'draw' && editingNote.attachments?.images?.length ? (
+                                            <View className="mb-10 z-10">
+                                                <TouchableOpacity onPress={() => setSelectedImage(editingNote.attachments!.images![editingNote.attachments!.images!.length - 1])}><RNImage source={{ uri: editingNote.attachments.images[editingNote.attachments.images.length - 1] }} className="w-full aspect-square rounded-[40px] bg-white" resizeMode="contain" /></TouchableOpacity>
+                                                <TouchableOpacity onPress={() => setShowDrawModal(true)} className="absolute bottom-4 right-4 bg-purple-600 w-12 h-12 rounded-full items-center justify-center shadow-lg"><Palette size={20} color="white" /></TouchableOpacity>
+                                            </View>
+                                        ) : null}
+                                        {isPreviewMode ? (
+                                            <View className="pb-32 z-10">{renderNoteContent(editingNote.content)}</View>
+                                        ) : (
+                                            <>
+                                                <TextInput ref={textInputRef} multiline textAlignVertical="top" placeholder={t('note_content_placeholder')} placeholderTextColor={placeholderColor} className={cn("leading-8 min-h-[400px] mb-32 z-10", textColorClass)} style={{ fontFamily: editingNote.textStyle?.fontFamily || 'Lexend_400Regular', fontSize: editingNote.textStyle?.fontSize || 20, textAlign: editingNote.textStyle?.textAlign || 'left' }} value={editingNote.content || ""} onChangeText={t => { updateCurrentNoteState({ content: t }); pushHistoryState(t, false); }} onSelectionChange={e => setSelection(e.nativeEvent.selection)} />
+                                            </>
+                                        )}
+                                    </View>
+                                )}
+                            </ScrollView>
+                        </ViewShot>
                         {!isPreviewMode && editingNote && (
-                            <View className="bg-[#161b22] border-t border-white/10 pb-12 pt-4 px-6">
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-                                    <TouchableOpacity onPress={() => setShowAttachments(!showAttachments)} className={cn("w-14 h-14 rounded-2xl items-center justify-center", showAttachments ? "bg-primary/20" : "bg-white/5")}><Plus size={24} color={showAttachments ? "#60a5fa" : "#8b949e"} /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => setShowDrawModal(true)} className="w-14 h-14 bg-white/5 rounded-2xl items-center justify-center ml-3"><Edit size={24} color="#8b949e" /></TouchableOpacity>
-                                    <View className="w-[1px] h-10 bg-white/10 mx-3" />
-                                    <TouchableOpacity onPress={() => insertMarkdown('**', '**')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center"><Bold size={20} color="#8b949e" /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => insertMarkdown('*', '*')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center mx-2"><Italic size={20} color="#8b949e" /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => insertMarkdown('# ', '')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center"><Heading size={20} color="#8b949e" /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => insertMarkdown('- ', '')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center mx-2"><List size={20} color="#8b949e" /></TouchableOpacity>
-                                    <View className="w-[1px] h-10 bg-white/10 mx-3" />
-                                    <TouchableOpacity onPress={() => { const refNum = (editingNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1; insertMarkdown(`[^${refNum}]`, `\n\n[^${refNum}]: `); }} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center"><Footprints size={20} color="#8b949e" /></TouchableOpacity>
-                                    <View className="w-[1px] h-10 bg-white/10 mx-3" />
-                                    <TouchableOpacity onPress={() => pickAndInsertMedia('image')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center"><Camera size={20} color="#8b949e" /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => pickAndInsertMedia('video')} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center mx-2"><Video size={20} color="#8b949e" /></TouchableOpacity>
-                                    <TouchableOpacity onPress={() => { setRecordMode('inline'); setShowVoiceModal(true); }} className="w-12 h-14 bg-white/5 rounded-2xl items-center justify-center"><Mic size={20} color="#8b949e" /></TouchableOpacity>
-                                    <View className="w-[1px] h-10 bg-white/10 mx-3" />
-                                    <TouchableOpacity onPress={() => setShowHighlighter(!showHighlighter)} className={cn("w-12 h-14 rounded-2xl items-center justify-center", showHighlighter ? "bg-primary/20" : "bg-white/5")}><Highlighter size={20} color={showHighlighter ? "#60a5fa" : "#8b949e"} /></TouchableOpacity>
-                                </ScrollView>
+                            <View className={cn("px-4 py-2 flex-row justify-between items-center border-t border-white/5", isDark ? "bg-[#161b22]" : "bg-[#f1f5f9]")}>
+                                <Text className={cn("text-[10px] font-bold", isDark ? "text-white/60" : "text-slate-500")}>
+                                    {editingNote.content ? editingNote.content.trim().split(/\s+/).filter(Boolean).length : 0} {t('words' as any) || 'mots'}  •  {editingNote.content ? editingNote.content.length : 0} {t('chars' as any) || 'caractères'}
+                                </Text>
+                                <Text className={cn("text-[10px] font-bold uppercase tracking-widest", isDark ? "text-white/60" : "text-slate-500")}>
+                                    Lecture ~{Math.max(1, Math.ceil((editingNote.content ? editingNote.content.length : 0) / 1000))} min
+                                </Text>
                             </View>
+                        )}
+                        {!isPreviewMode && editingNote && (
+                            <SafeAreaView edges={['bottom']} className={cn("border-t pt-3 px-4 pb-4", isDark ? "bg-[#161b22] border-white/10" : "bg-[#f8fafc] border-black/10")}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                                    <TouchableOpacity onPress={undo} disabled={historyState.index <= 0} className={cn("w-11 h-11 bg-white/5 rounded-xl items-center justify-center", historyState.index <= 0 ? "opacity-30" : "")}><Undo2 size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={redo} disabled={historyState.index >= historyState.stack.length - 1} className={cn("w-11 h-11 bg-white/5 rounded-xl items-center justify-center mx-2", historyState.index >= historyState.stack.length - 1 ? "opacity-30" : "")}><Redo2 size={18} color="#8b949e" /></TouchableOpacity>
+                                    <View className="w-[1px] h-8 bg-white/10 mr-2.5 self-center" />
+                                    
+                                    <TouchableOpacity onPress={() => setShowDrawModal(true)} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Edit size={20} color="#8b949e" /></TouchableOpacity>
+                                    <View className="w-[1px] h-8 bg-white/10 mx-2.5 self-center" />
+                                    
+                                    <TouchableOpacity onPress={() => insertMarkdown('**', '**')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Bold size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => insertMarkdown('*', '*')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center mx-2"><Italic size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => insertMarkdown('# ', '')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Heading size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => insertMarkdown('- ', '')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center mx-2"><List size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => insertMarkdown('- [ ] ', '')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Square size={18} color="#8b949e" /></TouchableOpacity>
+                                    
+                                    <View className="w-[1px] h-8 bg-white/10 mx-2.5 self-center" />
+                                    <TouchableOpacity onPress={() => { const refNum = (editingNote.content.match(/\[\^(\d+)\]/g)?.length || 0) + 1; insertMarkdown(`[^${refNum}]`, `\n\n[^${refNum}]: `); }} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Footprints size={18} color="#8b949e" /></TouchableOpacity>
+                                    
+                                    <View className="w-[1px] h-8 bg-white/10 mx-2.5 self-center" />
+                                    <TouchableOpacity onPress={() => pickAndInsertMedia('image')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Camera size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => pickAndInsertMedia('video')} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center mx-2"><Video size={18} color="#8b949e" /></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => { setRecordMode('inline'); setShowVoiceModal(true); }} className="w-11 h-11 bg-white/5 rounded-xl items-center justify-center"><Mic size={18} color="#8b949e" /></TouchableOpacity>
+                                    
+                                    <View className="w-[1px] h-8 bg-white/10 mx-2.5 self-center" />
+                                    <TouchableOpacity onPress={() => setShowHighlighter(!showHighlighter)} className={cn("w-11 h-11 rounded-xl items-center justify-center", showHighlighter ? "bg-primary/20" : "bg-white/5")}><Highlighter size={18} color={showHighlighter ? "#60a5fa" : "#8b949e"} /></TouchableOpacity>
+                                </ScrollView>
+                            </SafeAreaView>
                         )}
                     </KeyboardAvoidingView>
                 </View>
@@ -1089,6 +1783,86 @@ export default function Notes() {
               onConfirm={alertConfig.onConfirm}
               onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
             />
+
+            {/* Safe PIN Security Code Modal */}
+            <Modal visible={isPinCodeModalVisible} transparent animationType="fade">
+                <View className="flex-1 bg-black/80 items-center justify-center p-6">
+                    <View className="bg-[#1c2128] border border-white/10 w-full max-w-sm rounded-[40px] p-8 items-center shadow-2xl">
+                        <View className="w-16 h-16 rounded-3xl bg-amber-500/10 items-center justify-center mb-6">
+                            <Lock size={28} color="#f59e0b" />
+                        </View>
+                        <Text className="text-white text-xl font-bold text-center mb-2" style={{ fontFamily: 'Lexend_700Bold' }}>
+                            {isSettingPinCode ? "Créer un Code PIN" : "Note Verrouillée"}
+                        </Text>
+                        <Text className="text-slate-400 text-xs text-center mb-8 px-4">
+                            {isSettingPinCode 
+                                ? "Définissez un code d'accès à 4 chiffres pour protéger vos réflexions privées." 
+                                : "Saisissez votre code PIN de sécurité pour déverrouiller cette note."}
+                        </Text>
+
+                        {/* PIN dots */}
+                        <View className="flex-row gap-5 mb-10">
+                            {[0, 1, 2, 3].map(i => (
+                                <View 
+                                    key={i} 
+                                    className={cn(
+                                        "w-5 h-5 rounded-full border-2", 
+                                        pinInput.length > i 
+                                            ? "bg-amber-500 border-amber-500" 
+                                            : "border-slate-600 bg-transparent"
+                                    )} 
+                                />
+                            ))}
+                        </View>
+
+                        {/* Numeric Keyboard */}
+                        <View className="w-full gap-4 mb-6">
+                            {[[1, 2, 3], [4, 5, 6], [7, 8, 9]].map((row, idx) => (
+                                <View key={idx} className="flex-row justify-between gap-4">
+                                    {row.map(num => (
+                                        <TouchableOpacity 
+                                            key={num} 
+                                            onPress={() => pinInput.length < 4 && setPinInput(prev => prev + num)}
+                                            className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
+                                        >
+                                            <Text className="text-white text-xl font-bold">{num}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            ))}
+                            <View className="flex-row justify-between gap-4">
+                                <TouchableOpacity 
+                                    onPress={() => { setIsPinCodeModalVisible(false); setLockedNoteToUnlock(null); }}
+                                    className="flex-1 h-16 rounded-2xl items-center justify-center"
+                                >
+                                    <Text className="text-slate-500 font-bold text-sm">Annuler</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={() => pinInput.length < 4 && setPinInput(prev => prev + "0")}
+                                    className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
+                                >
+                                    <Text className="text-white text-xl font-bold">0</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={() => setPinInput(prev => prev.slice(0, -1))}
+                                    className="flex-1 h-16 rounded-2xl items-center justify-center"
+                                >
+                                    <Text className="text-amber-500 font-bold text-sm">Effacer</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {pinInput.length === 4 && (
+                            <TouchableOpacity 
+                                onPress={handleSubmitPin}
+                                className="w-full bg-amber-500 p-5 rounded-3xl items-center justify-center shadow-lg shadow-amber-500/20 mt-2"
+                            >
+                                <Text className="text-slate-950 font-bold text-base">Confirmer</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
