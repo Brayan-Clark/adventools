@@ -16,6 +16,9 @@ type AppSettings = {
   notifications: boolean;
   downloadOverWifiOnly: boolean;
   updateCheckIntervalMonths: number;
+  studyReminderEnabled: boolean;
+  studyReminderTime: string;
+  studyReminderLeadMinutes: number;
 };
 
 type SettingsContextType = {
@@ -38,6 +41,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   notifications: true,
   downloadOverWifiOnly: true, // Default to Wi-Fi only for safety
   updateCheckIntervalMonths: 1, // Default to 1 month
+  studyReminderEnabled: false,
+  studyReminderTime: '07:00',
+  studyReminderLeadMinutes: 0,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

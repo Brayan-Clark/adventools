@@ -26,12 +26,16 @@ import {
   Trash2,
   Type,
   User,
-  X
+  X,
+  Bell,
+  Clock
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, KeyboardAvoidingView, ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from '@/components/ui/AppText';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { scheduleStudyReminder } from '@/lib/notifications';
 
 
 
@@ -74,6 +78,36 @@ export default function Settings() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [installedBibles, setInstalledBibles] = useState<any[]>([]);
   const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const onTimeChange = async (event: any, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (selectedDate) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      await updateSettings({ studyReminderTime: timeStr });
+      await scheduleStudyReminder(
+        globalSettings.studyReminderEnabled,
+        timeStr,
+        globalSettings.studyReminderLeadMinutes,
+        globalSettings.language
+      );
+    }
+  };
+
+  const getPickerDate = () => {
+    const d = new Date();
+    if (globalSettings.studyReminderTime) {
+      const [h, m] = globalSettings.studyReminderTime.split(':');
+      d.setHours(parseInt(h, 10) || 7);
+      d.setMinutes(parseInt(m, 10) || 0);
+    } else {
+      d.setHours(7);
+      d.setMinutes(0);
+    }
+    return d;
+  };
 
   // Security
   const [isPinModalVisible, setIsPinModalVisible] = useState(false);
@@ -466,6 +500,86 @@ export default function Settings() {
                   isLast
                 />
               </SettingsGroup>
+
+              <SettingsGroup title="Rappel d'étude journalier">
+                <SettingItem
+                  icon={<Bell size={18} color="#f59e0b" />}
+                  label="Activer le rappel"
+                  rightElement={
+                    <Switch
+                      value={globalSettings.studyReminderEnabled}
+                      onValueChange={async (val) => {
+                        await updateSettings({ studyReminderEnabled: val });
+                        await scheduleStudyReminder(val, globalSettings.studyReminderTime, globalSettings.studyReminderLeadMinutes, globalSettings.language);
+                      }}
+                      trackColor={{ false: '#334155', true: '#3b82f6' }}
+                      thumbColor="#fff"
+                    />
+                  }
+                />
+                
+                {globalSettings.studyReminderEnabled && (
+                  <>
+                    <SettingItem
+                      icon={<Clock size={18} color="#3b82f6" />}
+                      label="Heure de rappel"
+                      value={globalSettings.studyReminderTime}
+                      onPress={() => {
+                        setShowTimePicker(true);
+                      }}
+                    />
+                    <SettingItem
+                      icon={<Clock size={18} color="#10b981" />}
+                      label="Avertir en avance"
+                      value={
+                        globalSettings.studyReminderLeadMinutes === 0 
+                          ? "À l'heure exacte" 
+                          : `${globalSettings.studyReminderLeadMinutes} minutes avant`
+                      }
+                      onPress={() => {
+                        Alert.alert(
+                          "Avertir en avance",
+                          "Sélectionnez quand être averti avant l'heure d'étude :",
+                          [
+                            { text: "À l'heure exacte", onPress: async () => {
+                              await updateSettings({ studyReminderLeadMinutes: 0 });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 0, globalSettings.language);
+                            }},
+                            { text: "5 minutes avant", onPress: async () => {
+                              await updateSettings({ studyReminderLeadMinutes: 5 });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 5, globalSettings.language);
+                            }},
+                            { text: "10 minutes avant", onPress: async () => {
+                              await updateSettings({ studyReminderLeadMinutes: 10 });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 10, globalSettings.language);
+                            }},
+                            { text: "15 minutes avant", onPress: async () => {
+                              await updateSettings({ studyReminderLeadMinutes: 15 });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 15, globalSettings.language);
+                            }},
+                            { text: "30 minutes avant", onPress: async () => {
+                              await updateSettings({ studyReminderLeadMinutes: 30 });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 30, globalSettings.language);
+                            }},
+                            { text: t('cancel') || "Annuler", style: 'cancel' }
+                          ]
+                        );
+                      }}
+                      isLast
+                    />
+                  </>
+                )}
+              </SettingsGroup>
+
+              {showTimePicker && (
+                <DateTimePicker
+                  value={getPickerDate()}
+                  mode="time"
+                  is24Hour={true}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onTimeChange}
+                />
+              )}
             </>
           )}
 
