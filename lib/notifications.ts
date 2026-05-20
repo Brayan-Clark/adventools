@@ -128,12 +128,19 @@ export async function scheduleStudyReminder(
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
       },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        hour,
-        minute,
-        repeats: true,
-      },
+      trigger: Platform.OS === 'android' 
+        ? {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour,
+            minute,
+            repeats: true,
+          }
+        : {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            hour,
+            minute,
+            repeats: true,
+          },
     });
 
     console.log(`Study reminder scheduled daily at ${hour}:${minute} (raw time: ${timeStr}, minus ${leadMinutes} min lead)`);
