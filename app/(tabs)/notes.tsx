@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Print from 'expo-print';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Lock, Mic, Music, Palette, Paperclip, Pause, Play, Plus, Pin, Printer, Redo2, Search, Share2, Square, Star, StickyNote, Trash2, Undo2, Unlock, User, Video, X, Maximize2, Minimize2, Pointer, Activity, Zap } from 'lucide-react-native';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, BookOpen, Camera, Check, ChevronRight, Edit, Eraser, Folder, Footprints, Heading, Highlighter, Italic, LayoutGrid, List, Lock, Mic, Music, Palette, Paperclip, Pause, Play, Plus, Pin, Printer, Redo2, Search, Share2, Square, Star, StickyNote, Trash2, Undo2, Unlock, User, Video, X, Maximize2, Minimize2, Pointer, Activity, Zap, CheckSquare, RotateCcw } from 'lucide-react-native';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
@@ -348,6 +348,8 @@ export default function Notes() {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [showHighlighter, setShowHighlighter] = useState(false);
     const [laserMode, setLaserMode] = useState<'off' | 'dot' | 'trail_red' | 'trail_highlight'>('off');
+    const [isLaserToolbarExpanded, setIsLaserToolbarExpanded] = useState(false);
+    const [showViewModeAttachments, setShowViewModeAttachments] = useState(false);
     
     // --- Selection and Modals ---
     const [showFolderModal, setShowFolderModal] = useState(false);
@@ -851,9 +853,18 @@ export default function Notes() {
     };
 
     const toggleSelectNote = (id: string) => {
-        setSelectedNoteIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
+        setSelectedNoteIds(prev => {
+            const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+            if (next.length === 0) {
+                setIsMultiSelectActive(false);
+            }
+            return next;
+        });
+    };
+
+    const handleSelectAll = () => {
+        const visibleIds = filteredNotes.map(n => n.id);
+        setSelectedNoteIds(visibleIds);
     };
 
     const handleNoteLongPress = (n: Note) => {
@@ -1278,6 +1289,9 @@ export default function Notes() {
     const renderNoteContent = (text: string) => {
         if (!text) return <Text className="text-white/20 italic">{t('no_content')}</Text>;
         const parts = text.split(/(\[(?:image|video|audio):\s*[^\]]+\])/gi);
+        const textAlign = editingNote?.textStyle?.textAlign || 'left';
+        const containerAlignItems = textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start';
+        const containerJustifyContent = textAlign === 'center' ? 'center' : textAlign === 'right' ? 'flex-end' : 'flex-start';
         return parts.map((part, index) => {
             const imageMatch = part.match(/\[image:\s*([^\]]+)\]/i);
             const videoMatch = part.match(/\[video:\s*([^\]]+)\]/i);
@@ -1301,26 +1315,115 @@ export default function Notes() {
                             ...((dynamicMarkdownStyles as any).body || {}),
                             fontFamily: activeFont,
                             fontSize: editingNote?.textStyle?.fontSize || 18,
-                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignSelf: 'stretch',
+                            alignItems: containerAlignItems,
                         },
                         paragraph: {
-                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        text: {
+                            textAlign: textAlign,
                         },
                         heading1: {
                             ...((dynamicMarkdownStyles as any).heading1 || {}),
-                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
                         },
                         heading2: {
                             ...((dynamicMarkdownStyles as any).heading2 || {}),
-                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
                         },
                         heading3: {
                             ...((dynamicMarkdownStyles as any).heading3 || {}),
-                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        heading4: {
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        heading5: {
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        heading6: {
+                            textAlign: textAlign,
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        strong: {
+                            textAlign: textAlign,
+                        },
+                        em: {
+                            textAlign: textAlign,
+                        },
+                        bullet_list: {
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        ordered_list: {
+                            width: '100%',
+                            alignItems: containerAlignItems,
+                        },
+                        list_item: {
+                            ...((dynamicMarkdownStyles as any).list_item || {}),
+                            textAlign: textAlign,
+                            width: '100%',
+                            justifyContent: containerJustifyContent,
                         },
                     } as any}
                     onLinkPress={handleVerseClick}
                     rules={{
+                        paragraph: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.paragraph, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading1: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading1, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading2: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading2, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading3: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading3, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading4: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading4, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading5: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading5, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        heading6: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.heading6, { width: '100%', alignItems: containerAlignItems, justifyContent: containerJustifyContent }]}>
+                                {children}
+                            </View>
+                        ),
+                        list_item: (node, children, parent, styles) => (
+                            <View key={node.key} style={[styles.list_item, { width: '100%', justifyContent: containerJustifyContent, alignItems: 'center' }]}>
+                                {children}
+                            </View>
+                        ),
                         // Override italic to avoid Android system font fallback
                         em: (node, children, parent, styles) => (
                             <Text key={node.key} style={{
@@ -1329,28 +1432,29 @@ export default function Notes() {
                                 color: isDark ? '#94a3b8' : '#64748b',
                                 letterSpacing: 0.4,
                                 opacity: 0.85,
+                                textAlign: editingNote?.textStyle?.textAlign || 'left',
                             }}>{children}</Text>
                         ),
                         link: (node, children, parent, styles) => {
                             const url = node.attributes.href;
                             if (url.startsWith('#highlight:')) {
                                 const color = url.replace('#highlight:', '');
-                                return <Text key={node.key} style={{ backgroundColor: color, color: '#000', borderRadius: 4, paddingHorizontal: 2, fontSize: 18 }}>{children}</Text>;
+                                return <Text key={node.key} style={{ backgroundColor: color, color: '#000', borderRadius: 4, paddingHorizontal: 2, fontSize: 18, textAlign: editingNote?.textStyle?.textAlign || 'left' }}>{children}</Text>;
                             }
                             if (url.startsWith('#footnote-ref:')) {
                                 const ref = url.replace('#footnote-ref:', '');
-                                return <Text key={node.key} style={{ fontSize: 12, color: '#3b82f6', verticalAlign: 'top', fontWeight: 'bold' }}> {ref}</Text>;
+                                return <Text key={node.key} style={{ fontSize: 12, color: '#3b82f6', verticalAlign: 'top', fontWeight: 'bold', textAlign: editingNote?.textStyle?.textAlign || 'left' }}> {ref}</Text>;
                             }
                             if (url.startsWith('#footnote-def:')) {
                                 const ref = url.replace('#footnote-def:', '');
                                 return (
                                     <View key={node.key} className="flex-row mt-4 pt-4 border-t border-white/5">
                                         <Text className="text-primary font-bold mr-2 text-xs">{ref}.</Text>
-                                        <Text className="text-white/40 text-xs flex-1 italic">{children}</Text>
+                                        <Text className="text-white/40 text-xs flex-1 italic" style={{ textAlign: editingNote?.textStyle?.textAlign || 'left' }}>{children}</Text>
                                     </View>
                                 );
                             }
-                            return <Text key={node.key} style={styles.link} onPress={() => handleVerseClick(url)}>{children}</Text>;
+                            return <Text key={node.key} style={{ ...styles.link, textAlign: editingNote?.textStyle?.textAlign || 'left' }} onPress={() => handleVerseClick(url)}>{children}</Text>;
                         },
                         image: () => null
                     }}
@@ -1488,31 +1592,49 @@ export default function Notes() {
             </View>
 
             {/* Multi-select action bar */}
-            {isMultiSelectActive && (
+            {isMultiSelectActive && selectedNoteIds.length > 0 && (
                 <View className="mx-4 mb-3 px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-3xl flex-row items-center justify-between">
                     <TouchableOpacity onPress={() => { setIsMultiSelectActive(false); setSelectedNoteIds([]); }} className="flex-row items-center">
                         <X size={16} color="#60a5fa" />
                         <Text className="text-blue-400 font-bold text-sm ml-1.5">{selectedNoteIds.length} sélectionnée(s)</Text>
                     </TouchableOpacity>
-                    <View className="flex-row gap-3">
+                    <View className="flex-row gap-2.5">
+                        <TouchableOpacity onPress={handleSelectAll} className="w-10 h-10 bg-blue-500/20 border border-blue-500/30 rounded-full items-center justify-center">
+                            <CheckSquare size={16} color="#60a5fa" />
+                        </TouchableOpacity>
                         {selectedFolder === 'trash' && (
-                            <TouchableOpacity onPress={handleRestoreSelected} className="px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-2xl">
-                                <Text className="text-green-400 font-bold text-xs">Restaurer</Text>
+                            <TouchableOpacity onPress={handleRestoreSelected} className="w-10 h-10 bg-green-500/20 border border-green-500/30 rounded-full items-center justify-center">
+                                <RotateCcw size={16} color="#4ade80" />
                             </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={handleDeleteSelected} className="px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-2xl">
-                            <Text className="text-red-400 font-bold text-xs">{selectedFolder === 'trash' ? 'Purger' : 'Supprimer'}</Text>
+                        <TouchableOpacity onPress={handleDeleteSelected} className="w-10 h-10 bg-red-500/20 border border-red-500/30 rounded-full items-center justify-center">
+                            <Trash2 size={16} color="#f87171" />
                         </TouchableOpacity>
                     </View>
                 </View>
             )}
 
-            {/* Empty Trash button */}
+            {/* Empty Trash button & Select multiple trigger */}
             {selectedFolder === 'trash' && !isMultiSelectActive && notes.filter(n => n.isTrash).length > 0 && (
-                <TouchableOpacity onPress={handleEmptyTrash} className="mx-4 mb-3 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-3xl flex-row items-center justify-center">
-                    <Trash2 size={14} color="#ef4444" />
-                    <Text className="text-red-400 font-bold text-sm ml-2">Vider la corbeille</Text>
-                </TouchableOpacity>
+                <View className="mx-4 mb-3 flex-row gap-3">
+                    <TouchableOpacity 
+                        onPress={() => {
+                            setIsMultiSelectActive(true);
+                            setSelectedNoteIds([]);
+                        }} 
+                        className="flex-1 px-5 py-3 bg-blue-500/10 border border-blue-500/20 rounded-3xl flex-row items-center justify-center"
+                    >
+                        <List size={14} color="#60a5fa" />
+                        <Text className="text-blue-400 font-bold text-sm ml-2">Sélectionner</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={handleEmptyTrash} 
+                        className="flex-1 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-3xl flex-row items-center justify-center"
+                    >
+                        <Trash2 size={14} color="#ef4444" />
+                        <Text className="text-red-400 font-bold text-sm ml-2">Vider la corbeille</Text>
+                    </TouchableOpacity>
+                </View>
             )}
 
             <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -1587,7 +1709,7 @@ export default function Notes() {
                         {showColorPicker && (
                             <View className={cn("px-6 py-5 border-b", isDark ? "bg-[#161b22] border-white/5" : "bg-[#f1f5f9] border-black/5")}>
                                 <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-slate-500")}>Couleur de la Fiche (Dashboard)</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4" keyboardShouldPersistTaps="always">
                                     {NOTE_COLORS.map(c => (
                                         <TouchableOpacity 
                                             key={c.value} 
@@ -1599,7 +1721,7 @@ export default function Notes() {
                                 </ScrollView>
 
                                 <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-slate-500")}>Couleur de Page (Arrière-plan)</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1 mb-4" keyboardShouldPersistTaps="always">
                                     {PAPER_COLORS.map(c => (
                                         <TouchableOpacity 
                                             key={c.value} 
@@ -1641,7 +1763,7 @@ export default function Notes() {
 
                                 {/* Typography Options */}
                                 <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-3 mt-4", isDark ? "text-white/40" : "text-slate-500")}>Police du Texte</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always">
                                     <View className="flex-row gap-3 py-1 mb-2">
                                     {TEXT_FONTS.map(f => {
                                         const isActive = (editingNote?.textStyle?.fontFamily || 'Lexend_400Regular') === f.id;
@@ -1656,7 +1778,7 @@ export default function Notes() {
                                 </ScrollView>
 
                                 <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2 mt-4", isDark ? "text-white/40" : "text-slate-500")}>Taille & Alignement</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-1" keyboardShouldPersistTaps="always">
                                     {TEXT_SIZES.map(s => {
                                         const isActive = (editingNote?.textStyle?.fontSize || 20) === s.id;
                                         return (
@@ -1683,7 +1805,7 @@ export default function Notes() {
                         )}
                         {showHighlighter && !isPreviewMode && (
                             <View className="px-6 py-4 bg-white/5 border-b border-white/5">
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row py-2" keyboardShouldPersistTaps="always">
                                     {HIGHLIGHT_COLORS.map(c => <TouchableOpacity key={c.id} onPress={() => { insertMarkdown(`<mark style="background-color: ${c.text}">`, '</mark>'); setShowHighlighter(false); }} style={{ backgroundColor: c.text }} className="w-12 h-12 rounded-full border-2 border-white/20 mr-4" />)}
                                     <TouchableOpacity onPress={() => { setCustomColorInput("#"); setColorPromptType('highlight'); setShowColorPrompt(true); }} className="w-12 h-12 rounded-full border-2 border-dashed border-white/40 items-center justify-center mr-4"><Plus size={20} color="white" /></TouchableOpacity>
                                 </ScrollView>
@@ -1695,33 +1817,117 @@ export default function Notes() {
                                     <View className="relative flex-1" style={{ minHeight: '100%' }}>
                                         <PaperBackground pattern={editingNote.bgStyle?.pattern || 'blank'} color={editingNote.bgStyle?.color || '#0d1117'} />
                                         
-                                        <View className="mb-6 z-10">
-                                            <Text className={cn("text-[10px] font-bold uppercase tracking-widest mb-1", isDark ? "text-white/30" : "text-slate-400")}>{new Date(editingNote.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
-                                            <View className="flex-row items-start justify-between">
-                                                <TextInput placeholder={t('note_title_placeholder')} placeholderTextColor={placeholderColor} className={cn("text-3xl font-bold flex-1 mr-4", textColorClass)} multiline style={{ fontFamily: 'Lexend_700Bold' }} value={editingNote.title} onChangeText={t => updateCurrentNoteState({ title: t })} />
-                                                <TouchableOpacity onPress={() => setShowFolderModal(true)} className={cn("border px-4 py-2.5 rounded-2xl flex-row items-center mt-1", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5")}><Folder size={14} color="#3b82f6" className="mr-2" /><Text className={cn("text-xs font-bold", isDark ? "text-white/60" : "text-slate-600")}>{editingNote.folder || t('category')}</Text></TouchableOpacity>
-                                            </View>
-                                        </View>
-                                        {showAttachments && (
-                                            <View className={cn("mb-10 rounded-[40px] p-8 border z-10", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
-                                                <View className="flex-row justify-between items-center mb-8">
-                                                    <Text className={cn("font-bold text-xs uppercase tracking-widest", isDark ? "text-white/40" : "text-slate-500")}>Pièces Jointes</Text>
-                                                    <View className="flex-row gap-3">
-                                                        <TouchableOpacity onPress={() => pickMedia(false, 'All')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><LayoutGrid size={18} color="#3b82f6" /></TouchableOpacity>
-                                                        <TouchableOpacity onPress={() => pickMedia(true, 'Images')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Camera size={18} color="#3b82f6" /></TouchableOpacity>
-                                                        <TouchableOpacity onPress={() => pickMedia(true, 'Videos')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Video size={18} color="#3b82f6" /></TouchableOpacity>
-                                                        <TouchableOpacity onPress={() => { setRecordMode('attachment'); setShowVoiceModal(true); }} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Mic size={18} color="#3b82f6" /></TouchableOpacity>
+                                        {(() => {
+                                            const textAlign = editingNote.textStyle?.textAlign || 'left';
+                                            const hasAttachments = !!(
+                                                editingNote.attachments?.videos?.length || 
+                                                editingNote.attachments?.images?.length || 
+                                                editingNote.attachments?.voice?.length
+                                            );
+                                            return (
+                                                <>
+                                                    <View className="mb-6 z-10" style={{ alignItems: 'flex-start' }}>
+                                                        <Text className={cn("text-[10px] font-bold uppercase tracking-widest mb-1", isDark ? "text-white/30" : "text-slate-400")} style={{ textAlign: 'left' }}>
+                                                            {new Date(editingNote.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                        </Text>
+                                                        <View className="w-full gap-2.5" style={{ alignItems: 'flex-start' }}>
+                                                            <TextInput 
+                                                                placeholder={t('note_title_placeholder')} 
+                                                                placeholderTextColor={placeholderColor} 
+                                                                className={cn("text-3xl font-bold w-full", textColorClass)} 
+                                                                multiline 
+                                                                editable={!isPreviewMode}
+                                                                style={{ fontFamily: 'Lexend_700Bold', textAlign: 'left' }} 
+                                                                value={editingNote.title} 
+                                                                onChangeText={t => updateCurrentNoteState({ title: t })} 
+                                                            />
+                                                            <View className="flex-row gap-3 flex-wrap items-center">
+                                                                <TouchableOpacity onPress={() => setShowFolderModal(true)} className={cn("border px-4 py-2.5 rounded-2xl flex-row items-center", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/5")}>
+                                                                    <Folder size={14} color="#3b82f6" className="mr-2" />
+                                                                    <Text className={cn("text-xs font-bold", isDark ? "text-white/60" : "text-slate-600")}>
+                                                                        {editingNote.folder || t('category')}
+                                                                    </Text>
+                                                                </TouchableOpacity>
+
+                                                                {isPreviewMode && hasAttachments && (
+                                                                    <TouchableOpacity 
+                                                                        onPress={() => setShowViewModeAttachments(prev => !prev)} 
+                                                                        className={cn("border px-4 py-2.5 rounded-2xl flex-row items-center", isDark ? "bg-[#f59e0b]/10 border-[#f59e0b]/30" : "bg-[#f59e0b]/5 border-[#f59e0b]/10")}
+                                                                    >
+                                                                        <Paperclip size={14} color="#d97706" className="mr-2" />
+                                                                        <Text className={cn("text-xs font-bold text-[#d97706]", isDark ? "text-[#fbbf24]" : "text-[#b45309]")}>
+                                                                            {showViewModeAttachments ? "Masquer Annexes" : `Annexes (${(editingNote.attachments?.images?.length || 0) + (editingNote.attachments?.videos?.length || 0) + (editingNote.attachments?.voice?.length || 0)})`}
+                                                                        </Text>
+                                                                    </TouchableOpacity>
+                                                                )}
+                                                            </View>
+                                                        </View>
                                                     </View>
-                                                </View>
-                                                <ScrollView horizontal className="mb-4">{editingNote.attachments?.videos?.map((u, i) => (
-                                                    <TouchableOpacity key={i} className="mr-4"><View className="w-24 h-24 rounded-2xl bg-black items-center justify-center border border-white/20"><Play size={20} color="white" /></View><TouchableOpacity onPress={() => { const nv = editingNote.attachments?.videos?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, videos: nv } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
-                                                ))}</ScrollView>
-                                                <ScrollView horizontal className="mb-4">{editingNote.attachments?.images?.map((u, i) => (
-                                                    <TouchableOpacity key={i} onPress={() => setSelectedImage(u)} className="mr-4"><RNImage source={{ uri: u }} className="w-24 h-24 rounded-2xl" /><TouchableOpacity onPress={() => { const ni = editingNote.attachments?.images?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, images: ni } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
-                                                ))}</ScrollView>
-                                                {editingNote.attachments?.voice?.map((v, i) => <AudioPlayer key={i} uri={v.uri} onDelete={() => { const nv = editingNote.attachments?.voice?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, voice: nv } }); }} />)}
-                                            </View>
-                                        )}
+
+                                                    {/* Attachments Display in View/Preview Mode */}
+                                                    {isPreviewMode && hasAttachments && showViewModeAttachments && (
+                                                        <View className={cn("mb-6 rounded-[32px] p-6 border z-10 w-full", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                                                            <Text className={cn("font-bold text-xs uppercase tracking-widest mb-4", isDark ? "text-white/40" : "text-slate-500")}>Pièces Jointes</Text>
+                                                            
+                                                            {editingNote.attachments?.videos && editingNote.attachments.videos.length > 0 && (
+                                                                <View className="mb-4 w-full">
+                                                                    <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/30" : "text-slate-400")}>Vidéos</Text>
+                                                                    {editingNote.attachments.videos.map((u, i) => (
+                                                                        <View key={i} className="mb-2 w-full">
+                                                                            <VideoPlayer uri={u} />
+                                                                        </View>
+                                                                    ))}
+                                                                </View>
+                                                            )}
+
+                                                            {editingNote.attachments?.images && editingNote.attachments.images.length > 0 && (
+                                                                <View className="mb-4">
+                                                                    <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/30" : "text-slate-400")}>Images</Text>
+                                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row" keyboardShouldPersistTaps="always">
+                                                                        {editingNote.attachments.images.map((u, i) => (
+                                                                            <TouchableOpacity key={i} onPress={() => setSelectedImage(u)} className="mr-3">
+                                                                                <RNImage source={{ uri: u }} className="w-24 h-24 rounded-2xl" />
+                                                                            </TouchableOpacity>
+                                                                        ))}
+                                                                    </ScrollView>
+                                                                </View>
+                                                            )}
+
+                                                            {editingNote.attachments?.voice && editingNote.attachments.voice.length > 0 && (
+                                                                <View className="w-full">
+                                                                    <Text className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", isDark ? "text-white/30" : "text-slate-400")}>Audios</Text>
+                                                                    {editingNote.attachments.voice.map((v, i) => (
+                                                                        <AudioPlayer key={i} uri={v.uri} />
+                                                                    ))}
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                    )}
+
+                                                    {/* Attachments Editing/Display in Edit Mode */}
+                                                    {!isPreviewMode && showAttachments && (
+                                                        <View className={cn("mb-10 rounded-[40px] p-8 border z-10", isDark ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                                                            <View className="flex-row justify-between items-center mb-8">
+                                                                <Text className={cn("font-bold text-xs uppercase tracking-widest", isDark ? "text-white/40" : "text-slate-500")}>Pièces Jointes</Text>
+                                                                <View className="flex-row gap-3">
+                                                                    <TouchableOpacity onPress={() => pickMedia(false, 'All')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><LayoutGrid size={18} color="#3b82f6" /></TouchableOpacity>
+                                                                    <TouchableOpacity onPress={() => pickMedia(true, 'Images')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Camera size={18} color="#3b82f6" /></TouchableOpacity>
+                                                                    <TouchableOpacity onPress={() => pickMedia(true, 'Videos')} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Video size={18} color="#3b82f6" /></TouchableOpacity>
+                                                                    <TouchableOpacity onPress={() => { setRecordMode('attachment'); setShowVoiceModal(true); }} className="w-10 h-10 bg-primary/20 rounded-xl items-center justify-center"><Mic size={18} color="#3b82f6" /></TouchableOpacity>
+                                                                </View>
+                                                            </View>
+                                                            <ScrollView horizontal className="mb-4" keyboardShouldPersistTaps="always">{editingNote.attachments?.videos?.map((u, i) => (
+                                                                <TouchableOpacity key={i} className="mr-4"><View className="w-24 h-24 rounded-2xl bg-black items-center justify-center border border-white/20"><Play size={20} color="white" /></View><TouchableOpacity onPress={() => { const nv = editingNote.attachments?.videos?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, videos: nv } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
+                                                            ))}</ScrollView>
+                                                            <ScrollView horizontal className="mb-4" keyboardShouldPersistTaps="always">{editingNote.attachments?.images?.map((u, i) => (
+                                                                <TouchableOpacity key={i} onPress={() => setSelectedImage(u)} className="mr-4"><RNImage source={{ uri: u }} className="w-24 h-24 rounded-2xl" /><TouchableOpacity onPress={() => { const ni = editingNote.attachments?.images?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, images: ni } }) }} className="absolute -top-1 -right-1 w-6 h-6 bg-black rounded-full items-center justify-center"><X size={12} color="white" /></TouchableOpacity></TouchableOpacity>
+                                                            ))}</ScrollView>
+                                                            {editingNote.attachments?.voice?.map((v, i) => <AudioPlayer key={i} uri={v.uri} onDelete={() => { const nv = editingNote.attachments?.voice?.filter((_, x) => x !== i); updateCurrentNoteState({ attachments: { ...editingNote.attachments, voice: nv } }); }} />)}
+                                                        </View>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                         {editingNote.type === 'draw' && editingNote.attachments?.images?.length ? (
                                             <View className="mb-10 z-10">
                                                 <TouchableOpacity onPress={() => setSelectedImage(editingNote.attachments!.images![editingNote.attachments!.images!.length - 1])}><RNImage source={{ uri: editingNote.attachments.images[editingNote.attachments.images.length - 1] }} className="w-full aspect-square rounded-[40px]" resizeMode="cover" /></TouchableOpacity>
@@ -1729,7 +1935,7 @@ export default function Notes() {
                                             </View>
                                         ) : null}
                                         {isPreviewMode ? (
-                                            <View className="pb-32 z-10">{renderNoteContent(editingNote.content)}</View>
+                                            <View className="pb-32 z-10 w-full" style={{ alignSelf: 'stretch' }}>{renderNoteContent(editingNote.content)}</View>
                                         ) : (
                                             <>
                                                 <TextInput ref={textInputRef} multiline textAlignVertical="top" placeholder={t('note_content_placeholder')} placeholderTextColor={placeholderColor} className={cn("leading-8 min-h-[400px] mb-32 z-10", textColorClass)} style={{ fontFamily: editingNote.textStyle?.fontFamily || 'Lexend_400Regular', fontSize: editingNote.textStyle?.fontSize || 20, textAlign: editingNote.textStyle?.textAlign || 'left' }} value={editingNote.content || ""} onChangeText={t => { updateCurrentNoteState({ content: t }); pushHistoryState(t, false); }} onSelectionChange={e => setSelection(e.nativeEvent.selection)} />
@@ -1754,7 +1960,7 @@ export default function Notes() {
                         )}
                         {!isPreviewMode && editingNote && (
                             <SafeAreaView edges={['bottom']} className={cn("border-t pt-3 px-4 pb-4", isDark ? "bg-[#161b22] border-white/10" : "bg-[#f8fafc] border-black/10")}>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row" keyboardShouldPersistTaps="always">
                                     <TouchableOpacity onPress={undo} disabled={historyState.index <= 0} className={cn("w-11 h-11 bg-white/5 rounded-xl items-center justify-center", historyState.index <= 0 ? "opacity-30" : "")}><Undo2 size={18} color="#8b949e" /></TouchableOpacity>
                                     <TouchableOpacity onPress={redo} disabled={historyState.index >= historyState.stack.length - 1} className={cn("w-11 h-11 bg-white/5 rounded-xl items-center justify-center mx-2", historyState.index >= historyState.stack.length - 1 ? "opacity-30" : "")}><Redo2 size={18} color="#8b949e" /></TouchableOpacity>
                                     <View className="w-[1px] h-8 bg-white/10 mr-2.5 self-center" />
@@ -1782,21 +1988,39 @@ export default function Notes() {
                             </SafeAreaView>
                         )}
                         {isPreviewMode && editingNote && (
-                            <SafeAreaView edges={['bottom']} style={{ zIndex: 1010 }} className="absolute bottom-6 self-center bg-[#1c2128]/90 px-4 py-3 rounded-full border border-white/10 flex-row gap-4 items-center shadow-xl">
-                                <TouchableOpacity onPress={() => setLaserMode('off')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'off' ? "bg-white/20" : "bg-transparent")}>
-                                    <X size={20} color={laserMode === 'off' ? "white" : "#94a3b8"} />
-                                </TouchableOpacity>
-                                <View className="w-[1px] h-6 bg-white/10" />
-                                <TouchableOpacity onPress={() => setLaserMode('dot')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'dot' ? "bg-red-500/20" : "bg-transparent")}>
-                                    <Pointer size={20} color={laserMode === 'dot' ? "#ef4444" : "#94a3b8"} />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setLaserMode('trail_red')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_red' ? "bg-red-500/20" : "bg-transparent")}>
-                                    <Activity size={20} color={laserMode === 'trail_red' ? "#ef4444" : "#94a3b8"} />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setLaserMode('trail_highlight')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_highlight' ? "bg-yellow-400/20" : "bg-transparent")}>
-                                    <Zap size={20} color={laserMode === 'trail_highlight' ? "#facc15" : "#94a3b8"} />
-                                </TouchableOpacity>
-                            </SafeAreaView>
+                            <>
+                                {!isLaserToolbarExpanded ? (
+                                    <TouchableOpacity 
+                                        onPress={() => setIsLaserToolbarExpanded(true)} 
+                                        className="absolute right-4 bottom-28 bg-[#1c2128]/95 w-12 h-12 rounded-full items-center justify-center shadow-2xl border border-white/15"
+                                        style={{ zIndex: 1010 }}
+                                    >
+                                        <Pointer size={20} color="#ef4444" />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <SafeAreaView edges={['bottom']} style={{ zIndex: 1010 }} className="absolute bottom-28 self-center bg-[#1c2128]/95 px-4 py-3 rounded-full border border-white/15 flex-row gap-4 items-center shadow-2xl">
+                                        <TouchableOpacity 
+                                            onPress={() => { 
+                                                setLaserMode('off'); 
+                                                setIsLaserToolbarExpanded(false); 
+                                            }} 
+                                            className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'off' ? "bg-white/20" : "bg-transparent")}
+                                        >
+                                            <X size={20} color={laserMode === 'off' ? "white" : "#94a3b8"} />
+                                        </TouchableOpacity>
+                                        <View className="w-[1px] h-6 bg-white/10" />
+                                        <TouchableOpacity onPress={() => setLaserMode('dot')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'dot' ? "bg-red-500/20" : "bg-transparent")}>
+                                            <Pointer size={20} color={laserMode === 'dot' ? "#ef4444" : "#94a3b8"} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => setLaserMode('trail_red')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_red' ? "bg-red-500/20" : "bg-transparent")}>
+                                            <Activity size={20} color={laserMode === 'trail_red' ? "#ef4444" : "#94a3b8"} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => setLaserMode('trail_highlight')} className={cn("w-10 h-10 rounded-full items-center justify-center", laserMode === 'trail_highlight' ? "bg-yellow-400/20" : "bg-transparent")}>
+                                            <Zap size={20} color={laserMode === 'trail_highlight' ? "#facc15" : "#94a3b8"} />
+                                        </TouchableOpacity>
+                                    </SafeAreaView>
+                                )}
+                            </>
                         )}
                     </KeyboardAvoidingView>
                 </View>
@@ -2140,7 +2364,7 @@ export default function Notes() {
 
                         {/* PIN dots */}
                         <View className="flex-row gap-3 mb-10 flex-wrap justify-center">
-                            {Array.from({ length: Math.max(4, pinInput.length) }).map((_, i) => (
+                            {Array.from({ length: 4 }).map((_, i) => (
                                 <View 
                                     key={i} 
                                     className={cn(
@@ -2160,7 +2384,7 @@ export default function Notes() {
                                     {row.map(num => (
                                         <TouchableOpacity 
                                             key={num} 
-                                            onPress={() => pinInput.length < 8 && setPinInput(prev => prev + num)}
+                                            onPress={() => pinInput.length < 4 && setPinInput(prev => prev + num)}
                                             className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
                                         >
                                             <Text className="text-white text-xl font-bold">{num}</Text>
@@ -2176,7 +2400,7 @@ export default function Notes() {
                                     <Text className="text-slate-500 font-bold text-sm">Annuler</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
-                                    onPress={() => pinInput.length < 8 && setPinInput(prev => prev + "0")}
+                                    onPress={() => pinInput.length < 4 && setPinInput(prev => prev + "0")}
                                     className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
                                 >
                                     <Text className="text-white text-xl font-bold">0</Text>
@@ -2221,7 +2445,7 @@ export default function Notes() {
                                         placeholderTextColor="#475569"
                                         keyboardType="numeric"
                                         secureTextEntry
-                                        maxLength={8}
+                                        maxLength={4}
                                     />
                                 </View>
                             ) : null}
@@ -2236,7 +2460,7 @@ export default function Notes() {
                                     placeholderTextColor="#475569"
                                     keyboardType="numeric"
                                     secureTextEntry
-                                    maxLength={8}
+                                    maxLength={4}
                                 />
                             </View>
 

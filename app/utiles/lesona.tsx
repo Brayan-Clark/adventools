@@ -46,7 +46,7 @@ import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange } fro
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View, Pressable } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -343,6 +343,95 @@ export default function LesonaSekolySabata() {
   const [verseModalVisible, setVerseModalVisible] = useState(false);
   const [verseTitle, setVerseTitle] = useState("");
   const [verseContent, setVerseContent] = useState("");
+
+  // Highlights State
+  const [highlights, setHighlights] = useState<Record<string, string>>({});
+  const [highlightPaletteVisible, setHighlightPaletteVisible] = useState(false);
+  const [selectedBlockKey, setSelectedBlockKey] = useState<string | null>(null);
+
+  // Sentence-Level Highlights State
+  const [sentenceHighlights, setSentenceHighlights] = useState<Record<string, string>>({});
+  const [isHighlightModeActive, setIsHighlightModeActive] = useState(false);
+  const [activeHighlightColor, setActiveHighlightColor] = useState('rgba(251, 191, 36, 0.35)');
+  const [activeHighlightOpacity, setActiveHighlightOpacity] = useState(0.35);
+  const [isHighlighterPanelExpanded, setIsHighlighterPanelExpanded] = useState(false);
+
+  // Completed Days State
+  const [completedDays, setCompletedDays] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const loadHighlightsAndCompletions = async () => {
+      try {
+        const storedHighlights = await AsyncStorage.getItem('ss_highlights');
+        if (storedHighlights) {
+          setHighlights(JSON.parse(storedHighlights));
+        }
+        const storedSentHighlights = await AsyncStorage.getItem('ss_sentence_highlights');
+        if (storedSentHighlights) {
+          setSentenceHighlights(JSON.parse(storedSentHighlights));
+        }
+        const storedCompletions = await AsyncStorage.getItem('ss_completed_days');
+        if (storedCompletions) {
+          setCompletedDays(JSON.parse(storedCompletions));
+        }
+      } catch (e) {
+        console.error("Error loading highlights/completions", e);
+      }
+    };
+    loadHighlightsAndCompletions();
+  }, []);
+
+  const saveHighlight = async (key: string, color: string) => {
+    try {
+      const newHighlights = { ...highlights };
+      if (color) {
+        newHighlights[key] = color;
+      } else {
+        delete newHighlights[key];
+      }
+      setHighlights(newHighlights);
+      await AsyncStorage.setItem('ss_highlights', JSON.stringify(newHighlights));
+      setHighlightPaletteVisible(false);
+    } catch (e) {
+      console.error("Error saving highlight", e);
+    }
+  };
+
+  const handleSentencePress = async (sentKey: string) => {
+    try {
+      const newHighlights = { ...sentenceHighlights };
+      if (newHighlights[sentKey]) {
+        delete newHighlights[sentKey];
+      } else {
+        newHighlights[sentKey] = activeHighlightColor;
+      }
+      setSentenceHighlights(newHighlights);
+      await AsyncStorage.setItem('ss_sentence_highlights', JSON.stringify(newHighlights));
+    } catch (e) {
+      console.error("Error saving sentence highlight", e);
+    }
+  };
+
+  const updateHighlightColor = (rgb: string, opacity: number) => {
+    setActiveHighlightColor(`rgba(${rgb}, ${opacity})`);
+    setActiveHighlightOpacity(opacity);
+  };
+
+  const toggleDayCompletion = async (dayKey: string) => {
+    try {
+      const newCompletions = { ...completedDays };
+      newCompletions[dayKey] = !newCompletions[dayKey];
+      setCompletedDays(newCompletions);
+      await AsyncStorage.setItem('ss_completed_days', JSON.stringify(newCompletions));
+    } catch (e) {
+      console.error("Error saving day completion", e);
+    }
+  };
+
+  const splitBlockIntoSentences = (markdown: string) => {
+    const plainText = cleanSspmMarkdown(markdown);
+    return plainText.match(/[^.!?]+[.!?]+(\s+|$)/g) || [plainText];
+  };
 
   // Quick Note state
   const [quickNoteModalVisible, setQuickNoteModalVisible] = useState(false);
@@ -1674,6 +1763,9 @@ export default function LesonaSekolySabata() {
               onSelectSegment={setActiveSegmentIdx}
               cleanTitle={cleanSspmMarkdown}
               lang={selectedLang}
+              completedDays={completedDays}
+              quarterlyId={selectedQuarterly?.id}
+              lessonId={currentLessonId}
             />
           </View>
 
@@ -1688,31 +1780,103 @@ export default function LesonaSekolySabata() {
                 />
 
                 {readingLesson.introduction && activeSegmentIdx === 0 && (
-                  <View className="mb-8 p-6 bg-slate-400/5 rounded-3xl border border-white/5">
-                    <View className="flex-row items-center mb-4">
-                      <View className="w-1 h-4 bg-primary rounded-full mr-3" />
-                      <Text className="text-white font-bold text-sm uppercase tracking-widest">{(t as any)('introduction') || 'Introduction'}</Text>
-                    </View>
-                    <Markdown
-                      style={{
-                        body: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_400Regular' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_400Regular' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_400Regular' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
-                        strong: { color: '#cbd5e1', fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : 'bold', fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_700Bold' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_700Bold' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_700Bold' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold' },
-                        italic: { fontStyle: globalSettings.fontFamily !== 'System' ? 'normal' : 'italic' }
-                      }}
-                      rules={{
-                        image: (node) => (
-                          <Image
-                            key={node.key}
-                            source={{ uri: node.attributes.src }}
-                            style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
-                            resizeMode="cover"
-                          />
-                        )
-                      }}
-                    >
-                      {cleanSspmMarkdown(readingLesson.introduction)}
-                    </Markdown>
-                  </View>
+                  (() => {
+                    const introKey = selectedQuarterly ? `${selectedQuarterly.id}_${currentLessonId}_intro` : null;
+                    const introHighlight = introKey ? highlights[introKey] : null;
+                    return (
+                      <Pressable
+                        onLongPress={() => {
+                          if (introKey) {
+                            setSelectedBlockKey(introKey);
+                            setHighlightPaletteVisible(true);
+                          }
+                        }}
+                        delayLongPress={400}
+                        className="mb-8"
+                        disabled={isHighlightModeActive}
+                      >
+                        <View 
+                          style={introHighlight ? { 
+                            backgroundColor: introHighlight, 
+                            borderRadius: 24, 
+                            padding: 16 
+                          } : undefined}
+                          className={introHighlight ? "" : "p-6 bg-slate-400/5 rounded-3xl border border-white/5"}
+                        >
+                          <View className="flex-row items-center mb-4">
+                            <View className="w-1 h-4 bg-primary rounded-full mr-3" />
+                            <Text className="text-white font-bold text-sm uppercase tracking-widest">{(t as any)('introduction') || 'Introduction'}</Text>
+                          </View>
+                          <Markdown
+                            style={{
+                              body: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_400Regular' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_400Regular' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_400Regular' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
+                              text: { color: '#94a3b8', fontSize: Math.max(13, globalSettings.fontSize * 0.8), lineHeight: Math.max(20, globalSettings.fontSize * 1.3), fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_400Regular' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_400Regular' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_400Regular' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_400Regular' },
+                              strong: { color: '#cbd5e1', fontWeight: globalSettings.fontFamily !== 'System' ? 'normal' : 'bold', fontFamily: globalSettings.fontFamily === 'Inter_400Regular' ? 'Inter_700Bold' : globalSettings.fontFamily === 'Poppins_400Regular' ? 'Poppins_700Bold' : globalSettings.fontFamily === 'Lora_400Regular' ? 'Lora_700Bold' : globalSettings.fontFamily !== 'System' ? globalSettings.fontFamily : 'Lexend_700Bold' },
+                              italic: { fontStyle: globalSettings.fontFamily !== 'System' ? 'normal' : 'italic' }
+                            }}
+                            rules={{
+                              paragraph: (node, children, parent, styles) => {
+                                if (!isHighlightModeActive) {
+                                  return (
+                                    <View key={node.key} style={{ marginBottom: 12 }}>
+                                      {children}
+                                    </View>
+                                  );
+                                }
+                                const extractText = (n: any): string => {
+                                  if (!n) return '';
+                                  if (n.type === 'softbreak' || n.type === 'hardbreak') return ' ';
+                                  if (n.children && n.children.length > 0) {
+                                    return n.children.map(extractText).join('');
+                                  }
+                                  return n.content || '';
+                                };
+                                const plainText = (node.children || []).map((c: any) => extractText(c)).join('');
+                                const sentenceSplit = plainText.replace(/([.!?]+)\s+/g, '$1\n');
+                                const rawSentences = sentenceSplit.split('\n').filter((s: string) => s.trim().length > 0);
+                                const sentences = rawSentences.length > 0 ? rawSentences : [plainText];
+                                return (
+                                  <View key={node.key} style={{ marginBottom: 12 }}>
+                                    <Text style={styles.text}>
+                                      {sentences.map((sentence, sentIdx) => {
+                                        const sentKey = introKey ? `${introKey}_p${node.index}_sent_${sentIdx}` : `p${node.index}_sent_${sentIdx}`;
+                                        const sentHighlight = sentenceHighlights[sentKey];
+                                        return (
+                                          <Text
+                                            key={sentIdx}
+                                            onPress={() => { if (sentKey) handleSentencePress(sentKey); }}
+                                            style={sentHighlight ? {
+                                              backgroundColor: sentHighlight,
+                                              color: '#ffffff',
+                                              fontFamily: styles.text?.fontFamily,
+                                              fontSize: styles.text?.fontSize,
+                                              lineHeight: styles.text?.lineHeight,
+                                            } : styles.text}
+                                          >
+                                            {sentence}
+                                          </Text>
+                                        );
+                                      })}
+                                    </Text>
+                                  </View>
+                                );
+                              },
+                              image: (node) => (
+                                <Image
+                                  key={node.key}
+                                  source={{ uri: node.attributes.src }}
+                                  style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
+                                  resizeMode="cover"
+                                />
+                              )
+                            }}
+                          >
+                            {cleanSspmMarkdown(readingLesson.introduction)}
+                          </Markdown>
+                        </View>
+                      </Pressable>
+                    );
+                  })()
                 )}
 
                 {segment.type === 'pdf' && segment.pdf ? (
@@ -1784,34 +1948,104 @@ export default function LesonaSekolySabata() {
                            }
                         }
 
+                        const blockKey = selectedQuarterly ? `${selectedQuarterly.id}_${currentLessonId}_${activeSegmentIdx}_${b.id || idx}` : null;
+                        const highlightColor = blockKey ? highlights[blockKey] : null;
                         content.push(
-                          <Markdown
+                          <Pressable
                             key={`${b.id || idx}_md`}
-                            onLinkPress={(url) => handleLinkPress(url, blockData)}
-                            style={{
-                              body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: cFont, letterSpacing: globalSettings.letterSpacing || 0 },
-                              heading1: { color: '#f8fafc', fontWeight: cWeightBold, marginTop: 30, marginBottom: 15, fontFamily: cFontBold },
-                              heading2: { color: '#60a5fa', fontWeight: cWeightBold, marginTop: 25, marginBottom: 10, fontFamily: cFontSemiBold },
-                              heading3: { color: '#60a5fa', marginTop: 20, marginBottom: 10, fontFamily: cFontSemiBold },
-                              strong: { color: '#ffffff', fontWeight: cWeightBold, fontFamily: cFontBold },
-                              italic: { fontStyle: cStyleItalic, fontFamily: cFont },
-                              blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 16, marginVertical: 12, borderRadius: 8 },
-                              link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: cWeightBold },
-                              paragraph: { marginBottom: 12 }
+                            onLongPress={() => {
+                              if (blockKey) {
+                                setSelectedBlockKey(blockKey);
+                                setHighlightPaletteVisible(true);
+                              }
                             }}
-                            rules={{
-                              image: (node) => (
-                                <Image
-                                  key={node.key}
-                                  source={{ uri: node.attributes.src }}
-                                  style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
-                                  resizeMode="cover"
-                                />
-                              )
-                            }}
+                            delayLongPress={400}
+                            disabled={isHighlightModeActive}
                           >
-                            {cleanSspmMarkdown(b.markdown)}
-                          </Markdown>
+                            <View 
+                              style={highlightColor ? { 
+                                backgroundColor: highlightColor, 
+                                borderRadius: 16, 
+                                paddingHorizontal: 12, 
+                                paddingVertical: 8, 
+                                marginVertical: 4 
+                              } : undefined}
+                            >
+                              <Markdown
+                                onLinkPress={(url) => handleLinkPress(url, blockData)}
+                                style={{
+                                  body: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: cFont, letterSpacing: globalSettings.letterSpacing || 0 },
+                                  text: { color: '#e2e8f0', fontSize: globalSettings.fontSize, lineHeight: globalSettings.fontSize * 1.6, fontFamily: cFont, letterSpacing: globalSettings.letterSpacing || 0 },
+                                  heading1: { color: '#f8fafc', fontWeight: cWeightBold, marginTop: 30, marginBottom: 15, fontFamily: cFontBold },
+                                  heading2: { color: '#60a5fa', fontWeight: cWeightBold, marginTop: 25, marginBottom: 10, fontFamily: cFontSemiBold },
+                                  heading3: { color: '#60a5fa', marginTop: 20, marginBottom: 10, fontFamily: cFontSemiBold },
+                                  strong: { color: '#ffffff', fontWeight: cWeightBold, fontFamily: cFontBold },
+                                  italic: { fontStyle: cStyleItalic, fontFamily: cFont },
+                                  blockquote: { backgroundColor: '#1e293b', borderLeftColor: '#3b82f6', borderLeftWidth: 4, padding: 16, marginVertical: 12, borderRadius: 8 },
+                                  link: { color: '#60a5fa', textDecorationLine: 'none', fontWeight: cWeightBold },
+                                  paragraph: { marginBottom: 12 }
+                                }}
+                                rules={{
+                                  paragraph: (node, children, parent, styles) => {
+                                    if (!isHighlightModeActive) {
+                                      return (
+                                        <View key={node.key} style={{ marginBottom: 12 }}>
+                                          {children}
+                                        </View>
+                                      );
+                                    }
+                                    const extractText = (n: any): string => {
+                                      if (!n) return '';
+                                      if (n.type === 'softbreak' || n.type === 'hardbreak') return ' ';
+                                      if (n.children && n.children.length > 0) {
+                                        return n.children.map(extractText).join('');
+                                      }
+                                      return n.content || '';
+                                    };
+                                    const plainText = (node.children || []).map((c: any) => extractText(c)).join('');
+                                    const sentenceSplit = plainText.replace(/([.!?]+)\s+/g, '$1\n');
+                                    const rawSentences = sentenceSplit.split('\n').filter((s: string) => s.trim().length > 0);
+                                    const sentences = rawSentences.length > 0 ? rawSentences : [plainText];
+                                    return (
+                                      <View key={node.key} style={{ marginBottom: 12 }}>
+                                        <Text style={styles.text}>
+                                          {sentences.map((sentence, sentIdx) => {
+                                            const sentKey = blockKey ? `${blockKey}_p${node.index}_sent_${sentIdx}` : `p${node.index}_sent_${sentIdx}`;
+                                            const sentHighlight = sentenceHighlights[sentKey];
+                                            return (
+                                              <Text
+                                                key={sentIdx}
+                                                onPress={() => { if (sentKey) handleSentencePress(sentKey); }}
+                                                style={sentHighlight ? {
+                                                  backgroundColor: sentHighlight,
+                                                  color: '#ffffff',
+                                                  fontFamily: styles.text?.fontFamily,
+                                                  fontSize: styles.text?.fontSize,
+                                                  lineHeight: styles.text?.lineHeight,
+                                                } : styles.text}
+                                              >
+                                                {sentence}
+                                              </Text>
+                                            );
+                                          })}
+                                        </Text>
+                                      </View>
+                                    );
+                                  },
+                                  image: (node) => (
+                                    <Image
+                                      key={node.key}
+                                      source={{ uri: node.attributes.src }}
+                                      style={{ width: '100%', height: 200, borderRadius: 12, marginVertical: 10 }}
+                                      resizeMode="cover"
+                                    />
+                                  )
+                                }}
+                              >
+                                {cleanSspmMarkdown(b.markdown)}
+                              </Markdown>
+                            </View>
+                          </Pressable>
                         );
                       }
 
@@ -1866,6 +2100,33 @@ export default function LesonaSekolySabata() {
                   <View className="flex-1 items-center justify-center py-20">
                     <Text className="text-slate-500">{t('no_content')}</Text>
                   </View>
+                )}
+                {/* Daily Study Completion Toggle Button */}
+                {selectedQuarterly && (
+                  (() => {
+                    const dayKey = `${selectedQuarterly.id}_${currentLessonId}_${activeSegmentIdx}`;
+                    const isCompleted = !!completedDays[dayKey];
+                    return (
+                      <TouchableOpacity
+                        onPress={() => toggleDayCompletion(dayKey)}
+                        className={`mt-10 mb-6 p-6 rounded-3xl border flex-row items-center justify-between ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-900 border-slate-800'}`}
+                      >
+                        <View className="flex-row items-center flex-1 mr-4">
+                          <View className={`w-10 h-10 rounded-2xl items-center justify-center mr-4 ${isCompleted ? 'bg-emerald-500/20' : 'bg-slate-800'}`}>
+                            {isCompleted ? <CheckCircle size={20} color="#10b981" /> : <Square size={20} color="#94a3b8" />}
+                          </View>
+                          <View className="flex-1">
+                            <Text className={`font-bold text-base ${isCompleted ? 'text-emerald-400' : 'text-slate-200'}`}>
+                              {isCompleted ? "Étude du jour complétée !" : "Marquer l'étude comme complétée"}
+                            </Text>
+                            <Text className="text-slate-500 text-xs mt-1">
+                              {isCompleted ? "Bravo ! Continuez votre progression quotidienne." : "Suivez votre assiduité et vos progrès spirituels."}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })()
                 )}
               </>
             ) : (
@@ -2156,6 +2417,72 @@ export default function LesonaSekolySabata() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Highlight Color Palette Modal */}
+      <Modal
+        visible={highlightPaletteVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setHighlightPaletteVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setHighlightPaletteVisible(false)}
+          className="flex-1 bg-black/60 justify-end"
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={e => e.stopPropagation()}
+            className="w-full bg-slate-900 rounded-t-[40px] border-t border-slate-800 p-8 pb-10"
+          >
+            <Text className="text-white text-lg font-bold mb-6 text-center">Surligner le paragraphe</Text>
+            
+            <View className="flex-row justify-around items-center mb-8">
+              {/* Yellow */}
+              <TouchableOpacity
+                onPress={() => saveHighlight(selectedBlockKey || '', 'rgba(251, 191, 36, 0.35)')}
+                className="w-12 h-12 rounded-full items-center justify-center bg-amber-500 border border-amber-400"
+              />
+              {/* Green */}
+              <TouchableOpacity
+                onPress={() => saveHighlight(selectedBlockKey || '', 'rgba(52, 211, 153, 0.35)')}
+                className="w-12 h-12 rounded-full items-center justify-center bg-emerald-500 border border-emerald-400"
+              />
+              {/* Blue */}
+              <TouchableOpacity
+                onPress={() => saveHighlight(selectedBlockKey || '', 'rgba(59, 130, 246, 0.35)')}
+                className="w-12 h-12 rounded-full items-center justify-center bg-blue-500 border border-blue-400"
+              />
+              {/* Purple */}
+              <TouchableOpacity
+                onPress={() => saveHighlight(selectedBlockKey || '', 'rgba(139, 92, 246, 0.35)')}
+                className="w-12 h-12 rounded-full items-center justify-center bg-violet-500 border border-violet-400"
+              />
+              {/* Pink */}
+              <TouchableOpacity
+                onPress={() => saveHighlight(selectedBlockKey || '', 'rgba(236, 72, 153, 0.35)')}
+                className="w-12 h-12 rounded-full items-center justify-center bg-pink-500 border border-pink-400"
+              />
+            </View>
+
+            {/* Clear highlight button */}
+            <TouchableOpacity
+              onPress={() => saveHighlight(selectedBlockKey || '', '')}
+              className="flex-row items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/5 mb-3"
+            >
+              <Trash2 size={16} color="#ef4444" className="mr-2" />
+              <Text className="text-red-500 font-bold text-sm">Effacer le surlignage</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setHighlightPaletteVisible(false)}
+              className="flex-row items-center justify-center p-4 bg-slate-800 rounded-2xl border border-slate-700"
+            >
+              <Text className="text-slate-300 font-bold text-sm">Annuler</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Verse View Replacement - Absolute positioning for perfect selection support */}
       {verseModalVisible && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
@@ -2387,6 +2714,69 @@ export default function LesonaSekolySabata() {
         confirmText={alertConfig.onConfirm ? t('ok') : 'OK'}
         cancelText={t('cancel')}
       />
+
+      {/* Floating Highlighter Panel */}
+      {readingLesson && (
+        <View style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 100, alignItems: 'flex-end' }}>
+          {isHighlighterPanelExpanded && (
+            <View className="bg-slate-950/95 border border-slate-800 rounded-3xl p-4 mb-3 shadow-2xl backdrop-blur-md items-center w-72">
+              <Text className="text-white text-xs font-bold mb-3 uppercase tracking-wider">Style du surligneur</Text>
+              
+              {/* Colors */}
+              <View className="flex-row justify-around w-full mb-4">
+                {[
+                  { rgb: '251, 191, 36', bg: 'bg-amber-400' },
+                  { rgb: '52, 211, 153', bg: 'bg-emerald-400' },
+                  { rgb: '59, 130, 246', bg: 'bg-blue-400' },
+                  { rgb: '139, 92, 246', bg: 'bg-violet-400' },
+                  { rgb: '236, 72, 153', bg: 'bg-pink-400' },
+                ].map((c) => {
+                  const isActive = activeHighlightColor.includes(c.rgb);
+                  return (
+                    <TouchableOpacity
+                      key={c.rgb}
+                      onPress={() => updateHighlightColor(c.rgb, activeHighlightOpacity)}
+                      className={`w-8 h-8 rounded-full ${c.bg} items-center justify-center border-2 ${isActive ? 'border-white' : 'border-transparent'}`}
+                    />
+                  );
+                })}
+              </View>
+
+              {/* Opacity Presets */}
+              <Text className="text-slate-400 text-[10px] font-bold mb-2 uppercase tracking-tight">Transparence : {Math.round(activeHighlightOpacity * 100)}%</Text>
+              <View className="flex-row justify-between w-full bg-slate-900 p-1 rounded-2xl border border-white/5">
+                {[0.2, 0.4, 0.6, 0.8].map((op) => {
+                  const isActive = activeHighlightOpacity === op;
+                  const rgbStr = activeHighlightColor.match(/rgba?\((\d+,\s*\d+,\s*\d+)/)?.[1] || '251, 191, 36';
+                  return (
+                    <TouchableOpacity
+                      key={op}
+                      onPress={() => updateHighlightColor(rgbStr, op)}
+                      className={`flex-1 py-1 rounded-xl items-center justify-center ${isActive ? 'bg-primary' : 'bg-transparent'}`}
+                    >
+                      <Text className={`font-bold text-[10px] ${isActive ? 'text-white' : 'text-slate-400'}`}>{op * 100}%</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Glowing Float Highlighter Toggle Button */}
+          <TouchableOpacity
+            onPress={() => {
+              setIsHighlightModeActive(!isHighlightModeActive);
+              setIsHighlighterPanelExpanded(!isHighlightModeActive);
+            }}
+            className={`w-14 h-14 rounded-full items-center justify-center shadow-2xl border ${isHighlightModeActive ? 'bg-amber-500 border-amber-400 shadow-amber-500/40' : 'bg-slate-900 border-white/10 shadow-black/80'}`}
+          >
+            <Edit size={22} color={isHighlightModeActive ? '#ffffff' : '#94a3b8'} />
+            {isHighlightModeActive && (
+              <View className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border border-slate-900" />
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
