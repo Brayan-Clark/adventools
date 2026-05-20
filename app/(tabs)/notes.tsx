@@ -343,6 +343,8 @@ export default function Notes() {
     const [isSettingPinCode, setIsSettingPinCode] = useState(false);
 
     const [editingNote, setEditingNote] = useState<Note | null>(null);
+    const [isMultiSelectActive, setIsMultiSelectActive] = useState(false);
+    const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [showHighlighter, setShowHighlighter] = useState(false);
     const [laserMode, setLaserMode] = useState<'off' | 'dot' | 'trail_red' | 'trail_highlight'>('off');
@@ -848,7 +850,97 @@ export default function Notes() {
         }
     };
 
-    const handleSubmitPin = async () => {
+    const toggleSelectNote = (id: string) => {
+        setSelectedNoteIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const handleNoteLongPress = (n: Note) => {
+        setIsMultiSelectActive(true);
+        setSelectedNoteIds([n.id]);
+    };
+
+    const handleRestoreSelected = async () => {
+        if (selectedNoteIds.length === 0) return;
+        const updatedNotes = notes.map(n => {
+            if (!selectedNoteIds.includes(n.id)) return n;
+            const u = { ...n, isTrash: false, deletedAt: undefined };
+            saveNote(u);
+            return u;
+        });
+        setNotes(updatedNotes);
+        setIsMultiSelectActive(false);
+        setSelectedNoteIds([]);
+        setAlertConfig({ visible: true, title: "Notes restaurées", message: `${selectedNoteIds.length} note(s) réintégrée(s).`, type: 'success' });
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedNoteIds.length === 0) return;
+        const inTrash = selectedFolder === 'trash';
+        const idsSnap = [...selectedNoteIds];
+        const doDelete = async () => {
+            if (inTrash) {
+                for (const id of idsSnap) {
+                    await deleteNoteFromDb(id);
+                    await AsyncStorage.removeItem(`@note_bg_style_${id}`);
+                    await AsyncStorage.removeItem(`@note_text_style_${id}`);
+                }
+                setNotes(prev => prev.filter(n => !idsSnap.includes(n.id)));
+            } else {
+                const updated = notes.map(n => {
+                    if (!idsSnap.includes(n.id)) return n;
+                    const u = { ...n, isTrash: true, deletedAt: Date.now() };
+                    saveNote(u);
+                    return u;
+                });
+                setNotes(updated);
+            }
+            setIsMultiSelectActive(false);
+            setSelectedNoteIds([]);
+        };
+        setAlertConfig({
+            visible: true,
+            title: inTrash ? `Supprimer ${idsSnap.length} note(s) ?` : `Déplacer ${idsSnap.length} note(s) ?`,
+            message: inTrash ? 'Ces notes seront supprimées définitivement.' : 'Ces notes seront déplacées dans la corbeille.',
+            type: 'error',
+            onConfirm: doDelete
+        });
+    };
+
+    const handleEmptyTrash = () => {
+        const trashNotes = notes.filter(n => n.isTrash);
+        if (trashNotes.length === 0) return;
+        const hasLocked = trashNotes.some(n => n.isLocked);
+        const doEmpty = async () => {
+            for (const note of trashNotes) {
+                await deleteNoteFromDb(note.id);
+                await AsyncStorage.removeItem(`@note_bg_style_${note.id}`);
+                await AsyncStorage.removeItem(`@note_text_style_${note.id}`);
+            }
+            setNotes(prev => prev.filter(n => !n.isTrash));
+        };
+        if (hasLocked && pinCode) {
+            setAlertConfig({
+                visible: true, title: 'PIN requis',
+                message: 'La corbeille contient des notes verrouillées. Entrez votre PIN pour confirmer.',
+                type: 'error',
+                onConfirm: () => {
+                    setLockedNoteToDelete({ id: '__empty_trash__' } as any);
+                    setPinInput('');
+                    setIsPinCodeModalVisible(true);
+                }
+            });
+        } else {
+            setAlertConfig({
+                visible: true, title: 'Vider la corbeille ?',
+                message: 'Toutes les notes de la corbeille seront définitivement supprimées.',
+                type: 'error', onConfirm: doEmpty
+            });
+        }
+    };
+
+        const handleSubmitPin = async () => {
         if (pinInput.length < 4) {
             setAlertConfig({ visible: true, title: "Code trop court", message: "Le code PIN doit comporter au moins 4 chiffres.", type: 'error' });
             return;
@@ -875,10 +967,21 @@ export default function Notes() {
             }
         } else if (lockedNoteToDelete) {
             if (pinInput === pinCode) {
-                const note = lockedNoteToDelete;
+                const target = lockedNoteToDelete;
                 setLockedNoteToDelete(null);
                 setIsPinCodeModalVisible(false);
-                performDeleteNote(note);
+                if ((target as any).id === '__empty_trash__') {
+                    const trashNotes = notes.filter(n => n.isTrash);
+                    for (const note of trashNotes) {
+                        await deleteNoteFromDb(note.id);
+                        await AsyncStorage.removeItem(`@note_bg_style_${note.id}`);
+                        await AsyncStorage.removeItem(`@note_text_style_${note.id}`);
+                    }
+                    setNotes(prev => prev.filter(n => !n.isTrash));
+                    setAlertConfig({ visible: true, title: "Corbeille vidée", message: "Toutes les notes ont été purgées.", type: 'success' });
+                } else {
+                    performDeleteNote(target);
+                }
             } else {
                 setAlertConfig({ visible: true, title: "Code PIN incorrect", message: "Le code saisi est invalide.", type: 'error' });
                 setPinInput("");
@@ -894,6 +997,10 @@ export default function Notes() {
     };
 
     const handleNoteClick = (n: Note) => {
+        if (isMultiSelectActive) {
+            toggleSelectNote(n.id);
+            return;
+        }
         if (selectedFolder === 'trash') {
             setAlertConfig({
                 visible: true,
@@ -1191,11 +1298,26 @@ export default function Notes() {
                     style={{
                         ...dynamicMarkdownStyles,
                         body: {
-                            ...(dynamicMarkdownStyles.body as any || {}),
+                            ...((dynamicMarkdownStyles as any).body || {}),
                             fontFamily: activeFont,
                             fontSize: editingNote?.textStyle?.fontSize || 18,
                             textAlign: editingNote?.textStyle?.textAlign || 'left',
-                        }
+                        },
+                        paragraph: {
+                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                        },
+                        heading1: {
+                            ...((dynamicMarkdownStyles as any).heading1 || {}),
+                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                        },
+                        heading2: {
+                            ...((dynamicMarkdownStyles as any).heading2 || {}),
+                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                        },
+                        heading3: {
+                            ...((dynamicMarkdownStyles as any).heading3 || {}),
+                            textAlign: editingNote?.textStyle?.textAlign || 'left',
+                        },
                     } as any}
                     onLinkPress={handleVerseClick}
                     rules={{
@@ -1365,12 +1487,40 @@ export default function Notes() {
                 </ScrollView>
             </View>
 
+            {/* Multi-select action bar */}
+            {isMultiSelectActive && (
+                <View className="mx-4 mb-3 px-4 py-3 bg-blue-500/10 border border-blue-500/30 rounded-3xl flex-row items-center justify-between">
+                    <TouchableOpacity onPress={() => { setIsMultiSelectActive(false); setSelectedNoteIds([]); }} className="flex-row items-center">
+                        <X size={16} color="#60a5fa" />
+                        <Text className="text-blue-400 font-bold text-sm ml-1.5">{selectedNoteIds.length} sélectionnée(s)</Text>
+                    </TouchableOpacity>
+                    <View className="flex-row gap-3">
+                        {selectedFolder === 'trash' && (
+                            <TouchableOpacity onPress={handleRestoreSelected} className="px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-2xl">
+                                <Text className="text-green-400 font-bold text-xs">Restaurer</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={handleDeleteSelected} className="px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-2xl">
+                            <Text className="text-red-400 font-bold text-xs">{selectedFolder === 'trash' ? 'Purger' : 'Supprimer'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+            {/* Empty Trash button */}
+            {selectedFolder === 'trash' && !isMultiSelectActive && notes.filter(n => n.isTrash).length > 0 && (
+                <TouchableOpacity onPress={handleEmptyTrash} className="mx-4 mb-3 px-5 py-3 bg-red-500/10 border border-red-500/20 rounded-3xl flex-row items-center justify-center">
+                    <Trash2 size={14} color="#ef4444" />
+                    <Text className="text-red-400 font-bold text-sm ml-2">Vider la corbeille</Text>
+                </TouchableOpacity>
+            )}
+
             <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
                 {filteredNotes.length > 0 ? (
                     <View className="flex-row gap-4">
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 === 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} />)}</View>
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 !== 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} />)}</View>
+                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 === 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} onLongPress={() => handleNoteLongPress(n)} isSelected={selectedNoteIds.includes(n.id)} isMultiSelectActive={isMultiSelectActive} />)}</View>
+                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 !== 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} onLongPress={() => handleNoteLongPress(n)} isSelected={selectedNoteIds.includes(n.id)} isMultiSelectActive={isMultiSelectActive} />)}</View>
                     </View>
                 ) : (
                     <View className="w-full items-center py-32 opacity-20"><StickyNote size={80} color="#94a3b8" /><Text className="text-white font-bold text-xl mt-6">{t('no_notes_found')}</Text></View>
@@ -1540,7 +1690,7 @@ export default function Notes() {
                             </View>
                         )}
                         <ViewShot ref={noteViewShotRef} style={{ flex: 1, backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }} options={{ format: "jpg", quality: 0.95 }}>
-                            <ScrollView ref={scrollViewRef} className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} scrollEnabled={laserMode === 'off'}>
+                            <ScrollView ref={scrollViewRef} className="flex-1 px-6 pt-2" keyboardShouldPersistTaps="always" contentContainerStyle={{ flexGrow: 1 }} scrollEnabled={laserMode === 'off'}>
                                 {editingNote && (
                                     <View className="relative flex-1" style={{ minHeight: '100%' }}>
                                         <PaperBackground pattern={editingNote.bgStyle?.pattern || 'blank'} color={editingNote.bgStyle?.color || '#0d1117'} />
@@ -1984,13 +2134,13 @@ export default function Notes() {
                         </Text>
                         <Text className="text-slate-400 text-xs text-center mb-8 px-4">
                             {isSettingPinCode 
-                                ? "Définissez un code d'accès à 4 chiffres pour protéger vos réflexions privées." 
+                                ? "Définissez un code de 4 à 8 chiffres pour protéger vos réflexions." 
                                 : "Saisissez votre code PIN de sécurité pour déverrouiller cette note."}
                         </Text>
 
                         {/* PIN dots */}
-                        <View className="flex-row gap-5 mb-10">
-                            {[0, 1, 2, 3].map(i => (
+                        <View className="flex-row gap-3 mb-10 flex-wrap justify-center">
+                            {Array.from({ length: Math.max(4, pinInput.length) }).map((_, i) => (
                                 <View 
                                     key={i} 
                                     className={cn(
@@ -2010,7 +2160,7 @@ export default function Notes() {
                                     {row.map(num => (
                                         <TouchableOpacity 
                                             key={num} 
-                                            onPress={() => pinInput.length < 4 && setPinInput(prev => prev + num)}
+                                            onPress={() => pinInput.length < 8 && setPinInput(prev => prev + num)}
                                             className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
                                         >
                                             <Text className="text-white text-xl font-bold">{num}</Text>
@@ -2026,7 +2176,7 @@ export default function Notes() {
                                     <Text className="text-slate-500 font-bold text-sm">Annuler</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
-                                    onPress={() => pinInput.length < 4 && setPinInput(prev => prev + "0")}
+                                    onPress={() => pinInput.length < 8 && setPinInput(prev => prev + "0")}
                                     className="flex-1 h-16 bg-white/5 rounded-2xl items-center justify-center active:bg-white/10"
                                 >
                                     <Text className="text-white text-xl font-bold">0</Text>
@@ -2040,7 +2190,7 @@ export default function Notes() {
                             </View>
                         </View>
 
-                        {pinInput.length === 4 && (
+                        {pinInput.length >= 4 && (
                             <TouchableOpacity 
                                 onPress={handleSubmitPin}
                                 className="w-full bg-amber-500 p-5 rounded-3xl items-center justify-center shadow-lg shadow-amber-500/20 mt-2"

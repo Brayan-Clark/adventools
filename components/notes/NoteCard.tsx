@@ -32,6 +32,9 @@ interface NoteCardProps {
   note: Note;
   onPress: () => void;
   onDelete: () => void;
+  onLongPress?: () => void;
+  isSelected?: boolean;
+  isMultiSelectActive?: boolean;
 }
 
 const isColorDark = (hexColor?: string) => {
@@ -51,7 +54,7 @@ const isColorDark = (hexColor?: string) => {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
 };
 
-export const NoteCard = ({ note, onPress, onDelete }: NoteCardProps) => {
+export const NoteCard = ({ note, onPress, onDelete, onLongPress, isSelected, isMultiSelectActive }: NoteCardProps) => {
   const { t } = useTranslation();
   const hasImage = note.attachments?.images && note.attachments.images.length > 0;
   
@@ -68,20 +71,28 @@ export const NoteCard = ({ note, onPress, onDelete }: NoteCardProps) => {
   return (
     <TouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       activeOpacity={0.7}
       style={{
         backgroundColor: cardBg,
-        borderColor: borderCol,
+        borderColor: isMultiSelectActive && isSelected ? '#3b82f6' : borderCol,
       }}
       className="p-5 rounded-[32px] border-2 mb-1 overflow-hidden"
     >
-      <View className="flex-row justify-between items-start mb-3">
+      <View className="flex-row justify-between items-center mb-3">
         <Text className={`text-[10px] font-bold uppercase tracking-widest ${subTextColor}`}>
           {new Date(note.date).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
         </Text>
-        <TouchableOpacity onPress={onDelete} className="p-1">
-          <X size={14} color={isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.3)"} />
-        </TouchableOpacity>
+        {isMultiSelectActive ? (
+          <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : (isDark ? 'border-white/20' : 'border-black/20')}`}>
+            {isSelected && <View className="w-2 h-2 rounded-full bg-white" />}
+          </View>
+        ) : (
+          <TouchableOpacity onPress={onDelete} className="p-1">
+            <X size={14} color={isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.3)"} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View className="flex-row items-center mb-2 flex-wrap">
