@@ -193,36 +193,65 @@ const highlightReactTree = (
   if (newChildren) {
     if (typeof newChildren === 'string') {
       const textContent = newChildren;
-      const startOffset = tracker.offset;
-      const endOffset = startOffset + textContent.length;
-      tracker.offset = endOffset;
 
-      let matchedHighlightColor: string | null = null;
-      sentenceRanges.forEach((range, sentIdx) => {
-        const sentKey = blockKey 
-          ? `${blockKey}_p${paragraphIndex}_sent_${sentIdx}` 
-          : (introKey ? `${introKey}_p${paragraphIndex}_sent_${sentIdx}` : `p${paragraphIndex}_sent_${sentIdx}`);
-        
-        const sentHighlight = sentenceHighlights[sentKey];
-        if (sentHighlight) {
-          if (startOffset < range.end && range.start < endOffset) {
-            matchedHighlightColor = sentHighlight;
-          }
-        }
-      });
-
-      if (matchedHighlightColor) {
-        const existingStyle = element.props.style || {};
-        return React.cloneElement(element, {
-          style: [
-            existingStyle,
-            {
-              backgroundColor: matchedHighlightColor,
-              color: '#ffffff',
-            }
-          ]
-        });
+      const rawParts: string[] = [];
+      let lastIndex = 0;
+      const regex = /[.!?]+(?:\s+|$)/g;
+      let match;
+      while ((match = regex.exec(textContent)) !== null) {
+        const sentenceEnd = match.index + match[0].length;
+        rawParts.push(textContent.substring(lastIndex, sentenceEnd));
+        lastIndex = sentenceEnd;
       }
+      if (lastIndex < textContent.length) {
+        rawParts.push(textContent.substring(lastIndex));
+      }
+
+      let runningOffset = tracker.offset;
+
+      const elements = rawParts.map((part, partIdx) => {
+        if (part.length === 0) return null;
+
+        const startOffset = runningOffset;
+        const endOffset = startOffset + part.length;
+        runningOffset = endOffset;
+
+        let matchedHighlightColor: string | null = null;
+        sentenceRanges.forEach((range, sentIdx) => {
+          const sentKey = blockKey 
+            ? `${blockKey}_p${paragraphIndex}_sent_${sentIdx}` 
+            : (introKey ? `${introKey}_p${paragraphIndex}_sent_${sentIdx}` : `p${paragraphIndex}_sent_${sentIdx}`);
+          
+          const sentHighlight = sentenceHighlights[sentKey];
+          if (sentHighlight) {
+            if (startOffset < range.end && range.start < endOffset) {
+              matchedHighlightColor = sentHighlight;
+            }
+          }
+        });
+
+        const existingStyle = element.props.style || {};
+        return (
+          <Text
+            key={partIdx}
+            style={matchedHighlightColor ? [
+              existingStyle,
+              {
+                backgroundColor: matchedHighlightColor,
+                color: '#ffffff',
+              }
+            ] : existingStyle}
+          >
+            {part}
+          </Text>
+        );
+      }).filter(Boolean);
+
+      tracker.offset = runningOffset;
+
+      return React.cloneElement(element, {
+        children: elements
+      });
     } else {
       newChildren = highlightReactTree(newChildren, sentenceHighlights, blockKey, introKey, paragraphIndex, sentenceRanges, tracker);
       return React.cloneElement(element, { children: newChildren });
