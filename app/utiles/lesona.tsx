@@ -170,6 +170,68 @@ import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
+const highlightReactTree = (
+  element: any,
+  sentenceHighlights: Record<string, string>,
+  blockKey: string,
+  introKey: string | undefined,
+  paragraphIndex: number,
+  sentenceRanges: Array<{ text: string; start: number; end: number }>,
+  tracker: { offset: number }
+): any => {
+  if (!element) return element;
+
+  if (Array.isArray(element)) {
+    return element.map(child => highlightReactTree(child, sentenceHighlights, blockKey, introKey, paragraphIndex, sentenceRanges, tracker));
+  }
+
+  if (typeof element !== 'object' || !element.props) {
+    return element;
+  }
+
+  let newChildren = element.props.children;
+  if (newChildren) {
+    if (typeof newChildren === 'string') {
+      const textContent = newChildren;
+      const startOffset = tracker.offset;
+      const endOffset = startOffset + textContent.length;
+      tracker.offset = endOffset;
+
+      let matchedHighlightColor: string | null = null;
+      sentenceRanges.forEach((range, sentIdx) => {
+        const sentKey = blockKey 
+          ? `${blockKey}_p${paragraphIndex}_sent_${sentIdx}` 
+          : (introKey ? `${introKey}_p${paragraphIndex}_sent_${sentIdx}` : `p${paragraphIndex}_sent_${sentIdx}`);
+        
+        const sentHighlight = sentenceHighlights[sentKey];
+        if (sentHighlight) {
+          if (startOffset < range.end && range.start < endOffset) {
+            matchedHighlightColor = sentHighlight;
+          }
+        }
+      });
+
+      if (matchedHighlightColor) {
+        const existingStyle = element.props.style || {};
+        return React.cloneElement(element, {
+          style: [
+            existingStyle,
+            {
+              backgroundColor: matchedHighlightColor,
+              color: '#ffffff',
+            }
+          ]
+        });
+      }
+    } else {
+      newChildren = highlightReactTree(newChildren, sentenceHighlights, blockKey, introKey, paragraphIndex, sentenceRanges, tracker);
+      return React.cloneElement(element, { children: newChildren });
+    }
+  }
+
+  return element;
+};
+
 export default function LesonaSekolySabata() {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -1816,13 +1878,6 @@ export default function LesonaSekolySabata() {
                             }}
                             rules={{
                               paragraph: (node, children, parent, styles) => {
-                                if (!isHighlightModeActive) {
-                                  return (
-                                    <View key={node.key} style={{ marginBottom: 12 }}>
-                                      {children}
-                                    </View>
-                                  );
-                                }
                                 const extractText = (n: any): string => {
                                   if (!n) return '';
                                   if (n.type === 'softbreak' || n.type === 'hardbreak') return ' ';
@@ -1835,6 +1890,50 @@ export default function LesonaSekolySabata() {
                                 const sentenceSplit = plainText.replace(/([.!?]+)\s+/g, '$1\n');
                                 const rawSentences = sentenceSplit.split('\n').filter((s: string) => s.trim().length > 0);
                                 const sentences = rawSentences.length > 0 ? rawSentences : [plainText];
+
+                                if (!isHighlightModeActive) {
+                                  const hasAnyHighlight = sentences.some((s, sentIdx) => {
+                                    const sentKey = introKey ? `${introKey}_p${node.index}_sent_${sentIdx}` : `p${node.index}_sent_${sentIdx}`;
+                                    return !!sentenceHighlights[sentKey];
+                                  });
+
+                                  if (!hasAnyHighlight) {
+                                    return (
+                                      <View key={node.key} style={{ marginBottom: 12 }}>
+                                        {children}
+                                      </View>
+                                    );
+                                  }
+
+                                  let currentStart = 0;
+                                  const sentenceRanges = sentences.map((sentence) => {
+                                    const start = plainText.indexOf(sentence, currentStart);
+                                    if (start !== -1) {
+                                      currentStart = start + sentence.length;
+                                      return { text: sentence, start, end: start + sentence.length };
+                                    }
+                                    const fallbackStart = currentStart;
+                                    currentStart = fallbackStart + sentence.length;
+                                    return { text: sentence, start: fallbackStart, end: fallbackStart + sentence.length };
+                                  });
+
+                                  const highlightedChildren = highlightReactTree(
+                                    children,
+                                    sentenceHighlights,
+                                    "",
+                                    introKey || undefined,
+                                    node.index,
+                                    sentenceRanges,
+                                    { offset: 0 }
+                                  );
+
+                                  return (
+                                    <View key={node.key} style={{ marginBottom: 12 }}>
+                                      {highlightedChildren}
+                                    </View>
+                                  );
+                                }
+
                                 return (
                                   <View key={node.key} style={{ marginBottom: 12 }}>
                                     <Text style={styles.text}>
@@ -1987,13 +2086,6 @@ export default function LesonaSekolySabata() {
                                 }}
                                 rules={{
                                   paragraph: (node, children, parent, styles) => {
-                                    if (!isHighlightModeActive) {
-                                      return (
-                                        <View key={node.key} style={{ marginBottom: 12 }}>
-                                          {children}
-                                        </View>
-                                      );
-                                    }
                                     const extractText = (n: any): string => {
                                       if (!n) return '';
                                       if (n.type === 'softbreak' || n.type === 'hardbreak') return ' ';
@@ -2006,6 +2098,50 @@ export default function LesonaSekolySabata() {
                                     const sentenceSplit = plainText.replace(/([.!?]+)\s+/g, '$1\n');
                                     const rawSentences = sentenceSplit.split('\n').filter((s: string) => s.trim().length > 0);
                                     const sentences = rawSentences.length > 0 ? rawSentences : [plainText];
+
+                                    if (!isHighlightModeActive) {
+                                      const hasAnyHighlight = sentences.some((s, sentIdx) => {
+                                        const sentKey = blockKey ? `${blockKey}_p${node.index}_sent_${sentIdx}` : `p${node.index}_sent_${sentIdx}`;
+                                        return !!sentenceHighlights[sentKey];
+                                      });
+
+                                      if (!hasAnyHighlight) {
+                                        return (
+                                          <View key={node.key} style={{ marginBottom: 12 }}>
+                                            {children}
+                                          </View>
+                                        );
+                                      }
+
+                                      let currentStart = 0;
+                                      const sentenceRanges = sentences.map((sentence) => {
+                                        const start = plainText.indexOf(sentence, currentStart);
+                                        if (start !== -1) {
+                                          currentStart = start + sentence.length;
+                                          return { text: sentence, start, end: start + sentence.length };
+                                        }
+                                        const fallbackStart = currentStart;
+                                        currentStart = fallbackStart + sentence.length;
+                                        return { text: sentence, start: fallbackStart, end: fallbackStart + sentence.length };
+                                      });
+
+                                      const highlightedChildren = highlightReactTree(
+                                        children,
+                                        sentenceHighlights,
+                                        blockKey || "",
+                                        undefined,
+                                        node.index,
+                                        sentenceRanges,
+                                        { offset: 0 }
+                                      );
+
+                                      return (
+                                        <View key={node.key} style={{ marginBottom: 12 }}>
+                                          {highlightedChildren}
+                                        </View>
+                                      );
+                                    }
+
                                     return (
                                       <View key={node.key} style={{ marginBottom: 12 }}>
                                         <Text style={styles.text}>
