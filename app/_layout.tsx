@@ -2,19 +2,19 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, router } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import { useEffect, useState } from 'react';
-import { View, Platform, PermissionsAndroid } from 'react-native';
-import 'react-native-reanimated';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import '../global.css';
 import * as Linking from 'expo-linking';
 import * as QuickActions from 'expo-quick-actions';
 import { useQuickActionRouting } from 'expo-quick-actions/router';
+import { Stack, router } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { PermissionsAndroid, Platform, View } from 'react-native';
 import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import '../global.css';
 import { widgetTaskHandler } from '../widgets/widget-task-handler';
 
 // Register the background task for the Android Widget
@@ -22,7 +22,7 @@ registerWidgetTaskHandler(widgetTaskHandler);
 
 
 export {
-  ErrorBoundary
+    ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -31,10 +31,10 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
-import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
-import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
+import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 import { initBibleMetadata } from '@/lib/bible';
 import { SettingsProvider, useSettings } from '@/lib/settings-context';
@@ -154,6 +154,14 @@ function RootNavigator() {
         }
       ]);
 
+      // Handle notification clicks
+      const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data;
+        if (data?.screen === 'sabbath-school' && data?.url) {
+          router.replace(data.url as any);
+        }
+      });
+
       // Deep Linking Support for professional redirection (Fixes 'screen doesn't exist')
       const handleDeepLink = (url: string | null) => {
         if (!url) return;
@@ -172,7 +180,7 @@ function RootNavigator() {
       };
 
       Linking.getInitialURL().then(handleDeepLink);
-      const subscription = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
+      const linkingSubscription = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
 
       const checkOnboarding = async () => {
       try {
@@ -200,7 +208,10 @@ function RootNavigator() {
     if (!isLoading) {
         checkOnboarding();
     }
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      linkingSubscription.remove();
+    };
   }, [isLoading]);
 
   if (checking) {

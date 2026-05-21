@@ -127,6 +127,10 @@ export async function scheduleStudyReminder(
         body,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: {
+          screen: 'sabbath-school',
+          url: '/video/sabbath-school',
+        },
       },
       trigger: Platform.OS === 'android' 
         ? {
