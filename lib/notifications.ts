@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { getSetting } from './user-storage';
 
 // Configure notification behavior when app is open
 Notifications.setNotificationHandler({
@@ -11,6 +12,27 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+/**
+ * Initialize notification channel on Android (must be called at app startup)
+ */
+export async function initializeNotificationChannel(): Promise<void> {
+  if (Platform.OS === 'android') {
+    try {
+      await Notifications.setNotificationChannelAsync('study-reminders', {
+        name: 'Study Reminders',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        enableLights: true,
+      });
+      console.log('Notification channel initialized successfully');
+    } catch (err) {
+      console.error('Failed to initialize notification channel:', err);
+    }
+  }
+}
 
 /**
  * Requests native notification permissions from the system.
@@ -117,8 +139,16 @@ export async function scheduleStudyReminder(
         importance: Notifications.AndroidImportance.HIGH,
         sound: 'default',
         vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        enableLights: true,
+        showBadge: true,
       });
+      console.log('Notification channel set for Android');
     }
+
+    const trigger = Platform.OS === 'android' 
+      ? Notifications.SchedulableTriggerInputTypes.DAILY
+      : Notifications.SchedulableTriggerInputTypes.CALENDAR;
 
     await Notifications.scheduleNotificationAsync({
       identifier,
@@ -134,13 +164,12 @@ export async function scheduleStudyReminder(
       },
       trigger: Platform.OS === 'android' 
         ? {
-            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            type: trigger,
             hour,
             minute,
-            repeats: true,
           }
         : {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            type: trigger,
             hour,
             minute,
             repeats: true,
@@ -148,7 +177,33 @@ export async function scheduleStudyReminder(
     });
 
     console.log(`Study reminder scheduled daily at ${hour}:${minute} (raw time: ${timeStr}, minus ${leadMinutes} min lead)`);
+    
+    // Verify the notification was scheduled
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    console.log(`Total scheduled notifications: ${scheduled.length}`);
+    const studyReminders = scheduled.filter(n => n.identifier.startsWith('study_reminder_'));
+    console.log(`Study reminders scheduled: ${studyReminders.length}`);
   } catch (err) {
     console.error('Failed to schedule local notification', err);
+  }
+}
+
+/**
+ * Restores study reminders from saved settings on app startup.
+ * This is needed because scheduled notifications are lost after app rebuild.
+ */
+export async function restoreStudyReminders(): Promise<void> {
+  try {
+    const enabled = await getSetting<boolean>('studyReminderEnabled', false);
+    const timeStr = await getSetting<string>('studyReminderTime', '07:00');
+    const leadMinutes = await getSetting<number>('studyReminderLeadMinutes', 0);
+    const language = await getSetting<string>('language', 'Français');
+
+    if (enabled) {
+      console.log('Restoring study reminders from settings...');
+      await scheduleStudyReminder(enabled, timeStr, leadMinutes, language);
+    }
+  } catch (err) {
+    console.error('Failed to restore study reminders:', err);
   }
 }

@@ -38,6 +38,7 @@ import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fo
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 import { initBibleMetadata } from '@/lib/bible';
+import { initializeNotificationChannel, restoreStudyReminders } from '@/lib/notifications';
 import { SettingsProvider, useSettings } from '@/lib/settings-context';
 import { ToastProvider } from '@/lib/toast-context';
 import { useAutoUpdater } from '@/lib/updater';
@@ -129,6 +130,12 @@ function RootNavigator() {
 
     useEffect(() => {
       checkPermissions();
+
+      // Initialize notification channel on Android (must be done at startup)
+      initializeNotificationChannel();
+
+      // Restore study reminders from saved settings (needed after app rebuild)
+      restoreStudyReminders();
 
       // Configure App Shortcuts (Long Press on App Icon)
       QuickActions.setItems([
