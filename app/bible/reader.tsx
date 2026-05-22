@@ -478,9 +478,8 @@ export default function BibleReader() {
           return (
             <View className="px-7">
               <TouchableOpacity
-                onPress={() => !wordSelectMode && handleSelectVerse()}
-                onLongPress={handleSelectVerse}
-                delayLongPress={300}
+                onLongPress={() => !wordSelectMode && handleSelectVerse()}
+                delayLongPress={400}
                 activeOpacity={0.7}
                 className={cn(
                   "mb-4 rounded-xl px-2 py-1 relative",
