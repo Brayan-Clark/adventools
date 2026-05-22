@@ -60,18 +60,13 @@ export async function scheduleStudyReminder(
   enabled: boolean,
   timeStr: string,
   leadMinutes: number,
-  language: string
+  language: string,
+  forceRecreate: boolean = true
 ): Promise<void> {
   try {
-    // 1. Cancel all existing study reminder notifications
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    for (const notif of scheduled) {
-      if (notif.identifier.startsWith('study_reminder_')) {
-        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
-      }
-    }
+    // We will cancel old ones only if we actually need to recreate them
   } catch (err) {
-    console.error('Error canceling old reminders:', err);
+    console.error('Error in schedule wrapper:', err);
   }
 
   if (!enabled) {
@@ -110,6 +105,54 @@ export async function scheduleStudyReminder(
     exactBody = "Take a few minutes to study your Sabbath School lesson today!";
   }
 
+  const exactIdentifier = `study_reminder_exact_${exactHour}_${exactMinute}`;
+  let expectedIdentifiers = enabled ? [exactIdentifier] : [];
+
+  let leadHour = exactHour;
+  let leadMinute = exactMinute;
+  let leadIdentifier = '';
+
+  if (enabled && leadMinutes > 0) {
+    let totalMinutes = exactHour * 60 + exactMinute - leadMinutes;
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60; // wrap to previous day
+    }
+    leadHour = Math.floor(totalMinutes / 60) % 24;
+    leadMinute = totalMinutes % 60;
+    leadIdentifier = `study_reminder_lead_${leadHour}_${leadMinute}`;
+    expectedIdentifiers.push(leadIdentifier);
+  }
+
+  try {
+    // Check existing scheduled notifications
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const currentStudyNotifs = scheduled.filter(n => n.identifier.startsWith('study_reminder_'));
+    
+    // Check if what is currently scheduled perfectly matches what we expect
+    const currentIds = currentStudyNotifs.map(n => n.identifier).sort();
+    const expectedIds = expectedIdentifiers.sort();
+    
+    const isMatching = currentIds.length === expectedIds.length && 
+                       currentIds.every((val, index) => val === expectedIds[index]);
+
+    if (isMatching && !forceRecreate) {
+      console.log('Study reminders are already correctly scheduled. Skipping recreation.');
+      return;
+    }
+
+    // If not matching or forced, cancel old ones
+    for (const notif of currentStudyNotifs) {
+      await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+    }
+  } catch (err) {
+    console.error('Error checking or canceling old reminders:', err);
+  }
+
+  if (!enabled) {
+    console.log('Study reminders are disabled. Cancelled all old reminders.');
+    return;
+  }
+
   // 5. Schedule local recurring notification for EXACT time
   try {
     if (Platform.OS === 'android') {
@@ -129,7 +172,7 @@ export async function scheduleStudyReminder(
       : Notifications.SchedulableTriggerInputTypes.CALENDAR;
 
     await Notifications.scheduleNotificationAsync({
-      identifier: `study_reminder_exact_${exactHour}_${exactMinute}`,
+      identifier: exactIdentifier,
       content: {
         title: exactTitle,
         body: exactBody,
@@ -159,13 +202,6 @@ export async function scheduleStudyReminder(
 
     // 6. Schedule Lead time notification if needed
     if (leadMinutes > 0) {
-      let totalMinutes = exactHour * 60 + exactMinute - leadMinutes;
-      if (totalMinutes < 0) {
-        totalMinutes += 24 * 60; // wrap to previous day
-      }
-      const leadHour = Math.floor(totalMinutes / 60) % 24;
-      const leadMinute = totalMinutes % 60;
-
       let leadTitle = "Miomana hianatra 📖";
       let leadBody = `Afaka ${leadMinutes} minitra dia fotoana hianaranao ny lesona Sekoly Sabata. Miomana ary!`;
       
@@ -178,7 +214,7 @@ export async function scheduleStudyReminder(
       }
 
       await Notifications.scheduleNotificationAsync({
-        identifier: `study_reminder_lead_${leadHour}_${leadMinute}`,
+        identifier: leadIdentifier,
         content: {
           title: leadTitle,
           body: leadBody,
@@ -227,7 +263,7 @@ export async function restoreStudyReminders(): Promise<void> {
 
     if (enabled) {
       console.log('Restoring study reminders from settings...');
-      await scheduleStudyReminder(enabled, timeStr, leadMinutes, language);
+      await scheduleStudyReminder(enabled, timeStr, leadMinutes, language, false);
     }
   } catch (err) {
     console.error('Failed to restore study reminders:', err);

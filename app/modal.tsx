@@ -79,6 +79,7 @@ export default function Settings() {
   const [installedBibles, setInstalledBibles] = useState<any[]>([]);
   const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isLeadTimeModalVisible, setIsLeadTimeModalVisible] = useState(false);
 
   const onTimeChange = async (event: any, selectedDate?: Date) => {
     setShowTimePicker(false);
@@ -536,35 +537,7 @@ export default function Settings() {
                           ? "À l'heure exacte" 
                           : `${globalSettings.studyReminderLeadMinutes} minutes avant`
                       }
-                      onPress={() => {
-                        Alert.alert(
-                          "Avertir en avance",
-                          "Sélectionnez quand être averti avant l'heure d'étude :",
-                          [
-                            { text: "À l'heure exacte", onPress: async () => {
-                              await updateSettings({ studyReminderLeadMinutes: 0 });
-                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 0, globalSettings.language);
-                            }},
-                            { text: "5 minutes avant", onPress: async () => {
-                              await updateSettings({ studyReminderLeadMinutes: 5 });
-                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 5, globalSettings.language);
-                            }},
-                            { text: "10 minutes avant", onPress: async () => {
-                              await updateSettings({ studyReminderLeadMinutes: 10 });
-                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 10, globalSettings.language);
-                            }},
-                            { text: "15 minutes avant", onPress: async () => {
-                              await updateSettings({ studyReminderLeadMinutes: 15 });
-                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 15, globalSettings.language);
-                            }},
-                            { text: "30 minutes avant", onPress: async () => {
-                              await updateSettings({ studyReminderLeadMinutes: 30 });
-                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, 30, globalSettings.language);
-                            }},
-                            { text: t('cancel') || "Annuler", style: 'cancel' }
-                          ]
-                        );
-                      }}
+                      onPress={() => setIsLeadTimeModalVisible(true)}
                       isLast
                     />
                   </>
@@ -1180,6 +1153,46 @@ export default function Settings() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Lead Time Modal */}
+      <Modal visible={isLeadTimeModalVisible} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[32px] p-6 max-h-[80%]">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-white font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>Avertir en avance</Text>
+              <TouchableOpacity onPress={() => setIsLeadTimeModalVisible(false)} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                <X size={16} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            <Text className="text-slate-400 text-sm mb-4">Quand souhaitez-vous être averti avant l'heure d'étude ?</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="gap-2">
+                {[
+                  { value: 0, label: "À l'heure exacte" },
+                  { value: 5, label: "5 minutes avant" },
+                  { value: 10, label: "10 minutes avant" },
+                  { value: 15, label: "15 minutes avant" },
+                  { value: 30, label: "30 minutes avant" }
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={async () => {
+                      await updateSettings({ studyReminderLeadMinutes: option.value });
+                      await scheduleStudyReminder(true, globalSettings.studyReminderTime, option.value, globalSettings.language);
+                      setIsLeadTimeModalVisible(false);
+                    }}
+                    className={`flex-row items-center justify-between p-4 rounded-2xl border ${globalSettings.studyReminderLeadMinutes === option.value ? 'bg-primary/20 border-primary' : 'bg-slate-800 border-slate-700'}`}
+                  >
+                    <Text className={`font-bold ${globalSettings.studyReminderLeadMinutes === option.value ? 'text-primary' : 'text-slate-300'}`}>{option.label}</Text>
+                    {globalSettings.studyReminderLeadMinutes === option.value && <Check size={18} color="#3b82f6" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View className="h-8" />
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
     </SafeAreaView>
