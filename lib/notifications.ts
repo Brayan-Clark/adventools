@@ -124,28 +124,15 @@ export async function scheduleStudyReminder(
   }
 
   try {
-    // Check existing scheduled notifications
+    // 1. Cancel all existing study reminder notifications
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    const currentStudyNotifs = scheduled.filter(n => n.identifier.startsWith('study_reminder_'));
-    
-    // Check if what is currently scheduled perfectly matches what we expect
-    const currentIds = currentStudyNotifs.map(n => n.identifier).sort();
-    const expectedIds = expectedIdentifiers.sort();
-    
-    const isMatching = currentIds.length === expectedIds.length && 
-                       currentIds.every((val, index) => val === expectedIds[index]);
-
-    if (isMatching && !forceRecreate) {
-      console.log('Study reminders are already correctly scheduled. Skipping recreation.');
-      return;
-    }
-
-    // If not matching or forced, cancel old ones
-    for (const notif of currentStudyNotifs) {
-      await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+    for (const notif of scheduled) {
+      if (notif.identifier.startsWith('study_reminder_')) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
     }
   } catch (err) {
-    console.error('Error checking or canceling old reminders:', err);
+    console.error('Error canceling old reminders:', err);
   }
 
   if (!enabled) {
@@ -167,10 +154,6 @@ export async function scheduleStudyReminder(
       });
     }
 
-    const triggerType = Platform.OS === 'android' 
-      ? Notifications.SchedulableTriggerInputTypes.DAILY
-      : Notifications.SchedulableTriggerInputTypes.CALENDAR;
-
     await Notifications.scheduleNotificationAsync({
       identifier: exactIdentifier,
       content: {
@@ -185,13 +168,13 @@ export async function scheduleStudyReminder(
       },
       trigger: Platform.OS === 'android' 
         ? {
-            type: triggerType,
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
             channelId: 'study-reminders',
             hour: exactHour,
             minute: exactMinute,
           }
         : {
-            type: triggerType,
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
             hour: exactHour,
             minute: exactMinute,
             repeats: true,
@@ -227,13 +210,13 @@ export async function scheduleStudyReminder(
         },
         trigger: Platform.OS === 'android' 
           ? {
-              type: triggerType,
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
               channelId: 'study-reminders',
               hour: leadHour,
               minute: leadMinute,
             }
           : {
-              type: triggerType,
+              type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
               hour: leadHour,
               minute: leadMinute,
               repeats: true,
