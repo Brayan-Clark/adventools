@@ -6,6 +6,7 @@ import { getSetting } from '@/lib/user-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ArrowLeft, Bookmark, ChevronRight as ChevronRightIcon, ChevronRight, Globe, Grid3X3, Music as MusicIcon, Search as SearchIcon, X, Music } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, BackHandler, FlatList, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
@@ -90,6 +91,24 @@ export default function Hymnes() {
 
   const fetchCategories = async () => {
     try {
+      // For non-built-in databases, verify the file exists before trying to open it
+      const isBuiltIn = !!HYMNE_SOURCES[dbName];
+      if (!isBuiltIn) {
+        const dbPath = `${FileSystem.documentDirectory}SQLite/hymnes/${dbName}`;
+        const info = await FileSystem.getInfoAsync(dbPath);
+        if (!info.exists || (info as any).size === 0) {
+          Alert.alert(
+            t('error'),
+            t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
+            [
+              { text: 'Annuler', style: 'cancel', onPress: () => router.back() },
+              { text: 'Aller au Store', onPress: () => router.replace('/hymnes/store' as any) }
+            ]
+          );
+          return;
+        }
+      }
+
       const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
 
       // Get categories
@@ -103,10 +122,25 @@ export default function Hymnes() {
         setTotalHymns(stats.count);
         setMaxHymnNumber(stats.max_num);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      Alert.alert(t('error'), t('db_not_found' as any));
-      router.back();
+      // Redirect to store if the DB is corrupted or missing
+      const msg = e?.message?.toLowerCase() || '';
+      const isDbMissing = msg.includes('not a database') || msg.includes('no such table') ||
+        msg.includes('unable to open') || msg.includes('code 26') || msg.includes('malformed');
+      if (isDbMissing) {
+        Alert.alert(
+          t('error'),
+          t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
+          [
+            { text: 'Annuler', style: 'cancel', onPress: () => router.back() },
+            { text: 'Aller au Store', onPress: () => router.replace('/hymnes/store' as any) }
+          ]
+        );
+      } else {
+        Alert.alert(t('error'), t('db_not_found' as any));
+        router.back();
+      }
     }
   };
 

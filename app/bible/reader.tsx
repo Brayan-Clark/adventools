@@ -756,8 +756,11 @@ export default function BibleReader() {
       {/* Study Mode Modal */}
       <Modal visible={wordSelectMode} transparent animationType="slide">
         <View className="flex-1 bg-black/95 justify-center p-6">
-          <View className="bg-[#1a2233] rounded-[40px] p-8 border border-white/10 shadow-2xl">
-            <View className="flex-row justify-between items-center mb-8">
+          <View
+            className="bg-[#1a2233] rounded-[40px] p-8 border border-white/10 shadow-2xl"
+            style={{ maxHeight: '92%' }}
+          >
+            <View className="flex-row justify-between items-center mb-6">
               <View>
                 <Text className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">Mode Étude Tactile</Text>
                 <Text className="text-white font-bold text-xl">{currentBookName} {chapter}:{selectedVerse?.verse}</Text>
@@ -767,8 +770,9 @@ export default function BibleReader() {
               </TouchableOpacity>
             </View>
 
-            {/* Preview Area */}
-            <View className="bg-[#111621] p-6 rounded-3xl mb-8 border border-white/5">
+            {/* Preview Area — scrollable so long verses don't push buttons off screen */}
+            <View className="bg-[#111621] rounded-3xl mb-6 border border-white/5" style={{ maxHeight: 200 }}>
+              <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
               <Text style={{
                 fontSize: 22,
                 lineHeight: 34,
@@ -832,10 +836,11 @@ export default function BibleReader() {
                   });
                 })()}
               </Text>
+              </ScrollView>
             </View>
 
             {/* Color Palette for Words */}
-            <View className="flex-row justify-center gap-3 mb-10">
+            <View className="flex-row justify-center gap-3 mb-6">
               {['#facc15', '#4ade80', '#f87171', '#38bdf8', '#ffffff'].map((c) => (
                 <TouchableOpacity
                   key={c}
