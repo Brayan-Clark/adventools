@@ -1464,27 +1464,93 @@ export default function Notes() {
                     );
                 })()}
 
-                {/* Folder tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
-                    <TouchableOpacity onPress={() => setSelectedFolder("all")} className={cn("px-6 py-4 rounded-3xl mr-3 border", selectedFolder === "all" ? "bg-primary border-primary" : "bg-white/5 border-white/10")}>
-                        <Text className={cn("font-bold text-sm", selectedFolder === "all" ? "text-white" : "text-slate-400")}>{t('all_notes')}</Text>
+                {/* Folder filter — Row 1: fixed actions */}
+                <View className="flex-row items-center mb-3 gap-2">
+                    {/* "Toutes" pill */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedFolder("all")}
+                        className={cn(
+                            "flex-1 py-3 rounded-2xl border items-center justify-center",
+                            selectedFolder === "all" ? "bg-primary border-primary" : "bg-white/5 border-white/10"
+                        )}
+                    >
+                        <Text className={cn("font-bold text-sm", selectedFolder === "all" ? "text-white" : "text-slate-400")}>
+                            {t('all_notes')}
+                            {selectedFolder === "all" && (
+                                <Text className="text-white/60"> • {notes.filter(n => !n.isTrash).length}</Text>
+                            )}
+                        </Text>
                     </TouchableOpacity>
-                    {folders.map(f => (
-                        <TouchableOpacity
-                          key={f}
-                          onPress={() => setSelectedFolder(f)}
-                          onLongPress={() => setFolderActionSheet(f)}
-                          className={cn("px-6 py-4 rounded-3xl mr-3 border", selectedFolder === f ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10")}
-                        >
-                            <Text className={cn("font-bold text-sm", selectedFolder === f ? "text-primary" : "text-slate-500")}>{f}</Text>
-                        </TouchableOpacity>
-                    ))}
-                    <TouchableOpacity onPress={() => setSelectedFolder("trash")} className={cn("px-6 py-4 rounded-3xl mr-3 border flex-row items-center", selectedFolder === "trash" ? "bg-red-500/20 border-red-500" : "bg-white/5 border-white/10")}>
-                        <Trash2 size={14} color={selectedFolder === "trash" ? "#ef4444" : "#64748b"} className="mr-2" />
-                        <Text className={cn("font-bold text-sm", selectedFolder === "trash" ? "text-red-400" : "text-slate-400")}>Corbeille</Text>
+
+                    {/* Add folder */}
+                    <TouchableOpacity
+                        onPress={() => { setEditingFolderName(null); setNewFolderName(""); setShowFolderModal(true); }}
+                        className="w-12 h-12 rounded-2xl bg-white/5 border border-dashed border-white/25 items-center justify-center"
+                    >
+                        <Plus size={20} color="#64748b" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setEditingFolderName(null); setNewFolderName(""); setShowFolderModal(true); }} className="w-14 h-14 rounded-[22px] bg-white/5 border border-dashed border-white/20 items-center justify-center"><Plus size={20} color="#94a3b8" /></TouchableOpacity>
-                </ScrollView>
+
+                    {/* Trash */}
+                    <TouchableOpacity
+                        onPress={() => setSelectedFolder("trash")}
+                        className={cn(
+                            "w-12 h-12 rounded-2xl border items-center justify-center",
+                            selectedFolder === "trash" ? "bg-red-500/20 border-red-500/60" : "bg-white/5 border-white/10"
+                        )}
+                    >
+                        <Trash2 size={18} color={selectedFolder === "trash" ? "#ef4444" : "#475569"} />
+                        {notes.filter(n => n.isTrash).length > 0 && selectedFolder !== "trash" && (
+                            <View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
+                                <Text style={{ fontSize: 9, color: 'white', fontWeight: 'bold' }}>
+                                    {notes.filter(n => n.isTrash).length}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* Folder filter — Row 2: category chips (scrollable) */}
+                {folders.length > 0 && (
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        className="mb-5"
+                        contentContainerStyle={{ paddingRight: 8 }}
+                    >
+                        {folders.map(f => {
+                            const count = notes.filter(n => !n.isTrash && n.folder === f).length;
+                            const isActive = selectedFolder === f;
+                            return (
+                                <TouchableOpacity
+                                    key={f}
+                                    onPress={() => setSelectedFolder(f)}
+                                    onLongPress={() => setFolderActionSheet(f)}
+                                    className={cn(
+                                        "flex-row items-center px-4 py-2.5 rounded-2xl mr-2 border",
+                                        isActive ? "bg-primary/15 border-primary/50" : "bg-white/5 border-white/10"
+                                    )}
+                                >
+                                    <View
+                                        className="w-2 h-2 rounded-full mr-2"
+                                        style={{ backgroundColor: isActive ? '#3b82f6' : '#334155' }}
+                                    />
+                                    <Text className={cn("font-bold text-sm mr-2", isActive ? "text-primary" : "text-slate-400")}>
+                                        {f}
+                                    </Text>
+                                    <View className={cn(
+                                        "px-2 py-0.5 rounded-full",
+                                        isActive ? "bg-primary/25" : "bg-white/8"
+                                    )}>
+                                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: isActive ? '#60a5fa' : '#475569' }}>
+                                            {count}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
+                )}
+                {folders.length === 0 && <View className="mb-5" />}
             </View>
 
             {/* Multi-select action bar */}
