@@ -741,50 +741,66 @@ export default function LesonaSekolySabata() {
     setLoading(true);
     try {
       const storageKey = getStorageKey(selectedLang);
+      const lastSyncKey = `${storageKey}_last_sync`;
       const stored = await AsyncStorage.getItem(storageKey);
+      const lastSyncStr = await AsyncStorage.getItem(lastSyncKey);
+
+      let shouldSync = true;
       if (stored) {
         setQuarterlyList(JSON.parse(stored));
+        if (lastSyncStr) {
+          const lastSync = new Date(lastSyncStr);
+          const now = new Date();
+          if (lastSync.getFullYear() === now.getFullYear() && 
+              lastSync.getMonth() === now.getMonth() && 
+              lastSync.getDate() === now.getDate()) {
+            shouldSync = false;
+          }
+        }
       } else {
         setQuarterlyList([]);
       }
 
-      // Fetch fresh with cache busting
-      let url = `${getApiBase(selectedLang)}/index.json?t=${Date.now()}`;
-      if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json?t=${Date.now()}`;
+      if (shouldSync) {
+        // Fetch fresh with cache busting
+        let url = `${getApiBase(selectedLang)}/index.json?t=${Date.now()}`;
+        if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json?t=${Date.now()}`;
 
-      const response = await fetch(url).catch(() => null);
-      let items: QuarterlyItem[] = [];
+        const response = await fetch(url).catch(() => null);
+        let items: QuarterlyItem[] = [];
 
-      if (response && response.ok) {
-        const data = await response.json();
-        if (data && data.groups) {
-          data.groups.forEach((group: any) => {
-            if (group.resources) {
-              group.resources.forEach((res: any) => {
-                const validated = QuarterlyItemSchema.safeParse({
-                  ...res,
-                  groupTitle: group.title || ""
+        if (response && response.ok) {
+          const data = await response.json();
+          if (data && data.groups) {
+            data.groups.forEach((group: any) => {
+              if (group.resources) {
+                group.resources.forEach((res: any) => {
+                  const validated = QuarterlyItemSchema.safeParse({
+                    ...res,
+                    groupTitle: group.title || ""
+                  });
+                  if (validated.success) {
+                    items.push(validated.data);
+                  } else {
+                    console.warn("[Zod] QuarterlyItem validation failed:", validated.error.format());
+                  }
                 });
-                if (validated.success) {
-                  items.push(validated.data);
-                } else {
-                  console.warn("[Zod] QuarterlyItem validation failed:", validated.error.format());
-                }
-              });
-            }
-          });
+              }
+            });
+          }
         }
-      }
 
-      items.sort((a, b) => {
-        const dateA = parseDate(a.startDate);
-        const dateB = parseDate(b.startDate);
-        return dateB.getTime() - dateA.getTime();
-      });
+        items.sort((a, b) => {
+          const dateA = parseDate(a.startDate);
+          const dateB = parseDate(b.startDate);
+          return dateB.getTime() - dateA.getTime();
+        });
 
-      if (items.length > 0) {
-        setQuarterlyList(items);
-        await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+        if (items.length > 0) {
+          setQuarterlyList(items);
+          await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+          await AsyncStorage.setItem(lastSyncKey, new Date().toISOString());
+        }
       }
     } catch (e) {
       console.error("Error loading initial data", e);

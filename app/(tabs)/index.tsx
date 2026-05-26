@@ -1,20 +1,19 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Bookmark, BookOpen, ChevronRight, FileText, History, LayoutGrid, Music, RefreshCw, Settings, Share2, StickyNote, Headphones, Tv, Search } from 'lucide-react-native';
+import { Bookmark, BookOpen, ChevronRight, FileText, Headphones, History, LayoutGrid, Music, RefreshCw, Search, Settings, Share2, StickyNote, Tv } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText as Text } from '@/components/ui/AppText';
 import { fetchVerseContentById } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
-import { syncMofonaina, getMofonainaForDate, Mofonaina } from '@/lib/mofonaina';
+import { getMofonainaForDate, Mofonaina, syncMofonaina } from '@/lib/mofonaina';
 import { useSettings } from '@/lib/settings-context';
+import { clearHistory, getHistory } from '@/lib/user-storage';
 import { getRandomVerseReference, VerseReference } from '@/lib/versets-data';
-import { fetchWeather, WeatherInfo, getWeatherDisplay } from '@/lib/weather';
-import { getHistory, clearHistory } from '@/lib/user-storage';
+import { fetchWeather, getWeatherDisplay, WeatherInfo } from '@/lib/weather';
 import * as LucideIcons from 'lucide-react-native';
-import { AppText as Text } from '@/components/ui/AppText';
 
 
 export default function Home() {
@@ -77,7 +76,7 @@ export default function Home() {
       try {
         const weatherData = await fetchWeather();
         if (weatherData) setWeather(weatherData);
-      } catch (_) {}
+      } catch (_) { }
       finally { setWeatherLoading(false); }
     }
     init();
@@ -91,7 +90,7 @@ export default function Home() {
       // Only update from cache on focus — no network call (7-day cache)
       fetchWeather()
         .then(data => { if (data) setWeather(data); })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setWeatherLoading(false));
     }, [])
   );
@@ -158,7 +157,7 @@ export default function Home() {
             >
               <Search size={20} color="#94a3b8" />
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               onPress={() => router.push('/modal')}
               className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 items-center justify-center relative shadow-lg"
@@ -349,7 +348,7 @@ export default function Home() {
             icon={<StickyNote color="#10b981" size={28} />}
             bgColor="bg-emerald-500/10"
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/utiles/lesona')}
             className="w-[47%] bg-slate-900 rounded-[30px] p-6 border border-slate-800 shadow-xl"
           >

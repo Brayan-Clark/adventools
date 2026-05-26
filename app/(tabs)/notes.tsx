@@ -693,8 +693,15 @@ export default function Notes() {
         if (noteIdParam && notes.length > 0) {
             const note = notes.find(n => n.id === noteIdParam);
             if (note) {
-                setEditingNote(note);
-                setIsPreviewMode(true);
+                if (note.isLocked) {
+                    setLockedNoteToUnlock(note);
+                    setPinInput("");
+                    setIsPinCodeModalVisible(true);
+                    router.setParams({ id: undefined });
+                } else {
+                    setEditingNote(note);
+                    setIsPreviewMode(true);
+                }
             }
         }
     }, [noteIdParam, notes]);

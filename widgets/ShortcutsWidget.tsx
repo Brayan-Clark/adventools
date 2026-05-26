@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget, ColorProp } from 'react-native-android-widget';
 
-const RADIUS = 0; // Matches premium Android 12+ system widget corner radius
+const RADIUS = 24; // Matches premium Android 12+ system widget corner radius
 
 interface ShortcutButtonProps {
   icon: string;
@@ -17,11 +17,11 @@ function ShortcutButton({ icon, label, color, uri }: ShortcutButtonProps) {
       clickActionData={{ uri }}
       style={{
         flex: 1,
-        marginHorizontal: 5,
-        paddingVertical: 14,
-        backgroundColor: '#ffffff0d', // Frosted glass button module background
+        marginHorizontal: 4,
+        paddingVertical: 12,
+        backgroundColor: '#ffffff1a', // Frosted glass button module background
         borderWidth: 1,
-        borderColor: '#ffffff0f',     // Delicate inner glass border
+        borderColor: '#ffffff33',     // Delicate inner glass border
         borderRadius: 16,
         flexDirection: 'column',
         alignItems: 'center',
@@ -31,17 +31,17 @@ function ShortcutButton({ icon, label, color, uri }: ShortcutButtonProps) {
       <TextWidget
         text={icon}
         style={{
-          fontSize: 22,
+          fontSize: 20,
           color: color, // Modern monochromatic colored glyph
           fontWeight: 'bold',
-          marginBottom: 6,
+          marginBottom: 4,
         }}
       />
       <TextWidget
         text={label}
         style={{
           fontSize: 10,
-          color: '#f1f5f9', // Crisp Slate-100 text
+          color: '#f8fafc', // Crisp Slate-50 text
           fontWeight: 'bold',
         }}
       />
@@ -55,9 +55,9 @@ export function ShortcutsWidget() {
       style={{
         height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0a0e1790', // Sleek 56% transparent dark blue-slate glass
+        backgroundColor: '#0f172aee', // Sleek transparent dark slate glass
         borderWidth: 1,
-        borderColor: '#ffffff1a',     // 10% white glow edge for realistic glass shine
+        borderColor: '#ffffff22',     // 10% white glow edge for realistic glass shine
         borderRadius: RADIUS,
         padding: 16,
         flexDirection: 'column',
@@ -69,10 +69,10 @@ export function ShortcutsWidget() {
       <TextWidget
         text="ACCÈS RAPIDE"
         style={{
-          fontSize: 9,
-          color: '#fb923c', // Warm amber-gold title accent
+          fontSize: 10,
+          color: '#38bdf8', // Light sky blue title accent
           fontWeight: 'bold',
-          letterSpacing: 3,
+          letterSpacing: 2,
           marginBottom: 12,
           textAlign: 'center',
         }}
@@ -90,7 +90,7 @@ export function ShortcutsWidget() {
         <ShortcutButton
           icon="✎"
           label="Notes"
-          color="#10b981" // Radiant Emerald
+          color="#34d399" // Emerald
           uri="adventools://notes"
         />
         <ShortcutButton
@@ -100,15 +100,15 @@ export function ShortcutsWidget() {
           uri="adventools://audio"
         />
         <ShortcutButton
-          icon="✙"
+          icon="📖"
           label="Baiboly"
-          color="#f59e0b" // Radiant Amber
-          uri="adventools://(tabs)/bible"
+          color="#60a5fa" // Blue
+          uri="adventools://bible"
         />
         <ShortcutButton
           icon="📚"
           label="Lesona"
-          color="#f97316" // Radiant Orange
+          color="#fb923c" // Orange
           uri="adventools://utiles/lesona"
         />
       </FlexWidget>

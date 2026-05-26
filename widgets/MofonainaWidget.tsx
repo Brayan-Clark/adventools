@@ -24,7 +24,7 @@ export function MofonainaWidget({
     month: 'long',
   });
 
-  const RADIUS = 0; // Premium modern rounded corner radius
+  const RADIUS = 24; // Premium modern rounded corner radius
 
   // Crop the image server-side to exact widget dimensions (simulates resizeMode="cover")
   let bgUrl = backgroundImage || 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8';
@@ -59,8 +59,8 @@ export function MofonainaWidget({
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          paddingHorizontal: 24,
-          paddingVertical: 28,
+          paddingHorizontal: 16,
+          paddingVertical: 16,
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
@@ -76,8 +76,8 @@ export function MofonainaWidget({
             fontSize: 10,
             color: '#fb923c', // Warm amber-gold date
             fontWeight: 'bold',
-            marginBottom: 8,
-            letterSpacing: 2,
+            marginBottom: 6,
+            letterSpacing: 1,
             textAlign: 'center',
           }}
         />
@@ -87,10 +87,10 @@ export function MofonainaWidget({
           maxLines={2}
           truncate="END"
           style={{
-            fontSize: 19,
+            fontSize: 16,
             color: '#ffffff', // Pristine white title
             fontWeight: 'bold',
-            marginBottom: 8,
+            marginBottom: 6,
             textAlign: 'center',
           }}
         />
@@ -100,10 +100,10 @@ export function MofonainaWidget({
           maxLines={4}
           truncate="END"
           style={{
-            fontSize: 13,
+            fontSize: 12,
             color: '#e2e8f0', // Clean slate-200 text for maximum reading contrast
             textAlign: 'center',
-            marginBottom: 12,
+            marginBottom: 8,
           }}
         />
 

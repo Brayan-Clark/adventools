@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget, ImageWidget, OverlapWidget } from 'react-native-android-widget';
 
-const RADIUS = 0;
+const RADIUS = 24;
 
 interface LesonaAndroWidgetProps {
   title: string;
@@ -49,7 +49,7 @@ export function LesonaAndroWidget({ title, date, category, coverImage }: LesonaA
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          padding: 24,
+          padding: 16,
           flexDirection: 'column',
           justifyContent: 'flex-end',
           backgroundColor: '#00000088',
@@ -60,18 +60,18 @@ export function LesonaAndroWidget({ title, date, category, coverImage }: LesonaA
           text={date}
           truncate="END"
           style={{
-            fontSize: 14,
+            fontSize: 12,
             color: '#e2e8f0',
-            marginBottom: 6,
+            marginBottom: 4,
           }}
         />
 
         <TextWidget
           text={title || 'Sokafy ny fampiharana...'}
-          maxLines={2}
+          maxLines={3}
           truncate="END"
           style={{
-            fontSize: 26,
+            fontSize: 18,
             color: '#ffffff',
             fontWeight: 'bold',
           }}

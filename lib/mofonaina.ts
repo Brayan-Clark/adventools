@@ -61,10 +61,12 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
       if (!lastSyncStr || !cachedStr) {
         shouldSync = true;
       } else {
-        const lastSync = new Date(lastSyncStr).getTime();
-        const now = new Date().getTime();
+        const lastSync = new Date(lastSyncStr);
+        const now = new Date();
         // Sync daily if online to ensure fresh content
-        if (now - lastSync > 24 * 60 * 60 * 1000) {
+        if (now.getFullYear() !== lastSync.getFullYear() || 
+            now.getMonth() !== lastSync.getMonth() || 
+            now.getDate() !== lastSync.getDate()) {
           shouldSync = true;
         }
       }
