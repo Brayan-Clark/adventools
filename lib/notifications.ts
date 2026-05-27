@@ -160,25 +160,19 @@ export async function scheduleStudyReminder(
         title: exactTitle,
         body: exactBody,
         sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
+        priority: Notifications.AndroidNotificationPriority.MAX,
         data: {
           screen: 'sabbath-school',
           url: '/utiles/lesona',
         },
       },
-      trigger: Platform.OS === 'android' 
-        ? {
-            type: Notifications.SchedulableTriggerInputTypes.DAILY,
-            channelId: 'study-reminders',
-            hour: exactHour,
-            minute: exactMinute,
-          }
-        : {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            hour: exactHour,
-            minute: exactMinute,
-            repeats: true,
-          },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        hour: exactHour,
+        minute: exactMinute,
+        repeats: true,
+        channelId: Platform.OS === 'android' ? 'study-reminders' : undefined,
+      },
     });
 
     console.log(`Exact study reminder scheduled daily at ${exactHour}:${exactMinute}`);
@@ -202,25 +196,19 @@ export async function scheduleStudyReminder(
           title: leadTitle,
           body: leadBody,
           sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: Notifications.AndroidNotificationPriority.MAX,
           data: {
             screen: 'sabbath-school',
             url: '/utiles/lesona',
           },
         },
-        trigger: Platform.OS === 'android' 
-          ? {
-              type: Notifications.SchedulableTriggerInputTypes.DAILY,
-              channelId: 'study-reminders',
-              hour: leadHour,
-              minute: leadMinute,
-            }
-          : {
-              type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-              hour: leadHour,
-              minute: leadMinute,
-              repeats: true,
-            },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          hour: leadHour,
+          minute: leadMinute,
+          repeats: true,
+          channelId: Platform.OS === 'android' ? 'study-reminders' : undefined,
+        },
       });
       console.log(`Lead study reminder scheduled daily at ${leadHour}:${leadMinute}`);
     }

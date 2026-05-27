@@ -59,8 +59,7 @@ export function MofonainaWidget({
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          paddingHorizontal: 16,
-          paddingVertical: 16,
+          padding: 16,
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',

@@ -1,13 +1,14 @@
 import { Stack, router } from 'expo-router';
-import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square } from 'lucide-react-native';
+import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square, Edit } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
 
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules } from '../../lib/mofonaina';
 import { useTranslation } from '../../lib/i18n';
 import { useSettings } from '../../lib/settings-context';
@@ -18,6 +19,8 @@ import { AppText as Text } from '@/components/ui/AppText';
 
 const { width, height } = Dimensions.get('window');
 
+const FAVORITES_STORAGE_KEY = 'mofonaina_favorites';
+
 export default function MofonainaScreen() {
   const { t } = useTranslation();
   const { settings: globalSettings } = useSettings();
@@ -25,7 +28,19 @@ export default function MofonainaScreen() {
   const [mofonaina, setMofonaina] = useState<Mofonaina | null>(null);
   const [isConnected, setIsConnected] = useState<boolean | null>(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [sentenceHighlights, setSentenceHighlights] = useState<Record<string, string>>({});
   
+  const [isHighlightModeActive, setIsHighlightModeActive] = useState(false);
+  const [isHighlighterPanelExpanded, setIsHighlighterPanelExpanded] = useState(false);
+  const [activeHighlightColor, setActiveHighlightColor] = useState('rgba(251, 191, 36, 0.35)');
+  const [activeHighlightOpacity, setActiveHighlightOpacity] = useState(0.35);
+
+  const updateHighlightColor = (rgb: string, opacity: number) => {
+    setActiveHighlightColor(`rgba(${rgb}, ${opacity})`);
+    setActiveHighlightOpacity(opacity);
+  };
+
   // Track selected date
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -42,6 +57,86 @@ export default function MofonainaScreen() {
     type: 'info'
   });
 
+  const loadFavorites = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+      if (stored) {
+        setFavorites(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error loading favorites", e);
+    }
+  };
+
+  const loadHighlights = async (dateStr: string) => {
+    try {
+      const stored = await AsyncStorage.getItem(`mofonaina_sentence_highlights_${dateStr}`);
+      if (stored) {
+        setSentenceHighlights(JSON.parse(stored));
+      } else {
+        setSentenceHighlights({});
+      }
+    } catch (e) {
+      console.error("Error loading highlights", e);
+      setSentenceHighlights({});
+    }
+  };
+
+  const handleSentencePress = async (sentKey: string) => {
+    if (!isHighlightModeActive) return;
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`;
+
+    try {
+      const newHighlights = { ...sentenceHighlights };
+      if (newHighlights[sentKey]) {
+        delete newHighlights[sentKey];
+      } else {
+        newHighlights[sentKey] = activeHighlightColor;
+      }
+      setSentenceHighlights(newHighlights);
+      await AsyncStorage.setItem(`mofonaina_sentence_highlights_${dateStr}`, JSON.stringify(newHighlights));
+    } catch (e) {
+      console.error("Error saving highlight", e);
+    }
+  };
+
+  const splitIntoSentences = (text: string) => {
+    return text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
+  };
+
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const toggleFavorite = async () => {
+    if (!mofonaina) return;
+    
+    // Normalize date string (YYYY-MM-DD)
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`;
+
+    try {
+      let newFavorites = [...favorites];
+      if (favorites.includes(dateStr)) {
+        newFavorites = newFavorites.filter(d => d !== dateStr);
+      } else {
+        newFavorites.push(dateStr);
+      }
+      setFavorites(newFavorites);
+      await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(newFavorites));
+    } catch (e) {
+      console.error("Error saving favorite", e);
+    }
+  };
+
+  const isFavorite = () => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`;
+    return favorites.includes(dateStr);
+  };
+
   const fetchMofonainaForDate = async (targetDate: Date) => {
     setLoading(true);
     try {
@@ -51,6 +146,10 @@ export default function MofonainaScreen() {
       await syncMofonaina(false);
       const data = await getMofonainaForDate(targetDate);
       
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const dateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
+      await loadHighlights(dateStr);
+
       setMofonaina(data);
     } catch (error) {
       console.error('Failed to load mofonaina', error);
@@ -190,6 +289,7 @@ export default function MofonainaScreen() {
       <PremiumDatePicker
         visible={showDatePicker}
         currentDate={currentDate}
+        favoriteDates={favorites}
         onClose={() => setShowDatePicker(false)}
         onSelect={(date) => {
           setCurrentDate(date);
@@ -308,17 +408,33 @@ export default function MofonainaScreen() {
                     <Text className="text-primary font-bold">
                        {mofonaina.toerana_soratra_masina}
                     </Text>
-                    <TouchableOpacity className="flex-row items-center">
-                       <Heart size={16} color="#475569" />
+                    <TouchableOpacity className="flex-row items-center" onPress={toggleFavorite}>
+                       <Heart size={20} color={isFavorite() ? "#ec4899" : "#475569"} fill={isFavorite() ? "#ec4899" : "transparent"} />
                     </TouchableOpacity>
                  </View>
               </View>
 
               {/* Main Content Card */}
               <View className="bg-white/5 rounded-[40px] border border-white/5 p-8 mb-8">
-                <Text className="text-slate-200 leading-[32px] text-justify text-lg">
-                  {mofonaina.mofon_aina}
-                </Text>
+                {mofonaina.mofon_aina.split('\n').filter(p => p.trim() !== '').map((paragraph, pIndex) => (
+                  <Text key={`p_${pIndex}`} className="leading-[32px] text-justify text-lg mb-4 text-slate-200">
+                    {splitIntoSentences(paragraph).map((sentence, sIndex) => {
+                      const key = `p${pIndex}_s${sIndex}`;
+                      const highlightColor = sentenceHighlights[key];
+                      
+                      return (
+                        <Text 
+                          key={key} 
+                          onPress={() => handleSentencePress(key)}
+                          suppressHighlighting={true}
+                          style={highlightColor ? { backgroundColor: highlightColor, color: '#ffffff' } : undefined}
+                        >
+                          {sentence}
+                        </Text>
+                      );
+                    })}
+                  </Text>
+                ))}
 
                 {mofonaina.loharano && (
                   <View className="mt-8 pt-6 border-t border-white/5 flex-row items-center justify-between">
@@ -333,7 +449,7 @@ export default function MofonainaScreen() {
                 )}
               </View>
 
-              {/* Quarterly Info Footer */}
+               {/* Quarterly Info Footer */}
               <TouchableOpacity className="bg-slate-900/40 rounded-[32px] p-6 border border-white/5 flex-row items-center">
                  <View className="w-14 h-14 rounded-2xl bg-blue-500/20 items-center justify-center mr-5">
                     <Text className="text-primary font-bold text-lg">{mofonaina.telovolana.taona}</Text>
@@ -341,9 +457,6 @@ export default function MofonainaScreen() {
                  <View className="flex-1">
                    <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{t('quarter_number')} {mofonaina.telovolana.laharana}</Text>
                    <Text className="text-white font-bold text-sm leading-tight">{mofonaina.telovolana.lohateny_lehibe}</Text>
-                 </View>
-                 <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
-                    <Heart size={14} color="#475569" />
                  </View>
               </TouchableOpacity>
             </View>
@@ -359,6 +472,67 @@ export default function MofonainaScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Floating Highlighter Panel */}
+      <View style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 100, alignItems: 'flex-end' }}>
+        {isHighlighterPanelExpanded && (
+          <View className="bg-slate-950/95 border border-slate-800 rounded-3xl p-4 mb-3 shadow-2xl backdrop-blur-md items-center w-72">
+            <Text className="text-white text-xs font-bold mb-3 uppercase tracking-wider">Style du surligneur</Text>
+            
+            {/* Colors */}
+            <View className="flex-row justify-around w-full mb-4">
+              {[
+                { rgb: '251, 191, 36', bg: 'bg-amber-400' },
+                { rgb: '52, 211, 153', bg: 'bg-emerald-400' },
+                { rgb: '59, 130, 246', bg: 'bg-blue-400' },
+                { rgb: '139, 92, 246', bg: 'bg-violet-400' },
+                { rgb: '236, 72, 153', bg: 'bg-pink-400' },
+              ].map((c) => {
+                const isActive = activeHighlightColor.includes(c.rgb);
+                return (
+                  <TouchableOpacity
+                    key={c.rgb}
+                    onPress={() => updateHighlightColor(c.rgb, activeHighlightOpacity)}
+                    className={`w-8 h-8 rounded-full ${c.bg} items-center justify-center border-2 ${isActive ? 'border-white' : 'border-transparent'}`}
+                  />
+                );
+              })}
+            </View>
+
+            {/* Opacity Presets */}
+            <Text className="text-slate-400 text-[10px] font-bold mb-2 uppercase tracking-tight">Transparence : {Math.round(activeHighlightOpacity * 100)}%</Text>
+            <View className="flex-row justify-between w-full bg-slate-900 p-1 rounded-2xl border border-white/5">
+              {[0.2, 0.4, 0.6, 0.8].map((op) => {
+                const isActive = activeHighlightOpacity === op;
+                const rgbStr = activeHighlightColor.match(/rgba?\((\d+,\s*\d+,\s*\d+)/)?.[1] || '251, 191, 36';
+                return (
+                  <TouchableOpacity
+                    key={op}
+                    onPress={() => updateHighlightColor(rgbStr, op)}
+                    className={`flex-1 py-1 rounded-xl items-center justify-center ${isActive ? 'bg-primary' : 'bg-transparent'}`}
+                  >
+                    <Text className={`font-bold text-[10px] ${isActive ? 'text-white' : 'text-slate-400'}`}>{op * 100}%</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Glowing Float Highlighter Toggle Button */}
+        <TouchableOpacity
+          onPress={() => {
+            setIsHighlightModeActive(!isHighlightModeActive);
+            setIsHighlighterPanelExpanded(!isHighlightModeActive);
+          }}
+          className={`w-14 h-14 rounded-full items-center justify-center shadow-lg border-2 ${
+            isHighlightModeActive ? 'bg-amber-500 border-amber-300 shadow-amber-500/50' : 'bg-slate-800 border-slate-700 shadow-black/50'
+          }`}
+        >
+          <Edit size={24} color={isHighlightModeActive ? '#ffffff' : '#94a3b8'} />
+        </TouchableOpacity>
+      </View>
+
     </View>
   );
 }

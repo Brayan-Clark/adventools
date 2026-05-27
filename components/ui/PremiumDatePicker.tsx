@@ -8,26 +8,30 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
+import { Heart } from 'lucide-react-native';
+
 interface PremiumDatePickerProps {
   visible: boolean;
   currentDate: Date;
   onClose: () => void;
   onSelect: (date: Date) => void;
+  favoriteDates?: string[]; // Format: YYYY-MM-DD
 }
 
-export const PremiumDatePicker = ({ 
-  visible, 
-  currentDate, 
+export const PremiumDatePicker = ({
+  visible,
+  currentDate,
   onClose,
-  onSelect
+  onSelect,
+  favoriteDates = []
 }: PremiumDatePickerProps) => {
   const [viewDate, setViewDate] = useState(new Date(currentDate));
-  
+
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
-  
+
   const months = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
 
@@ -48,51 +52,59 @@ export const PremiumDatePicker = ({
     const month = viewDate.getMonth();
     const totalDays = daysInMonth(year, month);
     const startDay = firstDayOfMonth(year, month);
-    
+
     const days = [];
-    
+
     // Fill empty slots for previous month days
     for (let i = 0; i < startDay; i++) {
       days.push(<View key={`empty-${i}`} className="w-[14%] h-12 items-center justify-center" />);
     }
-    
+
     for (let d = 1; d <= totalDays; d++) {
-      const isSelected = d === currentDate.getDate() && 
-                         month === currentDate.getMonth() && 
-                         year === currentDate.getFullYear();
-      
-      const isToday = d === new Date().getDate() && 
-                      month === new Date().getMonth() && 
-                      year === new Date().getFullYear();
+      const isSelected = d === currentDate.getDate() &&
+        month === currentDate.getMonth() &&
+        year === currentDate.getFullYear();
+
+      const isToday = d === new Date().getDate() &&
+        month === new Date().getMonth() &&
+        year === new Date().getFullYear();
+
+      const dateString = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+      const isFavorite = favoriteDates.includes(dateString);
 
       days.push(
-        <TouchableOpacity 
+        <TouchableOpacity
           key={d}
           onPress={() => {
             const selected = new Date(year, month, d);
             onSelect(selected);
           }}
-          className={`w-[14%] h-12 items-center justify-center rounded-2xl ${isSelected ? 'bg-primary shadow-lg shadow-primary/30' : ''}`}
+          className={`w-[14%] h-12 items-center justify-center rounded-2xl relative ${isSelected ? 'bg-primary shadow-lg shadow-primary/30' : ''}`}
         >
-          <Text className={`font-bold ${isSelected ? 'text-white' : isToday ? 'text-primary' : 'text-slate-300'}`}>
+          {isFavorite && (
+            <View className="absolute inset-0 items-center justify-center opacity-20">
+              <Heart size={42} color="#ec4899" fill="#ec4899" />
+            </View>
+          )}
+          <Text className={`font-bold z-10 ${isSelected ? 'text-white' : isFavorite ? 'text-pink-400' : isToday ? 'text-primary' : 'text-slate-300'}`}>
             {d}
           </Text>
         </TouchableOpacity>
       );
     }
-    
+
     return days;
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
-        <TouchableOpacity 
-          activeOpacity={1} 
-          onPress={onClose} 
-          style={styles.dismissArea} 
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={onClose}
+          style={styles.dismissArea}
         />
-        
+
         <View className="w-[90%] bg-slate-900 rounded-[40px] border border-white/10 p-6 shadow-2xl">
           <View className="flex-row justify-between items-center mb-6 px-2">
             <View>
@@ -112,18 +124,18 @@ export const PremiumDatePicker = ({
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View className="flex-row justify-between mb-4 px-2">
             {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, i) => (
               <Text key={`${d}-${i}`} className="text-slate-600 font-bold text-[10px] w-[14%] text-center">{d}</Text>
             ))}
           </View>
-          
+
           <View className="flex-row flex-wrap">
             {renderDays()}
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             onPress={onClose}
             className="mt-8 bg-slate-800 py-4 rounded-2xl items-center"
           >
