@@ -64,84 +64,72 @@ export async function scheduleStudyReminder(
   forceRecreate: boolean = true
 ): Promise<void> {
   try {
-    // We will cancel old ones only if we actually need to recreate them
-  } catch (err) {
-    console.error('Error in schedule wrapper:', err);
-  }
-
-  if (!enabled) {
-    console.log('Study reminders are disabled. Not scheduling new reminders.');
-    return;
-  }
-
-  // 2. Request/Verify permissions
-  const granted = await requestNotificationPermissions();
-  if (!granted) {
-    console.warn('Cannot schedule notification: permission not granted.');
-    return;
-  }
-
-  // 3. Parse and calculate reminder time
-  const [hourStr, minStr] = timeStr.split(':');
-  let exactHour = parseInt(hourStr, 10);
-  let exactMinute = parseInt(minStr, 10);
-
-  if (isNaN(exactHour) || isNaN(exactMinute)) {
-    exactHour = 7;
-    exactMinute = 0;
-  }
-
-  const lowerLang = language.toLowerCase();
-
-  // 4. Exact time notification texts
-  let exactTitle = "Fianarana ny Lesona 📖";
-  let exactBody = "Fotoana hianarana ny lesona Sekoly Sabata androany!";
-  
-  if (lowerLang.includes('français') || lowerLang.includes('french')) {
-    exactTitle = "C'est l'heure d'étudier ! 📖";
-    exactBody = "Prenez quelques minutes pour étudier votre leçon de l'École du Sabbat aujourd'hui !";
-  } else if (lowerLang.includes('anglais') || lowerLang.includes('english')) {
-    exactTitle = "Time to Study! 📖";
-    exactBody = "Take a few minutes to study your Sabbath School lesson today!";
-  }
-
-  const exactIdentifier = `study_reminder_exact_${exactHour}_${exactMinute}`;
-  let expectedIdentifiers = enabled ? [exactIdentifier] : [];
-
-  let leadHour = exactHour;
-  let leadMinute = exactMinute;
-  let leadIdentifier = '';
-
-  if (enabled && leadMinutes > 0) {
-    let totalMinutes = exactHour * 60 + exactMinute - leadMinutes;
-    if (totalMinutes < 0) {
-      totalMinutes += 24 * 60; // wrap to previous day
-    }
-    leadHour = Math.floor(totalMinutes / 60) % 24;
-    leadMinute = totalMinutes % 60;
-    leadIdentifier = `study_reminder_lead_${leadHour}_${leadMinute}`;
-    expectedIdentifiers.push(leadIdentifier);
-  }
-
-  try {
-    // 1. Cancel all existing study reminder notifications
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    
+    // If not enabled, just cancel and return
+    if (!enabled) {
+      for (const notif of scheduled) {
+        if (notif.identifier.startsWith('study_reminder_')) {
+          await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+        }
+      }
+      console.log('Study reminders are disabled. Cancelled all old reminders.');
+      return;
+    }
+
+    // Parse time
+    const [hourStr, minStr] = timeStr.split(':');
+    let exactHour = parseInt(hourStr, 10);
+    let exactMinute = parseInt(minStr, 10);
+    if (isNaN(exactHour) || isNaN(exactMinute)) {
+      exactHour = 7;
+      exactMinute = 0;
+    }
+
+    const exactIdentifier = `study_reminder_exact_${exactHour}_${exactMinute}`;
+    let expectedIdentifiers = [exactIdentifier];
+
+    let leadHour = exactHour;
+    let leadMinute = exactMinute;
+    let leadIdentifier = '';
+    const numericLead = Number(leadMinutes);
+
+    if (numericLead > 0) {
+      let totalMinutes = exactHour * 60 + exactMinute - numericLead;
+      if (totalMinutes < 0) {
+        totalMinutes += 24 * 60; // wrap to previous day
+      }
+      leadHour = Math.floor(totalMinutes / 60) % 24;
+      leadMinute = totalMinutes % 60;
+      leadIdentifier = `study_reminder_lead_${leadHour}_${leadMinute}`;
+      expectedIdentifiers.push(leadIdentifier);
+    }
+
+    // Check if we need to recreate
+    if (!forceRecreate) {
+      const existingIdentifiers = scheduled.map(n => n.identifier);
+      const hasAllExpected = expectedIdentifiers.every(id => existingIdentifiers.includes(id));
+      if (hasAllExpected) {
+         console.log('Reminders already properly scheduled. Skipping recreation.');
+         return;
+      }
+    }
+
+    // First cancel old ones
     for (const notif of scheduled) {
       if (notif.identifier.startsWith('study_reminder_')) {
         await Notifications.cancelScheduledNotificationAsync(notif.identifier);
       }
     }
-  } catch (err) {
-    console.error('Error canceling old reminders:', err);
-  }
 
-  if (!enabled) {
-    console.log('Study reminders are disabled. Cancelled all old reminders.');
-    return;
-  }
+    // Request permissions
+    const granted = await requestNotificationPermissions();
+    if (!granted) {
+      console.warn('Cannot schedule notification: permission not granted.');
+      return;
+    }
 
-  // 5. Schedule local recurring notification for EXACT time
-  try {
+    // Setup channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('study-reminders', {
         name: 'Study Reminders',
@@ -154,6 +142,19 @@ export async function scheduleStudyReminder(
       });
     }
 
+    // Language texts
+    const lowerLang = language.toLowerCase();
+    let exactTitle = "Fianarana ny Lesona 📖";
+    let exactBody = "Fotoana hianarana ny lesona Sekoly Sabata androany!";
+    if (lowerLang.includes('français') || lowerLang.includes('french')) {
+      exactTitle = "C'est l'heure d'étudier ! 📖";
+      exactBody = "Prenez quelques minutes pour étudier votre leçon de l'École du Sabbat aujourd'hui !";
+    } else if (lowerLang.includes('anglais') || lowerLang.includes('english')) {
+      exactTitle = "Time to Study! 📖";
+      exactBody = "Take a few minutes to study your Sabbath School lesson today!";
+    }
+
+    // Schedule EXACT
     await Notifications.scheduleNotificationAsync({
       identifier: exactIdentifier,
       content: {
@@ -161,33 +162,27 @@ export async function scheduleStudyReminder(
         body: exactBody,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
-        data: {
-          screen: 'sabbath-school',
-          url: '/utiles/lesona',
-        },
+        data: { screen: 'sabbath-school', url: '/utiles/lesona' },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour: exactHour,
         minute: exactMinute,
         repeats: true,
         channelId: Platform.OS === 'android' ? 'study-reminders' : undefined,
       },
     });
-
     console.log(`Exact study reminder scheduled daily at ${exactHour}:${exactMinute}`);
 
-    // 6. Schedule Lead time notification if needed
-    if (leadMinutes > 0) {
+    // Schedule LEAD
+    if (numericLead > 0) {
       let leadTitle = "Miomana hianatra 📖";
-      let leadBody = `Afaka ${leadMinutes} minitra dia fotoana hianaranao ny lesona Sekoly Sabata. Miomana ary!`;
-      
+      let leadBody = `Afaka ${numericLead} minitra dia fotoana hianaranao ny lesona Sekoly Sabata. Miomana ary!`;
       if (lowerLang.includes('français') || lowerLang.includes('french')) {
         leadTitle = "Préparez-vous à étudier ! 📖";
-        leadBody = `Dans ${leadMinutes} minutes, commence votre moment d'étude de la leçon de l'École du Sabbat. Préparez-vous !`;
+        leadBody = `Dans ${numericLead} minutes, commence votre moment d'étude de la leçon de l'École du Sabbat. Préparez-vous !`;
       } else if (lowerLang.includes('anglais') || lowerLang.includes('english')) {
         leadTitle = "Get ready to study! 📖";
-        leadBody = `In ${leadMinutes} minutes, it's time for your Sabbath School lesson study. Get ready!`;
+        leadBody = `In ${numericLead} minutes, it's time for your Sabbath School lesson study. Get ready!`;
       }
 
       await Notifications.scheduleNotificationAsync({
@@ -197,13 +192,9 @@ export async function scheduleStudyReminder(
           body: leadBody,
           sound: true,
           priority: Notifications.AndroidNotificationPriority.MAX,
-          data: {
-            screen: 'sabbath-school',
-            url: '/utiles/lesona',
-          },
+          data: { screen: 'sabbath-school', url: '/utiles/lesona' },
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
           hour: leadHour,
           minute: leadMinute,
           repeats: true,
@@ -212,10 +203,7 @@ export async function scheduleStudyReminder(
       });
       console.log(`Lead study reminder scheduled daily at ${leadHour}:${leadMinute}`);
     }
-    
-    // Verify the notification was scheduled
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    console.log(`Total scheduled notifications: ${scheduled.length}`);
+
   } catch (err) {
     console.error('Failed to schedule local notification', err);
   }

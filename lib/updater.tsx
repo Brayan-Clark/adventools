@@ -68,7 +68,7 @@ export async function performUpdateCheck(wifiOnly: boolean, manual = false) {
     const response = await fetch(gitHubApiUrl);
     if (response.ok) {
       const release = await response.json();
-      const latestVersion = release.tag_name ? release.tag_name.replace('v', '') : "0.0.0";
+      const latestVersion = release.tag_name ? release.tag_name.replace(/v/i, '') : "0.0.0";
 
       // Robust semantic version comparison
       const isNewer = (latest: string, current: string) => {
