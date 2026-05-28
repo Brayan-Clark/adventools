@@ -3,6 +3,7 @@ import { performUpdateCheck } from '@/lib/updater';
 import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
+import { useToast } from '@/lib/toast-context';
 import { clearHistory } from '@/lib/user-storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -51,6 +52,7 @@ export default function Settings() {
     getInstalledLanguages,
     getRemoteAvailableLanguages
   } = useTranslation();
+  const { showToast } = useToast();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
   const [isDeptModalVisible, setIsDeptModalVisible] = useState(false);
@@ -80,6 +82,12 @@ export default function Settings() {
   const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isLeadTimeModalVisible, setIsLeadTimeModalVisible] = useState(false);
+  const [isReminderSetupVisible, setIsReminderSetupVisible] = useState(false);
+  const [setupStep, setSetupStep] = useState(1);
+  const [setupTime, setSetupTime] = useState('07:00');
+  const [setupLead, setSetupLead] = useState(0);
+  const [isCustomLeadVisible, setIsCustomLeadVisible] = useState(false);
+  const [customLeadInput, setCustomLeadInput] = useState('');
 
   const onTimeChange = async (event: any, selectedDate?: Date) => {
     setShowTimePicker(false);
@@ -87,20 +95,39 @@ export default function Settings() {
       const hours = selectedDate.getHours().toString().padStart(2, '0');
       const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
       const timeStr = `${hours}:${minutes}`;
-      await updateSettings({ studyReminderTime: timeStr });
-      await scheduleStudyReminder(
-        globalSettings.studyReminderEnabled,
-        timeStr,
-        globalSettings.studyReminderLeadMinutes,
-        globalSettings.language
-      );
+      
+      if (isReminderSetupVisible) {
+        // Inside setup wizard: just update the local step state
+        setSetupTime(timeStr);
+      } else {
+        // Direct edit from the settings list: save & reschedule immediately
+        try {
+          await updateSettings({ studyReminderTime: timeStr });
+          await scheduleStudyReminder(
+            globalSettings.studyReminderEnabled,
+            timeStr,
+            globalSettings.studyReminderLeadMinutes,
+            globalSettings.language,
+            true
+          );
+          const lead = globalSettings.studyReminderLeadMinutes;
+          const summary = lead === 0
+            ? `${timeStr} (${t('exact_time' as any)})`
+            : `${timeStr} • ${lead} ${t('minutes_before' as any)}`;
+          showToast(`${t('reminder_saved' as any)}\n${summary}`, 'success');
+        } catch (err) {
+          console.error('Failed to update reminder time:', err);
+          showToast(t('error'), 'error');
+        }
+      }
     }
   };
 
   const getPickerDate = () => {
     const d = new Date();
-    if (globalSettings.studyReminderTime) {
-      const [h, m] = globalSettings.studyReminderTime.split(':');
+    const timeToParse = isReminderSetupVisible ? setupTime : globalSettings.studyReminderTime;
+    if (timeToParse) {
+      const [h, m] = timeToParse.split(':');
       d.setHours(parseInt(h, 10) || 7);
       d.setMinutes(parseInt(m, 10) || 0);
     } else {
@@ -502,16 +529,23 @@ export default function Settings() {
                 />
               </SettingsGroup>
 
-              <SettingsGroup title="Rappel d'étude journalier">
+              <SettingsGroup title={t('study_reminder_group' as any)}>
                 <SettingItem
                   icon={<Bell size={18} color="#f59e0b" />}
-                  label="Activer le rappel"
+                  label={t('enable_reminder' as any)}
                   rightElement={
                     <Switch
                       value={globalSettings.studyReminderEnabled}
                       onValueChange={async (val) => {
-                        await updateSettings({ studyReminderEnabled: val });
-                        await scheduleStudyReminder(val, globalSettings.studyReminderTime, globalSettings.studyReminderLeadMinutes, globalSettings.language);
+                        if (val) {
+                          setSetupTime(globalSettings.studyReminderTime || '07:00');
+                          setSetupLead(globalSettings.studyReminderLeadMinutes || 0);
+                          setSetupStep(1);
+                          setIsReminderSetupVisible(true);
+                        } else {
+                          await updateSettings({ studyReminderEnabled: false });
+                          await scheduleStudyReminder(false, globalSettings.studyReminderTime, globalSettings.studyReminderLeadMinutes, globalSettings.language, true);
+                        }
                       }}
                       trackColor={{ false: '#334155', true: '#3b82f6' }}
                       thumbColor="#fff"
@@ -523,7 +557,7 @@ export default function Settings() {
                   <>
                     <SettingItem
                       icon={<Clock size={18} color="#3b82f6" />}
-                      label="Heure de rappel"
+                      label={t('reminder_time' as any)}
                       value={globalSettings.studyReminderTime}
                       onPress={() => {
                         setShowTimePicker(true);
@@ -531,13 +565,17 @@ export default function Settings() {
                     />
                     <SettingItem
                       icon={<Clock size={18} color="#10b981" />}
-                      label="Avertir en avance"
+                      label={t('warn_in_advance' as any)}
                       value={
                         globalSettings.studyReminderLeadMinutes === 0 
-                          ? "À l'heure exacte" 
-                          : `${globalSettings.studyReminderLeadMinutes} minutes avant`
+                          ? t('exact_time' as any) 
+                          : `${globalSettings.studyReminderLeadMinutes} ${t('minutes_before' as any)}`
                       }
-                      onPress={() => setIsLeadTimeModalVisible(true)}
+                      onPress={() => {
+                        setIsCustomLeadVisible(false);
+                        setCustomLeadInput('');
+                        setIsLeadTimeModalVisible(true);
+                      }}
                       isLast
                     />
                   </>
@@ -1160,37 +1198,217 @@ export default function Settings() {
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-slate-900 rounded-t-[32px] p-6 max-h-[80%]">
             <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-white font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>Avertir en avance</Text>
+              <Text className="text-white font-bold text-lg" style={{ fontFamily: 'Lexend_700Bold' }}>{t('warn_in_advance' as any)}</Text>
               <TouchableOpacity onPress={() => setIsLeadTimeModalVisible(false)} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
                 <X size={16} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            <Text className="text-slate-400 text-sm mb-4">Quand souhaitez-vous être averti avant l'heure d'étude ?</Text>
+            <Text className="text-slate-400 text-sm mb-4">{t('when_warn_advance' as any)}</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="gap-2">
                 {[
-                  { value: 0, label: "À l'heure exacte" },
-                  { value: 5, label: "5 minutes avant" },
-                  { value: 10, label: "10 minutes avant" },
-                  { value: 15, label: "15 minutes avant" },
-                  { value: 30, label: "30 minutes avant" }
-                ].map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={async () => {
-                      await updateSettings({ studyReminderLeadMinutes: option.value });
-                      await scheduleStudyReminder(true, globalSettings.studyReminderTime, option.value, globalSettings.language);
-                      setIsLeadTimeModalVisible(false);
-                    }}
-                    className={`flex-row items-center justify-between p-4 rounded-2xl border ${globalSettings.studyReminderLeadMinutes === option.value ? 'bg-primary/20 border-primary' : 'bg-slate-800 border-slate-700'}`}
-                  >
-                    <Text className={`font-bold ${globalSettings.studyReminderLeadMinutes === option.value ? 'text-primary' : 'text-slate-300'}`}>{option.label}</Text>
-                    {globalSettings.studyReminderLeadMinutes === option.value && <Check size={18} color="#3b82f6" />}
-                  </TouchableOpacity>
-                ))}
+                  { value: 0, label: t('no_warning' as any) },
+                  { value: 5, label: `5 ${t('minutes_before' as any)}` },
+                  { value: 10, label: `10 ${t('minutes_before' as any)}` },
+                  { value: 15, label: `15 ${t('minutes_before' as any)}` },
+                  { value: 30, label: `30 ${t('minutes_before' as any)}` },
+                  { value: -1, label: t('custom_lead_time' as any) }
+                ].map((option) => {
+                  const isSelected = option.value === -1 ? isCustomLeadVisible : (!isCustomLeadVisible && globalSettings.studyReminderLeadMinutes === option.value);
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={async () => {
+                        if (option.value === -1) {
+                           setIsCustomLeadVisible(true);
+                        } else {
+                           setIsCustomLeadVisible(false);
+                           try {
+                             await updateSettings({ studyReminderLeadMinutes: option.value });
+                             await scheduleStudyReminder(true, globalSettings.studyReminderTime, option.value, globalSettings.language, true);
+                             const summary = option.value === 0
+                               ? `${globalSettings.studyReminderTime} (${t('exact_time' as any)})`
+                               : `${globalSettings.studyReminderTime} • ${option.value} ${t('minutes_before' as any)}`;
+                             showToast(`${t('reminder_saved' as any)}\n${summary}`, 'success');
+                           } catch (err) {
+                             console.error('Failed to update lead time:', err);
+                             showToast(t('error'), 'error');
+                           }
+                           setIsLeadTimeModalVisible(false);
+                        }
+                      }}
+                      className={`flex-row items-center justify-between p-4 rounded-2xl border ${isSelected ? 'bg-primary/20 border-primary' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                      <Text className={`font-bold ${isSelected ? 'text-primary' : 'text-slate-300'}`}>{option.label}</Text>
+                      {isSelected && <Check size={18} color="#3b82f6" />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+
+              {isCustomLeadVisible && (
+                 <View className="mt-4 flex-row items-center">
+                    <TextInput
+                      className="flex-1 bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white font-bold"
+                      value={customLeadInput}
+                      onChangeText={setCustomLeadInput}
+                      placeholder="Ex: 45"
+                      placeholderTextColor="#64748b"
+                      keyboardType="numeric"
+                      autoFocus
+                    />
+                    <TouchableOpacity
+                      onPress={async () => {
+                        const val = parseInt(customLeadInput, 10);
+                        if (!isNaN(val) && val >= 0) {
+                            try {
+                              await updateSettings({ studyReminderLeadMinutes: val });
+                              await scheduleStudyReminder(true, globalSettings.studyReminderTime, val, globalSettings.language, true);
+                              const summary = val === 0
+                                ? `${globalSettings.studyReminderTime} (${t('exact_time' as any)})`
+                                : `${globalSettings.studyReminderTime} • ${val} ${t('minutes_before' as any)}`;
+                              showToast(`${t('reminder_saved' as any)}\n${summary}`, 'success');
+                            } catch (err) {
+                              console.error('Failed to save custom lead time:', err);
+                              showToast(t('error'), 'error');
+                            }
+                            setIsCustomLeadVisible(false);
+                            setIsLeadTimeModalVisible(false);
+                        }
+                     }}
+                      className="ml-3 bg-primary p-4 rounded-2xl"
+                    >
+                      <Check size={20} color="white" />
+                    </TouchableOpacity>
+                 </View>
+              )}
+
               <View className="h-8" />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reminder Setup Wizard Modal */}
+      <Modal visible={isReminderSetupVisible} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[32px] p-6 min-h-[50%]">
+             <View className="flex-row items-center justify-between mb-6">
+               <Text className="text-white font-bold text-xl" style={{ fontFamily: 'Lexend_700Bold' }}>{t('study_reminder_setup' as any)}</Text>
+               <TouchableOpacity onPress={() => setIsReminderSetupVisible(false)} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                 <X size={16} color="#94a3b8" />
+               </TouchableOpacity>
+             </View>
+             
+             <Text className="text-slate-400 text-sm mb-6">{t('study_reminder_setup_desc' as any)}</Text>
+
+             {setupStep === 1 && (
+               <View className="flex-1">
+                 <Text className="text-white font-bold mb-4">{t('study_reminder_step1' as any)}</Text>
+                 <TouchableOpacity onPress={() => setShowTimePicker(true)} className="bg-slate-800 p-4 rounded-2xl items-center border border-slate-700">
+                    <Text className="text-white text-2xl font-bold">{setupTime}</Text>
+                 </TouchableOpacity>
+               </View>
+             )}
+
+             {setupStep === 2 && (
+               <View className="flex-1">
+                 <Text className="text-white font-bold mb-4">{t('study_reminder_step2' as any)}</Text>
+                 <ScrollView>
+                   {[
+                     { value: 0, label: t('no_warning' as any) },
+                     { value: 5, label: `5 ${t('minutes_before' as any)}` },
+                     { value: 10, label: `10 ${t('minutes_before' as any)}` },
+                     { value: 15, label: `15 ${t('minutes_before' as any)}` },
+                     { value: -1, label: t('custom_lead_time' as any) },
+                   ].map((option) => {
+                      const isSelected = option.value === -1 ? isCustomLeadVisible : (!isCustomLeadVisible && setupLead === option.value);
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          onPress={() => {
+                            if (option.value === -1) {
+                               setIsCustomLeadVisible(true);
+                            } else {
+                               setIsCustomLeadVisible(false);
+                               setSetupLead(option.value);
+                            }
+                          }}
+                          className={`flex-row items-center justify-between p-4 rounded-2xl mb-2 border ${isSelected ? 'bg-primary/20 border-primary' : 'bg-slate-800 border-slate-700'}`}
+                        >
+                           <Text className={`font-bold ${isSelected ? 'text-primary' : 'text-slate-300'}`}>{option.label}</Text>
+                           {isSelected && <Check size={18} color="#3b82f6" />}
+                        </TouchableOpacity>
+                      );
+                   })}
+
+                   {isCustomLeadVisible && (
+                     <View className="mt-2 mb-2 flex-row items-center">
+                        <TextInput
+                          className="flex-1 bg-slate-800 border border-slate-700 p-4 rounded-2xl text-white font-bold"
+                          value={customLeadInput}
+                          onChangeText={setCustomLeadInput}
+                          placeholder="Ex: 45"
+                          placeholderTextColor="#64748b"
+                          keyboardType="numeric"
+                          autoFocus
+                        />
+                        <TouchableOpacity
+                          onPress={() => {
+                             const val = parseInt(customLeadInput, 10);
+                             if (!isNaN(val) && val >= 0) {
+                                 setSetupLead(val);
+                                 setIsCustomLeadVisible(false);
+                             }
+                          }}
+                          className="ml-3 bg-primary p-4 rounded-2xl"
+                        >
+                          <Check size={20} color="white" />
+                        </TouchableOpacity>
+                     </View>
+                   )}
+
+                   <Text className="text-slate-500 text-xs italic mt-2 text-center">{t('no_warning_desc' as any)}</Text>
+                 </ScrollView>
+               </View>
+             )}
+
+             <View className="flex-row justify-between mt-6">
+                {setupStep > 1 ? (
+                  <TouchableOpacity onPress={() => setSetupStep(setupStep - 1)} className="px-6 py-3 rounded-xl bg-slate-800">
+                     <Text className="text-white font-bold">{t('previous' as any)}</Text>
+                  </TouchableOpacity>
+                ) : <View />}
+
+                {setupStep < 2 ? (
+                  <TouchableOpacity onPress={() => setSetupStep(setupStep + 1)} className="px-6 py-3 rounded-xl bg-primary">
+                     <Text className="text-white font-bold">{t('next' as any)}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    onPress={async () => {
+                       // Always close the modal first, then save in background
+                       setIsReminderSetupVisible(false);
+                       try {
+                         await updateSettings({ studyReminderEnabled: true, studyReminderTime: setupTime, studyReminderLeadMinutes: setupLead });
+                         await scheduleStudyReminder(true, setupTime, setupLead, globalSettings.language, true);
+                         const summary = setupLead === 0 
+                            ? `${setupTime} (${t('exact_time' as any)})` 
+                            : `${setupTime} • ${setupLead} ${t('minutes_before' as any)}`;
+                         showToast(`${t('reminder_saved' as any)}\n${summary}`, 'success');
+                       } catch (err) {
+                         console.error('Failed to save reminder:', err);
+                         showToast(t('error'), 'error');
+                       }
+                    }} 
+                    className="px-6 py-3 rounded-xl bg-green-500 flex-row items-center"
+                  >
+                     <Check size={18} color="white" className="mr-2" />
+                     <Text className="text-white font-bold">{t('save_reminder' as any)}</Text>
+                  </TouchableOpacity>
+                )}
+             </View>
+
           </View>
         </View>
       </Modal>
