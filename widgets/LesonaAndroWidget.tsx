@@ -8,75 +8,94 @@ interface LesonaAndroWidgetProps {
   date: string;
   category: string;
   coverImage?: string;
+  widgetWidth?: number;
+  widgetHeight?: number;
 }
 
-export function LesonaAndroWidget({ title, date, category, coverImage }: LesonaAndroWidgetProps) {
+export function LesonaAndroWidget({
+  title,
+  date,
+  category,
+  coverImage,
+  widgetWidth = 300,
+  widgetHeight = 200,
+}: LesonaAndroWidgetProps) {
   return (
-    <OverlapWidget
+    <FlexWidget
       style={{
         width: 'match_parent',
         height: 'match_parent',
-        borderRadius: RADIUS,
+        padding: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
-      {/* 1. Background image (Quarterly cover) */}
-      {coverImage ? (
-        <ImageWidget
-          image={coverImage as any}
-          imageWidth={400}
-          imageHeight={400}
-          radius={RADIUS}
-          style={{
-            width: 'match_parent',
-            height: 'match_parent',
-          }}
-        />
-      ) : (
-        <FlexWidget
-          style={{
-            width: 'match_parent',
-            height: 'match_parent',
-            backgroundColor: '#1a2634',
-            borderRadius: RADIUS,
-          }}
-        />
-      )}
-
-      {/* 2. Dark overlay + Text content */}
-      <FlexWidget
-        clickAction="OPEN_URI"
-        clickActionData={{ uri: 'adventools://utiles/lesona' }}
+      <OverlapWidget
         style={{
           width: 'match_parent',
           height: 'match_parent',
-          padding: 16,
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          backgroundColor: '#00000088',
           borderRadius: RADIUS,
         }}
       >
-        <TextWidget
-          text={date}
-          truncate="END"
-          style={{
-            fontSize: 12,
-            color: '#e2e8f0',
-            marginBottom: 4,
-          }}
-        />
+        {/* 1. Background image (Quarterly cover) */}
+        {coverImage ? (
+          <ImageWidget
+            image={coverImage as any}
+            imageWidth={widgetWidth - 24}
+            imageHeight={widgetHeight - 24}
+            radius={RADIUS}
+            style={{
+              width: 'match_parent',
+              height: 'match_parent',
+            }}
+          />
+        ) : (
+          <FlexWidget
+            style={{
+              width: 'match_parent',
+              height: 'match_parent',
+              backgroundColor: '#1a2634',
+              borderRadius: RADIUS,
+            }}
+          />
+        )}
 
-        <TextWidget
-          text={title || 'Sokafy ny fampiharana...'}
-          maxLines={3}
-          truncate="END"
+        {/* 2. Dark overlay + Text content */}
+        <FlexWidget
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'adventools://utiles/lesona' }}
           style={{
-            fontSize: 18,
-            color: '#ffffff',
-            fontWeight: 'bold',
+            width: 'match_parent',
+            height: 'match_parent',
+            padding: 16,
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            backgroundColor: '#00000088',
+            borderRadius: RADIUS,
           }}
-        />
-      </FlexWidget>
-    </OverlapWidget>
+        >
+          <TextWidget
+            text={date}
+            truncate="END"
+            style={{
+              fontSize: 12,
+              color: '#e2e8f0',
+              marginBottom: 4,
+            }}
+          />
+
+          <TextWidget
+            text={title || 'Sokafy ny fampiharana...'}
+            maxLines={3}
+            truncate="END"
+            style={{
+              fontSize: 18,
+              color: '#ffffff',
+              fontWeight: 'bold',
+            }}
+          />
+        </FlexWidget>
+      </OverlapWidget>
+    </FlexWidget>
   );
 }

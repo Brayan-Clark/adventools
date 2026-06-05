@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlexWidget, TextWidget, ColorProp } from 'react-native-android-widget';
+import { ColorProp, FlexWidget, TextWidget } from 'react-native-android-widget';
 
 const RADIUS = 24; // Matches premium Android 12+ system widget corner radius
 
@@ -18,11 +18,11 @@ function ShortcutButton({ icon, label, color, uri }: ShortcutButtonProps) {
       style={{
         flex: 1,
         marginHorizontal: 4,
-        paddingVertical: 12,
-        backgroundColor: '#ffffff1a', // Frosted glass button module background
+        paddingVertical: 8, // Reduced from 12
+        backgroundColor: '#ffffff1a',
         borderWidth: 1,
-        borderColor: '#ffffff33',     // Delicate inner glass border
-        borderRadius: 16,
+        borderColor: '#ffffff33',
+        borderRadius: 12, // Slightly smaller radius
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
@@ -31,17 +31,17 @@ function ShortcutButton({ icon, label, color, uri }: ShortcutButtonProps) {
       <TextWidget
         text={icon}
         style={{
-          fontSize: 20,
-          color: color, // Modern monochromatic colored glyph
+          fontSize: 18, // Reduced from 20
+          color: color,
           fontWeight: 'bold',
-          marginBottom: 4,
+          marginBottom: 2, // Reduced from 4
         }}
       />
       <TextWidget
         text={label}
         style={{
-          fontSize: 10,
-          color: '#f8fafc', // Crisp Slate-50 text
+          fontSize: 9, // Reduced from 10
+          color: '#f8fafc',
           fontWeight: 'bold',
         }}
       />
@@ -53,64 +53,62 @@ export function ShortcutsWidget() {
   return (
     <FlexWidget
       style={{
-        height: 'match_parent',
         width: 'match_parent',
-        backgroundColor: '#0f172aee', // Sleek transparent dark slate glass
-        borderWidth: 1,
-        borderColor: '#ffffff22',     // 10% white glow edge for realistic glass shine
-        borderRadius: RADIUS,
-        padding: 16,
-        flexDirection: 'column',
+        height: 'match_parent',
+        padding: 12,
         justifyContent: 'center',
-        overflow: 'hidden',
+        alignItems: 'center',
       }}
     >
-      {/* Sleek Minimalist Header */}
-      <TextWidget
-        text="ACCÈS RAPIDE"
-        style={{
-          fontSize: 10,
-          color: '#38bdf8', // Light sky blue title accent
-          fontWeight: 'bold',
-          letterSpacing: 2,
-          marginBottom: 12,
-          textAlign: 'center',
-        }}
-      />
-
-      {/* Glassmorphic Shortcut buttons */}
       <FlexWidget
         style={{
-          flexDirection: 'row',
+          height: 'match_parent',
           width: 'match_parent',
-          justifyContent: 'space-between',
+          backgroundColor: '#0f172aee',
+          borderWidth: 1,
+          borderColor: '#ffffff22',
+          borderRadius: RADIUS,
+          padding: 8,
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
-        <ShortcutButton
-          icon="✎"
-          label="Notes"
-          color="#34d399" // Emerald
-          uri="adventools://notes"
-        />
-        <ShortcutButton
-          icon="♬"
-          label="Audio"
-          color="#a78bfa" // Radiant Violet
-          uri="adventools://audio"
-        />
-        <ShortcutButton
-          icon="📖"
-          label="Baiboly"
-          color="#60a5fa" // Blue
-          uri="adventools://bible"
-        />
-        <ShortcutButton
-          icon="📚"
-          label="Lesona"
-          color="#fb923c" // Orange
-          uri="adventools://utiles/lesona"
-        />
+        {/* Glassmorphic Shortcut buttons */}
+        <FlexWidget
+          style={{
+            flexDirection: 'row',
+            width: 'match_parent',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <ShortcutButton
+            icon="✎"
+            label="Notes"
+            color="#34d399"
+            uri="adventools://notes"
+          />
+          <ShortcutButton
+            icon="♬"
+            label="Audio"
+            color="#a78bfa"
+            uri="adventools://audio"
+          />
+          <ShortcutButton
+            icon="📖"
+            label="Baiboly"
+            color="#60a5fa"
+            uri="adventools://bible"
+          />
+          <ShortcutButton
+            icon="📚"
+            label="Lesona"
+            color="#fb923c"
+            uri="adventools://utiles/lesona"
+          />
+        </FlexWidget>
       </FlexWidget>
     </FlexWidget>
   );

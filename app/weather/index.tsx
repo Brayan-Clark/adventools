@@ -26,6 +26,8 @@ import {
   getWeatherSuggestion,
   formatDayLabel,
 } from '@/lib/weather';
+import { checkMobileDataWarning } from '@/lib/data-saver';
+import { WeatherAnimation } from '@/components/ui/WeatherAnimation';
 
 // ─── Gradient palettes per condition ─────────────────────────────────────────
 function getBgGradient(code: number): [string, string, string] {
@@ -43,13 +45,26 @@ export default function WeatherScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (force = false) => {
-    try {
-      const data = await fetchWeather(force);
-      if (data) setWeather(data);
-    } catch (_) {}
-    finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  const load = useCallback((force = false) => {
+    const doFetch = async () => {
+      try {
+        const data = await fetchWeather(force);
+        if (data) setWeather(data);
+      } catch (_) {}
+      finally { setLoading(false); setRefreshing(false); }
+    };
+
+    if (force || !weather) {
+      checkMobileDataWarning("Météo", () => {
+        doFetch();
+      }, () => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+    } else {
+      doFetch();
+    }
+  }, [weather]);
 
   useEffect(() => { load(false); }, []);
 
@@ -82,6 +97,7 @@ export default function WeatherScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
+      <WeatherAnimation conditionCode={weather?.conditionCode ?? 0} />
 
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView

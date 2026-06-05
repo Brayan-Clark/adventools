@@ -1,17 +1,17 @@
-import { useTranslation } from '@/lib/i18n';
 import { loadDatabase } from '@/lib/database';
+import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
-import { cn } from '@/lib/utils';
 import { getBibleMarkup, saveBibleMarkup, saveHistory } from '@/lib/user-storage';
+import { cn } from '@/lib/utils';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Plus, Share2, Trash2, Type, X } from 'lucide-react-native';
+import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 
-import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
 import { AppText as Text } from '@/components/ui/AppText';
+import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
 
 
 export default function BibleReader() {
@@ -38,7 +38,7 @@ export default function BibleReader() {
   const [wordHighlights, setWordHighlights] = useState<Record<string, any>>({});
   const [wordSelectMode, setWordSelectMode] = useState(false);
   const [selectedWordColor, setSelectedWordColor] = useState('#facc15');
-  const [tempWordHighlights, setTempWordHighlights] = useState<Record<number, string>>({});
+  const [tempWordHighlights, setTempWordHighlights] = useState<Record<string, string>>({});
   const [highlightVerse, setHighlightVerse] = useState<number | null>(null);
   const [visibleVerse, setVisibleVerse] = useState<number | null>(null);
   const [pickerStep, setPickerStep] = useState<'chapter' | 'verse'>('chapter');
@@ -202,45 +202,45 @@ export default function BibleReader() {
   const [tempVerses, setTempVerses] = useState<number[]>([]);
   useEffect(() => {
     async function loadPickerVerses() {
-        if (!showChapterPicker || !bookId) return;
-        
-        const cacheKey = `${lang}_${bookId}_${tempChapter}`;
-        if (tempChapter === chapter && verses.length > 0) {
-            setTempVerses(Array.from({ length: verses.length }, (_, i) => i + 1));
-            return;
+      if (!showChapterPicker || !bookId) return;
+
+      const cacheKey = `${lang}_${bookId}_${tempChapter}`;
+      if (tempChapter === chapter && verses.length > 0) {
+        setTempVerses(Array.from({ length: verses.length }, (_, i) => i + 1));
+        return;
+      }
+
+      if (countsCache[cacheKey]) {
+        setTempVerses(Array.from({ length: countsCache[cacheKey] }, (_, i) => i + 1));
+        return;
+      }
+
+      try {
+        let db = dbInstance;
+        if (!db) {
+          const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
+          if (!config) return;
+          db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
+          setDbInstance(db);
         }
-        
-        if (countsCache[cacheKey]) {
-            setTempVerses(Array.from({ length: countsCache[cacheKey] }, (_, i) => i + 1));
-            return;
+
+        const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
+        const isCloud = tables.some((t: any) => t.name === 'books');
+        const bookIdNum = Number(bookId);
+        let countResult: any;
+
+        if (isCloud) {
+          countResult = await db.getFirstAsync(`SELECT MAX(verse) as count FROM verses WHERE book_number = ? AND CAST(chapter AS INTEGER) = ?`, [bookIdNum, tempChapter]);
+        } else {
+          const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
+          if (verseTable) {
+            countResult = await db.getFirstAsync(`SELECT MAX(CAST(a_and AS INTEGER)) as count FROM ${verseTable} WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?`, [bookIdNum, tempChapter]);
+          }
         }
-
-            try {
-                let db = dbInstance;
-                if (!db) {
-                    const config = availableBibles.find(b => b.id === lang) || availableBibles[0];
-                    if (!config) return;
-                    db = await loadDatabase(config.file, DB_SOURCES[config.file], 'bibles');
-                    setDbInstance(db);
-                }
-
-            const tables: any = await db.getAllAsync("SELECT name FROM sqlite_master WHERE type='table'");
-            const isCloud = tables.some((t: any) => t.name === 'books');
-            const bookIdNum = Number(bookId);
-            let countResult: any;
-
-            if (isCloud) {
-                countResult = await db.getFirstAsync(`SELECT MAX(verse) as count FROM verses WHERE book_number = ? AND CAST(chapter AS INTEGER) = ?`, [bookIdNum, tempChapter]);
-            } else {
-                const verseTable = tables.find((t: any) => t.name.endsWith("_andininy"))?.name;
-                if (verseTable) {
-                    countResult = await db.getFirstAsync(`SELECT MAX(CAST(a_and AS INTEGER)) as count FROM ${verseTable} WHERE a_bid = ? AND CAST(a_toko AS INTEGER) = ?`, [bookIdNum, tempChapter]);
-                }
-            }
-            const count = countResult?.count || 50;
-            setCountsCache(prev => ({ ...prev, [cacheKey]: count }));
-            setTempVerses(Array.from({ length: count }, (_, i) => i + 1));
-        } catch (e) {}
+        const count = countResult?.count || 50;
+        setCountsCache(prev => ({ ...prev, [cacheKey]: count }));
+        setTempVerses(Array.from({ length: count }, (_, i) => i + 1));
+      } catch (e) { }
     }
     loadPickerVerses();
   }, [tempChapter, showChapterPicker, bookId, lang, availableBibles, chapter, verses.length, dbInstance]);
@@ -278,7 +278,7 @@ export default function BibleReader() {
               }
             }
           };
-          
+
           setTimeout(() => tryScroll(), 300);
           return () => clearTimeout(timer);
         }
@@ -341,16 +341,16 @@ export default function BibleReader() {
         setVerses(versesResult || []);
         setDbInstance(db); // Cache for other uses
 
-          // Save to History
-          try {
-            await saveHistory({
-              type: 'bible',
-              title: `${bookInfo?.name || 'Bible'} ${chapter}`,
-              subtitle: `Chapitre consulté • ${new Date().toLocaleDateString('fr-FR')}`,
-              timestamp: Date.now(),
-              params: { bookId, chapter }
-            });
-          } catch (e) { }
+        // Save to History
+        try {
+          await saveHistory({
+            type: 'bible',
+            title: `${bookInfo?.name || 'Bible'} ${chapter}`,
+            subtitle: `Chapitre consulté • ${new Date().toLocaleDateString('fr-FR')}`,
+            timestamp: Date.now(),
+            params: { bookId, chapter }
+          });
+        } catch (e) { }
       } catch (e) {
         console.error("[BibleReader] Load Error:", e);
       } finally {
@@ -540,7 +540,7 @@ export default function BibleReader() {
                               <Text
                                 key={sIdx}
                                 style={{
-                                  color: vWh[idx] || userTextColor || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#cbd5e1'),
+                                  color: vWh[idx.toString()] || userTextColor || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#cbd5e1'),
                                   fontWeight: (inTag || inJesus) ? 'bold' : 'normal',
                                   fontStyle: inTag ? 'italic' : 'normal',
                                   fontSize: inTag ? globalSettings.fontSize * 0.85 : globalSettings.fontSize
@@ -755,12 +755,19 @@ export default function BibleReader() {
 
       {/* Study Mode Modal */}
       <Modal visible={wordSelectMode} transparent animationType="slide">
-        <View className="flex-1 bg-black/95 justify-center p-6">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', paddingHorizontal: 20, paddingTop: 48, paddingBottom: 32 }}>
           <View
-            className="bg-[#1a2233] rounded-[40px] p-8 border border-white/10 shadow-2xl"
-            style={{ maxHeight: '92%' }}
+            style={{
+              flex: 1,
+              backgroundColor: '#1a2233',
+              borderRadius: 40,
+              padding: 24,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)',
+            }}
           >
-            <View className="flex-row justify-between items-center mb-6">
+            {/* Header */}
+            <View className="flex-row justify-between items-center mb-4">
               <View>
                 <Text className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1">Mode Étude Tactile</Text>
                 <Text className="text-white font-bold text-xl">{currentBookName} {chapter}:{selectedVerse?.verse}</Text>
@@ -770,77 +777,86 @@ export default function BibleReader() {
               </TouchableOpacity>
             </View>
 
-            {/* Preview Area — scrollable so long verses don't push buttons off screen */}
-            <View className="bg-[#111621] rounded-3xl mb-6 border border-white/5" style={{ maxHeight: 200 }}>
-              <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
-              <Text style={{
-                fontSize: 22,
-                lineHeight: 34,
-                color: '#cbd5e1',
-                textAlign: 'center'
-              }}>
-                {(() => {
-                  let inTag = false;
-                  let inJesus = false;
-                  return (selectedVerse?.text.split(' ') || []).map((word, idx) => {
-                    const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>|<br\/?>|<J>|<\/J>)/g);
-                    return (
-                      <React.Fragment key={idx}>
-                        {segments.map((seg, sIdx) => {
-                          if (seg === '<n>') {
-                            inTag = true;
-                            return <Text key={sIdx}>{"\n"}</Text>;
-                          }
-                          if (seg === '</n>') {
-                            inTag = false;
-                            return <Text key={sIdx}>{"\n"}</Text>;
-                          }
-                          if (seg === '<pb>' || seg === '</pb>' || seg === '<br>' || seg === '<br/>') {
-                            return <Text key={sIdx}>{"\n"}</Text>;
-                          }
-                          if (seg === '<J>') {
-                            inJesus = true;
-                            return null;
-                          }
-                          if (seg === '</J>') {
-                            inJesus = false;
-                            return null;
-                          }
-                          if (!seg) return null;
+            {/* Preview Area — View+flexWrap so ScrollView can measure full height */}
+            <View
+              style={{ flex: 1, backgroundColor: '#111621', borderRadius: 24, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}
+            >
+              <ScrollView
+                contentContainerStyle={{ padding: 20, paddingBottom: 28 }}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
+              >
+                {/* IMPORTANT: Use View+flexWrap NOT Text+Text nesting — nested Text blocks ScrollView height measurement */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start' }}>
+                  {(() => {
+                    let inTag = false;
+                    let inJesus = false;
+                    const rawText = selectedVerse?.text || '';
+                    // Strip XML tags and split into words cleanly
+                    const cleanText = rawText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                    const words = cleanText.split(' ');
+                    // Also build the original word array for index mapping
+                    const originalWords = rawText.split(' ');
 
-                          return (
-                            <Text
-                              key={sIdx}
+                    return originalWords.map((word, idx) => {
+                      const segments = word.split(/(<n>|<\/n>|<pb>|<\/pb>|<br\/?>|<J>|<\/J>)/g);
+                      const visibleText = segments
+                        .filter(seg => !['<n>', '</n>', '<pb>', '</pb>', '<br>', '<br/>', '<J>', '</J>'].includes(seg))
+                        .join('');
+
+                      // Track tag state
+                      segments.forEach(seg => {
+                        if (seg === '<n>') inTag = true;
+                        if (seg === '</n>') inTag = false;
+                        if (seg === '<J>') inJesus = true;
+                        if (seg === '</J>') inJesus = false;
+                      });
+
+                      const hasLineBreak = segments.some(seg => ['<n>', '</n>', '<pb>', '</pb>', '<br>', '<br/>'].includes(seg));
+
+                      if (!visibleText.trim() && !hasLineBreak) return null;
+
+                      return (
+                        <React.Fragment key={idx}>
+                          {hasLineBreak && <View style={{ width: '100%', height: 8 }} />}
+                          {visibleText.trim() ? (
+                            <TouchableOpacity
                               onPress={() => {
+                                const wordKey = idx.toString();
                                 const newTemp = { ...tempWordHighlights };
-                                if (newTemp[idx] === selectedWordColor) {
-                                  delete newTemp[idx];
+                                if (newTemp[wordKey] === selectedWordColor) {
+                                  delete newTemp[wordKey];
                                 } else {
-                                  newTemp[idx] = selectedWordColor;
+                                  newTemp[wordKey] = selectedWordColor;
                                 }
                                 setTempWordHighlights(newTemp);
                               }}
-                              className={inTag ? "text-blue-300 font-bold italic" : inJesus ? "text-red-400 font-bold" : ""}
-                              style={{
-                                color: tempWordHighlights[idx] || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#cbd5e1'),
-                                fontSize: inTag ? 20 : 22
+                              activeOpacity={0.7}
+                              style={{ marginRight: 5, marginBottom: 6, paddingHorizontal: 2, paddingVertical: 2, borderRadius: 4,
+                                backgroundColor: tempWordHighlights[idx.toString()] ? tempWordHighlights[idx.toString()] + '33' : 'transparent'
                               }}
                             >
-                              {seg}
-                            </Text>
-                          );
-                        })}
-                        <Text>{" "}</Text>
-                      </React.Fragment>
-                    );
-                  });
-                })()}
-              </Text>
+                              <Text style={{
+                                color: tempWordHighlights[idx.toString()] || (inJesus ? '#f87171' : inTag ? '#93c5fd' : '#e2e8f0'),
+                                fontWeight: (inTag || inJesus || !!tempWordHighlights[idx.toString()]) ? 'bold' : 'normal',
+                                fontStyle: inTag ? 'italic' : 'normal',
+                                fontSize: 20,
+                                lineHeight: 30,
+                              }}>
+                                {visibleText}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
+                </View>
               </ScrollView>
             </View>
 
             {/* Color Palette for Words */}
-            <View className="flex-row justify-center gap-3 mb-6">
+            <View className="flex-row justify-center gap-3 mb-5">
               {['#facc15', '#4ade80', '#f87171', '#38bdf8', '#ffffff'].map((c) => (
                 <TouchableOpacity
                   key={c}
@@ -973,21 +989,21 @@ export default function BibleReader() {
       {/* Modal Selection Chapitre et Verset */}
       <Modal visible={showChapterPicker} transparent animationType="slide">
         <View className="flex-1 bg-black/70 justify-end">
-          <TouchableOpacity 
-            className="absolute inset-0" 
-            activeOpacity={1} 
+          <TouchableOpacity
+            className="absolute inset-0"
+            activeOpacity={1}
             onPress={() => { setShowChapterPicker(false); setPickerStep('chapter'); }}
           />
           <View className="bg-[#1a2233] rounded-t-[40px] p-8 max-h-[90%] border-t border-slate-700">
             <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
-            
+
             <View className="flex-row justify-center items-center mb-6 gap-4">
               <TouchableOpacity onPress={() => setPickerStep('chapter')} className="px-4 py-2">
                 <Text className={cn("text-lg font-bold", pickerStep === 'chapter' ? "text-white underline" : "text-slate-500")}>Chapitre</Text>
               </TouchableOpacity>
               <Text className="text-slate-700 font-bold">/</Text>
               <TouchableOpacity onPress={() => setPickerStep('verse')} className="px-4 py-2">
-                 <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")}>Verset</Text>
+                <Text className={cn("text-lg font-bold", pickerStep === 'verse' ? "text-white underline" : "text-slate-500")}>Verset</Text>
               </TouchableOpacity>
             </View>
 
@@ -1002,8 +1018,8 @@ export default function BibleReader() {
                     {Array.from({ length: chaptersCount || 50 }, (_, i) => i + 1).map((item) => (
                       <TouchableOpacity
                         key={item}
-                        onPress={() => { 
-                          setTempChapter(item); 
+                        onPress={() => {
+                          setTempChapter(item);
                           setPickerStep('verse');
                         }}
                         className={cn(
@@ -1026,9 +1042,9 @@ export default function BibleReader() {
                           setPickerStep('chapter');
                           if (router) {
                             setTimeout(() => {
-                              router.setParams({ 
-                                chapter: tempChapter.toString(), 
-                                verse: item.toString() 
+                              router.setParams({
+                                chapter: tempChapter.toString(),
+                                verse: item.toString()
                               });
                             }, 50);
                           }
@@ -1043,11 +1059,11 @@ export default function BibleReader() {
               </ScrollView>
             </View>
 
-            <TouchableOpacity 
-              onPress={() => { 
-                setChapter(tempChapter); 
-                setShowChapterPicker(false); 
-                setPickerStep('chapter'); 
+            <TouchableOpacity
+              onPress={() => {
+                setChapter(tempChapter);
+                setShowChapterPicker(false);
+                setPickerStep('chapter');
                 router.setParams({ chapter: tempChapter.toString(), verse: '' });
               }}
               className="mt-4 p-5 items-center bg-[#195de6] rounded-2xl shadow-lg border border-[#195de6]"

@@ -1,13 +1,13 @@
-import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { WidgetTaskHandlerProps } from 'react-native-android-widget';
-import { MofonainaWidget } from './MofonainaWidget';
-import { LesonaWidget } from './LesonaWidget';
-import { LesonaAndroWidget } from './LesonaAndroWidget';
-import { ShortcutsWidget } from './ShortcutsWidget';
-import { getMofonainaForDate } from '../lib/mofonaina';
 import * as SQLite from 'expo-sqlite';
+import React from 'react';
+import { WidgetTaskHandlerProps } from 'react-native-android-widget';
+import { getMofonainaForDate } from '../lib/mofonaina';
+import { LesonaAndroWidget } from './LesonaAndroWidget';
+import { LesonaWidget } from './LesonaWidget';
+import { MofonainaWidget } from './MofonainaWidget';
+import { ShortcutsWidget } from './ShortcutsWidget';
 
 // ────────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -43,8 +43,8 @@ async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
   while (retries > 0) {
     try {
       db = await SQLite.openDatabaseAsync('adventools_user.db');
-      // Enable WAL mode and a 3-second busy timeout to allow concurrent read/write operations from both the app and the widget
-      await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;");
+      // Enable WAL mode and a 5-second busy timeout to allow concurrent read/write operations from both the app and the widget
+      await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
       const row: any = await db.getFirstAsync('SELECT value FROM settings WHERE key = ?', [key]);
       if (row?.value) {
         try { return JSON.parse(row.value) as T; } catch { return row.value as unknown as T; }
@@ -55,7 +55,7 @@ async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
       if (retries === 0) {
         console.error('[Widget] Failed to read setting after retries:', err);
       } else {
-        await new Promise(resolve => setTimeout(resolve, 150)); // Small sleep and backoff
+        await new Promise(resolve => setTimeout(resolve, 200 * (5 - retries))); // Backoff
       }
     } finally {
       if (db) {
@@ -320,11 +320,15 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
     console.error('[Widget] Lesona error:', e);
   }
 
+  const widgetWidth  = props.widgetInfo.width  > 0 ? props.widgetInfo.width  : 300;
+  const widgetHeight = props.widgetInfo.height > 0 ? props.widgetInfo.height : 300;
+
   props.renderWidget(
     <LesonaWidget
       quarterlyTitle={quarterlyTitle} lessonTitle={lessonTitle}
       lessonNumber={lessonNumber} category={category}
       weekRange={weekRange} days={days} coverImage={coverImage}
+      widgetWidth={widgetWidth} widgetHeight={widgetHeight}
     />
   );
 }
@@ -401,5 +405,17 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
     console.error('[Widget] LesonaAndro error:', e);
   }
 
-  props.renderWidget(<LesonaAndroWidget title={title} date={dateStr} category={category} coverImage={coverImage} />);
+  const widgetWidth  = props.widgetInfo.width  > 0 ? props.widgetInfo.width  : 300;
+  const widgetHeight = props.widgetInfo.height > 0 ? props.widgetInfo.height : 200;
+
+  props.renderWidget(
+    <LesonaAndroWidget
+      title={title}
+      date={dateStr}
+      category={category}
+      coverImage={coverImage}
+      widgetWidth={widgetWidth}
+      widgetHeight={widgetHeight}
+    />
+  );
 }

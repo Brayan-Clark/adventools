@@ -161,17 +161,18 @@ export async function loadDatabase(dbName: string, assetSource?: any, subfolder?
       // expo-sqlite openDatabaseAsync expects a relative path from the SQLite folder
       const openPath = finalSubfolder ? `${finalSubfolder}/${finalDbName}` : finalDbName;
       
-      let retries = 3;
+      let retries = 5; // Increased retries
       while (retries > 0) {
         try {
           db = await SQLite.openDatabaseAsync(openPath);
-          // Verify database integrity and enable WAL mode to allow concurrent operations with background widget tasks
-          await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000; PRAGMA user_version;");
+          // Enable WAL mode and busy timeout to prevent conflicts between app and widgets
+          await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA user_version;");
           break;
         } catch (e: any) {
           retries--;
           if (retries === 0) throw e;
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 300 * (5 - retries)));
         }
       }
 

@@ -1,6 +1,11 @@
-import 'react-native-get-random-values';
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
+import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import 'react-native-get-random-values';
+import { widgetTaskHandler } from './widgets/widget-task-handler';
+
+// Register the Android Widget background task
+registerWidgetTaskHandler(widgetTaskHandler);
 
 // Register the background playback service for React Native Track Player.
 try {

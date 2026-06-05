@@ -12,15 +12,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { PermissionsAndroid, Platform, View } from 'react-native';
-import { registerWidgetTaskHandler } from 'react-native-android-widget';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
-import { widgetTaskHandler } from '../widgets/widget-task-handler';
-
-// Register the background task for the Android Widget
-registerWidgetTaskHandler(widgetTaskHandler);
-
 
 export {
     ErrorBoundary
