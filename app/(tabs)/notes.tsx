@@ -38,11 +38,11 @@ const TEXT_FONTS = [
     { id: 'Lexend_400Regular', label: 'Lexend', preview: 'Aa' },
     { id: 'Inter_400Regular', label: 'Inter', preview: 'Aa' },
     { id: 'Poppins_400Regular', label: 'Poppins', preview: 'Aa' },
-    { id: 'OpenSans', label: 'Open Sans', preview: 'Aa' },
+    { id: 'OpenSans_400Regular', label: 'Open Sans', preview: 'Aa' },
     { id: 'Lora_400Regular', label: 'Lora', preview: 'Aa' },
     { id: 'Serif', label: 'Serif', preview: 'Aa' },
-    { id: 'Alice', label: 'Alice', preview: 'Aa' },
-    { id: 'Comfortaa', label: 'Comfortaa', preview: 'Aa' },
+    { id: 'Alice_400Regular', label: 'Alice', preview: 'Aa' },
+    { id: 'Comfortaa_400Regular', label: 'Comfortaa', preview: 'Aa' },
     { id: 'Monospace', label: 'Mono', preview: 'Aa' },
     { id: 'Comic', label: 'Comic', preview: 'Aa' },
     { id: 'Allura', label: 'Allura', preview: 'Aa' },
@@ -269,43 +269,97 @@ const PaperBackground = ({ pattern, color }: { pattern: 'blank' | 'ruled' | 'gri
     );
 };
 
-// Map each font to its bold variant (or itself if no bold variant loaded)
+// ─── Font variant maps ───────────────────────────────────────────────────────
+// Fonts with REAL bold TTF files loaded
 const FONT_BOLD_MAP: Record<string, string> = {
-    'Lexend_400Regular': 'Lexend_700Bold',
-    'Inter_400Regular': 'Inter_700Bold',
-    'Poppins_400Regular': 'Poppins_700Bold',
-    'Lora_400Regular': 'Lora_700Bold',
-    // Fonts without separate bold variant - will use fontWeight synthetically
-    'OpenSans': 'OpenSans',
-    'Serif': 'Serif',
-    'Alice': 'Alice',
-    'Comfortaa': 'Comfortaa',
-    'Monospace': 'Monospace',
-    'Comic': 'Comic',
-    'Allura': 'Allura',
-    'Rosemary': 'Rosemary',
+    'Lexend_400Regular':     'Lexend_700Bold',
+    'Inter_400Regular':      'Inter_700Bold',
+    'Poppins_400Regular':    'Poppins_700Bold',
+    'Lora_400Regular':       'Lora_700Bold',
+    'OpenSans_400Regular':   'OpenSans_700Bold',
+    'Comfortaa_400Regular':  'Comfortaa_700Bold',
+    'Monospace':             'SpaceMono_700Bold',
+};
+
+// Fonts with REAL italic TTF files loaded
+const FONT_ITALIC_MAP: Record<string, string> = {
+    'Inter_400Regular':    'Inter_400Regular_Italic',
+    'Poppins_400Regular':  'Poppins_400Regular_Italic',
+    'Lora_400Regular':     'Lora_400Regular_Italic',
+    'OpenSans_400Regular': 'OpenSans_400Regular_Italic',
+    'Monospace':           'SpaceMono_400Regular_Italic',
+};
+
+// Fonts with REAL bold+italic TTF files loaded
+const FONT_BOLD_ITALIC_MAP: Record<string, string> = {
+    'Inter_400Regular':    'Inter_700Bold_Italic',
+    'Poppins_400Regular':  'Poppins_700Bold_Italic',
+    'Lora_400Regular':     'Lora_700Bold_Italic',
+    'OpenSans_400Regular': 'OpenSans_700Bold_Italic',
+    'Monospace':           'SpaceMono_700Bold_Italic',
 };
 
 const FONT_HAS_BOLD_VARIANT = new Set([
-    'Lexend_400Regular', 'Inter_400Regular', 'Poppins_400Regular', 'Lora_400Regular'
+    'Lexend_400Regular', 'Inter_400Regular', 'Poppins_400Regular',
+    'Lora_400Regular', 'OpenSans_400Regular', 'Comfortaa_400Regular', 'Monospace'
 ]);
 
+const FONT_HAS_ITALIC_VARIANT = new Set([
+    'Inter_400Regular', 'Poppins_400Regular', 'Lora_400Regular',
+    'OpenSans_400Regular', 'Monospace'
+]);
+
+// ─── Markdown styles ─────────────────────────────────────────────────────────
+// For fonts WITHOUT real bold/italic, we use a visually distinct color so the
+// user can always tell the difference on Android (synthetic styles are ignored).
 const getMarkdownStyles = (isDark: boolean, fontFamily: string = 'Lexend_400Regular') => {
     const boldFont = FONT_BOLD_MAP[fontFamily] || fontFamily;
+    const italicFont = FONT_ITALIC_MAP[fontFamily] || fontFamily;
     const hasBoldVariant = FONT_HAS_BOLD_VARIANT.has(fontFamily);
+    const hasItalicVariant = FONT_HAS_ITALIC_VARIANT.has(fontFamily);
+
+    // Colors used to make bold/italic VISUALLY distinct for fonts without real variants
+    const emphasisColor = isDark ? '#818cf8' : '#4f46e5';   // indigo – italic fallback
+    const strongColor   = isDark ? '#ffffff' : '#0f172a';   // white/black – bold
+
     return {
     body: { color: isDark ? '#e2e8f0' : '#1e293b', fontSize: 18, lineHeight: 32, fontFamily },
-    heading1: { color: isDark ? '#ffffff' : '#0f172a', fontSize: 28, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), marginTop: 20, marginBottom: 10 },
-    heading2: { color: isDark ? '#60a5fa' : '#2563eb', fontSize: 24, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), marginTop: 15, marginBottom: 8 },
-    heading3: { color: isDark ? '#60a5fa' : '#2563eb', fontSize: 20, fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('600' as any), marginTop: 12, marginBottom: 6 },
-    strong: { fontFamily: hasBoldVariant ? boldFont : fontFamily, fontWeight: hasBoldVariant ? 'normal' : ('700' as any), color: isDark ? '#ffffff' : '#0f172a' },
-    em: { fontStyle: 'italic' as any, color: isDark ? '#a1a1aa' : '#4b5563', fontFamily },
+    heading1: {
+        color: isDark ? '#ffffff' : '#0f172a', fontSize: 28, marginTop: 20, marginBottom: 10,
+        fontFamily: hasBoldVariant ? boldFont : fontFamily,
+        fontWeight: hasBoldVariant ? 'normal' : ('700' as any),
+    },
+    heading2: {
+        color: isDark ? '#60a5fa' : '#2563eb', fontSize: 24, marginTop: 15, marginBottom: 8,
+        fontFamily: hasBoldVariant ? boldFont : fontFamily,
+        fontWeight: hasBoldVariant ? 'normal' : ('700' as any),
+    },
+    heading3: {
+        color: isDark ? '#60a5fa' : '#2563eb', fontSize: 20, marginTop: 12, marginBottom: 6,
+        fontFamily: hasBoldVariant ? boldFont : fontFamily,
+        fontWeight: hasBoldVariant ? 'normal' : ('600' as any),
+    },
+    strong: {
+        // Real bold font file → use it, no weight override needed
+        // No real bold  → fontWeight 700 (works on iOS) + white color to differentiate on Android
+        fontFamily: hasBoldVariant ? boldFont : fontFamily,
+        fontWeight: hasBoldVariant ? ('normal' as any) : ('700' as any),
+        color: strongColor,
+        fontSize: hasBoldVariant ? undefined : (19 as any),  // slightly larger for fonts without real bold
+    },
+    em: {
+        // Real italic font file → use it, fontStyle normal (the file itself is italic)
+        // No real italic → fontStyle italic (iOS) + indigo color so Android users see a difference
+        fontFamily: hasItalicVariant ? italicFont : fontFamily,
+        fontStyle: hasItalicVariant ? ('normal' as any) : ('italic' as any),
+        color: hasItalicVariant ? (isDark ? '#a1a1aa' : '#4b5563') : emphasisColor,
+    },
     link: { color: isDark ? '#60a5fa' : '#2563eb', textDecorationLine: 'none' as any, fontWeight: 'bold' as any },
     list_item: { color: isDark ? '#cbd5e1' : '#334155', marginBottom: 5, fontFamily },
     blockquote: { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderLeftColor: '#3b82f6', borderLeftWidth: 4, paddingHorizontal: 15, paddingVertical: 10, marginVertical: 10, borderRadius: 8 },
-    code_inline: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)', color: isDark ? '#fbbf24' : '#b45309', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontFamily: 'Monospace', fontSize: 16 },
-    code_block: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
-    fence: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' },
+    code_inline: { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: isDark ? '#fbbf24' : '#b45309', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontFamily: 'Monospace', fontSize: 16 },
+    code_block: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+    fence: { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#94a3b8' : '#475569', padding: 15, borderRadius: 12, marginVertical: 10, fontFamily: 'Monospace', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
     table: { borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', borderRadius: 8 },
     tr: { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' },
     th: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)', color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' as any, padding: 8, fontFamily: hasBoldVariant ? boldFont : fontFamily },

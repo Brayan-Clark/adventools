@@ -26,10 +26,14 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold, Inter_400Regular_Italic, Inter_700Bold_Italic } from '@expo-google-fonts/inter';
 import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
-import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
-import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold, Lora_400Regular_Italic, Lora_700Bold_Italic } from '@expo-google-fonts/lora';
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, Poppins_400Regular_Italic, Poppins_700Bold_Italic } from '@expo-google-fonts/poppins';
+import { OpenSans_400Regular, OpenSans_700Bold, OpenSans_400Regular_Italic, OpenSans_700Bold_Italic } from '@expo-google-fonts/open-sans';
+import { Comfortaa_400Regular, Comfortaa_700Bold } from '@expo-google-fonts/comfortaa';
+import { Alice_400Regular } from '@expo-google-fonts/alice';
+import { SpaceMono_400Regular, SpaceMono_700Bold, SpaceMono_400Regular_Italic, SpaceMono_700Bold_Italic } from '@expo-google-fonts/space-mono';
 
 import { initBibleMetadata } from '@/lib/bible';
 import { initializeNotificationChannel, restoreStudyReminders } from '@/lib/notifications';
@@ -43,28 +47,44 @@ const ONBOARDING_KEY = 'adventools_onboarding_done';
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
+    SpaceMono_400Regular_Italic,
+    SpaceMono_700Bold_Italic,
     Lexend_400Regular,
     Lexend_700Bold,
     Lexend_600SemiBold,
     Poppins_400Regular,
     Poppins_600SemiBold,
     Poppins_700Bold,
+    Poppins_400Regular_Italic,
+    Poppins_700Bold_Italic,
     Lora_400Regular,
     Lora_600SemiBold,
     Lora_700Bold,
+    Lora_400Regular_Italic,
+    Lora_700Bold_Italic,
     Inter_400Regular,
     Inter_600SemiBold,
     Inter_700Bold,
-    'Alice': require('../assets/fonts/Alice.ttf'),
+    Inter_400Regular_Italic,
+    Inter_700Bold_Italic,
+    OpenSans_400Regular,
+    OpenSans_700Bold,
+    OpenSans_400Regular_Italic,
+    OpenSans_700Bold_Italic,
+    Comfortaa_400Regular,
+    Comfortaa_700Bold,
+    'Alice': Alice_400Regular,
     'Allura': require('../assets/fonts/Allura.ttf'),
     'Choco': require('../assets/fonts/Chococooky.ttf'),
-    'Comfortaa': require('../assets/fonts/Comfortaa.ttf'),
+    'Comfortaa': Comfortaa_400Regular,
     'Cool': require('../assets/fonts/Cooljazz.ttf'),
     'Rosemary': require('../assets/fonts/Rosemary.ttf'),
-    'OpenSans': require('../assets/fonts/OpenSans.ttf'),
+    'OpenSans': OpenSans_400Regular,
     'Arial': require('../assets/fonts/arial.ttf'),
     'Comic': require('../assets/fonts/comic.ttf'),
-    'Monospace': require('../assets/fonts/Monospace.ttf'),
+    'Monospace': SpaceMono_400Regular,
     'Serif': require('../assets/fonts/Serif.TTF'),
     ...FontAwesome.font,
   });

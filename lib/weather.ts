@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { getSetting } from './user-storage';
 
 const WEATHER_CACHE_KEY = 'app_weather_info_v2';
 // 7-day cache: we store a week of data to minimize requests.
@@ -64,9 +65,8 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     // 1. Read manual city from settings FIRST (needed for cache-invalidation check)
     let manualCity = '';
     try {
-      const storedSettings = await AsyncStorage.getItem('app_global_settings');
-      if (storedSettings) {
-        const settings = JSON.parse(storedSettings);
+      const settings: any = await getSetting('app_global_settings', null);
+      if (settings) {
         manualCity = settings.locationCity?.trim() || '';
       }
     } catch (_) { }

@@ -1070,7 +1070,19 @@ export default function Settings() {
                     <View key={lang.id} className="bg-slate-800/50 rounded-3xl border border-slate-800 p-4">
                       <View className="flex-row items-center justify-between">
                         <TouchableOpacity
-                          onPress={() => updateSettings({ language: lang.id as any })}
+                          onPress={async () => {
+                            await updateSettings({ language: lang.id as any });
+                            // Reschedule notifications in the new language immediately
+                            if (globalSettings.studyReminderEnabled) {
+                              await scheduleStudyReminder(
+                                true,
+                                globalSettings.studyReminderTime,
+                                globalSettings.studyReminderLeadMinutes,
+                                lang.id,
+                                true
+                              );
+                            }
+                          }}
                           className="flex-1 flex-row items-center"
                         >
                           <View className={`w-10 h-10 rounded-2xl items-center justify-center mr-4 ${isSelected ? 'bg-primary' : 'bg-slate-800'}`}>
