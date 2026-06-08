@@ -81,6 +81,13 @@
       "icon": "Mic",
       "color": "#f97316",
       "bg": "rgba(249, 115, 22, 0.1)"
+    },
+    {
+      "id": "etudes_islamiques",
+      "title": "Études Islamiques",
+      "icon": "BookOpen",
+      "color": "#059669",
+      "bg": "rgba(5, 150, 105, 0.1)"
     }
   ],
   "documents": [
@@ -1845,6 +1852,18 @@
       ]
     },
     {
+      "id": "tor_006",
+      "title": "DIMY MINITRAN'NY FANABEAZANA VOLANA MAY 2026",
+      "fileName": "DIMY MINITRAN'NY FANABEAZANA VOLANA MAY 2026.docx",
+      "categoryId": "toriteny_special",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/DIMY%20MINITRAN'NY%20FANABEAZANA%20VOLANA%20MAY%202026.docx",
+      "size": "9.1 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
       "id": "men_001",
       "title": "ARMA",
       "fileName": "ARMA.pptx",
@@ -1974,6 +1993,186 @@
       "isAsset": false,
       "tags": [
         "Ministères de l'Enfant"
+      ]
+    },
+    {
+      "id": "isl_001",
+      "title": "AMR AMBILOBE BIDEL",
+      "fileName": "AMR AMBILOBE BIDEL.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/AMR%20AMBILOBE%20BIDEL.pptx",
+      "size": "10.1 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_002",
+      "title": "Anaran'ny Jesosy ao @ Korany",
+      "fileName": "Anaran'ny Jesosy ao @ Korany.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Anaran'ny%20Jesosy%20ao%20%40%20Korany.pptx",
+      "size": "472.2 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_003",
+      "title": "Avy amin'ny Kor'any ho amin'ny Baiboly",
+      "fileName": "Avy amin'ny Kor'any ho amin'ny Baiboly.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Avy%20amin'ny%20Kor'any%20ho%20amin'ny%20Baiboly.pptx",
+      "size": "13.0 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_004",
+      "title": "Coran",
+      "fileName": "Coran.pdf",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Coran.pdf",
+      "size": "2.3 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_005",
+      "title": "DESCENT OF ISA AL MASIH",
+      "fileName": "DESCENT OF ISA AL MASIH.pdf",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/DESCENT%20OF%20ISA%20AL%20MASIH.pdf",
+      "size": "52.2 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_006",
+      "title": "GCAMR_2019_300pages",
+      "fileName": "GCAMR_2019_300pages.docx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/GCAMR_2019_300pages.docx",
+      "size": "1.2 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_007",
+      "title": "Ireo \"Olon'ny Boky\"",
+      "fileName": "Ireo \"Olon'ny Boky\".pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ireo%20%22Olon'ny%20Boky%22.pptx",
+      "size": "194.6 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_008",
+      "title": "Ismaela vs Isaka",
+      "fileName": "Ismaela vs Isaka.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ismaela%20vs%20Isaka.pptx",
+      "size": "66.3 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_009",
+      "title": "Ny Drafitr'Andriamanitra ho an'ny Taranak'Isimaela",
+      "fileName": "Ny Drafitr'Andriamanitra ho an'ny Taranak'Isimaela.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Drafitr'Andriamanitra%20ho%20an'ny%20Taranak'Isimaela.pptx",
+      "size": "568.6 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_010",
+      "title": "Ny Fototra ara-Baiboly Iorenan'ny Iraka Atao ho an'ny Kolotsaina Samihafa",
+      "fileName": "Ny Fototra ara-Baiboly Iorenan'ny Iraka Atao ho an'ny Kolotsaina Samihafa.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Fototra%20ara-Baiboly%20Iorenan'ny%20Iraka%20Atao%20ho%20an'ny%20Kolotsaina%20Samihafa.pptx",
+      "size": "4.7 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_011",
+      "title": "Ny Vanim-Potoana Talohan'ny Islamo sy ny Niandohan'ny Islamo",
+      "fileName": "Ny Vanim-Potoana Talohan'ny Islamo sy ny Niandohan'ny Islamo.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Vanim-Potoana%20Talohan'ny%20Islamo%20sy%20ny%20Niandohan'ny%20Islamo.pptx",
+      "size": "27.6 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_012",
+      "title": "Ny Vehivavy ao anatin'ny Finoana Islamo",
+      "fileName": "Ny Vehivavy ao anatin'ny Finoana Islamo.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Vehivavy%20ao%20anatin'ny%20Finoana%20Islamo.pptx",
+      "size": "101.0 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_013",
+      "title": "Ny fomba hitoriana ny Filazantsara amin'ny Silamo",
+      "fileName": "Ny fomba hitoriana ny Filazantsara amin'ny Silamo.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20fomba%20hitoriana%20ny%20Filazantsara%20amin'ny%20Silamo.pptx",
+      "size": "50.8 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_014",
+      "title": "RAMADAN",
+      "fileName": "RAMADAN.docx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/RAMADAN.docx",
+      "size": "17.1 KB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
+      ]
+    },
+    {
+      "id": "isl_015",
+      "title": "SILAMO",
+      "fileName": "SILAMO.pptx",
+      "categoryId": "etudes_islamiques",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/SILAMO.pptx",
+      "size": "7.7 MB",
+      "isAsset": false,
+      "tags": [
+        "Tous"
       ]
     }
   ]
