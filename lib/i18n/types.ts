@@ -398,6 +398,12 @@ export interface TranslationSchema {
   save_success_title: string;
   save_success_msg: string;
   save_error_msg: string;
+
+  // Study Reminder Notifications
+  notif_study_title: string;
+  notif_study_body: string;
+  notif_lead_title: string;
+  notif_lead_body: string;
 }
 
 export type TranslationKey = keyof TranslationSchema;

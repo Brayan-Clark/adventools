@@ -394,4 +394,10 @@ export const mg: TranslationSchema = {
   save_success_title: "Fampidinana vita",
   save_success_msg: "Voatahiry ao amin'ny findainao ny rakitra.",
   save_error_msg: "Tsy nahomby ny fampidinana. Manandrama indray azafady.",
+
+  // Study Reminder Notifications
+  notif_study_title: "Fianarana ny Lesona 📖",
+  notif_study_body: "Fotoana hianarana ny lesona Sekoly Sabata androany!",
+  notif_lead_title: "Miomana hianatra 📖",
+  notif_lead_body: "Afaka {{minutes}} minitra dia fotoana hianaranao ny lesona Sekoly Sabata. Miomana ary!",
 };

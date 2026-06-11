@@ -394,4 +394,10 @@ export const fr: TranslationSchema = {
   save_success_title: "Téléchargement réussi",
   save_success_msg: "Le fichier a été enregistré sur votre appareil.",
   save_error_msg: "Échec du téléchargement. Veuillez réessayer.",
+
+  // Study Reminder Notifications
+  notif_study_title: "C'est l'heure d'étudier ! 📖",
+  notif_study_body: "Prenez quelques minutes pour étudier votre leçon de l'École du Sabbat aujourd'hui !",
+  notif_lead_title: "Préparez-vous à étudier ! 📖",
+  notif_lead_body: "Dans {{minutes}} minute(s), ce sera votre moment d'étude. Préparez-vous !",
 };

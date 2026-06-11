@@ -394,4 +394,10 @@ export const en: TranslationSchema = {
   save_success_title: "Download Success",
   save_success_msg: "The file has been saved to your device.",
   save_error_msg: "Download failed. Please try again.",
+
+  // Study Reminder Notifications
+  notif_study_title: "Time to Study! 📖",
+  notif_study_body: "Take a few minutes to study your Sabbath School lesson today!",
+  notif_lead_title: "Get ready to study! 📖",
+  notif_lead_body: "In {{minutes}} minute(s), it's time for your Sabbath School lesson. Get ready!",
 };

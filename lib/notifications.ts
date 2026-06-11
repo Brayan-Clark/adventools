@@ -1,6 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { getSetting } from './user-storage';
+import { I18nManager } from './i18n-manager';
+import { fr } from './i18n/fr';
 
 // Configure notification behavior when app is open
 Notifications.setNotificationHandler({
@@ -152,31 +154,18 @@ export async function scheduleStudyReminder(
     }
 
     // ── Build language-specific texts ─────────────────────────────────────────
-    const lowerLang = language.toLowerCase();
-    const isFr = lowerLang.includes('français') || lowerLang.includes('french');
-    const isEn = lowerLang.includes('anglais') || lowerLang.includes('english');
+    const currentLang = language || 'Français';
+    const allTranslations = I18nManager.getInstance().getTranslations();
+    
+    // Resolve translations based on the selected language, fallback to French
+    const t = allTranslations[currentLang] || allTranslations.Français || fr;
 
-    let exactTitle: string;
-    let exactBody: string;
-    let leadTitle: string;
-    let leadBody: string;
-
-    if (isFr) {
-      exactTitle = "C'est l'heure d'étudier ! 📖";
-      exactBody = "Prenez quelques minutes pour étudier votre leçon de l'École du Sabbat aujourd'hui !";
-      leadTitle = "Préparez-vous à étudier ! 📖";
-      leadBody = `Dans ${numericLead} minute${numericLead > 1 ? 's' : ''}, ce sera votre moment d'étude de la leçon de l'École du Sabbat. Préparez-vous !`;
-    } else if (isEn) {
-      exactTitle = "Time to Study! 📖";
-      exactBody = "Take a few minutes to study your Sabbath School lesson today!";
-      leadTitle = "Get ready to study! 📖";
-      leadBody = `In ${numericLead} minute${numericLead > 1 ? 's' : ''}, it's time for your Sabbath School lesson study. Get ready!`;
-    } else {
-      exactTitle = "Fianarana ny Lesona 📖";
-      exactBody = "Fotoana hianarana ny lesona Sekoly Sabata androany!";
-      leadTitle = "Miomana hianatra 📖";
-      leadBody = `Afaka ${numericLead} minitra dia fotoana hianaranao ny lesona Sekoly Sabata. Miomana ary!`;
-    }
+    const exactTitle = (t as any).notif_study_title || fr.notif_study_title;
+    const exactBody = (t as any).notif_study_body || fr.notif_study_body;
+    
+    const leadTitle = (t as any).notif_lead_title || fr.notif_lead_title;
+    const rawLeadBody = (t as any).notif_lead_body || fr.notif_lead_body;
+    const leadBody = rawLeadBody.replace('{{minutes}}', String(numericLead));
 
     // ── Schedule EXACT daily reminder ─────────────────────────────────────────
     //   'daily' trigger fires at the given local-time hour:minute every day.
