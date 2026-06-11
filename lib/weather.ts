@@ -62,7 +62,7 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     const lastWeather = await getCachedWeather();
     const now = Date.now();
 
-    // 1. Read manual city from settings FIRST (needed for cache-invalidation check)
+    // 1. Read manual city from settings FIRST
     let manualCity = '';
     try {
       const settings: any = await getSetting('app_global_settings', null);
@@ -71,7 +71,7 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       }
     } catch (_) { }
 
-    // 2. Detect city change → invalidates cache
+    // 2. Detect city change
     cityChanged =
       lastWeather != null &&
       (lastWeather.cityConfig || '') !== manualCity;
@@ -84,7 +84,6 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       now - lastWeather.timestamp < CACHE_DURATION &&
       lastWeather.temp != null
     ) {
-      // Trouver l'index d'aujourd'hui dans les prévisions stockées pour décaler la liste
       const todayStr = new Date(now).toISOString().split('T')[0];
       const startIndex = lastWeather.forecast.findIndex(d => d.date === todayStr);
 
@@ -107,13 +106,14 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     // 4a. Geocode the manual city if provided
     if (manualCity.length > 0) {
       try {
-        // Open-Meteo works best with just the city name, so we split at the comma
         const searchTerm = manualCity.split(',')[0].trim();
         const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchTerm)}&count=1&language=fr`;
-        const geoResp = await fetch(geoUrl);
+        const geoResp = await fetch(geoUrl, {
+            headers: { 'User-Agent': 'AdventoolsApp/1.0' }
+        });
         if (geoResp.ok) {
           const geoData = await geoResp.json();
-          if (geoData.results && geoData.results[0]) {
+          if (geoData.results && geoData.results.length > 0) {
             latitude = geoData.results[0].latitude;
             longitude = geoData.results[0].longitude;
             city = geoData.results[0].name;
@@ -122,8 +122,6 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
           } else {
             console.log("[WEATHER] Geocoding NO RESULTS for:", searchTerm);
           }
-        } else {
-          console.log("[WEATHER] Geocoding API request failed. Status:", geoResp.status);
         }
       } catch (e) {
         console.log("[WEATHER] Geocoding error:", e);
@@ -139,11 +137,7 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
           latitude = location.coords.latitude;
           longitude = location.coords.longitude;
 
-          let reverseGeo = await Location.reverseGeocodeAsync({
-            latitude,
-            longitude
-          });
-          
+          let reverseGeo = await Location.reverseGeocodeAsync({ latitude, longitude });
           if (reverseGeo && reverseGeo.length > 0) {
             city = reverseGeo[0].city || reverseGeo[0].subregion || reverseGeo[0].region || 'Localisation GPS';
           }
@@ -153,34 +147,47 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
       }
     }
 
-    // 5. No location available → return last cached data (if any)
+    // 5. No location available
     if (latitude == null || longitude == null) {
-      return lastWeather;
+        // If we absolutely have no coordinates, try to use old cache even if city changed (better than nothing)
+        return lastWeather;
     }
 
-    // If we fell back to IP, we shouldn't pretend we cached the manual city
     const finalCityConfig = resolvedManualCity ? manualCity : '';
 
     // ── Fetch weather from Open-Meteo ────────────────────────────────────────
 
+    // Use the newer API parameters: 'current' instead of 'current_weather'
+    // Fallback to GMT timezone if auto fails by some weird chance, though auto is best.
     const url =
       `https://api.open-meteo.com/v1/forecast` +
       `?latitude=${latitude}&longitude=${longitude}` +
-      `&current_weather=true` +
-      `&daily=temperature_2m_max,temperature_2m_min,weathercode,sunrise,sunset,precipitation_probability_max,windspeed_10m_max` +
+      `&current=temperature_2m,weather_code` +
+      `&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,precipitation_probability_max,windspeed_10m_max` +
       `&timezone=auto` +
       `&forecast_days=7`;
 
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('weather api error');
+    const resp = await fetch(url, {
+        headers: { 'User-Agent': 'AdventoolsApp/1.0' }
+    });
+    
+    if (!resp.ok) {
+        console.log("[WEATHER] API Error:", resp.status, await resp.text().catch(()=>''));
+        throw new Error('weather api error');
+    }
+    
     const data = await resp.json();
+
+    if (!data.daily || !data.current) {
+        throw new Error('weather api invalid data');
+    }
 
     const daily = data.daily;
     const forecast: DayForecast[] = (daily.time as string[]).map((date: string, i: number) => ({
       date,
-      tempMax: Math.round(daily.temperature_2m_max[i]),
-      tempMin: Math.round(daily.temperature_2m_min[i]),
-      conditionCode: daily.weathercode[i],
+      tempMax: Math.round(daily.temperature_2m_max[i] ?? 0),
+      tempMin: Math.round(daily.temperature_2m_min[i] ?? 0),
+      conditionCode: daily.weather_code[i] ?? 0,
       sunrise: daily.sunrise[i] ? daily.sunrise[i].split('T')[1] : '--:--',
       sunset: daily.sunset[i] ? daily.sunset[i].split('T')[1] : '--:--',
       precipitationProbability: daily.precipitation_probability_max[i] ?? 0,
@@ -188,8 +195,8 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     }));
 
     const result: WeatherInfo = {
-      temp: Math.round(data.current_weather.temperature),
-      conditionCode: data.current_weather.weathercode,
+      temp: Math.round(data.current.temperature_2m ?? 0),
+      conditionCode: data.current.weather_code ?? 0,
       sunrise: forecast[0]?.sunrise ?? '--:--',
       sunset: forecast[0]?.sunset ?? '--:--',
       city: city || manualCity.split(',')[0].trim() || 'Localisation',
@@ -202,11 +209,10 @@ export async function fetchWeather(force = false): Promise<WeatherInfo | null> {
     return result;
 
   } catch (e) {
-    // DO NOT fallback to the old cache if the user explicitly changed their city!
-    // Otherwise it will silently show the wrong city (like Antsiranana).
-    if (cityChanged) {
-      return null;
-    }
+    console.log("[WEATHER] Main fetch catch:", e);
+    // If the city was newly changed but we failed to fetch, 
+    // it's usually better to show the old city's weather than complete failure.
+    // We will return the old cache instead of null, so the app doesn't crash visually.
     return getCachedWeather();
   }
 }

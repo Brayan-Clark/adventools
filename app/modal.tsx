@@ -819,24 +819,26 @@ export default function Settings() {
               />
               
               {/* SUGGESTIONS LIST */}
-              <View className="mb-6 max-h-40">
-                {isCitySearching && <ActivityIndicator size="small" color="#3b82f6" className="py-2" />}
-                {citySuggestions.map((item, idx) => (
-                  <TouchableOpacity 
-                    key={idx} 
-                    onPress={() => {
-                       setTempCity(`${item.name}, ${item.country}`);
-                       setCitySuggestions([]);
-                    }}
-                    className="p-3 border-b border-slate-800 flex-row items-center justify-between"
-                  >
-                    <View className="flex-1">
-                      <Text className="text-white font-bold text-sm tracking-tight">{item.name}</Text>
-                      <Text className="text-slate-500 text-[10px] mt-0.5">{item.admin1 || ''}, {item.country}</Text>
-                    </View>
-                    <Check size={14} color="#3b82f6" />
-                  </TouchableOpacity>
-                ))}
+              <View className="mb-6 max-h-48 rounded-xl overflow-hidden bg-slate-800/20">
+                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                  {isCitySearching && <ActivityIndicator size="small" color="#3b82f6" className="py-2" />}
+                  {citySuggestions.map((item, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      onPress={() => {
+                         setTempCity(`${item.name}, ${item.country}`);
+                         setCitySuggestions([]);
+                      }}
+                      className="p-3 border-b border-slate-800/50 flex-row items-center justify-between"
+                    >
+                      <View className="flex-1 pr-2">
+                        <Text className="text-white font-bold text-sm tracking-tight">{item.name}</Text>
+                        <Text className="text-slate-500 text-[10px] mt-0.5">{item.admin1 || ''}{item.admin1 ? ', ' : ''}{item.country}</Text>
+                      </View>
+                      <Check size={14} color="#3b82f6" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
 
               <View className="flex-row gap-3">
