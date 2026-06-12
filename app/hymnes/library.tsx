@@ -72,7 +72,7 @@ export default function Hymnes() {
     try {
       const num = parseInt(hymnNumber);
       if (isNaN(num)) return;
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
       const result: any = await db.getFirstAsync("SELECT id, c_title, c_num FROM adventiste_cantique WHERE c_num = ?", [num]);
       setPreviewHymn(result);
     } catch (e) {
@@ -109,7 +109,7 @@ export default function Hymnes() {
         }
       }
 
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
 
       // Get categories
       const result: any = await db.getAllAsync("SELECT DISTINCT c_categories FROM adventiste_cantique WHERE c_categories IS NOT NULL AND c_categories != 'undefined' ORDER BY c_categories ASC");
@@ -147,7 +147,7 @@ export default function Hymnes() {
   useEffect(() => {
     async function fetchHymns() {
       try {
-        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
         let query = "SELECT id, c_num, c_title, c_categories FROM adventiste_cantique";
         let conditions = [];
         let params: any[] = [];
@@ -194,7 +194,7 @@ export default function Hymnes() {
     if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {

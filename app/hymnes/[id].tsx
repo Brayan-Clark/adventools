@@ -6,12 +6,15 @@ import { cn } from '@/lib/utils';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, ChevronRight, Edit3, Heart, Music, Save, Share2, X, Grid3X3 } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Edit3, Heart, Music, Save, Share2, X, Grid3X3, Play, Pause, Square, Rewind, FastForward } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppText as Text } from '@/components/ui/AppText';
+import * as FileSystem from 'expo-file-system/legacy';
+import NetInfo from '@react-native-community/netinfo';
+import { Audio } from 'expo-av';
 
 
 export default function HymneDetail() {
@@ -30,6 +33,27 @@ export default function HymneDetail() {
   const [sameMelodyHymns, setSameMelodyHymns] = useState<any[]>([]);
   const [showMelodyModal, setShowMelodyModal] = useState(false);
   const [previewHymn, setPreviewHymn] = useState<any>(null);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const [audioPlaybacks, setAudioPlaybacks] = useState<{id: string, name: string, url: string}[]>([]);
+  const [hasAudio, setHasAudio] = useState(false);
+  const [availablePlaybacks, setAvailablePlaybacks] = useState<any[]>([]);
+
+  // Inline Player states
+  const [inlineSound, setInlineSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [activeTrack, setActiveTrack] = useState<{title: string, artist: string} | null>(null);
+  const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (inlineSound) {
+        inlineSound.unloadAsync();
+      }
+    };
+  }, [inlineSound]);
 
   useEffect(() => {
     checkFavorite();
@@ -48,7 +72,7 @@ export default function HymneDetail() {
     try {
       const num = parseInt(hymnNumber);
       if (isNaN(num)) return;
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
       const result: any = await db.getFirstAsync("SELECT id, c_title, c_num FROM adventiste_cantique WHERE c_num = ?", [num]);
       setPreviewHymn(result);
     } catch (e) {
@@ -62,6 +86,93 @@ export default function HymneDetail() {
       setIsFavorite(favorites.includes(Number(id)));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handlePlayClick = async () => {
+    if (availablePlaybacks.length === 1) {
+      const collectionId = hymn.c_playbacks;
+      playTrack(availablePlaybacks[0].url, availablePlaybacks[0].title || hymn.c_title, collectionId);
+    } else if (availablePlaybacks.length > 1) {
+      setAudioPlaybacks(availablePlaybacks.map((s: any, idx: number) => ({
+        id: s.id || idx.toString(),
+        name: s.title || `Version ${idx + 1}`,
+        url: s.url
+      })));
+      setShowAudioModal(true);
+    }
+  };
+
+  const playTrack = async (url: string, title: string, artist: string) => {
+    setShowAudioModal(false);
+    try {
+      if (inlineSound) {
+        await inlineSound.unloadAsync();
+      }
+      setIsBuffering(true);
+      setActiveTrack({ title, artist });
+      
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true },
+        (status: any) => {
+          if (status.isLoaded) {
+            setIsPlaying(status.isPlaying);
+            setIsBuffering(status.isBuffering);
+            setPosition(status.positionMillis / 1000);
+            setDuration(status.durationMillis ? status.durationMillis / 1000 : 0);
+            
+            if (status.didJustFinish && !status.isLooping) {
+              setIsPlaying(false);
+              setPosition(0);
+            }
+          }
+        }
+      );
+      setInlineSound(sound);
+    } catch (e) {
+      Alert.alert("Erreur", "Impossible de lire la piste.");
+      setActiveTrack(null);
+    } finally {
+      setIsBuffering(false);
+    }
+  };
+
+  const togglePlayPause = async () => {
+    if (inlineSound) {
+      if (isPlaying) {
+        await inlineSound.pauseAsync();
+      } else {
+        await inlineSound.playAsync();
+      }
+    }
+  };
+
+  const stopPlayer = async () => {
+    if (inlineSound) {
+      await inlineSound.stopAsync();
+      await inlineSound.unloadAsync();
+      setInlineSound(null);
+      setActiveTrack(null);
+    }
+  };
+
+  const skipForward = async () => {
+    if (inlineSound && duration > 0) {
+      const newPos = Math.min((position + 15) * 1000, duration * 1000);
+      await inlineSound.setPositionAsync(newPos);
+    }
+  };
+
+  const skipBackward = async () => {
+    if (inlineSound && position > 0) {
+      const newPos = Math.max((position - 15) * 1000, 0);
+      await inlineSound.setPositionAsync(newPos);
     }
   };
 
@@ -89,7 +200,7 @@ export default function HymneDetail() {
         const hymnId = Number(id);
         if (isNaN(hymnId)) return;
 
-        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+        const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
         const result: any = await db.getFirstAsync("SELECT * FROM adventiste_cantique WHERE id = ?", [hymnId]);
 
         if (result) {
@@ -126,6 +237,45 @@ export default function HymneDetail() {
             console.error("Failed to fetch same melody hymns", e);
             setSameMelodyHymns([]);
           }
+
+          // Fetch audio availability
+          try {
+            const collectionId = result.c_playbacks;
+            if (!collectionId || collectionId === 'null') {
+              setHasAudio(false);
+              setAvailablePlaybacks([]);
+              return;
+            }
+
+            const net = await NetInfo.fetch();
+            const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
+            const CACHE_FILE = `${PB_DIR}cache_${collectionId}.json`;
+            
+            let songs = [];
+            const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
+            if (cacheInfo.exists) {
+              songs = JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE));
+            } else if (net.isConnected) {
+              const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/${collectionId}.json`);
+              if (res.ok) {
+                songs = await res.json();
+                await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
+                await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(songs));
+              }
+            }
+            
+            const matchingSongs = songs.filter((s: any) => s.c_num === result.c_num.toString());
+            if (matchingSongs.length > 0) {
+              setHasAudio(true);
+              setAvailablePlaybacks(matchingSongs);
+            } else {
+              setHasAudio(false);
+              setAvailablePlaybacks([]);
+            }
+          } catch (e) {
+            setHasAudio(false);
+            setAvailablePlaybacks([]);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -143,7 +293,7 @@ export default function HymneDetail() {
     if (isNaN(num) || num < 1) return;
 
     try {
-      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 2);
+      const db = await loadDatabase(dbName, HYMNE_SOURCES[dbName], 'hymnes', 5);
       const result: any = await db.getFirstAsync("SELECT id FROM adventiste_cantique WHERE c_num = ?", [num]);
 
       if (result) {
@@ -262,39 +412,124 @@ export default function HymneDetail() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Premium Floating Toolbar */}
-      <View className="absolute bottom-8 self-center w-[85%] flex-row justify-between items-center bg-slate-900/95 p-2 rounded-[30px] shadow-2xl border border-slate-800">
-        <TouchableOpacity
-          onPress={toggleFavorite}
-          className={`w-12 h-12 rounded-full items-center justify-center border ${isFavorite ? 'bg-pink-500/10 border-pink-500/30' : 'bg-background-dark border-slate-800'}`}
-        >
-          <Heart size={20} color={isFavorite ? "#ec4899" : "#94a3b8"} fill={isFavorite ? "#ec4899" : "transparent"} />
-        </TouchableOpacity>
+      {/* Floating Menu & Player Container */}
+      <View className="absolute bottom-8 right-6 flex-row items-end gap-3" pointerEvents="box-none">
+        {isMenuExpanded ? (
+          <View className="items-end gap-4" pointerEvents="box-none">
+            {/* Inline Audio Player */}
+            {activeTrack && (
+              <View className="bg-slate-900/95 border border-slate-700 p-4 rounded-[24px] shadow-2xl w-[85vw] self-end">
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-1 pr-4">
+                    <Text className="text-white font-bold text-sm" numberOfLines={1}>{activeTrack.title}</Text>
+                    <Text className="text-blue-400 text-[10px] mt-0.5 uppercase tracking-widest">{activeTrack.artist}</Text>
+                  </View>
+                  <TouchableOpacity onPress={stopPlayer} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                    <Square size={14} color="#f87171" fill="#f87171" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View className="w-full h-1 bg-slate-800 rounded-full mb-3 overflow-hidden">
+                   <View className="h-full bg-blue-500 rounded-full" style={{ width: `${duration > 0 ? (position/duration)*100 : 0}%` }} />
+                </View>
 
-        <TouchableOpacity
-          onPress={() => setIsEditing(true)}
-          className="w-12 h-12 rounded-full items-center justify-center bg-background-dark border border-slate-800"
-        >
-          <Edit3 size={20} color="#94a3b8" />
-        </TouchableOpacity>
+                <View className="flex-row justify-center items-center gap-6">
+                  <TouchableOpacity onPress={skipBackward} className="w-10 h-10 items-center justify-center rounded-full bg-slate-800">
+                    <Rewind size={18} color="#94a3b8" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity onPress={togglePlayPause} className="w-12 h-12 bg-blue-500 rounded-full items-center justify-center shadow-lg shadow-blue-500/30">
+                    {isBuffering && !isPlaying ? (
+                      <ActivityIndicator color="white" />
+                    ) : isPlaying ? (
+                      <Pause size={20} color="white" fill="white" />
+                    ) : (
+                      <Play size={20} color="white" fill="white" className="ml-1" />
+                    )}
+                  </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={async () => {
-            const textToCopy = `Cantique ${hymn.c_num}: ${hymn.c_title}\n\n${hymn.c_content}`;
-            await Clipboard.setStringAsync(textToCopy);
-            Alert.alert("Exporté", "Le chant a été copié dans le presse-papier pour intégration.");
-          }}
-          className="w-12 h-12 rounded-full items-center justify-center bg-background-dark border border-slate-800"
-        >
-          <Share2 size={20} color="#94a3b8" />
-        </TouchableOpacity>
+                  <TouchableOpacity onPress={skipForward} className="w-10 h-10 items-center justify-center rounded-full bg-slate-800">
+                    <FastForward size={18} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
-        <TouchableOpacity
-          onPress={() => setShowNumberPicker(true)}
-          className="w-14 h-14 rounded-full bg-pink-500 items-center justify-center shadow-xl shadow-pink-500/40"
-        >
-          <MaterialCommunityIcons name="dialpad" size={28} color="white" />
-        </TouchableOpacity>
+            {/* Toolbar & Close Button */}
+            <View className="flex-row items-center gap-3">
+              <View className="flex-row justify-between items-center bg-slate-900/95 p-2 rounded-[30px] shadow-2xl border border-slate-800 w-[72vw]">
+                <TouchableOpacity
+                  onPress={toggleFavorite}
+                  className={`w-11 h-11 rounded-full items-center justify-center border ${isFavorite ? 'bg-pink-500/10 border-pink-500/30' : 'bg-background-dark border-slate-800'}`}
+                >
+                  <Heart size={18} color={isFavorite ? "#ec4899" : "#94a3b8"} fill={isFavorite ? "#ec4899" : "transparent"} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setIsEditing(true)}
+                  className="w-11 h-11 rounded-full items-center justify-center bg-background-dark border border-slate-800"
+                >
+                  <Edit3 size={18} color="#94a3b8" />
+                </TouchableOpacity>
+
+                {hasAudio && (
+                  <TouchableOpacity
+                    onPress={handlePlayClick}
+                    className="w-12 h-12 rounded-full bg-blue-500 items-center justify-center shadow-xl shadow-blue-500/40"
+                  >
+                    <Play size={20} color="white" fill="white" />
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  onPress={async () => {
+                    const textToCopy = `Cantique ${hymn.c_num}: ${hymn.c_title}\n\n${hymn.c_content}`;
+                    await Clipboard.setStringAsync(textToCopy);
+                    Alert.alert("Exporté", "Le chant a été copié dans le presse-papier pour intégration.");
+                  }}
+                  className="w-11 h-11 rounded-full items-center justify-center bg-background-dark border border-slate-800"
+                >
+                  <Share2 size={18} color="#94a3b8" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setShowNumberPicker(true)}
+                  className="w-12 h-12 rounded-full bg-pink-500 items-center justify-center shadow-xl shadow-pink-500/40"
+                >
+                  <MaterialCommunityIcons name="dialpad" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity 
+                onPress={() => setIsMenuExpanded(false)} 
+                className="w-12 h-12 bg-slate-800 rounded-full items-center justify-center border border-slate-700 shadow-xl"
+              >
+                <ChevronRight size={24} color="#f8fafc" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-row items-center gap-3">
+            {activeTrack && (
+              <TouchableOpacity onPress={togglePlayPause} className="w-12 h-12 bg-blue-500 rounded-full items-center justify-center shadow-lg shadow-blue-500/30">
+                {isBuffering && !isPlaying ? (
+                  <ActivityIndicator color="white" />
+                ) : isPlaying ? (
+                  <Pause size={20} color="white" fill="white" />
+                ) : (
+                  <Play size={20} color="white" fill="white" className="ml-1" />
+                )}
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              onPress={() => setIsMenuExpanded(true)} 
+              className="w-12 h-12 bg-slate-800 rounded-full items-center justify-center border border-slate-700 shadow-xl"
+            >
+              <ChevronLeft size={24} color="#f8fafc" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
 
@@ -365,6 +600,50 @@ export default function HymneDetail() {
               className="py-2 items-center"
             >
               <Text className="text-slate-500 font-bold text-xs uppercase tracking-widest">Annuler la recherche</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Audio Playback Modal */}
+      <Modal visible={showAudioModal} transparent animationType="slide" statusBarTranslucent={true}>
+        <View className="flex-1 bg-black/70 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => setShowAudioModal(false)} />
+          <View className="bg-[#1a2233] rounded-t-[40px] p-8 border-t border-slate-700">
+            <View className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8" />
+            
+            <View className="flex-row items-center justify-center mb-8">
+              <View className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center mr-4">
+                <Play size={20} color="#3b82f6" fill="#3b82f6" />
+              </View>
+              <Text className="text-xl font-bold text-white uppercase tracking-widest">Version Audio</Text>
+            </View>
+
+            <Text className="text-slate-400 text-center mb-8 px-6 text-xs leading-5">Choisissez la version audio que vous souhaitez écouter pour ce chant.</Text>
+
+            <View className="mb-6">
+              {audioPlaybacks.map((p, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => playTrack(p.url, p.name, hymn.c_playbacks)}
+                  className="flex-row items-center p-5 bg-[#111621] border border-slate-800 rounded-3xl mb-4"
+                >
+                  <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">
+                    <Music size={20} color="#3b82f6" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white font-bold text-sm">{p.name}</Text>
+                  </View>
+                  <Play size={16} color="#475569" fill="#475569" />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => setShowAudioModal(false)}
+              className="bg-slate-800 py-4 rounded-2xl items-center mb-4"
+            >
+              <Text className="text-white font-bold">Fermer</Text>
             </TouchableOpacity>
           </View>
         </View>

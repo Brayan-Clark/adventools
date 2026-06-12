@@ -109,11 +109,11 @@ export function HymnDatabaseManager() {
         await AsyncStorage.setItem('hymn_installed_versions', JSON.stringify(installedVersions));
 
         await checkLocalFiles();
-        Alert.alert("Vita", `${version.name} dia voasintona soa aman-tsara.`);
+        Alert.alert("Terminé", `${version.name} a été téléchargé avec succès.`);
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Hadisoana", "Tsy tontolo ny fampidinana.");
+      Alert.alert("Erreur", "Le téléchargement a échoué.");
     } finally {
       setDownloading(prev => {
         const next = { ...prev };
@@ -125,12 +125,12 @@ export function HymnDatabaseManager() {
 
   const deleteDatabase = async (version: any) => {
     Alert.alert(
-      "Hamafa fihirana",
-      `Tena hovonoina ve ny "${version.name}"?`,
+      "Supprimer le recueil",
+      `Voulez-vous vraiment supprimer "${version.name}" ?`,
       [
-        { text: "Hanafoana", style: "cancel" },
+        { text: "Annuler", style: "cancel" },
         {
-          text: "Eny, fafao",
+          text: "Oui, supprimer",
           style: "destructive",
           onPress: async () => {
             try {
@@ -138,7 +138,7 @@ export function HymnDatabaseManager() {
               await FileSystem.deleteAsync(path, { idempotent: true });
               await checkLocalFiles();
             } catch (e) {
-              Alert.alert("Hadisoana", "Tsy voafafa ny rakitra.");
+              Alert.alert("Erreur", "Le fichier n'a pas pu être supprimé.");
             }
           }
         }
