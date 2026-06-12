@@ -327,5 +327,9 @@
   "edit_city": "编辑城市",
   "city_placeholder": "例如：安齐拉纳纳，马哈赞加...",
   "auto_ip": "自动检测（IP）",
-  "reset_auto": "重置（自动检测）"
+  "reset_auto": "重置（自动检测）",
+  "notif_study_title": "学习时间到了！📖",
+  "notif_study_body": "花几分钟学习今天的安息日学课程吧！",
+  "notif_lead_title": "准备学习！📖",
+  "notif_lead_body": "还有 {{minutes}} 分钟，就到您学习安息日学课程的时间了。请做好准备！"
 }

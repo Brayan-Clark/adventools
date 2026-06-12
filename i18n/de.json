@@ -327,5 +327,9 @@
   "edit_city": "Stadt bearbeiten",
   "city_placeholder": "Z.B.: Antsiranana, Majunga...",
   "auto_ip": "Automatisch erkannt (IP)",
-  "reset_auto": "Zurücksetzen (Auto-Erkennung)"
+  "reset_auto": "Zurücksetzen (Auto-Erkennung)",
+  "notif_study_title": "Zeit zum Lernen! 📖",
+  "notif_study_body": "Nimm dir ein paar Minuten, um deine Sabbatschullektion für heute zu studieren!",
+  "notif_lead_title": "Mach dich bereit zum Lernen! 📖",
+  "notif_lead_body": "In {{minutes}} Minute(n) ist es Zeit für deine Sabbatschullektion. Mach dich bereit!"
 }

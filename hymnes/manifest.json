@@ -7,7 +7,8 @@
       "file": "cantique.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/cantique.db",
       "size": "600 KB",
-      "isDefault": true
+      "isDefault": true,
+      "version": 5
     },
     {
       "id": "cantique_fr",
@@ -16,7 +17,8 @@
       "file": "humnes&louanges.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/humnes&louanges.db",
       "size": "1 Mo",
-      "isDefault": false
+      "isDefault": false,
+      "version": 5
     },
     {
       "id": "cantique_ffpm",
@@ -25,7 +27,8 @@
       "file": "fihirana_ffpm.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_ffpm.db",
       "size": "1 Mo",
-      "isDefault": false
+      "isDefault": false,
+      "version": 5
     },
     {
       "id": "cantique_fanampiny",
@@ -34,7 +37,8 @@
       "file": "fihirana_fanampiny.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_fanampiny.db",
       "size": "1 Mo",
-      "isDefault": false
+      "isDefault": false,
+      "version": 5
     },
     {
       "id": "cantique_antema",
@@ -43,7 +47,8 @@
       "file": "fihirana_antema.db",
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/fihirana_antema.db",
       "size": "1 Mo",
-      "isDefault": false
+      "isDefault": false,
+      "version": 5
     }
   ]
 }

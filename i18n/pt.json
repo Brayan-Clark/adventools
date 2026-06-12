@@ -327,5 +327,9 @@
   "edit_city": "Editar cidade",
   "city_placeholder": "Ex: Antsiranana, Majunga...",
   "auto_ip": "Detetado automaticamente (IP)",
-  "reset_auto": "Repor (Auto-deteção)"
+  "reset_auto": "Repor (Auto-deteção)",
+  "notif_study_title": "Hora de Estudar! 📖",
+  "notif_study_body": "Reserve alguns minutos para estudar sua lição da Escola Sabatina de hoje!",
+  "notif_lead_title": "Prepare-se para estudar! 📖",
+  "notif_lead_body": "Em {{minutes}} minuto(s), chegará o momento de estudar sua lição da Escola Sabatina. Prepare-se!"
 }
