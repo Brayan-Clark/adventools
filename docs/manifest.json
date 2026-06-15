@@ -1,22 +1,141 @@
 {
   "departments": [
-    "Pasteur",
-    "Ancien",
-    "Diacre",
-    "Diaconesse",
-    "École du Sabbat",
-    "Jeunesse (AJA)",
-    "Ministères de la Femme",
-    "Ministères de l'Enfant",
-    "Publication",
-    "Communication",
-    "Santé",
-    "Trésorerie",
-    "Secrétariat",
-    "Musique",
-    "Ministères Personnels",
-    "Éducation",
-    "Membre"
+    {
+      "id": "pasteur",
+      "translations": {
+        "fr": "Pasteur",
+        "mg": "Mpitandrina",
+        "en": "Pastor"
+      }
+    },
+    {
+      "id": "ancien",
+      "translations": {
+        "fr": "Ancien",
+        "mg": "Loholona",
+        "en": "Elder"
+      }
+    },
+    {
+      "id": "diacre",
+      "translations": {
+        "fr": "Diacre",
+        "mg": "Diakona",
+        "en": "Deacon"
+      }
+    },
+    {
+      "id": "diaconesse",
+      "translations": {
+        "fr": "Diaconesse",
+        "mg": "Diakonisa",
+        "en": "Deaconess"
+      }
+    },
+    {
+      "id": "ecole_sabbat",
+      "translations": {
+        "fr": "École du Sabbat",
+        "mg": "Sekoly Sabata",
+        "en": "Sabbath School"
+      }
+    },
+    {
+      "id": "jeunesse",
+      "translations": {
+        "fr": "Jeunesse (AJA)",
+        "mg": "Tanora (AJA)",
+        "en": "Youth"
+      }
+    },
+    {
+      "id": "mifem",
+      "translations": {
+        "fr": "Ministères de la Femme",
+        "mg": "Minisiteran'ny Vehivavy",
+        "en": "Women's Ministries"
+      }
+    },
+    {
+      "id": "mienf",
+      "translations": {
+        "fr": "Ministères de l'Enfant",
+        "mg": "Minisiteran'ny Ankizy",
+        "en": "Children's Ministries"
+      }
+    },
+    {
+      "id": "publication",
+      "translations": {
+        "fr": "Publication",
+        "mg": "Fampielezam-boky",
+        "en": "Publishing"
+      }
+    },
+    {
+      "id": "communication",
+      "translations": {
+        "fr": "Communication",
+        "mg": "Serasera",
+        "en": "Communication"
+      }
+    },
+    {
+      "id": "sante",
+      "translations": {
+        "fr": "Santé",
+        "mg": "Fahasalamana",
+        "en": "Health"
+      }
+    },
+    {
+      "id": "tresorerie",
+      "translations": {
+        "fr": "Trésorerie",
+        "mg": "Firim-bolam-piangonana",
+        "en": "Treasury"
+      }
+    },
+    {
+      "id": "secretariat",
+      "translations": {
+        "fr": "Secrétariat",
+        "mg": "Sekretariat",
+        "en": "Secretariat"
+      }
+    },
+    {
+      "id": "musique",
+      "translations": {
+        "fr": "Musique",
+        "mg": "Mozika",
+        "en": "Music"
+      }
+    },
+    {
+      "id": "mip",
+      "translations": {
+        "fr": "Ministères Personnels",
+        "mg": "Asa Fitoriana",
+        "en": "Personal Ministries"
+      }
+    },
+    {
+      "id": "education",
+      "translations": {
+        "fr": "Éducation",
+        "mg": "Fanabeazana",
+        "en": "Education"
+      }
+    },
+    {
+      "id": "membre",
+      "translations": {
+        "fr": "Membre",
+        "mg": "Mpikambana",
+        "en": "Member"
+      }
+    }
   ],
   "categories": [
     {
@@ -99,7 +218,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Ifm.pdf",
       "size": "3.1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_001",
@@ -109,7 +230,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Fatokiana amin'ny fomba fiainana kristiana (HFM).pdf",
       "size": "432 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_002",
@@ -119,7 +242,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/NY%20DIA%20HO%20EO%20AMIN'I%20KRISTY.pdf",
       "size": "790,3 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_003",
@@ -129,7 +254,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/PATRIARKA%20SY%20MPAMINANY.pdf",
       "size": "1,8 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_004",
@@ -139,7 +266,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/FIOMANANA%20HO%20AMIN'NY%20RANONORANA%20FARANY.pdf",
       "size": "155,2 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_005",
@@ -149,7 +278,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conquérants%20Pacifiques.pdf",
       "size": "5,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_006",
@@ -159,7 +290,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Evangéliser.PDF",
       "size": "1,9 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_007",
@@ -169,7 +302,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conseils%20à%20l'Econome.pdf",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_008",
@@ -179,7 +314,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/la_grande_controverse.pdf",
       "size": "4,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_009",
@@ -189,7 +326,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/LE%20MINISTERE%20EVANGELIQUE.pdf",
       "size": "1,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_010",
@@ -199,7 +338,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conseils%20à%20l'Eglise.pdf",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_011",
@@ -209,7 +350,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conseils%20Aux%20Educateurs,%20Aux%20Parents%20et%20Aux%20Etudiants.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_012",
@@ -219,7 +362,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conseils%20sur%20la%20Conduite%20Sexuelle,%20l'Adultère%20et%20le%20Divorce.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_013",
@@ -229,7 +374,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Conseils%20sur%20la%20Nutrition%20et%20les%20Aliments.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_014",
@@ -239,7 +386,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Education.PDF",
       "size": "801,4 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_015",
@@ -249,7 +398,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Evènements%20des%20derniers%20Jours.PDF",
       "size": "801,4 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_016",
@@ -259,7 +410,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Heureux%20Ceux%20Qui.PDF",
       "size": "505,4 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_017",
@@ -269,7 +422,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Instructions%20Pour%20Un%20Service%20Chr%C3%A9tien%20Effectif.PDF",
       "size": "1,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_018",
@@ -279,7 +434,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/J%C3%A9sus%20Christ.PDF",
       "size": "2,3 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_019",
@@ -289,7 +446,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/L'Histoire%20De%20La%20R%C3%A9demption.PDF",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_020",
@@ -299,7 +458,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/La%20Trag%C3%A9die%20des%20Si%C3%A8cles.PDF",
       "size": "2,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_021",
@@ -309,7 +470,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Le%20Foyer%20Chr%C3%A9tien.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_022",
@@ -319,7 +482,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Le%20Meilleur%20Chemin.PDF",
       "size": "444,4 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_023",
@@ -329,7 +494,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Le%20Minist%C3%A8re%20Evang%C3%A9lique.PDF",
       "size": "1,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_024",
@@ -339,7 +506,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Le%20Minist%C3%A8re%20de%20la%20Gu%C3%A9rison.PDF",
       "size": "1,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_025",
@@ -349,7 +518,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Les%20Paraboles%20de%20J%C3%A9sus.PDF",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_026",
@@ -359,7 +530,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Messages%20Choisis%20Vol%201.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_027",
@@ -369,7 +542,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Messages%20%C3%A0%20la%20Jeunesse.PDF",
       "size": "1,5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_028",
@@ -379,7 +554,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Patriaches%20Et%20Proph%C3%A8tes.PDF",
       "size": "2,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_029",
@@ -389,7 +566,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Pour%20Un%20Bon%20Equilibre%20Mental%20et%20Spirituel%201.PDF",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_030",
@@ -399,7 +578,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Pour%20Un%20Bon%20Equilibre%20Mental%20et%20Spirituel%202.PDF",
       "size": "1,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_031",
@@ -409,7 +590,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Premiers%20Ecrits.PDF",
       "size": "938,3 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_032",
@@ -419,7 +602,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Proph%C3%A8tes%20Et%20Rois.PDF",
       "size": "1,7 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_033",
@@ -429,7 +614,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Temp%C3%A9rance.PDF",
       "size": "1,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_034",
@@ -439,7 +626,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/T%C3%A9moignages%20pour%20l'Eglise%20Vol%201.PDF",
       "size": "2,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_035",
@@ -449,7 +638,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/T%C3%A9moignages%20pour%20l'Eglise%20Vol%202.PDF",
       "size": "2,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_036",
@@ -459,7 +650,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/T%C3%A9moignages%20pour%20l'Eglise%20Vol%203.PDF",
       "size": "2,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_037",
@@ -469,7 +662,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Vers%20J%C3%A9sus.PDF",
       "size": "443,7 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_038",
@@ -479,7 +674,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Vers%20Un%20Meilleur%20Avenir.PDF",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_039",
@@ -489,7 +686,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Church%20assurance.pdf",
       "size": "72.8 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_040",
@@ -499,7 +698,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_fr/Histoire%20de%20la%20redemption.pdf",
       "size": "1.0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_041",
@@ -509,7 +710,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/ANY%20AMPARANY%20ANY.pdf",
       "size": "3,7 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_042",
@@ -519,7 +722,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Fanompoana%20kristiana.pdf",
       "size": "871,3 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_043",
@@ -529,7 +734,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Hafatra-Hoanny-Tanora.pdf",
       "size": "1,3 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_044",
@@ -539,7 +746,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/HERY%20MIFANANDRINA.pdf",
       "size": "2,1 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_045",
@@ -549,7 +758,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Vavolombelona-mahery.pdf",
       "size": "1,1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "esp_046",
@@ -559,7 +770,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/esprit_prophetie_mg/Fiomanana-ho-an_ny-fotoantsarotra-farany.pdf",
       "size": "6.3 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_002",
@@ -569,7 +782,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/BOKY%20TOMOERA.pdf",
       "size": "797,8 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_003",
@@ -579,7 +794,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Mpamitaka.docx",
       "size": "9,6 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_004",
@@ -589,7 +806,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Tara-pahazavana.pdf",
       "size": "33.1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_005",
@@ -599,7 +818,11 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Fianarana-toriteny.pdf",
       "size": "2,7 MB",
       "isAsset": false,
-      "tags": ["Ancien", "Pasteur", "Jeunesse (AJA)"]
+      "tags": [
+        "Ancien",
+        "Pasteur",
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "etb_006",
@@ -609,7 +832,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/faq-daniel-et-apocalypse.pdf",
       "size": "6.5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_007",
@@ -619,7 +844,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/1%20Ahoana%20No%20Fomba%20Fivavaka%20How%20To%20Pray.doc",
       "size": "41.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_008",
@@ -629,7 +856,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/10%20Tsy%20Hitan%20Andriamanitra%20Ve%20Fa%20Mijaly%20Aho%20Why%20So%20Much%20Sufferings.doc",
       "size": "43.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_009",
@@ -639,7 +868,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/11%20Velona%20Mandrakizay%20Living%20For%20Eternity.doc",
       "size": "39.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_010",
@@ -649,7 +880,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/2%20Andro%20Iray%20Tsy%20Azo%20Hadinoina%20Sabbath.doc",
       "size": "38.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_011",
@@ -659,7 +892,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/3%20Faminaniana%20Tranainy%20Manambara%20Ny%20Hoavy%20Dan%202.doc",
       "size": "44.0 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_012",
@@ -669,7 +904,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/4%20Ho%20Avy%20Indray%20Jesosy%20Jesus%20Is%20Coming%20Again.doc",
       "size": "43.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_013",
@@ -679,7 +916,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/5%20Inona%20No%20Mitranga%20Aorianny%20Fahafatesana%20Death.doc",
       "size": "43.0 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_014",
@@ -689,7 +928,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/6%20Inona%20No%20Ambaranny%20Baiboly%20Mikasika%20Ny%20Sabata%20Sy%20Ny%20Andro%20Voalohany%20Aminny%20Herinandro%20Sabbath%20Vs%20Sunday.doc",
       "size": "42.0 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_015",
@@ -699,7 +940,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/7%20Ireo%20Kristiana%20Advantista%20Who%20Are%20The%20Adventists.doc",
       "size": "34.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_016",
@@ -709,7 +952,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/8%20Ny%20Baiboly%20Loharano%20Azo%20Antoka%20Bible.doc",
       "size": "42.5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_017",
@@ -719,7 +964,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/9%20Ny%20Lalan%20Andriamanitra%20Gods%20Law.doc",
       "size": "39.0 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_018",
@@ -729,7 +976,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Daniel%20And%20Revelation%20Pdf.pdf",
       "size": "28.3 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_019",
@@ -739,7 +988,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/Dingana%20ho%20amin'ny%20Fifohazana%20ho%20an'ny%20Tena%20Manokana%20Pdf.pdf",
       "size": "5.4 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_020",
@@ -749,7 +1000,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/SEMINERA%20ARA%20BAIBOLY%20Ps%20PAUL%20RATSARASAOTRA%20MISY%20SARY%201%20Pdf.pdf",
       "size": "5.5 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "etb_021",
@@ -759,7 +1012,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_bibliques/The%20Great%20Controversy%20MG.pdf",
       "size": "35.7 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "aja_001",
@@ -769,7 +1024,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/SAKAIZA.pdf",
       "size": "2,7 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_002",
@@ -779,7 +1036,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/ASTUCES-DE-CAMP.pdf",
       "size": "1,6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_003",
@@ -789,7 +1048,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/COMMUNICATION-NIVEAU-1.pdf",
       "size": "309,4 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_004",
@@ -799,7 +1060,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FEUX-CUISINE-DE-CAMP.pdf",
       "size": "230,8 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_005",
@@ -809,7 +1072,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Galerie-noeuds.pdf",
       "size": "780,7 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_006",
@@ -819,7 +1084,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Noeuds.pdf",
       "size": "663,8 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_007",
@@ -829,7 +1096,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/5-SYL-Fiahiana-sy-Fanofanana-Mentoring-Blaireau.pptx",
       "size": "4.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_008",
@@ -839,7 +1108,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/ABST-Fizarana-1.pdf",
       "size": "1.5 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_009",
@@ -849,7 +1120,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BOKY-SYL.pdf",
       "size": "687.3 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_010",
@@ -859,7 +1132,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Basic%20Staff%20Training-%20Gasy%20final.pptx",
       "size": "1.7 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_011",
@@ -869,7 +1144,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/DISCPLINE-JA.pdf",
       "size": "614.9 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_012",
@@ -879,7 +1156,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FILOHA%20MPITARIKA.pptx",
       "size": "92.4 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_013",
@@ -889,7 +1168,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FITAKIANA-MIALOHA-SYL.pdf",
       "size": "297.6 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_014",
@@ -899,7 +1180,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FORMATION%20DE%20BASE%20POUR%20LES%20LEADER%202018%20and%202019.pptx",
       "size": "81.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_015",
@@ -909,7 +1192,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MIHEMOTRA%20NY%20TANORA.pptm",
       "size": "98.0 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_016",
@@ -919,7 +1204,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/1-SAKAIZA.pdf",
       "size": "2.5 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_017",
@@ -929,7 +1216,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/2-NAMANA.pdf",
       "size": "1.8 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_018",
@@ -939,7 +1228,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/3-MPANAZAVA.pdf",
       "size": "5.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_019",
@@ -949,7 +1240,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/4-MPAMAKY-LAY.pdf",
       "size": "2.5 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_020",
@@ -959,7 +1252,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/5-MPANDEHA-LAVITRA.pdf",
       "size": "2.2 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_021",
@@ -969,7 +1264,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/6-MPITARIKA.pdf",
       "size": "2.7 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_022",
@@ -979,7 +1276,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/6-taona-TANTELY-MAZOTO.doc",
       "size": "1.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_023",
@@ -989,7 +1288,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/7-taona-TANAMASOANDRO.doc",
       "size": "2.2 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_024",
@@ -999,7 +1300,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/8-taona-MPANORINA.doc",
       "size": "988.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_025",
@@ -1009,7 +1312,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/9-taona-TANANA-MANAMPY.doc",
       "size": "3.8 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_026",
@@ -1019,7 +1324,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-ALIKA.pdf",
       "size": "1.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_027",
@@ -1029,7 +1336,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-ARBRE.pdf",
       "size": "801.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_028",
@@ -1039,7 +1348,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-INSECTE-NIVEAU-1.pdf",
       "size": "633.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_029",
@@ -1049,7 +1360,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-MARCHE-RANDONNEE.pdf",
       "size": "109.2 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_030",
@@ -1059,7 +1372,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-NOEUDS.pdf",
       "size": "3.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_031",
@@ -1069,7 +1384,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-SAKA.pdf",
       "size": "1.4 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_032",
@@ -1079,7 +1396,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-VORONA-NIVEAU-1.pdf",
       "size": "940.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_033",
@@ -1089,7 +1408,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGE-natiora-pdf.pdf",
       "size": "675.6 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_034",
@@ -1099,7 +1420,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/BADGES-EXPLOS-REHETRA-FMC-COMPLET-1__re-__dition3.pdf",
       "size": "11.9 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_035",
@@ -1109,7 +1432,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Badge-tome-II.pdf",
       "size": "503.5 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_036",
@@ -1119,7 +1444,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/CAMPING.docx",
       "size": "22.2 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_037",
@@ -1129,7 +1456,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/CONSTELATION.pptx",
       "size": "1.7 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_038",
@@ -1139,7 +1468,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Code-Morse.pptx",
       "size": "257.1 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_039",
@@ -1149,7 +1480,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/ECOLOGIE.pdf",
       "size": "664.2 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_040",
@@ -1159,7 +1492,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FAMORONANA.pdf",
       "size": "484.9 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_041",
@@ -1169,7 +1504,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FANAMIANA-JA.pdf",
       "size": "2.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_042",
@@ -1179,7 +1516,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-I-BST-Fampidirana.pdf",
       "size": "1.9 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_043",
@@ -1189,7 +1528,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-II-BST-Fizarana-2.pdf",
       "size": "1.8 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_044",
@@ -1199,7 +1540,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-II-BST-Fizarana-3.pdf",
       "size": "1.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_045",
@@ -1209,7 +1552,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-II-BST-Fizarana-4.pdf",
       "size": "1.9 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_046",
@@ -1219,7 +1564,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-II-BST-Fizarana-5.pdf",
       "size": "1.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_047",
@@ -1229,7 +1576,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-III-a-BST-Fizarana-1.pdf",
       "size": "1.2 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_048",
@@ -1239,7 +1588,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-III-b-BST-Fizarana-2.pdf",
       "size": "1.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_049",
@@ -1249,7 +1600,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-III-c-BST-Fizarana-3.pdf",
       "size": "1.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_050",
@@ -1259,7 +1612,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIZARANA-IV-BST.pdf",
       "size": "3.7 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_051",
@@ -1269,7 +1624,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Galerie-noeuds.pdf",
       "size": "682.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_052",
@@ -1279,7 +1636,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Gestes-durgence-et-premiers-secours.pdf",
       "size": "626.6 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_053",
@@ -1289,7 +1648,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/INSTALLATIONS-ET-TECHNIQUES-DE-CAMP.pdf",
       "size": "1023.5 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_054",
@@ -1299,7 +1660,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Liste_des_%C3%A9toiles_par_constellation_avec_traduction_en_fran%C3%A7ais_et_brillance.pdf",
       "size": "285.5 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_055",
@@ -1309,7 +1672,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Manuel-Ambassadeur.pdf",
       "size": "3.1 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_056",
@@ -1319,7 +1684,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MANUEL-DADMINISTRATION-DES-EXPLORATEURS.pdf",
       "size": "1.6 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_057",
@@ -1329,7 +1696,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MANUEL-DU-CHEF-GUIDE-COMPLET-2015.pdf",
       "size": "1.3 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_058",
@@ -1339,7 +1708,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/MUSIC.pdf",
       "size": "746.9 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_060",
@@ -1349,7 +1720,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/NY-NIANDOHANTSIKA-SEREMONIA-ORDRE-SERRE.pdf",
       "size": "675.5 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_061",
@@ -1359,7 +1732,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Noeuds.pdf",
       "size": "665.1 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_062",
@@ -1369,7 +1744,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/SECOURISME.pdf",
       "size": "2.5 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_063",
@@ -1379,7 +1756,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/SURVIE-CAMPING-OK.docx",
       "size": "66.1 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_064",
@@ -1389,7 +1768,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Voady-Lal%C3%A0nny-Mpisavalalana.doc",
       "size": "288.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_065",
@@ -1399,7 +1780,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/agroforestiers.pdf",
       "size": "3.0 MB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_066",
@@ -1409,7 +1792,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/FIANARANA-BAIBOLY-1.pdf",
       "size": "450.0 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "aja_067",
@@ -1419,7 +1804,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_JA/Fiche-explo-et-Avent.pdf",
       "size": "733.1 KB",
       "isAsset": false,
-      "tags": ["Jeunesse (AJA)"]
+      "tags": [
+        "Jeunesse (AJA)"
+      ]
     },
     {
       "id": "deg_001",
@@ -1429,7 +1816,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_eglise/NY%20FIANGONANA%20ADVANTISTA%20MITANDRINA%20NY%20ANDRO%20FAHA7.pdf",
       "size": "1,9 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "deg_002",
@@ -1439,7 +1828,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_eglise/Manuel-deglise-2022.pdf",
       "size": "925,9 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "deg_003",
@@ -1449,7 +1840,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossiers_eglise/Lovan_ny_Fiangonana.pdf",
       "size": "1,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "sem_001",
@@ -1459,7 +1852,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/semaine_priere/10_ANDROM-BAVAKA_2026.pdf",
       "size": "558,9 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "sem_002",
@@ -1469,7 +1864,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/semaine_priere/40-ANDRO-FIBANJINANA-DINGANA-HO-AMINNY-FIFOHAZANA-HO-ANNY-TENA-MANOKANA.pdf",
       "size": "6,2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "sem_003",
@@ -1479,7 +1876,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/semaine_priere/10_ANDROM-BAVAKA_2025.pdf",
       "size": "16,5 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "sem_004",
@@ -1489,7 +1888,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/semaine_priere/10_ANDROM-BAVAKA_2024.pdf",
       "size": "2,7 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "sem_005",
@@ -1499,7 +1900,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/semaine_priere/10_ANDROM-BAVAKA_2023.pdf",
       "size": "610,2 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "aut_001",
@@ -1509,7 +1912,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/autres/FIHIRANA-SDA-SOLFA.pdf",
       "size": "15,5 MB",
       "isAsset": false,
-      "tags": ["Musique"]
+      "tags": [
+        "Musique"
+      ]
     },
     {
       "id": "aut_002",
@@ -1519,7 +1924,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/autres/FANOMANANA%20TORITENY%20-%20IICM.pptm",
       "size": "258.5 KB",
       "isAsset": false,
-      "tags": ["Musique"]
+      "tags": [
+        "Musique"
+      ]
     },
     {
       "id": "aut_003",
@@ -1529,7 +1936,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/autres/SEKOLY%20SABATA%20VELONA.pptx",
       "size": "7.4 MB",
       "isAsset": false,
-      "tags": ["École du Sabbat"]
+      "tags": [
+        "École du Sabbat"
+      ]
     },
     {
       "id": "tor_001",
@@ -1539,7 +1948,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/TARI-DALANA-SY-TORITENY-ANDRONNY-AMBASADAORO-2026.docx",
       "size": "4,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_002",
@@ -1549,7 +1960,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/DIMY%20MINITRA%20FANABEAZANA%20AVRILY%202026.docx",
       "size": "4,0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_003",
@@ -1559,7 +1972,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/Toriteny%20Communication%2002%20Mai%202026.pdf",
       "size": "95.0 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_004",
@@ -1569,7 +1984,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/TORITENY%20ANDRO%20MANERANTANY%20HO%20AN'NY%20MPISANTATRA.pdf",
       "size": "3.2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_005",
@@ -1579,7 +1996,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/DIMY%20MINITRA%20FANABEAZANA%20JONA%202026.docx",
       "size": "18 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_006",
@@ -1589,7 +2008,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/DIMY%20MINITRAN'NY%20FANABEAZANA%20VOLANA%20MAY%202026.docx",
       "size": "9.1 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "tor_007",
@@ -1599,7 +2020,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/toriteny_special/Toriteny%20PCM.pdf",
       "size": "151.9 Ko",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "men_001",
@@ -1609,7 +2032,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/ARMA.pptx",
       "size": "3.6 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_002",
@@ -1619,7 +2044,9 @@
       "url": "https://drive.usercontent.google.com/download?id=1LMPJf7a-tuujzb6ueteM490BXNMBsSK7&export=download&authuser=0&confirm=t&uuid=7ca7909d-ef10-46c9-9303-9ea04dc6c607&at=ALBwUgmBbiri8j1B5ySAccufIW6t%3A1775718194346",
       "size": "124 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_003",
@@ -1629,7 +2056,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Manao%20ankizy%20ho%20mpianatra.pptx",
       "size": "1.9 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_004",
@@ -1639,7 +2068,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Mifototra%20amin'ny%20Baiboly%20mifantoka%20amin'ny%20hiraka.pptx",
       "size": "30 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_005",
@@ -1649,7 +2080,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Mpanabe%20mamita%20hiraka.pptx",
       "size": "132 KB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_006",
@@ -1659,7 +2092,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/NY%20PSYCHOLOGIE%20NY%20ZAZA.pptx",
       "size": "11 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_007",
@@ -1669,7 +2104,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/NY%20SAMPANA%20MIADIDY%20NY%20ANKIZY.odp",
       "size": "8.8 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_008",
@@ -1679,7 +2116,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/TARI-DALANA%20NO%20AN'IREO%20MPANDRINDRA%20SY%20MPANENTANA.pptx",
       "size": "52 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_009",
@@ -1689,7 +2128,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/Tomoera%20ao%20amin'i%20Jesosy.pptx",
       "size": "3.7 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_010",
@@ -1699,7 +2140,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/FC%20Journ%C3%A9e%20mondiale%20pour%20les%20enfants%20%C3%A0%20risque.docx",
       "size": "9.9 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "men_011",
@@ -1709,7 +2152,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/dossier_MINENF/MG%20Andro%20hivavahana%20ho%20an'ireo%20zaza%20tandindomindoza.docx",
       "size": "30 MB",
       "isAsset": false,
-      "tags": ["Ministères de l'Enfant"]
+      "tags": [
+        "Ministères de l'Enfant"
+      ]
     },
     {
       "id": "isl_001",
@@ -1719,7 +2164,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/AMR%20AMBILOBE%20BIDEL.pptx",
       "size": "10.1 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_002",
@@ -1729,7 +2176,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Anaran'ny%20Jesosy%20ao%20%40%20Korany.pptx",
       "size": "472.2 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_003",
@@ -1739,7 +2188,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Avy%20amin'ny%20Kor'any%20ho%20amin'ny%20Baiboly.pptx",
       "size": "13.0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_004",
@@ -1749,7 +2200,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Coran.pdf",
       "size": "2.3 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_005",
@@ -1759,7 +2212,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/DESCENT%20OF%20ISA%20AL%20MASIH.pdf",
       "size": "52.2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_006",
@@ -1769,7 +2224,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/GCAMR_2019_300pages.docx",
       "size": "1.2 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_007",
@@ -1779,7 +2236,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ireo%20%22Olon'ny%20Boky%22.pptx",
       "size": "194.6 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_008",
@@ -1789,7 +2248,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ismaela%20vs%20Isaka.pptx",
       "size": "66.3 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_009",
@@ -1799,7 +2260,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Drafitr'Andriamanitra%20ho%20an'ny%20Taranak'Isimaela.pptx",
       "size": "568.6 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_010",
@@ -1809,7 +2272,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Fototra%20ara-Baiboly%20Iorenan'ny%20Iraka%20Atao%20ho%20an'ny%20Kolotsaina%20Samihafa.pptx",
       "size": "4.7 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_011",
@@ -1819,7 +2284,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Vanim-Potoana%20Talohan'ny%20Islamo%20sy%20ny%20Niandohan'ny%20Islamo.pptx",
       "size": "27.6 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_012",
@@ -1829,7 +2296,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20Vehivavy%20ao%20anatin'ny%20Finoana%20Islamo.pptx",
       "size": "101.0 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_013",
@@ -1839,7 +2308,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/Ny%20fomba%20hitoriana%20ny%20Filazantsara%20amin'ny%20Silamo.pptx",
       "size": "50.8 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_014",
@@ -1849,7 +2320,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/RAMADAN.docx",
       "size": "17.1 KB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     },
     {
       "id": "isl_015",
@@ -1859,7 +2332,9 @@
       "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/etudes_islamiques/SILAMO.pptx",
       "size": "7.7 MB",
       "isAsset": false,
-      "tags": ["Tous"]
+      "tags": [
+        "Tous"
+      ]
     }
   ]
 }
