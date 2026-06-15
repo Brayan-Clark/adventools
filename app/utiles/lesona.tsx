@@ -280,6 +280,13 @@ export default function LesonaSekolySabata() {
   const [showLangPicker, setShowLangPicker] = useState(false);
   const { qId: qIdParam, lId: lIdParam } = useLocalSearchParams();
 
+  // Sync active category with profile settings
+  useEffect(() => {
+    if (globalSettings?.profile_eds_class) {
+      setActiveCategory(globalSettings.profile_eds_class);
+    }
+  }, [globalSettings?.profile_eds_class]);
+
   // Premium Alert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;

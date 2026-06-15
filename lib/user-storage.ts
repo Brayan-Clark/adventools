@@ -374,22 +374,85 @@ export async function clearHistory() {
 }
 
 // --- BACKUP & RESTORE ---
-export async function exportAllData() {
+export async function exportAllData(categories?: string[]) {
     const database = await initUserStorage();
     const data: any = {};
 
-    // Export each table
-    data.settings = await database.getAllAsync('SELECT * FROM settings');
-    data.folders = await database.getAllAsync('SELECT * FROM folders');
-    data.notes = await database.getAllAsync('SELECT * FROM notes');
-    data.attachments = await database.getAllAsync('SELECT * FROM attachments');
-    data.history = await database.getAllAsync('SELECT * FROM history');
-    data.downloads = await database.getAllAsync('SELECT * FROM downloads');
-    data.favorites = await database.getAllAsync('SELECT * FROM favorites');
-    data.bible_markup = await database.getAllAsync('SELECT * FROM bible_markup');
+    const wants = (cat: string) => !categories || categories.includes(cat);
+
+    // Profile & Paramètres
+    if (wants('profile')) {
+        data.settings = await database.getAllAsync('SELECT * FROM settings');
+    }
+
+    // Notes
+    if (wants('notes')) {
+        data.folders = await database.getAllAsync('SELECT * FROM folders');
+        data.notes = await database.getAllAsync('SELECT * FROM notes');
+        data.attachments = await database.getAllAsync('SELECT * FROM attachments');
+    }
+
+    // Others
+    if (wants('others')) {
+        data.history = await database.getAllAsync('SELECT * FROM history');
+        data.downloads = await database.getAllAsync('SELECT * FROM downloads');
+        data.favorites = await database.getAllAsync('SELECT * FROM favorites');
+    }
+
+    // Bible and Hymnes use bible_markup in SQLite.
+    if (wants('bible') || wants('hymnes')) {
+        let query = 'SELECT * FROM bible_markup';
+        if (!wants('bible') && wants('hymnes')) {
+            query += " WHERE type = 'hymne'";
+        } else if (wants('bible') && !wants('hymnes')) {
+            query += " WHERE type != 'hymne'";
+        }
+        data.bible_markup = await database.getAllAsync(query);
+    }
+
+    // Export AsyncStorage items (Lesson notes, highlights, etc.)
+    const allKeys = await AsyncStorage.getAllKeys();
+    const asyncStorageData: Record<string, string | null> = {};
+    for (const key of allKeys) {
+        // Exclude system cache or temporary files
+        if (key === 'pdf_manifest_cache') continue;
+
+        let category = 'others';
+        if (key.startsWith('hymne_edit_') || key.startsWith('hymn_favorites_')) {
+            category = 'hymnes';
+        } else if (
+            key.startsWith('highlights_') ||
+            key.startsWith('word_highlights_') ||
+            key.startsWith('bookmarks_') ||
+            key.startsWith('bible_favorites') ||
+            key.startsWith('bible_bookmarks')
+        ) {
+            category = 'bible';
+        } else if (
+            key === 'adventools_notes' ||
+            key === 'adventools_folders' ||
+            key === 'utiles_etude_serie' ||
+            key === 'utiles_themes_divers' ||
+            key.startsWith('pdf_notes_') ||
+            key.startsWith('pdf_bookmarks_')
+        ) {
+            category = 'notes';
+        } else if (
+            key.startsWith('profile_') ||
+            key === 'app_settings' ||
+            key === 'app_history'
+        ) {
+            category = 'profile';
+        }
+
+        if (wants(category)) {
+            asyncStorageData[key] = await AsyncStorage.getItem(key);
+        }
+    }
+    data.asyncStorage = asyncStorageData;
 
     return {
-        version: "2.0",
+        version: "2.1",
         timestamp: Date.now(),
         data
     };
@@ -429,6 +492,19 @@ export async function importData(backup: any) {
             for (let m of d.bible_markup) await database.runAsync('INSERT OR REPLACE INTO bible_markup (key, type, lang, book_id, chapter, data) VALUES (?, ?, ?, ?, ?, ?)', [m.key, m.type, m.lang, m.book_id, m.chapter, m.data]);
         }
         await database.execAsync('COMMIT');
+
+        // Restore AsyncStorage items
+        if (d.asyncStorage) {
+            const pairs: [string, string][] = [];
+            for (const [key, value] of Object.entries(d.asyncStorage)) {
+                if (value !== null && value !== undefined) {
+                    pairs.push([key, String(value)]);
+                }
+            }
+            if (pairs.length > 0) {
+                await AsyncStorage.multiSet(pairs);
+            }
+        }
     } catch (e) {
         await database.execAsync('ROLLBACK');
         throw e;

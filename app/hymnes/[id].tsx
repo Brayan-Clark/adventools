@@ -92,7 +92,7 @@ export default function HymneDetail() {
   const handlePlayClick = async () => {
     if (availablePlaybacks.length === 1) {
       const collectionId = hymn.c_playbacks;
-      playTrack(availablePlaybacks[0].url, availablePlaybacks[0].title || hymn.c_title, collectionId);
+      playTrack(availablePlaybacks[0].url, availablePlaybacks[0].title || hymn.c_title, collectionId, availablePlaybacks[0].id);
     } else if (availablePlaybacks.length > 1) {
       setAudioPlaybacks(availablePlaybacks.map((s: any, idx: number) => ({
         id: s.id || idx.toString(),
@@ -103,7 +103,7 @@ export default function HymneDetail() {
     }
   };
 
-  const playTrack = async (url: string, title: string, artist: string) => {
+  const playTrack = async (url: string, title: string, artist: string, audioId: string) => {
     setShowAudioModal(false);
     try {
       if (inlineSound) {
@@ -112,13 +112,31 @@ export default function HymneDetail() {
       setIsBuffering(true);
       setActiveTrack({ title, artist });
       
+      let finalUrl = url;
+      try {
+        const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
+        const METADATA_FILE = `${PB_DIR}metadata.json`;
+        
+        const metaInfo = await FileSystem.getInfoAsync(METADATA_FILE);
+        if (metaInfo.exists) {
+          const metaContent = await FileSystem.readAsStringAsync(METADATA_FILE);
+          const downloadedSongs = JSON.parse(metaContent);
+          const key = `${artist}-${audioId}`; // Same key logic as getAudioKey
+          if (downloadedSongs[key]) {
+            finalUrl = `${PB_DIR}${artist}_${audioId}.mp3`;
+          }
+        }
+      } catch (e) {
+        // ignore fallback to url
+      }
+
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
       });
 
       const { sound } = await Audio.Sound.createAsync(
-        { uri: url },
+        { uri: finalUrl },
         { shouldPlay: true },
         (status: any) => {
           if (status.isLoaded) {
@@ -143,18 +161,48 @@ export default function HymneDetail() {
     }
   };
 
+  const fadeAudio = async (sound: Audio.Sound, toVolume: number, durationMs = 400) => {
+    return new Promise<void>((resolve) => {
+      const steps = 10;
+      const stepMs = durationMs / steps;
+      
+      sound.getStatusAsync().then((status) => {
+        if (!status.isLoaded) return resolve();
+        // @ts-ignore
+        const startVolume = status.volume ?? 1;
+        const volumeDiff = toVolume - startVolume;
+        
+        let currentStep = 0;
+        const interval = setInterval(async () => {
+          currentStep++;
+          const newVol = startVolume + (volumeDiff * (currentStep / steps));
+          await sound.setVolumeAsync(Math.max(0, Math.min(1, newVol)));
+          
+          if (currentStep >= steps) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, stepMs);
+      }).catch(() => resolve());
+    });
+  };
+
   const togglePlayPause = async () => {
     if (inlineSound) {
       if (isPlaying) {
+        await fadeAudio(inlineSound, 0);
         await inlineSound.pauseAsync();
       } else {
+        await inlineSound.setVolumeAsync(0);
         await inlineSound.playAsync();
+        await fadeAudio(inlineSound, 1);
       }
     }
   };
 
   const stopPlayer = async () => {
     if (inlineSound) {
+      await fadeAudio(inlineSound, 0);
       await inlineSound.stopAsync();
       await inlineSound.unloadAsync();
       setInlineSound(null);
@@ -249,7 +297,7 @@ export default function HymneDetail() {
 
             const net = await NetInfo.fetch();
             const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
-            const CACHE_FILE = `${PB_DIR}cache_${collectionId}.json`;
+            const CACHE_FILE = `${PB_DIR}cache_v2_${collectionId}.json`;
             
             let songs = [];
             const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
@@ -625,7 +673,7 @@ export default function HymneDetail() {
               {audioPlaybacks.map((p, i) => (
                 <TouchableOpacity
                   key={i}
-                  onPress={() => playTrack(p.url, p.name, hymn.c_playbacks)}
+                  onPress={() => playTrack(p.url, p.name, hymn.c_playbacks, p.id)}
                   className="flex-row items-center p-5 bg-[#111621] border border-slate-800 rounded-3xl mb-4"
                 >
                   <View className="w-12 h-12 rounded-2xl bg-blue-500/10 items-center justify-center mr-4">

@@ -19,6 +19,7 @@ type AppSettings = {
   studyReminderEnabled: boolean;
   studyReminderTime: string;
   studyReminderLeadMinutes: number;
+  profile_eds_class?: string;
 };
 
 type SettingsContextType = {

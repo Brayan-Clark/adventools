@@ -62,7 +62,26 @@ export default function Settings() {
   const [tempCity, setTempCity] = useState('');
   const [citySuggestions, setCitySuggestions] = useState<any[]>([]);
   const [isCitySearching, setIsCitySearching] = useState(false);
-  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
+  const DEFAULT_DEPARTMENTS = [
+    { id: "pasteur", translations: { fr: "Pasteur", mg: "Mpitandrina", en: "Pastor" } },
+    { id: "ancien", translations: { fr: "Ancien", mg: "Loholona", en: "Elder" } },
+    { id: "diacre", translations: { fr: "Diacre", mg: "Diakona", en: "Deacon" } },
+    { id: "diaconesse", translations: { fr: "Diaconesse", mg: "Diakonisa", en: "Deaconess" } },
+    { id: "ecole_sabbat", translations: { fr: "École du Sabbat", mg: "Sekoly Sabata", en: "Sabbath School" } },
+    { id: "jeunesse", translations: { fr: "Jeunesse (AJA)", mg: "Tanora (AJA)", en: "Youth" } },
+    { id: "mifem", translations: { fr: "Ministères de la Femme", mg: "Minisiteran'ny Vehivavy", en: "Women's Ministries" } },
+    { id: "mienf", translations: { fr: "Ministères de l'Enfant", mg: "Minisiteran'ny Ankizy", en: "Children's Ministries" } },
+    { id: "publication", translations: { fr: "Publication", mg: "Fampielezam-boky", en: "Publishing" } },
+    { id: "communication", translations: { fr: "Communication", mg: "Serasera", en: "Communication" } },
+    { id: "sante", translations: { fr: "Santé", mg: "Fahasalamana", en: "Health" } },
+    { id: "tresorerie", translations: { fr: "Trésorerie", mg: "Firim-bolam-piangonana", en: "Treasury" } },
+    { id: "secretariat", translations: { fr: "Secrétariat", mg: "Sekretariat", en: "Secretariat" } },
+    { id: "musique", translations: { fr: "Musique", mg: "Mozika", en: "Music" } },
+    { id: "mip", translations: { fr: "Ministères Personnels", mg: "Asa Fitoriana", en: "Personal Ministries" } },
+    { id: "education", translations: { fr: "Éducation", mg: "Fanabeazana", en: "Education" } },
+    { id: "membre", translations: { fr: "Membre", mg: "Mpikambana", en: "Member" } }
+  ];
+  const [availableDepartments, setAvailableDepartments] = useState<any[]>(DEFAULT_DEPARTMENTS);
   const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
 
@@ -78,6 +97,28 @@ export default function Settings() {
   const [importData, setImportData] = useState<any>(null);
   const [importSummary, setImportSummary] = useState<any[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  
+  // Export states
+  const [isExportModalVisible, setIsExportModalVisible] = useState(false);
+  const [selectedExportKeys, setSelectedExportKeys] = useState<string[]>(['hymnes', 'bible', 'notes', 'profile', 'others']);
+  
+  const exportGroups = [
+    { id: 'hymnes', label: "Cantiques (Favoris & Éditions)" },
+    { id: 'bible', label: "Bible (Signets, Favoris & Surlignage)" },
+    { id: 'notes', label: "Notes & Études Bibliques" },
+    { id: 'profile', label: "Profil & Paramètres" },
+    { id: 'others', label: "Autres données" }
+  ];
+
+  const confirmExport = async () => {
+    if (selectedExportKeys.length === 0) {
+      Alert.alert(t('info'), t('no_category_selected'));
+      return;
+    }
+    setIsExportModalVisible(false);
+    await exportAllAppData(selectedExportKeys);
+  };
+
   const [installedBibles, setInstalledBibles] = useState<any[]>([]);
   const [isBibleModalVisible, setIsBibleModalVisible] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -201,19 +242,29 @@ export default function Settings() {
 
   const syncDepartments = async () => {
     try {
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
       const cachedManifest = await AsyncStorage.getItem('pdf_manifest_cache');
+      const lastFetchStr = await AsyncStorage.getItem('manifest_last_fetch');
+      const now = Date.now();
+
       if (cachedManifest) {
         const data = JSON.parse(cachedManifest);
         if (data.departments) setAvailableDepartments(data.departments);
       }
 
-      const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`;
-      const response = await fetch(GITHUB_MANIFEST_URL);
-      if (response.ok) {
-        const remoteData = await response.json();
-        if (remoteData.departments) {
-          setAvailableDepartments(remoteData.departments);
-          await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
+      const lastFetch = lastFetchStr ? parseInt(lastFetchStr, 10) : 0;
+
+      // Only fetch if older than 30 days
+      if (now - lastFetch > THIRTY_DAYS_MS) {
+        const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json?t=${Date.now()}`;
+        const response = await fetch(GITHUB_MANIFEST_URL);
+        if (response.ok) {
+          const remoteData = await response.json();
+          if (remoteData.departments) {
+            setAvailableDepartments(remoteData.departments);
+            await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(remoteData));
+            await AsyncStorage.setItem('manifest_last_fetch', now.toString());
+          }
         }
       }
     } catch (e) {
@@ -332,36 +383,14 @@ export default function Settings() {
       others: { label: "Autres données", keys: [] }
     };
 
-    Object.keys(actualData).forEach(key => {
-      if (key.startsWith('hymne_edit_') || key.startsWith('hymn_favorites_')) {
-        summaryMap.hymnes.keys.push(key);
-      } else if (
-        key.startsWith('highlights_') ||
-        key.startsWith('word_highlights_') ||
-        key.startsWith('bookmarks_') ||
-        key.startsWith('bible_favorites') ||
-        key.startsWith('bible_bookmarks')
-      ) {
-        summaryMap.bible.keys.push(key);
-      } else if (
-        key === 'adventools_notes' ||
-        key === 'adventools_folders' ||
-        key === 'utiles_etude_serie' ||
-        key === 'utiles_themes_divers' ||
-        key.startsWith('pdf_notes_') ||
-        key.startsWith('pdf_bookmarks_')
-      ) {
-        summaryMap.notes.keys.push(key);
-      } else if (
-        key.startsWith('profile_') ||
-        key === 'app_settings' ||
-        key === 'app_history'
-      ) {
-        summaryMap.profile.keys.push(key);
-      } else {
-        summaryMap.others.keys.push(key);
-      }
-    });
+    if (actualData.bible_markup) summaryMap.bible.keys.push('bible_markup');
+    if (actualData.notes) summaryMap.notes.keys.push('notes');
+    if (actualData.folders) summaryMap.notes.keys.push('folders');
+    if (actualData.settings) summaryMap.profile.keys.push('settings');
+    if (actualData.history) summaryMap.others.keys.push('history');
+    if (actualData.favorites) summaryMap.others.keys.push('favorites');
+    if (actualData.downloads) summaryMap.others.keys.push('downloads');
+    if (actualData.asyncStorage) summaryMap.others.keys.push('asyncStorage');
 
     const finalSummary = Object.entries(summaryMap)
       .filter(([_, val]) => val.keys.length > 0)
@@ -388,11 +417,18 @@ export default function Settings() {
         return;
       }
 
-      const pairs: [string, string][] = keysToImport.map(k => [k, String(importData[k])]);
-      await AsyncStorage.multiSet(pairs);
+      // Reconstruct data object for importData
+      const filteredData: any = {};
+      keysToImport.forEach(k => {
+        filteredData[k] = importData[k];
+      });
+
+      // We need to import via lib/user-storage.ts importData function which knows how to insert into SQLite
+      const { importData: dbImport } = require('@/lib/user-storage');
+      await dbImport(filteredData);
 
       setIsImportModalVisible(false);
-      Alert.alert(t('success'), t('import_success'));
+      Alert.alert(t('success'), "Restauration terminée avec succès !");
       loadSettings();
     } catch (e) {
       console.error(e);
@@ -624,7 +660,14 @@ export default function Settings() {
                 <SettingItem
                   icon={<Shield size={18} color="#64748b" />}
                   label={t('my_departments')}
-                  value={`${userDepartments.length} sélectionnés`}
+                  value={
+                    userDepartments.map(id => {
+                      const d = availableDepartments.find(ad => ad.id === id);
+                      if (!d) return id;
+                      const langKey = globalSettings.language === 'Malagasy' ? 'mg' : (globalSettings.language === 'English' ? 'en' : 'fr');
+                      return d.translations[langKey] || d.translations.fr || d.id;
+                    }).join(', ')
+                  }
                   onPress={() => setIsDeptModalVisible(true)}
                   isLast
                 />
@@ -637,15 +680,15 @@ export default function Settings() {
               <SettingsGroup title={t('data_group')}>
                 <SettingItem
                   icon={<Save size={18} color="#3b82f6" />}
-                  label={t('full_backup')}
+                  label="Sauvegarder les données"
                   value="Notes, Bible, Profil, Cantiques..."
-                  onPress={exportAllAppData}
+                  onPress={() => setIsExportModalVisible(true)}
                 />
                 <SettingItem
                   icon={<Download size={18} color="#3b82f6" />}
                   label="Restauration Sécurisée"
                   value="Restaurer un fichier .advb"
-                  onPress={importAllAppData}
+                  onPress={handleStartImport}
                   isLast
                 />
               </SettingsGroup>
@@ -954,15 +997,18 @@ export default function Settings() {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="flex-row flex-wrap gap-2 mb-10">
                 {availableDepartments.map((dept) => {
-                  const isSelected = userDepartments.includes(dept);
+                  const isSelected = userDepartments.includes(dept.id);
+                  const langKey = globalSettings.language === 'Malagasy' ? 'mg' : (globalSettings.language === 'English' ? 'en' : 'fr');
+                  const label = dept.translations?.[langKey] || dept.translations?.fr || dept.id;
+
                   return (
                     <TouchableOpacity
-                      key={dept}
-                      onPress={() => toggleDepartment(dept)}
+                      key={dept.id}
+                      onPress={() => toggleDepartment(dept.id)}
                       className={`px-4 py-3 rounded-2xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
                     >
                       <View className="flex-row items-center">
-                        <Text className={`text-sm ${isSelected ? 'text-primary font-bold' : 'text-slate-400'}`}>{dept}</Text>
+                        <Text className={`text-sm ${isSelected ? 'text-primary font-bold' : 'text-slate-400'}`}>{label}</Text>
                         {isSelected && <Check size={14} color="#3b82f6" className="ml-2" />}
                       </View>
                     </TouchableOpacity>
@@ -973,6 +1019,58 @@ export default function Settings() {
 
             <TouchableOpacity onPress={() => setIsDeptModalVisible(false)} className="bg-primary p-5 rounded-3xl items-center">
               <Text className="text-white font-bold">{t('finish')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Export Modal */}
+      <Modal visible={isExportModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-slate-900 rounded-t-[40px] px-6 pt-8 pb-10 max-h-[85%] border-t border-slate-800">
+            <View className="flex-row justify-between items-center mb-6 px-2">
+              <View>
+                <Text className="text-white text-2xl font-bold" style={{ fontFamily: 'Lexend_700Bold' }}>Sauvegarder</Text>
+                <Text className="text-slate-500 mt-1">Choisissez les données à exporter</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsExportModalVisible(false)} className="w-10 h-10 rounded-full bg-slate-800 items-center justify-center">
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+              <View className="gap-3">
+                {exportGroups.map((group) => {
+                  const isSelected = selectedExportKeys.includes(group.id);
+                  return (
+                    <TouchableOpacity
+                      key={group.id}
+                      onPress={() => {
+                        if (isSelected) setSelectedExportKeys(selectedExportKeys.filter(k => k !== group.id));
+                        else setSelectedExportKeys([...selectedExportKeys, group.id]);
+                      }}
+                      className={`p-5 rounded-3xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View>
+                          <Text className={`text-base font-bold ${isSelected ? 'text-primary' : 'text-slate-300'}`}>{group.label}</Text>
+                        </View>
+                        <View className={`w-6 h-6 rounded-lg border-2 items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-slate-700'}`}>
+                          {isSelected && <Check size={14} color="white" />}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={confirmExport}
+              className="bg-primary p-5 rounded-[24px] items-center flex-row justify-center"
+            >
+              <Save size={20} color="white" className="mr-2" />
+              <Text className="text-white font-bold text-lg">Exporter la sauvegarde</Text>
             </TouchableOpacity>
           </View>
         </View>

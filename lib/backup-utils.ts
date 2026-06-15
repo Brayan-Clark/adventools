@@ -10,10 +10,10 @@ const BACKUP_FILE_EXTENSION = '.advb';
 /**
  * EXPORT COMPLET ET CHIFFRÉ DE L'APPLICATION
  */
-export async function exportAllAppData() {
+export async function exportAllAppData(categories?: string[]) {
   try {
     // 1. Collect all data from SQLite
-    const backupData = await exportAllData();
+    const backupData = await exportAllData(categories);
 
     // 2. Encrypt the data
     const jsonString = JSON.stringify(backupData);

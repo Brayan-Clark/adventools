@@ -36,9 +36,23 @@ const EDS_CLASSES = [
 ];
 
 const DEFAULT_DEPARTMENTS = [
-  "Pasteur", "Ancien", "Diacre", "Diaconesse", "Secrétaire", "Trésorier", 
-  "École du Sabbat", "Ministères Personnels", "Jeunesse", "Ministère de la Femme", 
-  "Ministère de l'Enfant", "Santé", "Communication", "Musique", "Éducation", "Famille"
+  { id: "pasteur", translations: { fr: "Pasteur", mg: "Mpitandrina", en: "Pastor" } },
+  { id: "ancien", translations: { fr: "Ancien", mg: "Loholona", en: "Elder" } },
+  { id: "diacre", translations: { fr: "Diacre", mg: "Diakona", en: "Deacon" } },
+  { id: "diaconesse", translations: { fr: "Diaconesse", mg: "Diakonisa", en: "Deaconess" } },
+  { id: "ecole_sabbat", translations: { fr: "École du Sabbat", mg: "Sekoly Sabata", en: "Sabbath School" } },
+  { id: "jeunesse", translations: { fr: "Jeunesse (AJA)", mg: "Tanora (AJA)", en: "Youth" } },
+  { id: "mifem", translations: { fr: "Ministères de la Femme", mg: "Minisiteran'ny Vehivavy", en: "Women's Ministries" } },
+  { id: "mienf", translations: { fr: "Ministères de l'Enfant", mg: "Minisiteran'ny Ankizy", en: "Children's Ministries" } },
+  { id: "publication", translations: { fr: "Publication", mg: "Fampielezam-boky", en: "Publishing" } },
+  { id: "communication", translations: { fr: "Communication", mg: "Serasera", en: "Communication" } },
+  { id: "sante", translations: { fr: "Santé", mg: "Fahasalamana", en: "Health" } },
+  { id: "tresorerie", translations: { fr: "Trésorerie", mg: "Firim-bolam-piangonana", en: "Treasury" } },
+  { id: "secretariat", translations: { fr: "Secrétariat", mg: "Sekretariat", en: "Secretariat" } },
+  { id: "musique", translations: { fr: "Musique", mg: "Mozika", en: "Music" } },
+  { id: "mip", translations: { fr: "Ministères Personnels", mg: "Asa Fitoriana", en: "Personal Ministries" } },
+  { id: "education", translations: { fr: "Éducation", mg: "Fanabeazana", en: "Education" } },
+  { id: "membre", translations: { fr: "Membre", mg: "Mpikambana", en: "Member" } }
 ];
 
 const STEPS = [
@@ -49,7 +63,7 @@ const STEPS = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, currentLang: selectedLanguage } = useTranslation();
   const { updateSettings } = useSettings();
 
   const [step, setStep] = useState(0);
@@ -57,7 +71,7 @@ export default function OnboardingScreen() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedEDS, setSelectedEDS] = useState('Lesona Lehibe (+ 35 taona)');
   const [departments, setDepartments] = useState<string[]>([]);
-  const [availableDepts, setAvailableDepts] = useState<string[]>(DEFAULT_DEPARTMENTS);
+  const [availableDepts, setAvailableDepts] = useState<any[]>(DEFAULT_DEPARTMENTS);
   const [saving, setSaving] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -70,20 +84,32 @@ export default function OnboardingScreen() {
     // Load departments from manifest
     const loadDepts = async () => {
       try {
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         const cached = await AsyncStorage.getItem('pdf_manifest_cache');
+        const lastFetchStr = await AsyncStorage.getItem('manifest_last_fetch');
+        const now = Date.now();
+
         if (cached) {
           const data = JSON.parse(cached);
           if (data.departments) setAvailableDepts(data.departments);
         }
-        const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/docs/manifest.json?t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.departments) {
-            setAvailableDepts(data.departments);
-            await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(data));
+
+        const lastFetch = lastFetchStr ? parseInt(lastFetchStr, 10) : 0;
+
+        if (now - lastFetch > THIRTY_DAYS_MS) {
+          const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json?t=${Date.now()}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.departments) {
+              setAvailableDepts(data.departments);
+              await AsyncStorage.setItem('pdf_manifest_cache', JSON.stringify(data));
+              await AsyncStorage.setItem('manifest_last_fetch', now.toString());
+            }
           }
         }
-      } catch (_) { }
+      } catch (e) {
+        console.log("Error loading departments");
+      }
     };
     loadDepts();
   }, []);
@@ -110,9 +136,9 @@ export default function OnboardingScreen() {
     if (!result.canceled) setPhoto(result.assets[0].uri);
   };
 
-  const toggleDept = (dept: string) => {
+  const toggleDept = (deptId: string) => {
     setDepartments(prev =>
-      prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
+      prev.includes(deptId) ? prev.filter(d => d !== deptId) : [...prev, deptId]
     );
   };
 
@@ -405,11 +431,14 @@ export default function OnboardingScreen() {
                 </Text>
                 <View className="flex-row flex-wrap gap-2 mb-8">
                   {availableDepts.map((dept) => {
-                    const selected = departments.includes(dept);
+                    const selected = departments.includes(dept.id);
+                    const langKey = selectedLanguage === 'Malagasy' ? 'mg' : (selectedLanguage === 'English' ? 'en' : 'fr');
+                    const label = dept.translations?.[langKey] || dept.translations?.fr || dept.id;
+
                     return (
                       <TouchableOpacity
-                        key={dept}
-                        onPress={() => toggleDept(dept)}
+                        key={dept.id}
+                        onPress={() => toggleDept(dept.id)}
                         className={`px-4 py-2.5 rounded-2xl border flex-row items-center ${selected
                             ? 'bg-[#195de6]/15 border-[#195de6]/40'
                             : 'bg-slate-900 border-slate-800'
@@ -422,7 +451,7 @@ export default function OnboardingScreen() {
                           className={`text-xs font-bold ${selected ? 'text-[#195de6]' : 'text-slate-400'
                             }`}
                         >
-                          {dept}
+                          {label}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -458,7 +487,12 @@ export default function OnboardingScreen() {
                     <Check size={16} color="#195de6" />
                   </View>
                   <Text className="text-slate-300 text-sm flex-1">
-                    {departments.join(', ')}
+                    {departments.map(id => {
+                      const d = availableDepts.find(ad => ad.id === id);
+                      if (!d) return id;
+                      const langKey = selectedLanguage === 'Malagasy' ? 'mg' : (selectedLanguage === 'English' ? 'en' : 'fr');
+                      return d.translations?.[langKey] || d.translations?.fr || d.id;
+                    }).join(', ')}
                   </Text>
                 </View>
               )}

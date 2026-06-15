@@ -242,10 +242,22 @@ export default function PDFLibrary() {
   };
 
   const isDocVisible = (doc: any) => {
+    if (userDepartments.includes("pasteur") || userDepartments.includes("ancien")) return true;
     if (userDepartments.includes("Pasteur") || userDepartments.includes("Ancien")) return true;
+
     if (!doc.tags || doc.tags.length === 0) return true;
     if (doc.tags.includes("Tous")) return true;
-    return doc.tags.some((tag: string) => userDepartments.includes(tag));
+
+    return doc.tags.some((tag: string) => {
+      const matchedDept = manifest?.departments?.find((d: any) => 
+        d.id === tag || 
+        d.translations?.fr === tag || 
+        d.translations?.mg === tag || 
+        d.translations?.en === tag
+      );
+      const tagId = matchedDept ? matchedDept.id : tag;
+      return userDepartments.includes(tagId) || userDepartments.includes(tag);
+    });
   };
 
   const SmartCover = ({ title, categoryId, size = "md" }: { title: string, categoryId: string, size?: "sm" | "md" }) => {

@@ -14,6 +14,7 @@ const COLLECTION_BASE_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adve
 
 interface Song {
   id: string;
+  c_num?: string;
   title: string;
   url: string;
 }
@@ -122,8 +123,8 @@ export default function PlaybacksSongsScreen() {
   };
 
   const filteredSongs = useMemo(() => {
-    let result = songs.filter(song => 
-      song.id.toString().includes(searchQuery) || 
+    let result = songs.filter(song =>
+      (song.c_num || song.id).toString().includes(searchQuery) ||
       song.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -258,7 +259,7 @@ export default function PlaybacksSongsScreen() {
     router.push({
       pathname: '/audio/player',
       params: {
-        title: `N° ${song.id} - ${song.title}`,
+        title: `N° ${song.c_num || song.id} - ${song.title}`,
         url: url,
         isLocal: isDownloaded ? 'true' : 'false',
         subtext: collectionTitle,
@@ -282,11 +283,11 @@ export default function PlaybacksSongsScreen() {
           className="p-4 flex-row items-center"
         >
           <View className={`w-10 h-10 rounded-xl items-center justify-center ${isDownloaded ? 'bg-emerald-500/10' : 'bg-slate-800'}`}>
-             <Text className={`font-bold ${isDownloaded ? 'text-emerald-500' : 'text-slate-400'}`} style={{ fontFamily: fontFamilyBold }}>{item.id}</Text>
+             <Text className={`font-bold ${isDownloaded ? 'text-emerald-500' : 'text-slate-400'}`} style={{ fontFamily: fontFamilyBold }}>{item.c_num || item.id}</Text>
           </View>
           
           <View className="ml-4 flex-1">
-            <Text className="text-white font-bold text-sm" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>{item.title}</Text>
+            <Text className="text-white font-bold text-sm" numberOfLines={1} style={{ fontFamily: fontFamilyBold }}>N° {item.c_num || item.id} - {item.title}</Text>
             <View className="flex-row items-center mt-1">
                <Smartphone size={10} color={isDownloaded ? '#22c55e' : '#64748b'} />
                <Text className={`text-[10px] ml-1 uppercase font-bold ${isDownloaded ? 'text-emerald-500' : 'text-slate-500'}`} style={{ fontFamily: fontFamilyBold }}>
