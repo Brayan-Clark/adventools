@@ -18,6 +18,15 @@
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
   },
   {
+    "id": "fanompoam-pivavahana",
+    "title": "Hira Fanompoam Pivavahana",
+    "lang": "Malagasy",
+    "count": 2,
+    "color": "#60b2a5",
+    "bg": "bg-cyan-500/10",
+    "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
+  },
+  {
     "id": "hira-faneva_fipikri",
     "title": "Hira Faneva FIPIKRI",
     "lang": "Malagasy",
@@ -34,7 +43,7 @@
     "color": "#06b6d4",
     "bg": "bg-cyan-500/10",
     "image": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/assets/images/Cantique.png"
-  },  
+  },
   {
     "id": "hira-faneva_ja",
     "title": "Hira Faneva JA",
