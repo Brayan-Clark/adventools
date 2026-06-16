@@ -1,20 +1,20 @@
+import { AppText as Text } from '@/components/ui/AppText';
 import { loadDatabase } from '@/lib/database';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import { useSettings } from '@/lib/settings-context';
-import { getSetting, setSetting, saveHistory } from '@/lib/user-storage';
+import { getSetting, saveHistory, setSetting } from '@/lib/user-storage';
 import { cn } from '@/lib/utils';
-import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, ChevronLeft, ChevronRight, Edit3, Heart, Music, Save, Share2, X, Grid3X3, Play, Pause, Square, Rewind, FastForward } from 'lucide-react-native';
-import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppText as Text } from '@/components/ui/AppText';
-import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 import { Audio } from 'expo-av';
+import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ArrowLeft, ChevronLeft, ChevronRight, Edit3, FastForward, Heart, Music, Pause, Play, Rewind, Save, Share2, Square, X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function HymneDetail() {
@@ -297,22 +297,32 @@ export default function HymneDetail() {
 
             const net = await NetInfo.fetch();
             const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
-            const CACHE_FILE = `${PB_DIR}cache_v2_${collectionId}.json`;
+            const CACHE_FILE = `${PB_DIR}cache_v3_${collectionId}.json`;
             
             let songs = [];
+            
+            // Try cache first (to save data)
             const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
             if (cacheInfo.exists) {
               songs = JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE));
-            } else if (net.isConnected) {
-              const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/${collectionId}.json`);
-              if (res.ok) {
-                songs = await res.json();
-                await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
-                await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(songs));
+            }
+            
+            // Only fetch from GitHub if cache doesn't exist OR if explicitly refreshing
+            // The audio manifests are updated when downloading hymn databases in the store
+            if (songs.length === 0 && net.isConnected) {
+              try {
+                const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/${collectionId}.json`);
+                if (res.ok) {
+                  songs = await res.json();
+                  await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
+                  await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(songs));
+                }
+              } catch (fetchError) {
+                console.log('Failed to fetch from GitHub', fetchError);
               }
             }
             
-            const matchingSongs = songs.filter((s: any) => s.c_num === result.c_num.toString());
+            const matchingSongs = songs.filter((s: any) => s.c_num?.toString() === result.c_num.toString());
             if (matchingSongs.length > 0) {
               setHasAudio(true);
               setAvailablePlaybacks(matchingSongs);

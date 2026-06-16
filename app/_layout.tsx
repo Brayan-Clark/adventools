@@ -5,7 +5,6 @@ import { useFonts } from 'expo-font';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import * as QuickActions from 'expo-quick-actions';
-import { useQuickActionRouting } from 'expo-quick-actions/router';
 import { Stack, router } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
@@ -126,7 +125,6 @@ export default function RootLayout() {
 
 function RootNavigator() {
   useAutoUpdater();
-  useQuickActionRouting();
   const { isLoading } = useSettings();
   
   // true = still checking AsyncStorage, overlay shown to prevent flash
@@ -150,6 +148,17 @@ function RootNavigator() {
 
       // Restore study reminders from saved settings (needed after app rebuild)
       restoreStudyReminders();
+
+      // Handle Quick Actions (App Shortcuts) — must use router singleton here,
+      // NOT useQuickActionRouting() which is forbidden in root layout
+      if (QuickActions.initial && (QuickActions.initial as any)?.params?.href) {
+        setTimeout(() => router.navigate((QuickActions.initial as any).params.href), 100);
+      }
+      const qaSub = QuickActions.addListener((action: any) => {
+        if (action?.params?.href) {
+          router.navigate(action.params.href);
+        }
+      });
 
       // Configure App Shortcuts (Long Press on App Icon)
       QuickActions.setItems([
@@ -233,30 +242,29 @@ function RootNavigator() {
     return () => {
       subscription.remove();
       linkingSubscription.remove();
+      qaSub?.remove?.();
     };
   }, [isLoading]);
 
-  if (checking) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: '#060d1f',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      />
-    );
-  }
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="utiles/lesona" options={{ headerShown: false }} />
-      <Stack.Screen name="audio/player" options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="weather/index" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="utiles/lesona" options={{ headerShown: false }} />
+        <Stack.Screen name="audio/player" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="weather/index" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'none' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+      {checking && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#060d1f',
+          }}
+        />
+      )}
+    </>
   );
 }

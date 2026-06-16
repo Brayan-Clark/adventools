@@ -1,5 +1,5 @@
 import { HymnDatabaseManager } from '@/components/hymnes/HymnDatabaseManager';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft } from 'lucide-react-native';
 import React from 'react';
@@ -9,8 +9,6 @@ import { AppText as Text } from '@/components/ui/AppText';
 
 
 export default function HymneStore() {
-  const router = useRouter();
-
   return (
     <SafeAreaView className="flex-1 bg-background-dark">
       <StatusBar style="light" />

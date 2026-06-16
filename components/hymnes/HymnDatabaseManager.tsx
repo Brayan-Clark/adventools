@@ -1,13 +1,46 @@
+import { AppText as Text } from '@/components/ui/AppText';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { CheckCircle2, CloudDownload, Music, RefreshCw, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
-import { AppText as Text } from '@/components/ui/AppText';
 
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
+const AUDIO_MANIFEST_BASE_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/';
+
+// Known audio collections used by hymn databases
+const KNOWN_AUDIO_COLLECTIONS = ['fihirana-adventista', 'fanompoam-pivavahana', 'hira-fameno'];
+
+// Function to download audio manifest for a collection
+const downloadAudioManifest = async (collectionId: string): Promise<void> => {
+  try {
+    const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
+    const CACHE_FILE = `${PB_DIR}cache_v3_${collectionId}.json`;
+    
+    const res = await fetch(`${AUDIO_MANIFEST_BASE_URL}${collectionId}.json`);
+    if (res.ok) {
+      const data = await res.json();
+      await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
+      await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(data));
+      console.log(`Updated audio manifest for ${collectionId}`);
+    }
+  } catch (e) {
+    console.log(`Failed to download audio manifest for ${collectionId}`, e);
+  }
+};
+
+// Function to update all audio manifests
+const updateAllAudioManifests = async (): Promise<void> => {
+  try {
+    for (const collectionId of KNOWN_AUDIO_COLLECTIONS) {
+      await downloadAudioManifest(collectionId);
+    }
+  } catch (e) {
+    console.log('Failed to update audio manifests', e);
+  }
+};
 
 export function HymnDatabaseManager() {
   const [manifest, setManifest] = useState<any>(null);
@@ -108,6 +141,9 @@ export function HymnDatabaseManager() {
         installedVersions[version.id] = version.version || 1;
         await AsyncStorage.setItem('hymn_installed_versions', JSON.stringify(installedVersions));
 
+        // Update audio manifests
+        await updateAllAudioManifests();
+
         await checkLocalFiles();
         Alert.alert("Terminé", `${version.name} a été téléchargé avec succès.`);
       }
@@ -148,8 +184,37 @@ export function HymnDatabaseManager() {
 
   if (loading && !manifest) return <ActivityIndicator color="#ec4899" />;
 
+  const updateAllAudioManifestsHandler = async () => {
+    Alert.alert(
+      "Mettre à jour les audio",
+      "Cela va télécharger les manifests audio pour toutes les bases de données installées. Continuer?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Mettre à jour",
+          onPress: async () => {
+            try {
+              await updateAllAudioManifests();
+              Alert.alert("Terminé", "Les manifests audio ont été mis à jour.");
+            } catch (e) {
+              Alert.alert("Erreur", "La mise à jour a échoué.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View className="gap-4">
+      <TouchableOpacity
+        onPress={updateAllAudioManifestsHandler}
+        className="bg-blue-600/20 border border-blue-500/30 rounded-2xl p-4 flex-row items-center justify-center"
+      >
+        <RefreshCw size={18} color="#3b82f6" />
+        <Text className="text-blue-400 font-bold text-sm ml-2">Mettre à jour tous les manifests audio</Text>
+      </TouchableOpacity>
+
       {manifest?.versions.map((v: any) => {
         const isBuiltIn = HYMNE_SOURCES[v.file.toLowerCase()];
         const isLocal = localFiles[v.file.toLowerCase()]?.exists || isBuiltIn;
