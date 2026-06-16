@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hira Fameno - Gestion des Chants</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .form-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+
+        .form-container h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .list-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+
+        .list-container h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .cantique-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .cantique-item:hover {
+            transform: translateX(5px);
+        }
+
+        .cantique-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cantique-num {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .cantique-title {
+            font-size: 1.3em;
+            color: #212529;
+            font-weight: 600;
+        }
+
+        .cantique-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .cantique-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            font-size: 30px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .close:hover {
+            color: #dc3545;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            display: none;
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Hira Fameno - Gestion des Chants</h1>
+
+        <div class="form-container">
+            <h2>Ajouter un chant</h2>
+            <form id="addForm">
+                <div class="form-group">
+                    <label for="c_num">Numéro</label>
+                    <input type="number" id="c_num" required>
+                </div>
+                <div class="form-group">
+                    <label for="c_title">Titre</label>
+                    <input type="text" id="c_title" required>
+                </div>
+                <div class="form-group">
+                    <label for="c_key">Tonalité</label>
+                    <input type="text" id="c_key" placeholder="Ex: Do, Ré, Mi...">
+                </div>
+                <div class="form-group">
+                    <label for="C_author">Auteur</label>
+                    <input type="text" id="C_author" placeholder="Nom de l'auteur">
+                </div>
+                <div class="form-group">
+                    <label for="c_categories">Catégories</label>
+                    <input type="text" id="c_categories" placeholder="Ex: Louange, Adoration...">
+                </div>
+                <div class="form-group">
+                    <label for="c_content">Contenu</label>
+                    <textarea id="c_content" placeholder="Paroles du chant..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="c_playbacks">Playbacks</label>
+                    <input type="text" id="c_playbacks" placeholder="URL ou référence des playbacks">
+                </div>
+                <button type="submit" class="btn btn-primary">Ajouter</button>
+                <button type="reset" class="btn btn-secondary">Réinitialiser</button>
+            </form>
+        </div>
+
+        <div class="list-container">
+            <h2>Liste des chants</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Rechercher un chant...">
+            </div>
+            <div id="cantiqueList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"></path>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    <p>Aucun chant trouvé</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modifier le chant</h2>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="edit_id">
+                <div class="form-group">
+                    <label for="edit_c_num">Numéro</label>
+                    <input type="number" id="edit_c_num" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_c_title">Titre</label>
+                    <input type="text" id="edit_c_title" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_c_key">Tonalité</label>
+                    <input type="text" id="edit_c_key">
+                </div>
+                <div class="form-group">
+                    <label for="edit_C_author">Auteur</label>
+                    <input type="text" id="edit_C_author">
+                </div>
+                <div class="form-group">
+                    <label for="edit_c_categories">Catégories</label>
+                    <input type="text" id="edit_c_categories">
+                </div>
+                <div class="form-group">
+                    <label for="edit_c_content">Contenu</label>
+                    <textarea id="edit_c_content"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit_c_playbacks">Playbacks</label>
+                    <input type="text" id="edit_c_playbacks">
+                </div>
+                <button type="submit" class="btn btn-success">Enregistrer</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="viewTitle">Détails du chant</h2>
+                <span class="close" onclick="closeViewModal()">&times;</span>
+            </div>
+            <div id="viewContent">
+                <div class="cantique-info" style="margin-bottom: 20px;">
+                    <strong>Numéro:</strong> <span id="viewNum"></span><br>
+                    <strong>Titre:</strong> <span id="viewTitleText"></span><br>
+                    <strong>Auteur:</strong> <span id="viewAuthor"></span><br>
+                    <strong>Tonalité:</strong> <span id="viewKey"></span><br>
+                    <strong>Catégorie:</strong> <span id="viewCategories"></span><br>
+                    <strong>Playbacks:</strong> <span id="viewPlaybacks"></span>
+                </div>
+                <div class="form-group">
+                    <label>Contenu:</label>
+                    <div id="viewContentText" style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"></div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="closeViewModal()" style="margin-top: 20px;">Fermer</button>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8081/api/cantique';
+
+        // Charger la liste des chants
+        async function loadCantiques() {
+            try {
+                const response = await fetch(API_URL);
+                const cantiques = await response.json();
+                displayCantiques(cantiques);
+            } catch (error) {
+                showNotification('Erreur lors du chargement', 'error');
+            }
+        }
+
+        // Afficher les chants
+        function displayCantiques(cantiques) {
+            const list = document.getElementById('cantiqueList');
+            
+            if (cantiques.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                        <p>Aucun chant trouvé</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = cantiques.map(c => `
+                <div class="cantique-item">
+                    <div class="cantique-header">
+                        <span class="cantique-num">#${c.c_num}</span>
+                        <span class="cantique-title">${c.c_title}</span>
+                    </div>
+                    <div class="cantique-info">
+                        ${c.C_author ? `Auteur: ${c.C_author}` : ''} 
+                        ${c.c_key ? `| Tonalité: ${c.c_key}` : ''} 
+                        ${c.c_categories ? `| Catégorie: ${c.c_categories}` : ''}
+                    </div>
+                    <div class="cantique-actions">
+                        <button class="btn btn-secondary" onclick="viewCantique(${c.id})">Voir</button>
+                        <button class="btn btn-success" onclick="editCantique(${c.id})">Modifier</button>
+                        <button class="btn btn-danger" onclick="deleteCantique(${c.id})">Supprimer</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Ajouter un chant
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                c_num: parseInt(document.getElementById('c_num').value),
+                c_title: document.getElementById('c_title').value,
+                c_key: document.getElementById('c_key').value,
+                C_author: document.getElementById('C_author').value,
+                c_categories: document.getElementById('c_categories').value,
+                c_content: document.getElementById('c_content').value,
+                c_playbacks: document.getElementById('c_playbacks').value
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showNotification('Chant ajouté avec succès!', 'success');
+                    document.getElementById('addForm').reset();
+                    loadCantiques();
+                } else {
+                    showNotification('Erreur lors de l\'ajout', 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur de connexion', 'error');
+            }
+        });
+
+        // Voir un chant
+        async function viewCantique(id) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`);
+                const cantique = await response.json();
+                
+                document.getElementById('viewNum').textContent = cantique.c_num;
+                document.getElementById('viewTitleText').textContent = cantique.c_title;
+                document.getElementById('viewAuthor').textContent = cantique.C_author || 'Non renseigné';
+                document.getElementById('viewKey').textContent = cantique.c_key || 'Non renseigné';
+                document.getElementById('viewCategories').textContent = cantique.c_categories || 'Non renseigné';
+                document.getElementById('viewPlaybacks').textContent = cantique.c_playbacks || 'Non renseigné';
+                document.getElementById('viewContentText').textContent = cantique.c_content || 'Non renseigné';
+                document.getElementById('viewTitle').textContent = `#${cantique.c_num} - ${cantique.c_title}`;
+                
+                document.getElementById('viewModal').classList.add('active');
+            } catch (error) {
+                showNotification('Erreur lors de la récupération', 'error');
+            }
+        }
+
+        // Modifier un chant
+        async function editCantique(id) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`);
+                const cantique = await response.json();
+                
+                document.getElementById('edit_id').value = cantique.id;
+                document.getElementById('edit_c_num').value = cantique.c_num;
+                document.getElementById('edit_c_title').value = cantique.c_title;
+                document.getElementById('edit_c_key').value = cantique.c_key || '';
+                document.getElementById('edit_C_author').value = cantique.C_author || '';
+                document.getElementById('edit_c_categories').value = cantique.c_categories || '';
+                document.getElementById('edit_c_content').value = cantique.c_content || '';
+                document.getElementById('edit_c_playbacks').value = cantique.c_playbacks || '';
+                
+                document.getElementById('editModal').classList.add('active');
+            } catch (error) {
+                showNotification('Erreur lors de la récupération', 'error');
+            }
+        }
+
+        // Enregistrer les modifications
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit_id').value;
+            const data = {
+                c_num: parseInt(document.getElementById('edit_c_num').value),
+                c_title: document.getElementById('edit_c_title').value,
+                c_key: document.getElementById('edit_c_key').value,
+                C_author: document.getElementById('edit_C_author').value,
+                c_categories: document.getElementById('edit_c_categories').value,
+                c_content: document.getElementById('edit_c_content').value,
+                c_playbacks: document.getElementById('edit_c_playbacks').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showNotification('Chant modifié avec succès!', 'success');
+                    closeEditModal();
+                    loadCantiques();
+                } else {
+                    showNotification('Erreur lors de la modification', 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur de connexion', 'error');
+            }
+        });
+
+        // Supprimer un chant
+        async function deleteCantique(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce chant?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showNotification('Chant supprimé avec succès!', 'success');
+                    loadCantiques();
+                } else {
+                    showNotification('Erreur lors de la suppression', 'error');
+                }
+            } catch (error) {
+                showNotification('Erreur de connexion', 'error');
+            }
+        }
+
+        // Fermer le modal d'édition
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        // Fermer le modal de visualisation
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+
+        // Afficher une notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Recherche
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
+            const query = e.target.value.toLowerCase();
+            const response = await fetch(API_URL);
+            const cantiques = await response.json();
+            
+            const filtered = cantiques.filter(c => 
+                c.c_title.toLowerCase().includes(query) ||
+                c.c_num.toString().includes(query) ||
+                (c.C_author && c.C_author.toLowerCase().includes(query))
+            );
+            
+            displayCantiques(filtered);
+        });
+
+        // Charger au démarrage
+        loadCantiques();
+    </script>
+</body>
+</html>

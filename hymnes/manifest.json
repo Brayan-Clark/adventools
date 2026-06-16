@@ -49,6 +49,16 @@
       "size": "1 Mo",
       "isDefault": false,
       "version": 5
+    },
+    {
+      "id": "hira_fameno",
+      "name": "Hira Fameno",
+      "language": "Malagasy",
+      "file": "hira_fameno.db",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/hira_fameno.db",
+      "size": "1 Mo",
+      "isDefault": false,
+      "version": 1
     }
   ]
 }
