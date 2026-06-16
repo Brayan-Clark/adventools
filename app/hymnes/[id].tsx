@@ -11,7 +11,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft, ChevronLeft, ChevronRight, Edit3, FastForward, Heart, Music, Pause, Play, Rewind, Save, Share2, Square, X } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit3, FastForward, Heart, Music, Pause, Play, Rewind, Save, Share2, Square, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,9 @@ export default function HymneDetail() {
   const [audioPlaybacks, setAudioPlaybacks] = useState<{id: string, name: string, url: string}[]>([]);
   const [hasAudio, setHasAudio] = useState(false);
   const [availablePlaybacks, setAvailablePlaybacks] = useState<any[]>([]);
+  const [isAudioDownloaded, setIsAudioDownloaded] = useState(false);
+  const [downloadingAudio, setDownloadingAudio] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Inline Player states
   const [inlineSound, setInlineSound] = useState<Audio.Sound | null>(null);
@@ -158,6 +161,58 @@ export default function HymneDetail() {
       setActiveTrack(null);
     } finally {
       setIsBuffering(false);
+    }
+  };
+
+  const downloadAudio = async (url: string, artist: string, audioId: string) => {
+    try {
+      setDownloadingAudio(true);
+      setDownloadProgress(0);
+
+      const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
+      const METADATA_FILE = `${PB_DIR}metadata.json`;
+      const fileUri = `${PB_DIR}${artist}_${audioId}.mp3`;
+      const key = `${artist}-${audioId}`;
+
+      if (!(await FileSystem.getInfoAsync(PB_DIR)).exists) {
+        await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true });
+      }
+
+      const downloadResumable = FileSystem.createDownloadResumable(
+        url,
+        fileUri,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://www.hymnes.net/'
+          }
+        },
+        (dp) => {
+          const progress = dp.totalBytesWritten / dp.totalBytesExpectedToWrite;
+          setDownloadProgress(progress);
+        }
+      );
+
+      const result = await downloadResumable.downloadAsync();
+      if (result && result.status === 200) {
+        // Update metadata
+        let metadata: Record<string, boolean> = {};
+        const metaInfo = await FileSystem.getInfoAsync(METADATA_FILE);
+        if (metaInfo.exists) {
+          const metaContent = await FileSystem.readAsStringAsync(METADATA_FILE);
+          metadata = JSON.parse(metaContent);
+        }
+        metadata[key] = true;
+        await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(metadata));
+        
+        setIsAudioDownloaded(true);
+        Alert.alert("Terminé", "L'audio a été téléchargé avec succès.");
+      }
+    } catch (e) {
+      Alert.alert("Erreur", "Le téléchargement a échoué.");
+    } finally {
+      setDownloadingAudio(false);
+      setDownloadProgress(0);
     }
   };
 
@@ -326,13 +381,30 @@ export default function HymneDetail() {
             if (matchingSongs.length > 0) {
               setHasAudio(true);
               setAvailablePlaybacks(matchingSongs);
+              
+              // Check if audio is already downloaded
+              try {
+                const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
+                const METADATA_FILE = `${PB_DIR}metadata.json`;
+                const metaInfo = await FileSystem.getInfoAsync(METADATA_FILE);
+                if (metaInfo.exists) {
+                  const metaContent = await FileSystem.readAsStringAsync(METADATA_FILE);
+                  const downloadedSongs = JSON.parse(metaContent);
+                  const key = `${collectionId}-${matchingSongs[0].id}`;
+                  setIsAudioDownloaded(!!downloadedSongs[key]);
+                }
+              } catch (e) {
+                setIsAudioDownloaded(false);
+              }
             } else {
               setHasAudio(false);
               setAvailablePlaybacks([]);
+              setIsAudioDownloaded(false);
             }
           } catch (e) {
             setHasAudio(false);
             setAvailablePlaybacks([]);
+            setIsAudioDownloaded(false);
           }
         }
       } catch (e) {
@@ -482,10 +554,34 @@ export default function HymneDetail() {
                     <Text className="text-white font-bold text-sm" numberOfLines={1}>{activeTrack.title}</Text>
                     <Text className="text-blue-400 text-[10px] mt-0.5 uppercase tracking-widest">{activeTrack.artist}</Text>
                   </View>
-                  <TouchableOpacity onPress={stopPlayer} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
-                    <Square size={14} color="#f87171" fill="#f87171" />
-                  </TouchableOpacity>
+                  <View className="flex-row items-center gap-2">
+                    {!isAudioDownloaded && !downloadingAudio && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          const song = availablePlaybacks[0];
+                          downloadAudio(song.url, hymn.c_playbacks, song.id);
+                        }}
+                        className="w-8 h-8 rounded-full bg-green-500/10 items-center justify-center border border-green-500/20"
+                      >
+                        <Download size={14} color="#10b981" />
+                      </TouchableOpacity>
+                    )}
+                    {downloadingAudio && (
+                      <View className="w-8 h-8 rounded-full bg-green-500/10 items-center justify-center border border-green-500/20">
+                        <ActivityIndicator size="small" color="#10b981" />
+                      </View>
+                    )}
+                    <TouchableOpacity onPress={stopPlayer} className="w-8 h-8 rounded-full bg-slate-800 items-center justify-center">
+                      <Square size={14} color="#f87171" fill="#f87171" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+                
+                {downloadingAudio && (
+                  <View className="w-full h-1 bg-slate-800 rounded-full mb-3 overflow-hidden">
+                    <View className="h-full bg-green-500 rounded-full" style={{ width: `${downloadProgress * 100}%` }} />
+                  </View>
+                )}
                 
                 <View className="w-full h-1 bg-slate-800 rounded-full mb-3 overflow-hidden">
                    <View className="h-full bg-blue-500 rounded-full" style={{ width: `${duration > 0 ? (position/duration)*100 : 0}%` }} />
