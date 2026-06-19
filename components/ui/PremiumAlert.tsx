@@ -17,6 +17,7 @@ interface PremiumAlertProps {
   type?: AlertType;
   onClose: () => void;
   onConfirm?: () => void; // New: optional confirmation action
+  onCancel?: () => void;  // New: optional action when the Cancel button is pressed
   confirmText?: string;
   cancelText?: string;   // New: optional cancel text
 }
@@ -28,10 +29,16 @@ export const PremiumAlert = ({
   type = 'info', 
   onClose,
   onConfirm,
+  onCancel,
   confirmText = 'OK',
   cancelText = 'Annuler'
 }: PremiumAlertProps) => {
-  
+
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    onClose();
+  };
+
   const getIcon = () => {
     switch (type) {
       case 'success': return <CheckCircle2 size={32} color="#10b981" />;
@@ -77,8 +84,8 @@ export const PremiumAlert = ({
           
           <View className="w-full flex-row gap-3">
             {onConfirm && (
-              <TouchableOpacity 
-                onPress={onClose}
+              <TouchableOpacity
+                onPress={handleCancel}
                 className="flex-1 bg-white/5 border border-white/10 py-4 rounded-2xl items-center"
               >
                 <Text className="text-slate-400 font-bold" style={{ fontFamily: 'Lexend_600SemiBold' }}>

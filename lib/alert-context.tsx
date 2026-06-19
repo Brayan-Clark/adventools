@@ -9,6 +9,8 @@ interface AlertOptions {
   cancelText?: string;
   /** When provided, a Cancel button is shown and this runs on confirm. */
   onConfirm?: () => void;
+  /** Optional action when the Cancel button is pressed. */
+  onCancel?: () => void;
 }
 
 interface AlertContextType {
@@ -44,6 +46,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         confirmText={options.confirmText}
         cancelText={options.cancelText}
         onConfirm={options.onConfirm}
+        onCancel={options.onCancel}
         onClose={handleClose}
       />
     </AlertContext.Provider>

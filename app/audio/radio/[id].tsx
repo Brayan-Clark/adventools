@@ -1,8 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Download, PlayCircle, Clock, Trash2, CheckCircle, Smartphone, Globe, RefreshCcw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, TouchableOpacity, View, Alert } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import NetInfo from '@react-native-community/netinfo';
@@ -29,6 +31,8 @@ const ITEMS_PER_PAGE = 15;
 
 export default function PodcastEpisodesScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams() as any;
   const { title, streamUrl } = params;
   
@@ -51,17 +55,21 @@ export default function PodcastEpisodesScreen() {
     const toDelete = Object.keys(downloadedMetadata);
     if (toDelete.length === 0) return;
 
-    Alert.alert('Tout supprimer', `Voulez-vous supprimer les ${toDelete.length} épisodes téléchargés ?`, [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Tout supprimer', style: 'destructive', onPress: async () => {
-            try {
-                for (const id of toDelete) {
-                    await FileSystem.deleteAsync(`${AUDIO_DIR}${id}.mp3`, { idempotent: true });
-                }
-                saveMetadata({}, cachedRemoteFeed);
-            } catch (e) {}
-        }}
-    ]);
+    showAlert({
+      title: 'Tout supprimer',
+      message: `Voulez-vous supprimer les ${toDelete.length} épisodes téléchargés ?`,
+      type: 'error',
+      confirmText: 'Tout supprimer',
+      cancelText: 'Annuler',
+      onConfirm: async () => {
+        try {
+          for (const id of toDelete) {
+            await FileSystem.deleteAsync(`${AUDIO_DIR}${id}.mp3`, { idempotent: true });
+          }
+          saveMetadata({}, cachedRemoteFeed);
+        } catch (e) {}
+      },
+    });
   };
 
   const initAndLoad = async () => {
@@ -262,22 +270,26 @@ export default function PodcastEpisodesScreen() {
             return next;
         });
       }
-    } catch (e) { Alert.alert('Erreur', 'Echec du téléchargement.'); }
+    } catch (e) { showToast('Échec du téléchargement.', 'error'); }
     setDownloadingProgress(prev => { const n = {...prev}; delete n[ep.id]; return n; });
   };
 
   const deleteEpisode = async (epId: string) => {
-    Alert.alert('Supprimer', 'Voulez-vous supprimer ce fichier ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+    showAlert({
+      title: 'Supprimer',
+      message: 'Voulez-vous supprimer ce fichier ?',
+      type: 'error',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      onConfirm: async () => {
         try {
           await FileSystem.deleteAsync(`${AUDIO_DIR}${epId}.mp3`, { idempotent: true });
           const newMeta = { ...downloadedMetadata };
           delete newMeta[epId];
           saveMetadata(newMeta);
         } catch (e) {}
-      }}
-    ]);
+      },
+    });
   };
 
   const playEpisode = (ep: PodcastEpisode) => {
@@ -307,22 +319,21 @@ export default function PodcastEpisodesScreen() {
   const downloadAll = async () => {
     const toDownload = listToDisplay.filter(ep => !downloadedMetadata[ep.id]);
     if (toDownload.length === 0) {
-        Alert.alert('Info', 'Tout les épisodes affichés sont déjà téléchargés.');
+        showToast('Tous les épisodes affichés sont déjà téléchargés.', 'info');
         return;
     }
 
-    Alert.alert(
-      'Tout télécharger',
-      `Voulez-vous télécharger les ${toDownload.length} épisodes récents affichés ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Télécharger', onPress: async () => {
-             for (const ep of toDownload) {
-                await downloadEpisode(ep);
-             }
-        }}
-      ]
-    );
+    showAlert({
+      title: 'Tout télécharger',
+      message: `Voulez-vous télécharger les ${toDownload.length} épisodes récents affichés ?`,
+      confirmText: 'Télécharger',
+      cancelText: 'Annuler',
+      onConfirm: async () => {
+        for (const ep of toDownload) {
+          await downloadEpisode(ep);
+        }
+      },
+    });
   };
 
   const renderEpisodeCard = (ep: PodcastEpisode, section: 'local' | 'remote') => {

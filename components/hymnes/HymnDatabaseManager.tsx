@@ -5,7 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { CheckCircle2, CloudDownload, Music, RefreshCw, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 
 
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
@@ -84,6 +86,8 @@ const updateAllAudioManifests = async (manifest: any): Promise<number> => {
 };
 
 export function HymnDatabaseManager() {
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const [manifest, setManifest] = useState<any>(null);
   const [localFiles, setLocalFiles] = useState<Record<string, { size: number, exists: boolean, needsUpdate: boolean }>>({});
   const [loading, setLoading] = useState(true);
@@ -186,11 +190,11 @@ export function HymnDatabaseManager() {
         await updateAllAudioManifests(manifest);
 
         await checkLocalFiles();
-        Alert.alert("Terminé", `${version.name} a été téléchargé avec succès.`);
+        showToast(`${version.name} a été téléchargé avec succès.`, 'success');
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Erreur", "Le téléchargement a échoué.");
+      showToast("Le téléchargement a échoué.", 'error');
     } finally {
       setDownloading(prev => {
         const next = { ...prev };
@@ -201,54 +205,46 @@ export function HymnDatabaseManager() {
   };
 
   const deleteDatabase = async (version: any) => {
-    Alert.alert(
-      "Supprimer le recueil",
-      `Voulez-vous vraiment supprimer "${version.name}" ?`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Oui, supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const path = `${FileSystem.documentDirectory}SQLite/hymnes/${version.file}`;
-              await FileSystem.deleteAsync(path, { idempotent: true });
-              await checkLocalFiles();
-            } catch (e) {
-              Alert.alert("Erreur", "Le fichier n'a pas pu être supprimé.");
-            }
-          }
+    showAlert({
+      title: "Supprimer le recueil",
+      message: `Voulez-vous vraiment supprimer "${version.name}" ?`,
+      type: 'error',
+      confirmText: "Oui, supprimer",
+      cancelText: "Annuler",
+      onConfirm: async () => {
+        try {
+          const path = `${FileSystem.documentDirectory}SQLite/hymnes/${version.file}`;
+          await FileSystem.deleteAsync(path, { idempotent: true });
+          await checkLocalFiles();
+        } catch (e) {
+          showToast("Le fichier n'a pas pu être supprimé.", 'error');
         }
-      ]
-    );
+      },
+    });
   };
 
   if (loading && !manifest) return <ActivityIndicator color="#ec4899" />;
 
   const updateAllAudioManifestsHandler = async () => {
-    Alert.alert(
-      "Mettre à jour les audio",
-      "Cela va télécharger les manifests audio pour toutes les bases de données installées. Continuer?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Mettre à jour",
-          onPress: async () => {
-            try {
-              const count = await updateAllAudioManifests(manifest);
-              Alert.alert(
-                "Terminé",
-                count > 0
-                  ? `Les audio de ${count} collection(s) ont été mis à jour.`
-                  : "Aucune collection audio trouvée dans les recueils installés."
-              );
-            } catch (e) {
-              Alert.alert("Erreur", "La mise à jour a échoué.");
-            }
-          }
+    showAlert({
+      title: "Mettre à jour les audio",
+      message: "Cela va télécharger les manifests audio pour toutes les bases de données installées. Continuer?",
+      confirmText: "Mettre à jour",
+      cancelText: "Annuler",
+      onConfirm: async () => {
+        try {
+          const count = await updateAllAudioManifests(manifest);
+          showToast(
+            count > 0
+              ? `Les audio de ${count} collection(s) ont été mis à jour.`
+              : "Aucune collection audio trouvée dans les recueils installés.",
+            count > 0 ? 'success' : 'info'
+          );
+        } catch (e) {
+          showToast("La mise à jour a échoué.", 'error');
         }
-      ]
-    );
+      },
+    });
   };
 
   return (
