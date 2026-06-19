@@ -1,10 +1,12 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Play, Download, Headphones, CheckCircle, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { TouchableOpacity, View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../../../lib/settings-context';
 import { useTranslation } from '../../../lib/i18n';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // Audio mapping
@@ -18,6 +20,8 @@ const METADATA_FILE = `${BIBLE_DIR}metadata.json`;
 export default function BibleAudioChaptersScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams() as any;
   const { id, name, chapters } = params;
   
@@ -84,24 +88,28 @@ export default function BibleAudioChaptersScreen() {
         });
       }
     } catch (e) {
-      Alert.alert(t('error'), t('download_failed'));
+      showToast(t('download_failed'), 'error');
     }
     setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
   };
 
   const deleteChapter = (chapter: number) => {
     const key = getAudioKey(chapter);
-    Alert.alert(t('delete'), `${t('delete_audio_confirm')} (${t('chapters')} ${chapter})`, [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: async () => {
-          try {
-            await FileSystem.deleteAsync(getLocalFileUri(chapter), { idempotent: true });
-            const newMeta = { ...downloadedChapters };
-            delete newMeta[key];
-            saveMetadata(newMeta);
-          } catch (e) {}
-      }}
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: `${t('delete_audio_confirm')} (${t('chapters')} ${chapter})`,
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        try {
+          await FileSystem.deleteAsync(getLocalFileUri(chapter), { idempotent: true });
+          const newMeta = { ...downloadedChapters };
+          delete newMeta[key];
+          saveMetadata(newMeta);
+        } catch (e) {}
+      },
+    });
   };
 
   const handlePlayChapter = (chapter: number) => {
@@ -136,34 +144,34 @@ export default function BibleAudioChaptersScreen() {
   const downloadAll = async () => {
     const toDownload = chaptersList.filter(c => !downloadedChapters[getAudioKey(c)]);
     if (toDownload.length === 0) {
-      Alert.alert(t('info'), t('all_downloaded'));
+      showToast(t('all_downloaded'), 'info');
       return;
     }
 
-    Alert.alert(
-      t('download_all'),
-      `${t('download_all_confirm')} (${toDownload.length} chapters)`,
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('download'), onPress: async () => {
-             for (const c of toDownload) {
-                await downloadChapter(c);
-             }
-        }}
-      ]
-    );
+    showAlert({
+      title: t('download_all'),
+      message: `${t('download_all_confirm')} (${toDownload.length} chapters)`,
+      confirmText: t('download'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        for (const c of toDownload) {
+          await downloadChapter(c);
+        }
+      },
+    });
   };
 
   const deleteAll = async () => {
     const toDelete = chaptersList.filter(c => downloadedChapters[getAudioKey(c)]);
     if (toDelete.length === 0) return;
 
-    Alert.alert(
-      t('delete'),
-      `${t('delete_audio_confirm')} (${toDelete.length} ${t('chapters')})`,
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('delete'), style: 'destructive', onPress: async () => {
+    showAlert({
+      title: t('delete'),
+      message: `${t('delete_audio_confirm')} (${toDelete.length} ${t('chapters')})`,
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
             try {
               for (const c of toDelete) {
                 await FileSystem.deleteAsync(getLocalFileUri(c), { idempotent: true });
@@ -172,9 +180,8 @@ export default function BibleAudioChaptersScreen() {
               toDelete.forEach(c => delete newMeta[getAudioKey(c)]);
               saveMetadata(newMeta);
             } catch (e) {}
-        }}
-      ]
-    );
+      },
+    });
   };
 
   return (

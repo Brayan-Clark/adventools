@@ -1,7 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Play, Download, Search, Users, Trash2, Smartphone, CheckCircle, RefreshCcw } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { FlatList, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
@@ -27,6 +29,8 @@ const CACHE_FILE = (id: string) => `${ETUDES_DIR}cache_${id}.json`;
 export default function EtudesLessonsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams() as any;
   const { series: seriesId, title: seriesTitle, author: seriesAuthor } = params;
   
@@ -91,46 +95,45 @@ export default function EtudesLessonsScreen() {
   const downloadAll = async () => {
     const toDownload = lessons.filter(l => !downloadedLessons[getAudioKey(l.id)]);
     if (toDownload.length === 0) {
-      Alert.alert(t('info'), t('all_downloaded'));
+      showToast(t('all_downloaded'), 'info');
       return;
     }
 
-    Alert.alert(
-      t('download_all'),
-      `${t('download_all_confirm')} (${toDownload.length} files)`,
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('download'), onPress: async () => {
-             for (const l of toDownload) {
-                await downloadLesson(l);
-             }
-        }}
-      ]
-    );
+    showAlert({
+      title: t('download_all'),
+      message: `${t('download_all_confirm')} (${toDownload.length} files)`,
+      confirmText: t('download'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        for (const l of toDownload) {
+          await downloadLesson(l);
+        }
+      },
+    });
   };
 
   const deleteAll = async () => {
     const toDelete = lessons.filter(l => downloadedLessons[getAudioKey(l.id)]);
     if (toDelete.length === 0) return;
 
-    Alert.alert(
-      t('delete'),
-      `${t('delete_audio_confirm')} (${toDelete.length} files)`,
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('delete'), style: 'destructive', onPress: async () => {
-            try {
-              for (const l of toDelete) {
-                await FileSystem.deleteAsync(getLocalFileUri(l.id), { idempotent: true });
-              }
-              const newMeta = { ...downloadedLessons };
-              toDelete.forEach(l => delete newMeta[getAudioKey(l.id)]);
-              setDownloadedLessons(newMeta);
-              await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
-            } catch (e) {}
-        }}
-      ]
-    );
+    showAlert({
+      title: t('delete'),
+      message: `${t('delete_audio_confirm')} (${toDelete.length} files)`,
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        try {
+          for (const l of toDelete) {
+            await FileSystem.deleteAsync(getLocalFileUri(l.id), { idempotent: true });
+          }
+          const newMeta = { ...downloadedLessons };
+          toDelete.forEach(l => delete newMeta[getAudioKey(l.id)]);
+          setDownloadedLessons(newMeta);
+          await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
+        } catch (e) {}
+      },
+    });
   };
 
   const filteredLessons = useMemo(() => {
@@ -163,25 +166,29 @@ export default function EtudesLessonsScreen() {
         });
       }
     } catch (e) {
-      Alert.alert(t('error'), t('download_failed'));
+      showToast(t('download_failed'), 'error');
     }
     setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
   };
 
   const deleteLesson = (lesson: Lesson) => {
     const key = getAudioKey(lesson.id);
-    Alert.alert(t('delete'), t('delete_audio_confirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: async () => {
-          try {
-            await FileSystem.deleteAsync(getLocalFileUri(lesson.id), { idempotent: true });
-            const newMeta = { ...downloadedLessons };
-            delete newMeta[key];
-            setDownloadedLessons(newMeta);
-            await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
-          } catch (e) {}
-      }}
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: t('delete_audio_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        try {
+          await FileSystem.deleteAsync(getLocalFileUri(lesson.id), { idempotent: true });
+          const newMeta = { ...downloadedLessons };
+          delete newMeta[key];
+          setDownloadedLessons(newMeta);
+          await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(newMeta));
+        } catch (e) {}
+      },
+    });
   };
 
   const playLesson = (lesson: Lesson) => {

@@ -15,6 +15,7 @@ import { captureRef } from 'react-native-view-shot';
 import { AppText as Text } from '@/components/ui/AppText';
 import NetInfo from '@react-native-community/netinfo';
 import { checkMobileDataWarning } from '@/lib/data-saver';
+import { useToast } from '@/lib/toast-context';
 
 
 // ... (Rest of imports or constants)
@@ -70,6 +71,7 @@ const IMAGE_POOL = [
 export default function ShareVerse() {
   const { verseText, verseRef } = useLocalSearchParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const [bgType, setBgType] = useState<'gradient' | 'image' | 'custom' | 'online'>('gradient');
   const [selectedBg, setSelectedBg] = useState(0);
   const [selectedImg, setSelectedImg] = useState(0);
@@ -117,7 +119,7 @@ export default function ShareVerse() {
           onPress: async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission refusée', 'Désolé, nous avons besoin de la permission pour accéder à vos photos.');
+              showToast('Permission refusée : accès aux photos nécessaire.', 'error');
               return;
             }
 
@@ -139,7 +141,7 @@ export default function ShareVerse() {
           onPress: async () => {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== 'granted') {
-              Alert.alert('Permission refusée', 'Désolé, nous avons besoin de la permission pour accéder à votre appareil photo.');
+              showToast('Permission refusée : accès à l\'appareil photo nécessaire.', 'error');
               return;
             }
 
@@ -198,7 +200,7 @@ export default function ShareVerse() {
       // but user wants image for copy too.
       const uri = await captureImage();
       if (!uri) {
-        Alert.alert('Erreur', 'Impossible de générer l\'image.');
+        showToast('Impossible de générer l\'image.', 'error');
         setCapturing(false);
         return;
       }
@@ -208,26 +210,26 @@ export default function ShareVerse() {
           try {
             const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
             await Clipboard.setImageAsync(base64);
-            Alert.alert('Copié !', 'L\'image a été copiée dans le presse-papiers.');
+            showToast('L\'image a été copiée dans le presse-papiers.', 'success');
           } catch (e) {
             console.error("Copy failed", e);
             // Fallback to text if image copy fails
             await Clipboard.setStringAsync(`"${text}"\n\n— ${reference}`);
-            Alert.alert('Copié (Texte)', 'La copie d\'image a échoué, le texte a été copié à la place.');
+            showToast('Copie d\'image échouée : le texte a été copié à la place.', 'info');
           }
           break;
 
         case 'save':
           try {
             await MediaLibrary.createAssetAsync(uri);
-            Alert.alert('Enregistré !', 'L\'image a été enregistrée dans votre galerie.');
+            showToast('L\'image a été enregistrée dans votre galerie.', 'success');
           } catch (e) {
             console.error("Save failed", e);
             // Fallback to sharing if save fails (often due to permission)
             if (await Sharing.isAvailableAsync()) {
               await Sharing.shareAsync(uri);
             } else {
-              Alert.alert('Erreur', 'Impossible d\'enregistrer l\'image (Permission demandée).');
+              showToast('Impossible d\'enregistrer l\'image (permission requise).', 'error');
             }
           }
           break;
@@ -241,13 +243,13 @@ export default function ShareVerse() {
               UTI: 'public.png'
             });
           } else {
-            Alert.alert('Erreur', 'Le partage n\'est pas disponible sur cet appareil.');
+            showToast('Le partage n\'est pas disponible sur cet appareil.', 'error');
           }
           break;
       }
     } catch (error) {
       console.error('Share error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors du partage.');
+      showToast('Une erreur est survenue lors du partage.', 'error');
     } finally {
       setCapturing(false);
     }
