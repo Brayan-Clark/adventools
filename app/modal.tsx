@@ -4,6 +4,7 @@ import { getAvailableBibles } from '@/lib/bible';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { clearHistory } from '@/lib/user-storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -53,6 +54,7 @@ export default function Settings() {
     getRemoteAvailableLanguages
   } = useTranslation();
   const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [userDepartments, setUserDepartments] = useState<string[]>([]);
   const [isDeptModalVisible, setIsDeptModalVisible] = useState(false);
@@ -112,7 +114,7 @@ export default function Settings() {
 
   const confirmExport = async () => {
     if (selectedExportKeys.length === 0) {
-      Alert.alert(t('info'), t('no_category_selected'));
+      showToast(t('no_category_selected'), 'info');
       return;
     }
     setIsExportModalVisible(false);
@@ -335,26 +337,22 @@ export default function Settings() {
   };
 
   const handleClearHistory = async () => {
-    Alert.alert(
-      t('reset_history'),
-      t('clear_history_confirm'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('delete'),
-          style: 'destructive',
-          onPress: async () => {
-            await clearHistory();
-            Alert.alert(t('success'), t('history_cleared'));
-          }
-        }
-      ]
-    );
+    showAlert({
+      title: t('reset_history'),
+      message: t('clear_history_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        await clearHistory();
+        showToast(t('history_cleared'), 'success');
+      },
+    });
   };
 
   const handleChangePin = async () => {
     if (existingPin && oldPinInput !== existingPin) {
-      Alert.alert("Erreur", "L'ancien code PIN est incorrect.");
+      showToast("L'ancien code PIN est incorrect.", 'error');
       return;
     }
     if (newPinInput.length >= 4) {
@@ -362,9 +360,9 @@ export default function Settings() {
       setNewPinInput('');
       setOldPinInput('');
       setIsPinModalVisible(false);
-      Alert.alert(t('success'), "Le code PIN de vos notes a été modifié avec succès.");
+      showToast("Le code PIN de vos notes a été modifié avec succès.", 'success');
     } else {
-      Alert.alert("Erreur", "Le code PIN doit contenir au moins 4 caractères.");
+      showToast("Le code PIN doit contenir au moins 4 caractères.", 'error');
     }
   };
 
@@ -413,7 +411,7 @@ export default function Settings() {
       });
 
       if (keysToImport.length === 0) {
-        Alert.alert(t('info'), t('no_category_selected'));
+        showToast(t('no_category_selected'), 'info');
         return;
       }
 
@@ -429,11 +427,11 @@ export default function Settings() {
       await dbImport({ data: filteredData });
 
       setIsImportModalVisible(false);
-      Alert.alert(t('success'), "Restauration terminée avec succès !");
+      showToast("Restauration terminée avec succès !", 'success');
       loadSettings();
     } catch (e) {
       console.error(e);
-      Alert.alert(t('error'), t('import_error'));
+      showToast(t('import_error'), 'error');
     }
   };
 
@@ -792,27 +790,23 @@ export default function Settings() {
                   icon={<CircleHelp size={18} color="#64748b" />}
                   label={t('help')}
                   value="Email"
-                  onPress={() => Alert.alert(t('help'), t('contact_help_msg' as any))}
+                  onPress={() => showAlert({ title: t('help'), message: t('contact_help_msg' as any), type: 'info' })}
                 />
                 <SettingItem
                   icon={<User size={18} color="#8b5cf6" />}
                   label="Revoir l'introduction"
                   value="Onboarding"
                   onPress={() => {
-                    Alert.alert(
-                      "Revoir l'introduction",
-                      "Cela va relancer l'écran de bienvenue au prochain démarrage.",
-                      [
-                        { text: t('cancel'), style: 'cancel' },
-                        {
-                          text: "Relancer maintenant",
-                          onPress: async () => {
-                            await AsyncStorage.removeItem('adventools_onboarding_done');
-                            router.replace('/onboarding' as any);
-                          }
-                        }
-                      ]
-                    );
+                    showAlert({
+                      title: "Revoir l'introduction",
+                      message: "Cela va relancer l'écran de bienvenue au prochain démarrage.",
+                      confirmText: "Relancer maintenant",
+                      cancelText: t('cancel'),
+                      onConfirm: async () => {
+                        await AsyncStorage.removeItem('adventools_onboarding_done');
+                        router.replace('/onboarding' as any);
+                      },
+                    });
                   }}
                   isLast
                 />

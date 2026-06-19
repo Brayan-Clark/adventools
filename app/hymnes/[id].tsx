@@ -13,12 +13,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit3, FastForward, Heart, Music, Pause, Play, Rewind, Save, Share2, Square, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
 
 
 export default function HymneDetail() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { id, db: dbNameParam } = useLocalSearchParams();
   const dbName = (dbNameParam as string) || 'cantique.db';
 
@@ -157,7 +159,7 @@ export default function HymneDetail() {
       );
       setInlineSound(sound);
     } catch (e) {
-      Alert.alert("Erreur", "Impossible de lire la piste.");
+      showToast("Impossible de lire la piste.", 'error');
       setActiveTrack(null);
     } finally {
       setIsBuffering(false);
@@ -206,10 +208,10 @@ export default function HymneDetail() {
         await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(metadata));
         
         setIsAudioDownloaded(true);
-        Alert.alert("Terminé", "L'audio a été téléchargé avec succès.");
+        showToast("L'audio a été téléchargé avec succès.", 'success');
       }
     } catch (e) {
-      Alert.alert("Erreur", "Le téléchargement a échoué.");
+      showToast("Le téléchargement a échoué.", 'error');
     } finally {
       setDownloadingAudio(false);
       setDownloadProgress(0);
@@ -420,7 +422,7 @@ export default function HymneDetail() {
         }
       } catch (e) {
         console.error(e);
-        Alert.alert("Erreur", "Base de données introuvable.");
+        showToast("Base de données introuvable.", 'error');
         router.back();
       } finally {
         setLoading(false);
@@ -515,9 +517,9 @@ export default function HymneDetail() {
                       await setSetting(`hymne_edit_${dbName}_${id}`, editedContent);
                       setHymn({ ...hymn, c_content: editedContent });
                       setIsEditing(false);
-                      Alert.alert("Succès", "Modification enregistrée avec succès.");
+                      showToast("Modification enregistrée avec succès.", 'success');
                     } catch (e) {
-                      Alert.alert("Erreur", "Impossible d'enregistrer la modification.");
+                      showToast("Impossible d'enregistrer la modification.", 'error');
                     }
                   }}
                   className="mt-6 bg-green-600 py-4 rounded-2xl items-center flex-row justify-center"
@@ -650,7 +652,7 @@ export default function HymneDetail() {
                   onPress={async () => {
                     const textToCopy = `Cantique ${hymn.c_num}: ${hymn.c_title}\n\n${hymn.c_content}`;
                     await Clipboard.setStringAsync(textToCopy);
-                    Alert.alert("Exporté", "Le chant a été copié dans le presse-papier pour intégration.");
+                    showToast("Le chant a été copié dans le presse-papier.", 'success');
                   }}
                   className="w-11 h-11 rounded-full items-center justify-center bg-background-dark border border-slate-800"
                 >

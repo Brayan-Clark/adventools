@@ -38,6 +38,7 @@ import { initBibleMetadata } from '@/lib/bible';
 import { initializeNotificationChannel, restoreStudyReminders } from '@/lib/notifications';
 import { SettingsProvider, useSettings } from '@/lib/settings-context';
 import { ToastProvider } from '@/lib/toast-context';
+import { AlertProvider } from '@/lib/alert-context';
 import { useAutoUpdater } from '@/lib/updater';
 import { getSetting } from '@/lib/user-storage';
 
@@ -113,10 +114,12 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SettingsProvider>
         <ToastProvider>
-          <ThemeProvider value={DarkTheme}>
-            <StatusBar style="light" />
-            <RootNavigator />
-          </ThemeProvider>
+          <AlertProvider>
+            <ThemeProvider value={DarkTheme}>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </ThemeProvider>
+          </AlertProvider>
         </ToastProvider>
       </SettingsProvider>
     </SafeAreaProvider>
