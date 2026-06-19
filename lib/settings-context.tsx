@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getDefaultBibleForLanguage } from './bible';
 import { getSetting, setSetting, migrateFromAsyncStorage } from './user-storage';
+import { initSecurity } from './security';
 
 type AppSettings = {
   userName: string;
@@ -55,6 +56,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
+        // Load the per-device encryption key BEFORE any data encryption/decryption.
+        await initSecurity();
         await migrateFromAsyncStorage();
         await loadSettings();
     };

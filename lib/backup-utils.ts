@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { exportAllData, importData } from './user-storage';
-import { encryptData, decryptData } from './security';
+import { encryptBackup, decryptBackup } from './security';
 
 const BACKUP_FILE_EXTENSION = '.advb';
 
@@ -17,7 +17,7 @@ export async function exportAllAppData(categories?: string[]) {
 
     // 2. Encrypt the data
     const jsonString = JSON.stringify(backupData);
-    const encryptedData = encryptData(jsonString);
+    const encryptedData = encryptBackup(jsonString);
 
     // 3. Save to a temporary file
     const filename = `adventools_backup_${new Date().toISOString().split('T')[0]}${BACKUP_FILE_EXTENSION}`;
@@ -64,7 +64,7 @@ export async function readBackupFile() {
       jsonString = content;
     } else {
       // Encrypted backup
-      jsonString = decryptData(content);
+      jsonString = decryptBackup(content);
     }
 
     if (!jsonString || !jsonString.startsWith('{')) {

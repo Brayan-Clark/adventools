@@ -354,26 +354,37 @@ export default function HymneDetail() {
             const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
             const CACHE_FILE = `${PB_DIR}cache_v3_${collectionId}.json`;
             
-            let songs = [];
-            
-            // Try cache first (to save data)
+            // Offline-first / data-saving: serve the cached manifest and never
+            // hit the network on a normal hymn open. We only do a ONE-TIME fetch
+            // when the cache is completely missing (first use of this collection),
+            // which is unavoidable to know whether any audio exists at all.
+            // Refreshing existing manifests (to pick up newly-linked audio) is
+            // user-driven via the "Mettre à jour les manifests audio" button in
+            // the hymn store, and also runs automatically after a DB download.
+            let songs: any[] = [];
+
             const cacheInfo = await FileSystem.getInfoAsync(CACHE_FILE);
             if (cacheInfo.exists) {
-              songs = JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE));
+              try {
+                songs = JSON.parse(await FileSystem.readAsStringAsync(CACHE_FILE));
+              } catch {
+                songs = [];
+              }
             }
-            
-            // Only fetch from GitHub if cache doesn't exist OR if explicitly refreshing
-            // The audio manifests are updated when downloading hymn databases in the store
+
             if (songs.length === 0 && net.isConnected) {
               try {
                 const res = await fetch(`https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/${collectionId}.json`);
                 if (res.ok) {
-                  songs = await res.json();
-                  await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
-                  await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(songs));
+                  const fresh = await res.json();
+                  if (Array.isArray(fresh)) {
+                    songs = fresh;
+                    await FileSystem.makeDirectoryAsync(PB_DIR, { intermediates: true }).catch(() => {});
+                    await FileSystem.writeAsStringAsync(CACHE_FILE, JSON.stringify(songs));
+                  }
                 }
               } catch (fetchError) {
-                console.log('Failed to fetch from GitHub', fetchError);
+                console.log('Failed to fetch playback manifest', fetchError);
               }
             }
             

@@ -3,6 +3,7 @@ import { loadDatabase } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { encryptData, decryptData } from './security';
+import { uniqueId } from './utils';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -182,7 +183,7 @@ export async function getAllNotes() {
 
 export async function saveNote(note: any) {
     const database = await initUserStorage();
-    const noteId = note.id || Date.now().toString() + Math.random().toString();
+    const noteId = note.id || uniqueId();
     const noteType = note.type || 'text';
     const noteDate = note.date || Date.now();
 
@@ -227,17 +228,17 @@ export async function saveNote(note: any) {
     if (note.attachments) {
         if (note.attachments.images) {
             for (let uri of note.attachments.images) {
-                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri) VALUES (?, ?, ?, ?)', [Date.now() + Math.random().toString(), noteId, 'image', uri]);
+                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri) VALUES (?, ?, ?, ?)', [uniqueId(), noteId, 'image', uri]);
             }
         }
         if (note.attachments.videos) {
             for (let uri of note.attachments.videos) {
-                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri) VALUES (?, ?, ?, ?)', [Date.now() + Math.random().toString(), noteId, 'video', uri]);
+                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri) VALUES (?, ?, ?, ?)', [uniqueId(), noteId, 'video', uri]);
             }
         }
         if (note.attachments.voice) {
             for (let v of note.attachments.voice) {
-                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri, duration) VALUES (?, ?, ?, ?, ?)', [Date.now() + Math.random().toString(), noteId, 'voice', v.uri, v.duration || null]);
+                await database.runAsync('INSERT INTO attachments (id, note_id, type, uri, duration) VALUES (?, ?, ?, ?, ?)', [uniqueId(), noteId, 'voice', v.uri, v.duration || null]);
             }
         }
     }
@@ -388,7 +389,15 @@ export async function exportAllData(categories?: string[]) {
     // Notes
     if (wants('notes')) {
         data.folders = await database.getAllAsync('SELECT * FROM folders');
-        data.notes = await database.getAllAsync('SELECT * FROM notes');
+        // Note content is stored encrypted with the per-device key. Decrypt it to
+        // plaintext here so the backup stays portable across devices (the backup
+        // file itself is encrypted by the portable backup envelope). On import the
+        // content is re-encrypted with the destination device's key.
+        const noteRows: any[] = await database.getAllAsync('SELECT * FROM notes');
+        data.notes = noteRows.map((n: any) => ({
+            ...n,
+            content: n.content ? decryptData(n.content) : n.content,
+        }));
         data.attachments = await database.getAllAsync('SELECT * FROM attachments');
     }
 
@@ -474,7 +483,18 @@ export async function importData(backup: any) {
             for (let f of d.folders) await database.runAsync('INSERT OR REPLACE INTO folders (id, name) VALUES (?, ?)', [f.id, f.name]);
         }
         if (d.notes) {
-            for (let n of d.notes) await database.runAsync('INSERT OR REPLACE INTO notes (id, type, title, content, color, folder_id, date) VALUES (?, ?, ?, ?, ?, ?, ?)', [n.id, n.type, n.title, n.content, n.color, n.folder_id, n.date]);
+            for (let n of d.notes) {
+                // Normalise content to exactly one layer of device-key encryption:
+                // decryptData() yields plaintext whether the backup holds plaintext
+                // (new portable backups) or an encrypted blob (older backups), then
+                // we encrypt with THIS device's key. Idempotent for both formats.
+                const content = n.content ? encryptData(decryptData(n.content)) : n.content;
+                await database.runAsync(
+                    'INSERT OR REPLACE INTO notes (id, type, title, content, color, folder_id, date, is_pinned, is_locked, is_trash, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [n.id, n.type, n.title, content, n.color, n.folder_id, n.date,
+                     n.is_pinned ?? 0, n.is_locked ?? 0, n.is_trash ?? 0, n.deleted_at ?? null]
+                );
+            }
         }
         if (d.attachments) {
             for (let a of d.attachments) await database.runAsync('INSERT OR REPLACE INTO attachments (id, note_id, type, uri, duration) VALUES (?, ?, ?, ?, ?)', [a.id, a.note_id, a.type, a.uri, a.duration]);

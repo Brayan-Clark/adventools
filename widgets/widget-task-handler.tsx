@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import React from 'react';
@@ -43,8 +42,14 @@ async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
   while (retries > 0) {
     try {
       db = await SQLite.openDatabaseAsync('adventools_user.db');
-      // Enable WAL mode and a 5-second busy timeout to allow concurrent read/write operations from both the app and the widget
-      await db.execAsync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+      // The widget runs in a SEPARATE process. WAL mode is persistent and is
+      // already set once by the main app (see lib/database.ts), so we must NOT
+      // re-issue `PRAGMA journal_mode = WAL` here: that is a write to the DB
+      // header and, when done concurrently from this second process while the app
+      // holds a connection, it can leave a stale -wal/-shm and make the app fail
+      // to read notes / hymns / Bible markup afterwards. The widget stays a pure
+      // reader: only a busy timeout so concurrent reads wait instead of erroring.
+      await db.execAsync("PRAGMA busy_timeout = 5000;");
       const row: any = await db.getFirstAsync('SELECT value FROM settings WHERE key = ?', [key]);
       if (row?.value) {
         try { return JSON.parse(row.value) as T; } catch { return row.value as unknown as T; }
@@ -136,6 +141,46 @@ function matchQuarterly(quarterlies: any[], suffix: string, now: Date): any | nu
   );
 }
 
+/**
+ * Load the quarterly list for the widget WITHOUT touching AsyncStorage.
+ *
+ * AsyncStorage (RKStorage) is NOT multi-process safe: reading/writing it from
+ * the widget's headless task — which runs in a separate Android process — can
+ * lock or corrupt the store, which then breaks the main app's notes, hymn
+ * favorites and Bible highlights. We therefore fetch from network and cache to
+ * the filesystem (which IS safe to share across processes) instead.
+ */
+async function getQuarterlies(lang: string): Promise<any[]> {
+  const cachePath = `${LESSONS_DIR}quarterlies_${lang}.json`;
+
+  // 1. Network first (keeps the widget fresh)
+  const res = await fetch(`https://inverse.sspmadventist.org/api/v3/${lang}/ss/index.json`).catch(() => null);
+  if (res?.ok) {
+    try {
+      const data = await res.json();
+      const out: any[] = [];
+      (data.groups || []).forEach((g: any) => {
+        if (g.resources) out.push(...g.resources);
+      });
+      if (out.length) {
+        await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true }).catch(() => {});
+        await FileSystem.writeAsStringAsync(cachePath, JSON.stringify(out)).catch(() => {});
+        return out;
+      }
+    } catch { /* fall through to cache */ }
+  }
+
+  // 2. Offline fallback: filesystem cache
+  const info = await FileSystem.getInfoAsync(cachePath).catch(() => null);
+  if (info?.exists) {
+    try {
+      return JSON.parse(await FileSystem.readAsStringAsync(cachePath));
+    } catch { /* ignore */ }
+  }
+
+  return [];
+}
+
 // ────────────────────────────────────────────────────────────────────────────────
 // ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────────
@@ -207,10 +252,10 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
   let coverImage     = '';
 
   try {
-    // 1. Read class preference from SQLite (where settings are stored after migration)
+    // 1. Read class preference from SQLite (where settings are stored after migration).
+    //    No AsyncStorage fallback: see getQuarterlies() for why the widget avoids it.
     const edsClass: string =
       (await readSqliteSetting<string>('profile_eds_class', '')) ||
-      (await AsyncStorage.getItem('profile_eds_class')) ||
       'Lesona Lehibe (+ 35 taona)';
 
     const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
@@ -219,22 +264,8 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
     const lang = 'mg';
     const now  = new Date(); now.setHours(0, 0, 0, 0);
 
-    // 2. Load quarterly list
-    const storageKey  = `adventools_ss_data_${lang}`;
-    const cached      = await AsyncStorage.getItem(storageKey);
-    let   quarterlies: any[] = cached ? JSON.parse(cached) : [];
-
-    if (quarterlies.length === 0) {
-      const res = await fetch(`https://inverse.sspmadventist.org/api/v3/${lang}/ss/index.json`).catch(() => null);
-      if (res?.ok) {
-        const data = await res.json();
-        (data.groups || []).forEach((g: any) => {
-          if (g.resources) quarterlies.push(...g.resources);
-        });
-        // Removed to prevent AsyncStorage corruption in background tasks
-        // await AsyncStorage.setItem(storageKey, JSON.stringify(quarterlies));
-      }
-    }
+    // 2. Load quarterly list (network + filesystem cache, never AsyncStorage)
+    const quarterlies: any[] = await getQuarterlies(lang);
 
     if (!quarterlies.length) throw new Error('No quarterlies');
 
@@ -347,7 +378,6 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
   try {
     const edsClass: string =
       (await readSqliteSetting<string>('profile_eds_class', '')) ||
-      (await AsyncStorage.getItem('profile_eds_class')) ||
       'Lesona Lehibe (+ 35 taona)';
 
     const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
@@ -356,8 +386,7 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
     const lang = 'mg';
     const now  = new Date(); now.setHours(0, 0, 0, 0);
 
-    const cached      = await AsyncStorage.getItem(`adventools_ss_data_${lang}`);
-    let   quarterlies = cached ? JSON.parse(cached) : [];
+    const quarterlies = await getQuarterlies(lang);
 
     const pq = matchQuarterly(quarterlies, classInfo.suffix, now);
     if (!pq) throw new Error('No quarterly');

@@ -7,6 +7,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Generates a collision-resistant unique id (RFC 4122 v4 UUID, prefixed with a
+ * timestamp for human-readable ordering). Uses the crypto.getRandomValues
+ * polyfill (react-native-get-random-values, imported in index.js) instead of
+ * `Date.now() + Math.random()`, which could collide when several ids are created
+ * within the same millisecond (e.g. inserting multiple attachments in a loop).
+ */
+export function uniqueId(): string {
+  const bytes = new Uint8Array(16);
+  // @ts-ignore — provided by the react-native-get-random-values polyfill
+  crypto.getRandomValues(bytes);
+  // Per RFC 4122 §4.4: set version (4) and variant bits.
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `${Date.now().toString(36)}-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/**
  * US-03: Shared file utility — avoids code duplication between notes.tsx and lesona.tsx.
  * Copies a temporary media file to the permanent app document directory.
  */

@@ -1,9 +1,32 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const API_BASE = 'https://jasemsoftware.tech/api/v1';
-const ASYNC_STORAGE_KEY = 'mofonaina_cache';
-const ASYNC_STORAGE_LAST_SYNC_KEY = 'mofonaina_last_sync';
+
+// Cache stored on the filesystem (NOT AsyncStorage): this module is loaded by the
+// Mofonaina widget, which runs in a separate Android process. AsyncStorage is not
+// multi-process safe and concurrent access from the widget can corrupt the whole
+// store (breaking notes, hymn favorites and Bible highlights in the main app).
+// The filesystem is safe to share across processes.
+const CACHE_FILE = `${FileSystem.documentDirectory}mofonaina_cache.json`;
+const LAST_SYNC_FILE = `${FileSystem.documentDirectory}mofonaina_last_sync.txt`;
+
+async function readCacheFile(path: string): Promise<string | null> {
+  try {
+    const info = await FileSystem.getInfoAsync(path);
+    if (!info.exists) return null;
+    return await FileSystem.readAsStringAsync(path);
+  } catch {
+    return null;
+  }
+}
+
+async function writeCacheFile(path: string, value: string): Promise<void> {
+  try {
+    await FileSystem.writeAsStringAsync(path, value);
+  } catch (e) {
+    console.warn('Failed to write mofonaina cache', e);
+  }
+}
 
 /**
  * Global function to sync all remote-manifest-based modules
@@ -48,12 +71,12 @@ export interface Mofonaina {
 
 /**
  * Fetches the latest daily devotionals from the API if online,
- * or returns the cached version from AsyncStorage.
+ * or returns the cached version from the filesystem cache.
  */
 export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
   try {
-    const lastSyncStr = await AsyncStorage.getItem(ASYNC_STORAGE_LAST_SYNC_KEY);
-    const cachedStr = await AsyncStorage.getItem(ASYNC_STORAGE_KEY);
+    const lastSyncStr = await readCacheFile(LAST_SYNC_FILE);
+    const cachedStr = await readCacheFile(CACHE_FILE);
 
     let shouldSync = force;
 
@@ -93,8 +116,8 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
           if (response.ok) {
             const data: Mofonaina[] = await response.json();
             if (Array.isArray(data) && data.length > 0) {
-              await AsyncStorage.setItem(ASYNC_STORAGE_KEY, JSON.stringify(data));
-              await AsyncStorage.setItem(ASYNC_STORAGE_LAST_SYNC_KEY, new Date().toISOString());
+              await writeCacheFile(CACHE_FILE, JSON.stringify(data));
+              await writeCacheFile(LAST_SYNC_FILE, new Date().toISOString());
               success = true;
               return data;
             }
@@ -113,7 +136,7 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
     return [];
   } catch (error) {
     console.error('Error syncing mofonaina:', error);
-    const cachedStr = await AsyncStorage.getItem(ASYNC_STORAGE_KEY);
+    const cachedStr = await readCacheFile(CACHE_FILE);
     if (cachedStr) {
       return JSON.parse(cachedStr);
     }

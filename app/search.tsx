@@ -60,6 +60,11 @@ export default function SearchScreen() {
     return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
   };
 
+  // Escape SQL LIKE wildcards (% and _) so typing them searches literally
+  // instead of matching everything. Used together with `ESCAPE '\'` in queries.
+  const escapeLike = (text: string) =>
+    text.replace(/[\\%_]/g, (c) => `\\${c}`);
+
   const performSearch = async (searchTerm: string) => {
     setLoading(true);
     const allResults: SearchResult[] = [];
@@ -144,7 +149,8 @@ export default function SearchScreen() {
       // 3. Search in Cantiques (Hymns)
       try {
         const dbHymnes = await loadDatabase('cantique.db', HYMNE_SOURCES['cantique.db'], 'hymnes');
-        const hymns: any[] = await dbHymnes.getAllAsync("SELECT id, c_title, c_num, c_categories, c_content FROM adventiste_cantique WHERE c_title LIKE ? OR c_content LIKE ? LIMIT 10", [`%${searchTerm}%`, `%${searchTerm}%`]);
+        const likeTerm = `%${escapeLike(searchTerm)}%`;
+        const hymns: any[] = await dbHymnes.getAllAsync("SELECT id, c_title, c_num, c_categories, c_content FROM adventiste_cantique WHERE c_title LIKE ? ESCAPE '\\' OR c_content LIKE ? ESCAPE '\\' LIMIT 10", [likeTerm, likeTerm]);
         for (const hymn of hymns) {
           allResults.push({
             id: `hymn_${hymn.id}`,
@@ -172,10 +178,10 @@ export default function SearchScreen() {
               SELECT book_number as bookId, chapter, verse, text, 
                     (SELECT long_name FROM books WHERE book_number = verses.book_number) as bookName
               FROM verses
-              WHERE text LIKE ?
+              WHERE text LIKE ? ESCAPE '\\'
               LIMIT 15
             `;
-            const verseResults: any[] = await dbBible.getAllAsync(queryBible, [`%${searchTerm}%`]);
+            const verseResults: any[] = await dbBible.getAllAsync(queryBible, [`%${escapeLike(searchTerm)}%`]);
             for (const v of verseResults) {
               allResults.push({
                 id: `bible_${v.bookId}_${v.chapter}_${v.verse}`,
@@ -201,10 +207,10 @@ export default function SearchScreen() {
                 SELECT CAST(v.a_toko AS INTEGER) as chapter, v.a_and as verse, v.a_text as text, b.b_name as bookName, b.id as bookId, b.b_testid as testament
                 FROM ${verseTable} v
                 JOIN ${bookTable} b ON v.a_bid = b.id
-                WHERE v.a_text LIKE ?
+                WHERE v.a_text LIKE ? ESCAPE '\\'
                 LIMIT 15
               `;
-              const verseResults: any[] = await dbBible.getAllAsync(queryBible, [`%${searchTerm}%`]);
+              const verseResults: any[] = await dbBible.getAllAsync(queryBible, [`%${escapeLike(searchTerm)}%`]);
               for (const v of verseResults) {
                 allResults.push({
                   id: `bible_${v.bookId}_${v.chapter}_${v.verse}`,

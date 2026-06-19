@@ -23,17 +23,18 @@ export function useAutoUpdater() {
         const lastCheckDate = lastCheckStr ? new Date(lastCheckStr) : null;
         const now = new Date();
 
-        // Calculate months difference
-        let monthsDiff = 0;
-        if (lastCheckDate) {
-          monthsDiff = (now.getFullYear() - lastCheckDate.getFullYear()) * 12;
-          monthsDiff -= lastCheckDate.getMonth();
-          monthsDiff += now.getMonth();
+        // Compute the next due date by advancing the last check by N months. Using
+        // setMonth keeps the day-of-month into account, so a check on Jan 31 is not
+        // wrongly considered "1 month elapsed" on Feb 1 (the old month-number diff did).
+        const interval = settings.updateCheckIntervalMonths || 1;
+        let isDue = true;
+        if (lastCheckDate && !isNaN(lastCheckDate.getTime())) {
+          const nextDue = new Date(lastCheckDate);
+          nextDue.setMonth(nextDue.getMonth() + interval);
+          isDue = now >= nextDue;
         }
 
-        // If no previous check, or elapsed time >= interval, do check
-        const interval = settings.updateCheckIntervalMonths || 1;
-        if (!lastCheckDate || monthsDiff >= interval) {
+        if (isDue) {
           await performUpdateCheck(settings.downloadOverWifiOnly);
           // Save new check date
           await AsyncStorage.setItem(LAST_CHECK_KEY, now.toISOString());

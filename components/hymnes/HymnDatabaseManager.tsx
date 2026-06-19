@@ -1,4 +1,5 @@
 import { AppText as Text } from '@/components/ui/AppText';
+import { loadDatabase } from '@/lib/database';
 import { HYMNE_SOURCES } from '@/lib/hymnes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -10,15 +11,12 @@ import { ActivityIndicator, Alert, TouchableOpacity, View } from 'react-native';
 const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/hymnes/manifest.json';
 const AUDIO_MANIFEST_BASE_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/audio/playbacks/';
 
-// Known audio collections used by hymn databases
-const KNOWN_AUDIO_COLLECTIONS = ['fihirana-adventista', 'fanompoam-pivavahana', 'hira-fameno'];
-
 // Function to download audio manifest for a collection
 const downloadAudioManifest = async (collectionId: string): Promise<void> => {
   try {
     const PB_DIR = `${FileSystem.documentDirectory}playbacks/`;
     const CACHE_FILE = `${PB_DIR}cache_v3_${collectionId}.json`;
-    
+
     const res = await fetch(`${AUDIO_MANIFEST_BASE_URL}${collectionId}.json`);
     if (res.ok) {
       const data = await res.json();
@@ -31,15 +29,58 @@ const downloadAudioManifest = async (collectionId: string): Promise<void> => {
   }
 };
 
-// Function to update all audio manifests
-const updateAllAudioManifests = async (): Promise<void> => {
+/**
+ * Collect the audio collections ACTUALLY referenced by the installed hymn
+ * databases, by reading the distinct `c_playbacks` values from each DB. This
+ * replaces a hardcoded list that was both wrong (e.g. 'hira-fameno' is not a
+ * real collection) and incomplete (missed collections like 'hira-faneva_minenf'),
+ * which is why the update button never refreshed some hymns' audio.
+ */
+const collectInstalledCollections = async (manifest: any): Promise<string[]> => {
+  const collections = new Set<string>();
+  const docDir = FileSystem.documentDirectory;
+  const versions: any[] = manifest?.versions || [];
+
+  for (const v of versions) {
+    const fileName = (v.file || '').toLowerCase();
+    if (!fileName) continue;
+
+    // Only read DBs that are actually present (built-in or downloaded).
+    const isBuiltIn = !!HYMNE_SOURCES[fileName];
+    if (!isBuiltIn && docDir) {
+      const info = await FileSystem.getInfoAsync(`${docDir}SQLite/hymnes/${v.file}`).catch(() => null);
+      if (!info?.exists || info.size === 0) continue;
+    }
+
+    try {
+      const db = await loadDatabase(v.file, HYMNE_SOURCES[fileName], 'hymnes', isBuiltIn ? 5 : 0);
+      const rows: any[] = await db.getAllAsync(
+        "SELECT DISTINCT c_playbacks FROM adventiste_cantique WHERE c_playbacks IS NOT NULL AND c_playbacks != '' AND c_playbacks != 'null'"
+      );
+      for (const r of rows) {
+        if (r.c_playbacks) collections.add(String(r.c_playbacks));
+      }
+    } catch (e) {
+      console.log(`Could not read collections from ${v.file}`, e);
+    }
+  }
+
+  return Array.from(collections);
+};
+
+// Refresh every audio manifest referenced by the installed databases.
+const updateAllAudioManifests = async (manifest: any): Promise<number> => {
+  let count = 0;
   try {
-    for (const collectionId of KNOWN_AUDIO_COLLECTIONS) {
+    const collections = await collectInstalledCollections(manifest);
+    for (const collectionId of collections) {
       await downloadAudioManifest(collectionId);
+      count++;
     }
   } catch (e) {
     console.log('Failed to update audio manifests', e);
   }
+  return count;
 };
 
 export function HymnDatabaseManager() {
@@ -141,8 +182,8 @@ export function HymnDatabaseManager() {
         installedVersions[version.id] = version.version || 1;
         await AsyncStorage.setItem('hymn_installed_versions', JSON.stringify(installedVersions));
 
-        // Update audio manifests
-        await updateAllAudioManifests();
+        // Update audio manifests for every collection referenced by installed DBs
+        await updateAllAudioManifests(manifest);
 
         await checkLocalFiles();
         Alert.alert("Terminé", `${version.name} a été téléchargé avec succès.`);
@@ -194,8 +235,13 @@ export function HymnDatabaseManager() {
           text: "Mettre à jour",
           onPress: async () => {
             try {
-              await updateAllAudioManifests();
-              Alert.alert("Terminé", "Les manifests audio ont été mis à jour.");
+              const count = await updateAllAudioManifests(manifest);
+              Alert.alert(
+                "Terminé",
+                count > 0
+                  ? `Les audio de ${count} collection(s) ont été mis à jour.`
+                  : "Aucune collection audio trouvée dans les recueils installés."
+              );
             } catch (e) {
               Alert.alert("Erreur", "La mise à jour a échoué.");
             }

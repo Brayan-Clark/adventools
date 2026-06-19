@@ -42,7 +42,7 @@ import {
   Copy
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
-import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange } from '@/lib/utils';
+import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange, uniqueId } from '@/lib/utils';
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
@@ -605,7 +605,7 @@ export default function LesonaSekolySabata() {
       if (!existingNote) {
         // New note: pre-fill with the verse content so the user can annotate it
         existingNote = {
-          id: Date.now().toString() + Math.random().toString(),
+          id: uniqueId(),
           type: 'text',
           title: title,
           content: verseContent ? `> ${verseContent}\n\n` : '',

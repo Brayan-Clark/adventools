@@ -47,3 +47,7 @@ yarn-error.*
 skills-lock.json
 
 Audit
+
+# Work scratch / local backups (not part of the app)
+scratch/
+backups/

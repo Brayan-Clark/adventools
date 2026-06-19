@@ -44,7 +44,6 @@
         "INTERNET",
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
         "REQUEST_INSTALL_PACKAGES",
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM",
@@ -111,7 +110,8 @@
           ]
         }
       ],
-      "expo-quick-actions"
+      "expo-quick-actions",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

@@ -423,9 +423,10 @@ export default function Settings() {
         filteredData[k] = importData[k];
       });
 
-      // We need to import via lib/user-storage.ts importData function which knows how to insert into SQLite
+      // We need to import via lib/user-storage.ts importData function which knows how to insert into SQLite.
+      // importData expects the backup shape { data: {...} }, so wrap the filtered selection.
       const { importData: dbImport } = require('@/lib/user-storage');
-      await dbImport(filteredData);
+      await dbImport({ data: filteredData });
 
       setIsImportModalVisible(false);
       Alert.alert(t('success'), "Restauration terminée avec succès !");
