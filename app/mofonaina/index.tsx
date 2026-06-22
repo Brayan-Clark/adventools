@@ -1,5 +1,5 @@
 import { Stack, router } from 'expo-router';
-import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square, Edit } from 'lucide-react-native';
+import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square, Edit, BookOpen } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar, Modal } from 'react-native';
@@ -10,7 +10,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules } from '../../lib/mofonaina';
+import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '../../lib/bible';
 import { useTranslation } from '../../lib/i18n';
+import { useToast } from '../../lib/toast-context';
 import { useSettings } from '../../lib/settings-context';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import { PremiumDatePicker } from '@/components/ui/PremiumDatePicker';
@@ -23,6 +25,7 @@ const FAVORITES_STORAGE_KEY = 'mofonaina_favorites';
 
 export default function MofonainaScreen() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { settings: globalSettings } = useSettings();
   const [loading, setLoading] = useState(true);
   const [mofonaina, setMofonaina] = useState<Mofonaina | null>(null);
@@ -193,6 +196,58 @@ export default function MofonainaScreen() {
     setShowDatePicker(false);
     if (selectedDate) {
       setCurrentDate(selectedDate);
+    }
+  };
+
+  // Parse a scripture reference like "Estera 6" or "Estera 6:1" into book/chapter/verse.
+  // Tries the Bible-aware regex first, then a tolerant fallback so Malagasy book
+  // names still resolve (fetchVerseContent matches the book name with a LIKE query).
+  const parseScriptureRef = (ref: string): { book: string; chapter: string; verse: string } | null => {
+    BIBLE_REGEX.lastIndex = 0;
+    const m = BIBLE_REGEX.exec(ref);
+    if (m) {
+      return { book: m[1], chapter: m[2], verse: (m[3] || '').trim().split(/[\s,;\-]/)[0] || '1' };
+    }
+    const fm = ref.trim().match(/^(.+?)\s+(\d+)(?::\s*(\d+))?/);
+    if (fm) {
+      return { book: fm[1].trim(), chapter: fm[2], verse: fm[3] || '1' };
+    }
+    return null;
+  };
+
+  const openChapterInBible = async () => {
+    const ref = mofonaina?.toerana_soratra_masina;
+    if (!ref) return;
+    try {
+      const parsed = parseScriptureRef(ref);
+      if (!parsed) { showToast(`${t('no_verse_found')} ${ref}`, 'info'); return; }
+
+      // The reference is in Malagasy, so prefer a Malagasy bible, then the user's
+      // selected version, then whatever is installed.
+      const bibles = await getAvailableBibles();
+      const best = bibles.find(b => b.language?.toLowerCase() === 'malagasy')
+        || bibles.find(b => b.id === globalSettings.bibleVersion)
+        || bibles[0];
+      if (!best) { showToast(t('db_not_found' as any), 'error'); return; }
+
+      const res: any = await fetchVerseContent(best.id, parsed.book, parsed.chapter, '1', false);
+      if (res && res.bookId) {
+        router.push({
+          pathname: '/bible/reader',
+          params: {
+            bookId: String(res.bookId),
+            bookName: res.bookName || parsed.book,
+            chapter: String(parsed.chapter),
+            verse: String(parsed.verse),
+            lang: best.id,
+            testament: '1',
+          },
+        });
+      } else {
+        showToast(`${t('no_verse_found')} ${ref}`, 'info');
+      }
+    } catch (e) {
+      showToast(t('error'), 'error');
     }
   };
 
@@ -405,9 +460,12 @@ export default function MofonainaScreen() {
                     "{mofonaina.andininy_soratra_masina}"
                  </Text>
                  <View className="flex-row items-center justify-between border-t border-white/5 pt-4">
-                    <Text className="text-primary font-bold">
-                       {mofonaina.toerana_soratra_masina}
-                    </Text>
+                    <TouchableOpacity className="flex-row items-center flex-1 mr-3" onPress={openChapterInBible} activeOpacity={0.6}>
+                       <BookOpen size={16} color="#3b82f6" />
+                       <Text className="text-primary font-bold ml-2 underline" numberOfLines={1}>
+                          {mofonaina.toerana_soratra_masina}
+                       </Text>
+                    </TouchableOpacity>
                     <TouchableOpacity className="flex-row items-center" onPress={toggleFavorite}>
                        <Heart size={20} color={isFavorite() ? "#ec4899" : "#475569"} fill={isFavorite() ? "#ec4899" : "transparent"} />
                     </TouchableOpacity>
