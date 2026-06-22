@@ -3,6 +3,7 @@
   "main": "index.js",
   "version": "1.2.1",
   "scripts": {
+    "postinstall": "patch-package",
     "start": "npx expo start -c",
     "android": "npx expo run:android",
     "ios": "npx expo run:ios",
@@ -87,6 +88,7 @@
     "autoprefixer": "^10.4.24",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "babel-preset-expo": "~54.0.11",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.6",
     "react-test-renderer": "19.1.0",
     "tailwindcss": "^3.4.1",
