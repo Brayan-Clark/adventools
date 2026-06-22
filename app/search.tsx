@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Search as SearchIcon, X, StickyNote, BookOpen, ChevronRight, ChevronDown, History, Music } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings-context';
 import { initUserStorage } from '@/lib/user-storage';
@@ -18,6 +19,8 @@ import { getAvailableBibles, DB_SOURCES, checkAndDownloadBible } from '@/lib/bib
 
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
+const RECENT_SEARCHES_KEY = 'adventools_recent_searches';
+const MAX_RECENT = 8;
 
 interface SearchResult {
   id: string;
@@ -27,6 +30,46 @@ interface SearchResult {
   excerpt: string;
   params: any;
 }
+
+// Accent/case-insensitive normalization (matches the search comparison).
+const normalize = (text: string) =>
+  text ? text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase() : '';
+
+/**
+ * Finds the [start, end) range of the first occurrence of `rawQuery` inside
+ * `text`, comparing accent/case-insensitively while returning indices into the
+ * ORIGINAL text (so highlighting keeps the original accents). Returns null if
+ * there is no match.
+ */
+const findMatchRange = (text: string, rawQuery: string): [number, number] | null => {
+  const q = normalize(rawQuery);
+  if (!q || !text) return null;
+  let normStr = '';
+  const map: number[] = []; // map[normIndex] -> original index
+  for (let i = 0; i < text.length; i++) {
+    const nc = normalize(text[i]);
+    for (let k = 0; k < nc.length; k++) { normStr += nc[k]; map.push(i); }
+  }
+  const idx = normStr.indexOf(q);
+  if (idx === -1) return null;
+  return [map[idx], map[idx + q.length - 1] + 1];
+};
+
+/** Renders `text` with the first match of `query` highlighted in blue. */
+const HighlightedText = ({ text, query, className, numberOfLines }: { text: string; query: string; className?: string; numberOfLines?: number }) => {
+  const range = findMatchRange(text, query);
+  if (!range) {
+    return <Text className={className} numberOfLines={numberOfLines}>{text}</Text>;
+  }
+  const [s, e] = range;
+  return (
+    <Text className={className} numberOfLines={numberOfLines}>
+      {text.slice(0, s)}
+      <Text style={{ color: '#3b82f6', fontFamily: 'Lexend_700Bold' }}>{text.slice(s, e)}</Text>
+      {text.slice(e)}
+    </Text>
+  );
+};
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -55,6 +98,30 @@ export default function SearchScreen() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [query]);
+
+  // Load recent searches once on mount.
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+        if (stored) setRecentSearches(JSON.parse(stored));
+      } catch (e) { /* non-blocking */ }
+    })();
+  }, []);
+
+  // Persist a term to the recent-searches list (most recent first, deduped).
+  const saveRecentSearch = async (term: string) => {
+    const cleaned = term.trim();
+    if (cleaned.length < 2) return;
+    const next = [cleaned, ...recentSearches.filter(s => normalize(s) !== normalize(cleaned))].slice(0, MAX_RECENT);
+    setRecentSearches(next);
+    try { await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next)); } catch (e) { /* non-blocking */ }
+  };
+
+  const clearRecentSearches = async () => {
+    setRecentSearches([]);
+    try { await AsyncStorage.removeItem(RECENT_SEARCHES_KEY); } catch (e) { /* non-blocking */ }
+  };
 
   const normalizeText = (text: string) => {
     return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
@@ -274,6 +341,8 @@ export default function SearchScreen() {
               autoFocus
               value={query}
               onChangeText={setQuery}
+              onSubmitEditing={() => saveRecentSearch(query)}
+              returnKeyType="search"
               style={{ fontFamily: 'Lexend_400Regular' }}
             />
             {query.length > 0 && (
@@ -296,7 +365,33 @@ export default function SearchScreen() {
             <Text className="text-slate-500 mt-4">Recherche en cours...</Text>
           </View>
         ) : query.length < 2 ? (
-          <View className="py-20 items-center opacity-20">
+          <View>
+            {recentSearches.length > 0 && (
+              <View className="mb-8">
+                <View className="flex-row items-center justify-between mb-4">
+                  <View className="flex-row items-center">
+                    <History size={14} color="#94a3b8" />
+                    <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2">{t('recents')}</Text>
+                  </View>
+                  <TouchableOpacity onPress={clearRecentSearches} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Text className="text-[11px] text-slate-500">Effacer</Text>
+                  </TouchableOpacity>
+                </View>
+                <View className="flex-row flex-wrap gap-2">
+                  {recentSearches.map((term) => (
+                    <TouchableOpacity
+                      key={term}
+                      onPress={() => setQuery(term)}
+                      className="flex-row items-center bg-white/5 border border-white/10 rounded-full px-4 py-2"
+                    >
+                      <History size={12} color="#475569" />
+                      <Text className="text-slate-300 text-[12px] ml-2" style={{ fontFamily: 'Lexend_400Regular' }}>{term}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          <View className="py-12 items-center opacity-20">
             <SearchIcon size={80} color="#94a3b8" />
             <Text className="text-white font-bold text-xl mt-6 text-center">{t('what_are_you_looking_for')}</Text>
             <View className="bg-white/5 rounded-2xl p-5 mt-4 border border-white/5">
@@ -319,12 +414,17 @@ export default function SearchScreen() {
               </View>
             </View>
           </View>
+          </View>
         ) : results.length > 0 ? (
           <View>
             <Text className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">{results.length} Résultats trouvés</Text>
             
             {['note', 'lesson', 'hymn', 'bible'].map((type) => {
-              const typeResults = results.filter(r => r.type === type);
+              const nq = normalize(query);
+              // Relevance: results whose title matches the query rank first.
+              const typeResults = results
+                .filter(r => r.type === type)
+                .sort((a, b) => (normalize(b.title).includes(nq) ? 1 : 0) - (normalize(a.title).includes(nq) ? 1 : 0));
               if (typeResults.length === 0) return null;
 
               const isExpanded = expandedGroups[type] ?? true;
@@ -369,6 +469,7 @@ export default function SearchScreen() {
                     <TouchableOpacity
                       key={item.id}
                       onPress={() => {
+                        saveRecentSearch(query);
                         if (item.type === 'note') {
                           router.push({ pathname: '/notes', params: item.params });
                         } else if (item.type === 'hymn') {
@@ -388,8 +489,8 @@ export default function SearchScreen() {
                       className="bg-slate-900/30 border border-white/5 rounded-2xl p-4 mb-3 flex-row items-center ml-2"
                     >
                       <View className="flex-1 mr-3">
-                        <Text className="text-white font-bold text-[13px] mb-1" numberOfLines={1}>{item.title}</Text>
-                        <Text className="text-slate-400 text-[11px] leading-4" numberOfLines={2}>{item.excerpt}</Text>
+                        <HighlightedText text={item.title} query={query} className="text-white font-bold text-[13px] mb-1" numberOfLines={1} />
+                        <HighlightedText text={item.excerpt} query={query} className="text-slate-400 text-[11px] leading-4" numberOfLines={2} />
                       </View>
                       <ChevronRight size={16} color="#334155" />
                     </TouchableOpacity>
