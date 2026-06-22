@@ -7,14 +7,16 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { BookOpen, ChevronRight, Music, Plus, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
 export default function HymneManager() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAutomaticallyRedirected, setHasAutomaticallyRedirected] = useState(false);
@@ -147,7 +149,7 @@ export default function HymneManager() {
 
   const deleteHymnSource = async (version: any) => {
     if (version.isDefault) {
-      Alert.alert(t('action_impossible'), t('cannot_delete_default_hymnal'));
+      showToast(t('cannot_delete_default_hymnal'), 'info');
       return;
     }
 

@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Edit2, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
@@ -94,6 +96,8 @@ const DEFAULT_THEMES = [
 
 export default function ThemesDivers() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -142,7 +146,7 @@ export default function ThemesDivers() {
 
   const copyToClipboard = async (text: string) => {
     await Clipboard.setStringAsync(text);
-    Alert.alert(t('copy'), t('ref_copied'));
+    showToast(t('ref_copied'), 'success');
   };
 
   const handleOpenBible = async (ref: string) => {
@@ -166,7 +170,7 @@ export default function ThemesDivers() {
           });
         } else {
           const bibleName = res?.bibleName || globalSettings.bibleVersion;
-          Alert.alert(t('verse_not_found'), `${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`);
+          showToast(`${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`, 'info');
           router.push("/bible");
         }
       } catch (e) {
@@ -195,17 +199,17 @@ export default function ThemesDivers() {
   };
 
   const deleteTheme = (index: number) => {
-    Alert.alert(t('delete'), t('delete_note_confirm'), [
-      { text: t('cancel'), style: "cancel" },
-      {
-        text: t('delete'),
-        style: "destructive",
-        onPress: () => {
-          const updated = themes.filter((_, i) => i !== index);
-          saveThemes(updated);
-        }
-      }
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: t('delete_note_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: () => {
+        const updated = themes.filter((_, i) => i !== index);
+        saveThemes(updated);
+      },
+    });
   };
 
   const openModal = (index: number | null = null) => {

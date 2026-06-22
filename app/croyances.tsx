@@ -6,8 +6,9 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Quote, Sparkles, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, LayoutAnimation, Modal, Platform, ScrollView, TouchableOpacity, UIManager, View } from 'react-native';
+import { ActivityIndicator, LayoutAnimation, Modal, Platform, ScrollView, TouchableOpacity, UIManager, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
@@ -359,6 +360,7 @@ const BELIEFS_MG = [
 
 export default function CroyancesPage() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { settings: globalSettings } = useSettings();
   const [lang, setLang] = useState<'FR' | 'MG'>('FR');
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -413,7 +415,7 @@ export default function CroyancesPage() {
         setLoadingVerse(false);
       }
     } else {
-      Alert.alert(t('info'), `Reference: ${ref}`);
+      showToast(`Reference: ${ref}`, 'info');
     }
   };
 

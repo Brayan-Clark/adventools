@@ -5,8 +5,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlertCircle, ArrowLeft, Bookmark, ChevronRight, FileText, Hash, Menu, Save, Search, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, Platform, KeyboardAvoidingView, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
 import { saveHistory } from '@/lib/user-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppText as Text } from '@/components/ui/AppText';
@@ -25,6 +26,7 @@ try {
 export default function PdfViewer() {
   const { fileName, title, uri, page: initialPage } = useLocalSearchParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const [source, setSource] = useState<{ uri: string, cache: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -446,7 +448,7 @@ export default function PdfViewer() {
                       jumpToPage(page);
                       setShowPagePicker(false);
                     } else {
-                      Alert.alert("Hors limites", `Veuillez entrer une page entre 1 et ${totalPages}`);
+                      showToast(`Veuillez entrer une page entre 1 et ${totalPages}`, 'error');
                     }
                   }}
                 />
@@ -460,7 +462,7 @@ export default function PdfViewer() {
                     jumpToPage(page);
                     setShowPagePicker(false);
                   } else {
-                    Alert.alert("Invalide", `La page doit être comprise entre 1 et ${totalPages}`);
+                    showToast(`La page doit être comprise entre 1 et ${totalPages}`, 'error');
                   }
                 }}
                 className="bg-blue-600 py-5 rounded-3xl items-center shadow-lg shadow-blue-600/30 flex-row justify-center"

@@ -9,14 +9,18 @@ import { StatusBar } from 'expo-status-bar';
 import * as FileSystem from 'expo-file-system/legacy';
 import { ArrowLeft, Bookmark, ChevronRight as ChevronRightIcon, ChevronRight, Globe, Grid3X3, Music as MusicIcon, Search as SearchIcon, X, Music } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, BackHandler, FlatList, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
 export default function Hymnes() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const router = useRouter();
   const { db: dbNameParam, title: pageTitle, redirected } = useLocalSearchParams<{ db: string, title?: string, redirected?: string }>();
   const dbName = dbNameParam || 'cantique.db';
@@ -97,14 +101,15 @@ export default function Hymnes() {
         const dbPath = `${FileSystem.documentDirectory}SQLite/hymnes/${dbName}`;
         const info = await FileSystem.getInfoAsync(dbPath);
         if (!info.exists || (info as any).size === 0) {
-          Alert.alert(
-            t('error'),
-            t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
-            [
-              { text: 'Annuler', style: 'cancel', onPress: () => router.back() },
-              { text: 'Aller au Store', onPress: () => router.replace('/hymnes/store' as any) }
-            ]
-          );
+          showAlert({
+            title: t('error'),
+            message: t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
+            type: 'error',
+            confirmText: 'Aller au Store',
+            cancelText: 'Annuler',
+            onConfirm: () => router.replace('/hymnes/store' as any),
+            onCancel: () => router.back(),
+          });
           return;
         }
       }
@@ -129,16 +134,17 @@ export default function Hymnes() {
       const isDbMissing = msg.includes('not a database') || msg.includes('no such table') ||
         msg.includes('unable to open') || msg.includes('code 26') || msg.includes('malformed');
       if (isDbMissing) {
-        Alert.alert(
-          t('error'),
-          t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
-          [
-            { text: 'Annuler', style: 'cancel', onPress: () => router.back() },
-            { text: 'Aller au Store', onPress: () => router.replace('/hymnes/store' as any) }
-          ]
-        );
+        showAlert({
+          title: t('error'),
+          message: t('db_not_found' as any) + '\n\nVeuillez télécharger cette version dans le store.',
+          type: 'error',
+          confirmText: 'Aller au Store',
+          cancelText: 'Annuler',
+          onConfirm: () => router.replace('/hymnes/store' as any),
+          onCancel: () => router.back(),
+        });
       } else {
-        Alert.alert(t('error'), t('db_not_found' as any));
+        showToast(t('db_not_found' as any), 'error');
         router.back();
       }
     }

@@ -46,7 +46,7 @@ import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange, uniq
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View, Pressable } from 'react-native';
+import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View, Pressable } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -554,7 +554,7 @@ export default function LesonaSekolySabata() {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert("Microphone bloqué", "L'autorisation du micro est nécessaire pour enregistrer.");
+        showToast("L'autorisation du micro est nécessaire pour enregistrer.", 'error');
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });

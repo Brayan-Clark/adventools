@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AlignLeft, ChevronLeft, Info, MoveHorizontal, Sparkles } from 'lucide-react-native';
 import React from 'react';
-import { Alert, PanResponder, ScrollView, TouchableOpacity, View } from 'react-native';
+import { PanResponder, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
@@ -72,6 +73,7 @@ function ModernSlider({ value, min, max, onChange, step = 1 }: { value: number, 
 
 export default function BibleSettings() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const { settings, updateSettings, isLoading } = useSettings();
 
   const fonts = [
@@ -107,7 +109,7 @@ export default function BibleSettings() {
         </Text>
         <TouchableOpacity
           className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
-          onPress={() => Alert.alert("Aide", "Ces réglages s'appliquent à toute l'application.")}
+          onPress={() => showAlert({ title: "Aide", message: "Ces réglages s'appliquent à toute l'application.", type: 'info' })}
         >
           <Info size={20} color="#cbd5e1" />
         </TouchableOpacity>

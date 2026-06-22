@@ -3,14 +3,16 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Copy, ExternalLink, Facebook, Heart, Landmark, Mail, Sparkles } from 'lucide-react-native';
 import React from 'react';
-import { Alert, Linking, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
 export default function DonateScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showAlert } = useAlert();
 
   const handleFacebook = () => {
     Linking.openURL('https://facebook.com/adventools');
@@ -80,7 +82,7 @@ export default function DonateScreen() {
 
             <View className="gap-3">
               <TouchableOpacity
-                onPress={() => Alert.alert("Mvola", "+261 34 37 395 28")}
+                onPress={() => showAlert({ title: "Mvola", message: "+261 34 37 395 28", type: 'info' })}
                 className="flex-row items-center bg-slate-800/50 p-4 rounded-2xl border border-white/5"
               >
                 <View className="w-8 h-8 rounded-full bg-yellow-400 items-center justify-center mr-3">
@@ -94,7 +96,7 @@ export default function DonateScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => Alert.alert("Orange Money", "+261 32 88 942 01")}
+                onPress={() => showAlert({ title: "Orange Money", message: "+261 32 88 942 01", type: 'info' })}
                 className="flex-row items-center bg-slate-800/50 p-4 rounded-2xl border border-white/5"
               >
                 <View className="w-8 h-8 rounded-full bg-orange-500 items-center justify-center mr-3">
@@ -111,7 +113,7 @@ export default function DonateScreen() {
 
           <TouchableOpacity
             className="flex-row items-center bg-primary p-5 rounded-3xl mb-4 shadow-xl shadow-primary/20"
-            onPress={() => Alert.alert(t('online_payment'), "Lien de paiement en ligne bientôt disponible.")}
+            onPress={() => showAlert({ title: t('online_payment'), message: "Lien de paiement en ligne bientôt disponible.", type: 'info' })}
           >
             <View className="w-12 h-12 rounded-2xl bg-white/20 items-center justify-center mr-4">
               <Heart size={24} color="white" fill="white" />

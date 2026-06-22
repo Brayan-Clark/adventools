@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { ChevronLeft, PlayCircle, Globe, RefreshCw, Search, AlertCircle, Download, Trash2, WifiOff } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScrollView, TouchableOpacity, View, Image, SectionList, TextInput, ActivityIndicator, Modal, Alert } from 'react-native';
+import { ScrollView, TouchableOpacity, View, Image, SectionList, TextInput, ActivityIndicator, Modal } from 'react-native';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -61,6 +63,8 @@ const extractLessonNum = (index?: string) => {
 export default function SabbathSchoolVideoScreen() {
   const router = useRouter();
   const { t, currentLang } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const { settings: globalSettings } = useSettings();
   
   const initialLang = SUPPORTED_LANGS.find(l => l.label === currentLang)?.code || 'fr';
@@ -240,25 +244,29 @@ export default function SabbathSchoolVideoScreen() {
               return next;
           });
         }
-      } catch (e) { Alert.alert(t('error'), t('download_failed')); }
+      } catch (e) { showToast(t('download_failed'), 'error'); }
       setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
     });
   };
 
   const deleteVideo = (item: VideoClip) => {
-    Alert.alert(t('delete'), t('delete_audio_confirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: async () => {
-          try {
-            await FileSystem.deleteAsync(`${SS_VIDEO_DIR}${item.id}.mp4`, { idempotent: true });
-            setDownloadedVideos(prev => {
-                const next = { ...prev }; delete next[item.id];
-                FileSystem.writeAsStringAsync(SS_VIDEO_METADATA, JSON.stringify(next)).catch(() => {});
-                return next;
-            });
-          } catch (e) {}
-      }}
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: t('delete_audio_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        try {
+          await FileSystem.deleteAsync(`${SS_VIDEO_DIR}${item.id}.mp4`, { idempotent: true });
+          setDownloadedVideos(prev => {
+              const next = { ...prev }; delete next[item.id];
+              FileSystem.writeAsStringAsync(SS_VIDEO_METADATA, JSON.stringify(next)).catch(() => {});
+              return next;
+          });
+        } catch (e) {}
+      },
+    });
   };
 
   const playVideo = (item: VideoClip) => {

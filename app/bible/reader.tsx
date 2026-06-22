@@ -8,8 +8,9 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Globe, Palette, Share2, Type, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, ScrollView, TouchableOpacity, View } from 'react-native';
 
+import { useToast } from '@/lib/toast-context';
 import { AppText as Text } from '@/components/ui/AppText';
 import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } from '@/lib/bible';
 
@@ -17,6 +18,7 @@ import { BibleConfig, checkAndDownloadBible, DB_SOURCES, getAvailableBibles } fr
 export default function BibleReader() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { bookId, bookName, testament, testamentName, chapter: chapterParam, verse: verseParam, lang: langParam } = useLocalSearchParams();
   const [chapter, setChapter] = useState(Number(chapterParam) || 1);
   const [chaptersCount, setChaptersCount] = useState(0);
@@ -727,7 +729,7 @@ export default function BibleReader() {
                 <TouchableOpacity
                   onPress={async () => {
                     await Clipboard.setStringAsync(`${currentBookName} ${chapter}:${selectedVerse?.verse}\n${selectedVerse?.text}`);
-                    Alert.alert("Copié", "Verset copié dans le presse-papier");
+                    showToast("Verset copié dans le presse-papier", 'success');
                     setSelectedVerse(null);
                   }}
                   className="flex-1 bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex-row items-center justify-center"

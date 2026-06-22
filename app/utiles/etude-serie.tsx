@@ -7,8 +7,10 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, Copy, Pencil, Plus, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
@@ -94,6 +96,8 @@ const DEFAULT_STUDIES = [
 
 export default function EtudeSerie() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const router = useRouter();
   const { settings: globalSettings } = useSettings();
   const [studies, setStudies] = useState<StudySection[]>([]);
@@ -190,7 +194,7 @@ export default function EtudeSerie() {
           });
         } else {
           const bibleName = res?.bibleName || globalSettings.bibleVersion;
-          Alert.alert(t('verse_not_found'), `${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`);
+          showToast(`${t('no_verse_found')} ${ref} ${t('not_found_in_bible')} (${bibleName})`, 'info');
         }
       } catch (e) { console.error(e); }
     } else {
@@ -252,17 +256,19 @@ export default function EtudeSerie() {
   };
 
   const deleteVerse = (sIdx: number, vIdx: number) => {
-    Alert.alert(t('delete'), t('delete_note_confirm'), [
-      { text: t('cancel'), style: "cancel" },
-      {
-        text: t('delete'), style: "destructive", onPress: () => {
-          const updated = [...studies];
-          updated[sIdx].verses.splice(vIdx, 1);
-          if (updated[sIdx].verses.length === 0) updated.splice(sIdx, 1);
-          saveStudies(updated);
-        }
-      }
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: t('delete_note_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: () => {
+        const updated = [...studies];
+        updated[sIdx].verses.splice(vIdx, 1);
+        if (updated[sIdx].verses.length === 0) updated.splice(sIdx, 1);
+        saveStudies(updated);
+      },
+    });
   };
 
   const resetForm = () => {
@@ -275,7 +281,7 @@ export default function EtudeSerie() {
 
   const copyToClipboard = async (text: string) => {
     await Clipboard.setStringAsync(text);
-    Alert.alert(t('copy'), t('verse_copied'));
+    showToast(t('verse_copied'), 'success');
   };
 
   return (

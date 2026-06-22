@@ -5,8 +5,9 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, CloudDownload, Info, RefreshCcw, Search, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from '@/components/ui/AppText';
 import { checkMobileDataWarning } from '@/lib/data-saver';
@@ -17,6 +18,7 @@ const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/
 export default function BibleStore() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const [loading, setLoading] = useState(true);
   const [manifest, setManifest] = useState<BibleConfig[]>([]);
   const [installed, setInstalled] = useState<BibleConfig[]>([]);
@@ -137,15 +139,13 @@ export default function BibleStore() {
       return;
     }
 
-    Alert.alert(
-      "Suppression",
-      "Voulez-vous vraiment supprimer cette version ?",
-      [
-        { text: "Non", style: "cancel" },
-        {
-          text: "Oui",
-          style: "destructive",
-          onPress: async () => {
+    showAlert({
+      title: "Suppression",
+      message: "Voulez-vous vraiment supprimer cette version ?",
+      type: 'error',
+      confirmText: "Oui",
+      cancelText: "Non",
+      onConfirm: async () => {
             try {
               const version = installed.find(b => b.id === versionId);
               if (!version) return;
@@ -164,10 +164,8 @@ export default function BibleStore() {
             } catch (e) {
               console.error(e);
             }
-          }
-        }
-      ]
-    );
+      },
+    });
   };
 
   const displayList = getDisplayList();

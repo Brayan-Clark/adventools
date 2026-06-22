@@ -2,8 +2,9 @@ import { Audio } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, Pause, Play, Rewind, FastForward, SkipBack, SkipForward, Repeat, Heart, List, Share2, Radio as RadioIcon } from 'lucide-react-native';
 import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, TouchableOpacity, View, Alert, Image, Dimensions, Animated, Platform, PermissionsAndroid, FlatList } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View, Image, Dimensions, Animated, Platform, PermissionsAndroid, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAlert } from '@/lib/alert-context';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSettings } from '../../lib/settings-context';
@@ -106,6 +107,7 @@ const resolveAudioUrl = (url: string) => {
 export default function AudioPlayerScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams() as any;
   // NOTE: We do NOT use useKeepAwake() here.
   // For radio playback, we WANT the screen to be able to turn off while audio
@@ -287,7 +289,7 @@ export default function AudioPlayerScreen() {
           return; // Success!
         }
       } catch (e: any) {
-        Alert.alert("Erreur Lecteur Natif", "Le lecteur haute performance n'a pas pu démarrer. Assurez-vous d'utiliser l'APK mis à jour.\n\nErreur: " + (e?.message || e));
+        showAlert({ title: "Erreur Lecteur Natif", message: "Le lecteur haute performance n'a pas pu démarrer. Assurez-vous d'utiliser l'APK mis à jour.\n\nErreur: " + (e?.message || e), type: 'error' });
       }
     }
 

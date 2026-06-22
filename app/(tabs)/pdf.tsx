@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, Clock, CloudDownload, FileText, FolderOpen, Plus, RefreshCw, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, TouchableOpacity, View, BackHandler } from 'react-native';
+import { useToast } from '@/lib/toast-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CacheManager } from '@/lib/cache-manager';
 import { AppText as Text } from '@/components/ui/AppText';
@@ -38,6 +39,7 @@ const getMimeType = (fileName: string) => {
 
 export default function PDFLibrary() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [manifest, setManifest] = useState<any>(null);
   const [downloading, setDownloading] = useState<Record<string, number>>({});
@@ -147,7 +149,7 @@ export default function PDFLibrary() {
       if (e.message?.includes("Network request failed") || e.message?.includes("network")) {
         errorMsg = t('connection_error');
       }
-      Alert.alert("Erreur", errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setDownloading(prev => {
         const next = { ...prev };
@@ -183,10 +185,10 @@ export default function PDFLibrary() {
               await AsyncStorage.removeItem(`pdf_bookmarks_${fileName}`);
               await AsyncStorage.removeItem(`pdf_notes_${fileName}`);
               setLocalFiles(prev => prev.filter(f => f !== fileName));
-              Alert.alert("Succès", t('delete_doc_success'));
+              showToast(t('delete_doc_success'), 'success');
             } catch (e) {
               console.error(e);
-              Alert.alert("Erreur", t('delete_doc_error'));
+              showToast(t('delete_doc_error'), 'error');
             }
           }
         }

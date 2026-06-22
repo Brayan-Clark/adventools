@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Headphones, Globe, RefreshCw, Search, X, Download, Trash2, AlertCircle, WifiOff } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScrollView, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Alert, Modal, BackHandler } from 'react-native';
+import { ScrollView, TouchableOpacity, View, Image, SectionList, ActivityIndicator, TextInput, Modal, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
+import { useToast } from '@/lib/toast-context';
+import { useAlert } from '@/lib/alert-context';
 import { AppText as Text } from '@/components/ui/AppText';
 import { checkMobileDataWarning } from '@/lib/data-saver';
 
@@ -64,6 +66,8 @@ const extractLessonNum = (index?: string) => {
 export default function SabbathSchoolAudioScreen() {
   const router = useRouter();
   const { t, currentLang } = useTranslation();
+  const { showToast } = useToast();
+  const { showAlert } = useAlert();
   const { settings: globalSettings } = useSettings();
   
   const initialLang = SUPPORTED_LANGS.find(l => l.label === currentLang)?.code || 'fr';
@@ -258,25 +262,29 @@ export default function SabbathSchoolAudioScreen() {
               return next;
           });
         }
-      } catch (e) { Alert.alert(t('error'), t('download_failed')); }
+      } catch (e) { showToast(t('download_failed'), 'error'); }
       setDownloadingProgress(prev => { const n = {...prev}; delete n[key]; return n; });
     });
   };
 
   const deleteAudio = (item: AudioItem) => {
-    Alert.alert(t('delete'), t('delete_audio_confirm'), [
-      { text: t('cancel'), style: 'cancel' },
-      { text: t('delete'), style: 'destructive', onPress: async () => {
-          try {
-            await FileSystem.deleteAsync(`${SS_AUDIO_DIR}${item.id}.mp3`, { idempotent: true });
-            setDownloadedMedia(prev => {
-                const next = { ...prev }; delete next[item.id];
-                FileSystem.writeAsStringAsync(SS_METADATA_FILE, JSON.stringify(next)).catch(() => {});
-                return next;
-            });
-          } catch (e) {}
-      }}
-    ]);
+    showAlert({
+      title: t('delete'),
+      message: t('delete_audio_confirm'),
+      type: 'error',
+      confirmText: t('delete'),
+      cancelText: t('cancel'),
+      onConfirm: async () => {
+        try {
+          await FileSystem.deleteAsync(`${SS_AUDIO_DIR}${item.id}.mp3`, { idempotent: true });
+          setDownloadedMedia(prev => {
+              const next = { ...prev }; delete next[item.id];
+              FileSystem.writeAsStringAsync(SS_METADATA_FILE, JSON.stringify(next)).catch(() => {});
+              return next;
+          });
+        } catch (e) {}
+      },
+    });
   };
 
   const playAudio = (item: AudioItem) => {
