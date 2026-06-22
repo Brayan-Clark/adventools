@@ -17,6 +17,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, PanResponder, Platform, Image as RNImage, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { PremiumAlert } from '@/components/ui/PremiumAlert';
 import Markdown from 'react-native-markdown-display';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
@@ -1660,17 +1661,27 @@ export default function Notes() {
                 </View>
             )}
 
-            <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-
+            <View style={{ flex: 1 }}>
                 {filteredNotes.length > 0 ? (
-                    <View className="flex-row gap-4">
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 === 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} onLongPress={() => handleNoteLongPress(n)} isSelected={selectedNoteIds.includes(n.id)} isMultiSelectActive={isMultiSelectActive} />)}</View>
-                        <View className="flex-1 gap-4">{filteredNotes.filter((_, i) => i % 2 !== 0).map(n => <NoteCard key={n.id} note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} onLongPress={() => handleNoteLongPress(n)} isSelected={selectedNoteIds.includes(n.id)} isMultiSelectActive={isMultiSelectActive} />)}</View>
-                    </View>
+                    <FlashList
+                        data={filteredNotes}
+                        masonry
+                        numColumns={2}
+                        optimizeItemArrangement
+                        keyExtractor={(n) => n.id}
+                        extraData={`${isMultiSelectActive}|${selectedNoteIds.join(',')}`}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 100 }}
+                        renderItem={({ item: n }) => (
+                            <View style={{ paddingHorizontal: 6, paddingBottom: 12 }}>
+                                <NoteCard note={n} onPress={() => handleNoteClick(n)} onDelete={() => deleteNote(n.id)} onLongPress={() => handleNoteLongPress(n)} isSelected={selectedNoteIds.includes(n.id)} isMultiSelectActive={isMultiSelectActive} />
+                            </View>
+                        )}
+                    />
                 ) : (
-                    <View className="w-full items-center py-32 opacity-20"><StickyNote size={80} color="#94a3b8" /><Text className="text-white font-bold text-xl mt-6">{t('no_notes_found')}</Text></View>
+                    <View className="flex-1 items-center justify-center py-32 opacity-20"><StickyNote size={80} color="#94a3b8" /><Text className="text-white font-bold text-xl mt-6">{t('no_notes_found')}</Text></View>
                 )}
-            </ScrollView>
+            </View>
 
             <Modal visible={!!editingNote} animationType="slide" statusBarTranslucent onRequestClose={closeNote}>
                 <View style={{ backgroundColor: editingNote?.bgStyle?.color || '#0d1117' }} className="flex-1">

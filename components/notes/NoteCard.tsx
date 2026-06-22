@@ -54,7 +54,7 @@ const isColorDark = (hexColor?: string) => {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
 };
 
-export const NoteCard = ({ note, onPress, onDelete, onLongPress, isSelected, isMultiSelectActive }: NoteCardProps) => {
+const NoteCardComponent = ({ note, onPress, onDelete, onLongPress, isSelected, isMultiSelectActive }: NoteCardProps) => {
   const { t } = useTranslation();
   const hasImage = note.attachments?.images && note.attachments.images.length > 0;
   
@@ -138,3 +138,5 @@ export const NoteCard = ({ note, onPress, onDelete, onLongPress, isSelected, isM
     </TouchableOpacity>
   );
 };
+
+export const NoteCard = React.memo(NoteCardComponent);
