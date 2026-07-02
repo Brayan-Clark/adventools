@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules } from '../../lib/mofonaina';
+import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules, getAllMofonainaForQuarter } from '../../lib/mofonaina';
 import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '../../lib/bible';
 import { useTranslation } from '../../lib/i18n';
 import { useToast } from '../../lib/toast-context';
@@ -29,6 +29,8 @@ export default function MofonainaScreen() {
   const { settings: globalSettings } = useSettings();
   const [loading, setLoading] = useState(true);
   const [mofonaina, setMofonaina] = useState<Mofonaina | null>(null);
+  const [quarterList, setQuarterList] = useState<Mofonaina[]>([]);
+  const [showQuarterModal, setShowQuarterModal] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean | null>(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -154,6 +156,9 @@ export default function MofonainaScreen() {
       await loadHighlights(dateStr);
 
       setMofonaina(data);
+      
+      const allQ = await getAllMofonainaForQuarter();
+      setQuarterList(allQ);
     } catch (error) {
       console.error('Failed to load mofonaina', error);
       setMofonaina(null);
@@ -452,25 +457,32 @@ export default function MofonainaScreen() {
           ) : mofonaina ? (
             <View>
               {/* Verse Card */}
-              <View className="bg-slate-900/80 rounded-[32px] border border-white/10 p-6 mb-6 backdrop-blur-xl">
-                 <View className="w-10 h-10 rounded-2xl bg-primary/20 items-center justify-center mb-4">
-                    <Bookmark size={20} color="#3b82f6" />
+              <LinearGradient 
+                colors={['rgba(59, 130, 246, 0.15)', 'rgba(30, 58, 138, 0.05)']}
+                start={{x: 0, y: 0}} end={{x: 1, y: 1}}
+                className="rounded-[32px] border border-blue-500/20 p-6 mb-8 overflow-hidden relative"
+              >
+                 <View className="absolute -top-10 -right-10 opacity-5">
+                    <BookOpen size={180} color="#3b82f6" />
                  </View>
-                 <Text className="text-white font-medium italic leading-relaxed mb-4 text-xl">
+                 <View className="w-12 h-12 rounded-2xl bg-blue-500/20 items-center justify-center mb-4 border border-blue-500/30">
+                    <Bookmark size={24} color="#60a5fa" />
+                 </View>
+                 <Text className="text-blue-50 font-medium italic leading-relaxed mb-6 text-2xl tracking-wide shadow-sm">
                     "{mofonaina.andininy_soratra_masina}"
                  </Text>
-                 <View className="flex-row items-center justify-between border-t border-white/5 pt-4">
-                    <TouchableOpacity className="flex-row items-center flex-1 mr-3" onPress={openChapterInBible} activeOpacity={0.6}>
-                       <BookOpen size={16} color="#3b82f6" />
-                       <Text className="text-primary font-bold ml-2 underline" numberOfLines={1}>
+                 <View className="flex-row items-center justify-between border-t border-blue-500/20 pt-4">
+                    <TouchableOpacity className="flex-row items-center flex-1 mr-3 bg-blue-500/10 py-2.5 px-4 rounded-xl" onPress={openChapterInBible} activeOpacity={0.6}>
+                       <BookOpen size={16} color="#60a5fa" />
+                       <Text className="text-blue-300 font-bold ml-2 uppercase tracking-wider text-xs" numberOfLines={1}>
                           {mofonaina.toerana_soratra_masina}
                        </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity className="flex-row items-center" onPress={toggleFavorite}>
-                       <Heart size={20} color={isFavorite() ? "#ec4899" : "#475569"} fill={isFavorite() ? "#ec4899" : "transparent"} />
+                    <TouchableOpacity className="flex-row items-center w-11 h-11 bg-blue-500/10 rounded-xl justify-center" onPress={toggleFavorite}>
+                       <Heart size={22} color={isFavorite() ? "#ec4899" : "#60a5fa"} fill={isFavorite() ? "#ec4899" : "transparent"} />
                     </TouchableOpacity>
                  </View>
-              </View>
+              </LinearGradient>
 
               {/* Main Content Card */}
               <View className="bg-white/5 rounded-[40px] border border-white/5 p-8 mb-8">
@@ -508,14 +520,15 @@ export default function MofonainaScreen() {
               </View>
 
                {/* Quarterly Info Footer */}
-              <TouchableOpacity className="bg-slate-900/40 rounded-[32px] p-6 border border-white/5 flex-row items-center">
+              <TouchableOpacity onPress={() => setShowQuarterModal(true)} activeOpacity={0.8} className="bg-slate-900/40 rounded-[32px] p-6 border border-white/5 flex-row items-center">
                  <View className="w-14 h-14 rounded-2xl bg-blue-500/20 items-center justify-center mr-5">
                     <Text className="text-primary font-bold text-lg">{mofonaina.telovolana.taona}</Text>
                  </View>
                  <View className="flex-1">
-                   <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{t('quarter_number')} {mofonaina.telovolana.laharana}</Text>
+                   <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{t('quarter_number')} {mofonaina.telovolana.laharana} • VOIR TOUT</Text>
                    <Text className="text-white font-bold text-sm leading-tight">{mofonaina.telovolana.lohateny_lehibe}</Text>
                  </View>
+                 <ChevronLeft size={20} color="#64748b" style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -590,6 +603,46 @@ export default function MofonainaScreen() {
           <Edit size={24} color={isHighlightModeActive ? '#ffffff' : '#94a3b8'} />
         </TouchableOpacity>
       </View>
+
+      {/* Quarter List Modal */}
+      <Modal visible={showQuarterModal} animationType="slide" transparent={true} onRequestClose={() => setShowQuarterModal(false)}>
+        <View className="flex-1 bg-[#020617]/95 backdrop-blur-xl">
+          <SafeAreaView className="flex-1">
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-white/10">
+              <Text className="text-white font-bold text-lg">Liste du Trimestre</Text>
+              <TouchableOpacity onPress={() => setShowQuarterModal(false)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
+                <ChevronLeft size={20} color="#f8fafc" style={{ transform: [{ rotate: '-90deg' }] }} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView className="flex-1 px-4 pt-4">
+              {quarterList.map((item, index) => {
+                const itemDate = new Date(item.daty);
+                const isSelected = item.daty === mofonaina?.daty;
+                return (
+                  <TouchableOpacity
+                    key={`q_item_${index}`}
+                    onPress={() => {
+                      setCurrentDate(itemDate);
+                      setShowQuarterModal(false);
+                    }}
+                    className={`mb-3 p-4 rounded-2xl border ${isSelected ? 'bg-primary/20 border-primary/50' : 'bg-slate-900 border-white/5'} flex-row items-center`}
+                  >
+                    <View className="w-12 h-12 rounded-xl bg-black/30 items-center justify-center mr-4">
+                      <Text className="text-white font-bold text-lg">{itemDate.getDate()}</Text>
+                      <Text className="text-slate-400 text-[10px] uppercase">{itemDate.toLocaleString('fr-FR', { month: 'short' })}</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className={`font-bold text-sm mb-1 ${isSelected ? 'text-primary' : 'text-white'}`} numberOfLines={1}>{item.lohateny_andro}</Text>
+                      <Text className="text-slate-400 text-xs italic" numberOfLines={1}>{item.toerana_soratra_masina}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+              <View className="h-10" />
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
 
     </View>
   );

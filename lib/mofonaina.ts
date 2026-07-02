@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
-const API_BASE = 'https://jasemsoftware.tech/api/v1';
+const API_BASE = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
 
 // Cache stored on the filesystem (NOT AsyncStorage): this module is loaded by the
 // Mofonaina widget, which runs in a separate Android process. AsyncStorage is not
@@ -107,19 +107,45 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
-          const response = await fetch(`${API_BASE}/fiambenana?t=${Date.now()}`, {
+          const now = new Date();
+          const year = now.getFullYear();
+          const quarter = Math.floor(now.getMonth() / 3) + 1;
+          const fileName = `${year}-Q${quarter}.json`;
+
+          const response = await fetch(`${API_BASE}/mofonaina/${fileName}?t=${Date.now()}`, {
             signal: controller.signal
           });
           
           clearTimeout(timeoutId);
 
           if (response.ok) {
-            const data: Mofonaina[] = await response.json();
-            if (Array.isArray(data) && data.length > 0) {
-              await writeCacheFile(CACHE_FILE, JSON.stringify(data));
-              await writeCacheFile(LAST_SYNC_FILE, new Date().toISOString());
-              success = true;
-              return data;
+            const fileData = await response.json();
+            if (fileData && fileData.trimestre && Array.isArray(fileData.meditations)) {
+              // Convert new French JSON structure to the internal Mofonaina array
+              const data: Mofonaina[] = fileData.meditations.map((med: any, index: number) => ({
+                id: index + 1,
+                id_telovolana: fileData.trimestre.numero_trimestre,
+                daty: med.date,
+                lohateny_andro: med.titre_du_jour,
+                andininy_soratra_masina: med.verset_texte,
+                toerana_soratra_masina: med.verset_reference,
+                mofon_aina: med.contenu,
+                loharano: med.source,
+                publish: true,
+                telovolana: {
+                  id: fileData.trimestre.numero_trimestre,
+                  taona: fileData.trimestre.annee,
+                  laharana: fileData.trimestre.numero_trimestre,
+                  lohateny_lehibe: fileData.trimestre.titre_principal
+                }
+              }));
+
+              if (data.length > 0) {
+                await writeCacheFile(CACHE_FILE, JSON.stringify(data));
+                await writeCacheFile(LAST_SYNC_FILE, new Date().toISOString());
+                success = true;
+                return data;
+              }
             }
           }
         } catch (fetchError) {
@@ -179,10 +205,30 @@ export async function getMofonainaForDate(date: Date = new Date()): Promise<Mofo
  * Gets the current quarter's information from the cached data
  */
 export async function getCurrentTelovolanaInfo(): Promise<Telovolana | null> {
-  const all = await syncMofonaina();
-  if (all.length > 0) {
-    const sorted = [...all].sort((a, b) => new Date(b.daty).getTime() - new Date(a.daty).getTime());
-    return sorted.length > 0 ? sorted[0].telovolana : null;
+  try {
+    const content = await readCacheFile(CACHE_FILE);
+    if (!content) return null;
+    
+    const data: Mofonaina[] = JSON.parse(content);
+    if (data.length > 0) {
+      return data[0].telovolana;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting telovolana info:', error);
+    return null;
   }
-  return null;
+}
+
+export async function getAllMofonainaForQuarter(): Promise<Mofonaina[]> {
+  try {
+    const content = await readCacheFile(CACHE_FILE);
+    if (!content) return [];
+    
+    const data: Mofonaina[] = JSON.parse(content);
+    return data;
+  } catch (error) {
+    console.error('Error getting all mofonaina:', error);
+    return [];
+  }
 }
