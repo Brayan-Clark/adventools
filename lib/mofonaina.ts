@@ -140,6 +140,10 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
                 }
               }));
 
+              if (fileData.abbreviations) {
+                await writeCacheFile(`${FileSystem.documentDirectory}mofonaina_abbreviations.json`, JSON.stringify(fileData.abbreviations));
+              }
+
               if (data.length > 0) {
                 await writeCacheFile(CACHE_FILE, JSON.stringify(data));
                 await writeCacheFile(LAST_SYNC_FILE, new Date().toISOString());
@@ -230,5 +234,16 @@ export async function getAllMofonainaForQuarter(): Promise<Mofonaina[]> {
   } catch (error) {
     console.error('Error getting all mofonaina:', error);
     return [];
+  }
+}
+
+export async function getMofonainaAbbreviations(): Promise<Record<string, string>> {
+  try {
+    const content = await readCacheFile(`${FileSystem.documentDirectory}mofonaina_abbreviations.json`);
+    if (!content) return {};
+    return JSON.parse(content);
+  } catch (error) {
+    console.error('Error getting mofonaina abbreviations:', error);
+    return {};
   }
 }

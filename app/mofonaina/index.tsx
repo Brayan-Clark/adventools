@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules, getAllMofonainaForQuarter } from '../../lib/mofonaina';
+import { syncMofonaina, getMofonainaForDate, Mofonaina, syncAllModules, getAllMofonainaForQuarter, getMofonainaAbbreviations } from '../../lib/mofonaina';
 import { BIBLE_REGEX, fetchVerseContent, getAvailableBibles } from '../../lib/bible';
 import { useTranslation } from '../../lib/i18n';
 import { useToast } from '../../lib/toast-context';
@@ -35,6 +35,8 @@ export default function MofonainaScreen() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sentenceHighlights, setSentenceHighlights] = useState<Record<string, string>>({});
+  const [abbreviations, setAbbreviations] = useState<Record<string, string>>({});
+  const [showAbbrModal, setShowAbbrModal] = useState(false);
   
   const [isHighlightModeActive, setIsHighlightModeActive] = useState(false);
   const [isHighlighterPanelExpanded, setIsHighlighterPanelExpanded] = useState(false);
@@ -151,6 +153,8 @@ export default function MofonainaScreen() {
 
       await syncMofonaina(false);
       const data = await getMofonainaForDate(targetDate);
+      const abbrs = await getMofonainaAbbreviations();
+      setAbbreviations(abbrs);
       
       const pad = (n: number) => n.toString().padStart(2, '0');
       const dateStr = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}`;
@@ -469,7 +473,7 @@ export default function MofonainaScreen() {
                  <View className="w-12 h-12 rounded-2xl bg-blue-500/20 items-center justify-center mb-4 border border-blue-500/30">
                     <Bookmark size={24} color="#60a5fa" />
                  </View>
-                 <Text className="text-blue-50 font-medium italic leading-relaxed mb-6 text-2xl tracking-wide shadow-sm">
+                 <Text className="text-blue-50 font-medium italic leading-relaxed mb-6 text-lg tracking-wide shadow-sm">
                     "{mofonaina.andininy_soratra_masina}"
                  </Text>
                  <View className="flex-row items-center justify-between border-t border-blue-500/20 pt-4">
@@ -508,15 +512,26 @@ export default function MofonainaScreen() {
                 ))}
 
                 {mofonaina.loharano && (
-                  <View className="mt-8 pt-6 border-t border-white/5 flex-row items-center justify-between">
-                    <View>
-                      <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{t('author')}</Text>
+                  <TouchableOpacity 
+                    onPress={() => Object.keys(abbreviations).length > 0 && setShowAbbrModal(true)}
+                    activeOpacity={0.7}
+                    className="mt-8 pt-6 border-t border-white/5 flex-row items-center justify-between"
+                  >
+                    <View className="flex-1 pr-4">
+                      <View className="flex-row items-center mb-1">
+                        <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{t('author')}</Text>
+                        {Object.keys(abbreviations).length > 0 && (
+                          <View className="ml-2 bg-slate-800 rounded-full px-2 py-0.5">
+                            <Text className="text-[9px] text-blue-400 font-bold">INFO</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text className="text-white font-bold text-sm">{mofonaina.loharano}</Text>
                     </View>
                     <View className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
                        <Text className="text-white/20 font-bold text-xl">”</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -639,6 +654,35 @@ export default function MofonainaScreen() {
                   </TouchableOpacity>
                 );
               })}
+              <View className="h-10" />
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* Abbreviations Modal */}
+      <Modal visible={showAbbrModal} animationType="slide" transparent={true} onRequestClose={() => setShowAbbrModal(false)}>
+        <View className="flex-1 bg-[#020617]/95 backdrop-blur-xl">
+          <SafeAreaView className="flex-1">
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-white/10">
+              <Text className="text-white font-bold text-lg">Abréviations</Text>
+              <TouchableOpacity onPress={() => setShowAbbrModal(false)} className="w-10 h-10 rounded-full bg-white/5 items-center justify-center">
+                <ChevronLeft size={20} color="#f8fafc" style={{ transform: [{ rotate: '-90deg' }] }} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView className="flex-1 px-6 pt-6">
+              {Object.keys(abbreviations).length > 0 ? (
+                Object.entries(abbreviations).map(([key, value], index) => (
+                  <View key={`abbr_${index}`} className="mb-4 p-4 rounded-2xl bg-slate-900 border border-white/5">
+                    <Text className="font-bold text-blue-400 text-sm mb-1">{key}</Text>
+                    <Text className="text-slate-300 text-sm">{value}</Text>
+                  </View>
+                ))
+              ) : (
+                <View className="items-center justify-center py-20">
+                  <Text className="text-slate-400 font-medium">Aucune abréviation disponible.</Text>
+                </View>
+              )}
               <View className="h-10" />
             </ScrollView>
           </SafeAreaView>
