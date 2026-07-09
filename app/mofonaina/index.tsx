@@ -108,7 +108,8 @@ export default function MofonainaScreen() {
   };
 
   const splitIntoSentences = (text: string) => {
-    return text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
+    // Improved regex that splits by sentences but preserves all characters including trailing quotes/parentheses
+    return text.match(/[^.!?]+[.!?]+[\s"”’»>)]*|.+/g) || [text];
   };
 
   useEffect(() => {
