@@ -94,9 +94,9 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    // Force portrait orientation lock
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-    
+    // Allow free rotation (portrait + landscape, phones and tablets)
+    ScreenOrientation.unlockAsync().catch(() => {});
+
     // Bible metadata init on startup
     initBibleMetadata();
     // NOTE: Notification permission is handled once in RootNavigator.checkPermissions()

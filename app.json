@@ -3,7 +3,7 @@
     "name": "Adventools",
     "slug": "adventools",
     "version": "1.3.4",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "adventools",
     "userInterfaceStyle": "dark",

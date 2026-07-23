@@ -4,11 +4,13 @@ import { useTranslation } from '@/lib/i18n';
 import { Tabs } from 'expo-router';
 import { BookOpen, FileText, Home, Music, StickyNote } from 'lucide-react-native';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const { settings } = useSettings();
+  const insets = useSafeAreaInsets();
 
   let tabFont = 'Lexend_600SemiBold';
   if (settings.fontFamily !== 'System') {
@@ -26,8 +28,10 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#111621',
           borderTopColor: '#1e293b',
-          height: 60,
-          paddingBottom: 10,
+          // Add the system navigation bar inset so the tab bar is never
+          // hidden behind gesture/3-button navigation (tablets included)
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(10, insets.bottom),
           paddingTop: 5,
         },
         headerShown: false,
