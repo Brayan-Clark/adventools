@@ -53,7 +53,8 @@ const lang: Lang = 'fr';
 
   const lang = clientLang();
   // URL base (pour les liens internes sur GitHub Pages)
-  const BASE = import.meta.env.BASE_URL ?? '/';
+  // Toujours terminer par '/' pour éviter /adventoolsmofonaina
+  const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
   const root = document.getElementById('mofonaina-root');
   const rangeEl = document.getElementById('mofonaina-range');

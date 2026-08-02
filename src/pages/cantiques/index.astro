@@ -74,7 +74,7 @@ const lang: Lang = 'fr';
 
   const lang = clientLang();
   // URL base (pour les liens internes sur GitHub Pages)
-  const BASE = import.meta.env.BASE_URL ?? '/';
+  const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
   const searchEl = document.getElementById('cant-search') as HTMLInputElement | null;
   const grid = document.getElementById('cant-grid')!;

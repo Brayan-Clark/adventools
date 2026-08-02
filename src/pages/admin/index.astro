@@ -214,7 +214,7 @@ const typeOptions = [
   import type { MediaItem } from '@/lib/types';
 
   const lang = document.documentElement.lang;
-  const BASE = import.meta.env.BASE_URL ?? '/';
+  const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
   const loginScreen = document.getElementById('login-screen')!;
   const dashboard = document.getElementById('dashboard')!;

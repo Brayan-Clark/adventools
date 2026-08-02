@@ -82,7 +82,7 @@ const backHome = t(lang, 'back_home');
 <script>
 import { supabase, signIn } from '@/lib/supabase';
 
-const BASE = import.meta.env.BASE_URL ?? '/';
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
 const form = document.getElementById('login-form') as HTMLFormElement;
 const errorMsg = document.getElementById('error-message') as HTMLDivElement;

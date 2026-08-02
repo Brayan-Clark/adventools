@@ -9,7 +9,7 @@
  */
 
 const RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
-const BASE = import.meta.env.BASE_URL ?? '/';
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 heures
 
 interface CacheEntry<T> {

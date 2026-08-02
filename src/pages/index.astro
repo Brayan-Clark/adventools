@@ -272,7 +272,7 @@ const catColors: Record<string, string> = {
   const lang = clientLang();
 
   // URL base (pour les liens internes sur GitHub Pages)
-  const BASE = import.meta.env.BASE_URL ?? '/';
+  const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
   const ADVENTOOLS = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
 
