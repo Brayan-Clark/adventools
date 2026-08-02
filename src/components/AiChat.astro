@@ -1,0 +1,781 @@
+---
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+interface Props {
+  lang?: Lang;
+  embedded?: boolean;
+}
+const { lang = 'fr', embedded = false } = Astro.props;
+---
+
+{!embedded && (
+  <!-- Bouton flottant -->
+  <button
+    id="ai-fab"
+    class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-night-950 shadow-soft-gold transition-all duration-300 hover:scale-110 active:scale-95"
+    aria-label="Assistant IA"
+  >
+    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2zm7 11l.95 2.55L22.5 16.5l-2.55.95L19 20l-.95-2.55L15.5 16.5l2.55-.95L19 13zm-9 3l.75 2L12.5 18.75l-2.75.75L9 22.25 8.25 19.5 5.5 18.75l2.75-.75L9 15.25z" />
+    </svg>
+  </button>
+)}
+
+<!-- Panneau de chat -->
+<section
+  id="ai-panel"
+  class:list={[
+    'flex flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white/95 shadow-soft backdrop-blur-xl transition-all duration-300 dark:border-night-600 dark:bg-night-800/95',
+    embedded
+      ? 'relative h-[680px] w-full max-w-full opacity-100'
+      : 'fixed bottom-24 right-5 z-50 h-[75vh] max-h-[700px] w-[calc(100vw-2.5rem)] max-w-md translate-y-4 opacity-0 pointer-events-none',
+  ]}
+  data-ai-panel
+  aria-hidden={embedded ? 'false' : 'true'}
+>
+  <!-- En-tête -->
+  <div class="flex items-center gap-3 border-b border-slate-200/70 bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 text-white dark:border-night-700">
+    <div class="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur">
+      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2z" />
+      </svg>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="font-display text-sm font-semibold">{t(lang, 'ai_title')}</p>
+      <p class="truncate text-[11px] text-white/70">{t(lang, 'ai_powered')}</p>
+    </div>
+    <div class="flex items-center gap-1">
+      <button id="ai-clear" class="rounded-full p-1.5 text-white/80 transition hover:bg-white/10" aria-label={t(lang, 'ai_clear')}>
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" d="M6 7h12M9 7V5h6v2m-7 0l1 13h6l1-13" />
+        </svg>
+      </button>
+      {!embedded && (
+        <button id="ai-close" class="rounded-full p-1.5 text-white/80 transition hover:bg-white/10" aria-label="Fermer">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      )}
+    </div>
+  </div>
+
+  <!-- Bandeau connexion -->
+  <div id="ai-auth-off" class="hidden border-b border-gold-500/30 bg-gold-500/10 px-5 py-3">
+    <div class="flex items-start gap-2.5">
+      <svg class="mt-0.5 h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2a5 5 0 015 5v3h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm-3 8h6V7a3 3 0 10-6 0v3z" />
+      </svg>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">{t(lang, 'ai_signin_title')}</p>
+        <p class="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{t(lang, 'ai_signin_text')}</p>
+        <button
+          id="ai-signin-btn"
+          class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 px-3.5 py-1.5 text-[11px] font-bold text-night-950 transition hover:brightness-110 active:scale-95"
+        >
+          <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 002-2V5a2 2 0 00-2-2h-8v2h8v14z" />
+          </svg>
+          {t(lang, 'ai_signin_btn')}
+        </button>
+        <span id="ai-signin-err" class="mt-1 hidden block text-[11px] text-rose-500"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statut connecté -->
+  <div id="ai-auth-on" class="hidden border-b border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5">
+    <div class="flex items-center gap-2 text-[11px] text-emerald-700 dark:text-emerald-300">
+      <span class="h-2 w-2 shrink-0 rounded-full bg-emerald-500"></span>
+      <span class="min-w-0 flex-1 truncate">
+        {t(lang, 'ai_signed_as')} <strong id="ai-user-label" class="font-semibold"></strong>
+      </span>
+      <button id="ai-signout-btn" class="shrink-0 rounded-full px-2.5 py-0.5 font-semibold ring-1 ring-emerald-500/40 transition hover:bg-emerald-500/15">
+        {t(lang, 'ai_signout')}
+      </button>
+    </div>
+  </div>
+
+  <!-- Statut hors-ligne -->
+  <div id="ai-offline" class="hidden border-b border-amber-500/30 bg-amber-500/10 px-5 py-3 text-xs text-amber-700 dark:text-amber-300">
+    ⚠️ {t(lang, 'ai_offline_text')}
+  </div>
+
+  <!-- Onglets -->
+  <div class="flex border-b border-slate-200/70 px-3 pt-2 dark:border-night-700" role="tablist">
+    {[
+      { id: 'chat', label: t(lang, 'ai_tab_chat'), icon: 'M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2z' },
+      { id: 'image', label: t(lang, 'ai_tab_image'), icon: 'M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm2 3.5A1.5 1.5 0 117.5 10 1.5 1.5 0 016 8.5zM20 17l-4.5-5L10 17l-3-3-3 3v1h16v-1z' },
+      { id: 'audio', label: t(lang, 'ai_tab_audio'), icon: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z' },
+    ].map((tab, i) => (
+      <button
+        class:list={[
+          'ai-tab flex items-center gap-1.5 rounded-t-xl px-3.5 py-2 text-xs font-semibold transition',
+          i === 0
+            ? 'border border-b-0 border-slate-200/70 bg-white text-gold-600 dark:border-night-600 dark:bg-night-800 dark:text-gold-400'
+            : 'border border-b-0 border-transparent text-slate-400 hover:text-gold-600 dark:hover:text-gold-400',
+        ]}
+        data-tab={tab.id}
+        role="tab"
+      >
+        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d={tab.icon} /></svg>
+        {tab.label}
+      </button>
+    ))}
+  </div>
+
+  <!-- ==== Onglet Chat ==== -->
+  <div id="ai-tab-chat" class="flex min-h-0 flex-1 flex-col">
+    <div id="ai-messages" class="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+      <!-- Carte d'accueil (affichée si non connecté) -->
+      <div id="ai-welcome" class="hidden">
+        <div class="flex flex-col items-center rounded-2xl border border-gold-500/40 bg-gold-500/10 px-5 py-8 text-center">
+          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-night-950 shadow-soft-gold">
+            <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2zm7 11l.95 2.55L22.5 16.5l-2.55.95L19 20l-.95-2.55L15.5 16.5l2.55-.95L19 13zm-9 3l.75 2L12.5 18.75l-2.75.75L9 22.25 8.25 19.5 5.5 18.75l2.75-.75L9 15.25z" />
+            </svg>
+          </span>
+          <h3 class="mt-4 font-display text-lg font-semibold text-slate-900 dark:text-white">
+            {t(lang, 'ai_welcome_title')}
+          </h3>
+          <p class="mt-1 max-w-xs text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            {t(lang, 'ai_welcome_text')}
+          </p>
+          <button
+            id="ai-welcome-signin"
+            class="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 px-4 py-2 text-xs font-bold text-night-950 transition hover:brightness-110 active:scale-95"
+          >
+            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 002-2V5a2 2 0 00-2-2h-8v2h8v14z" />
+            </svg>
+            {t(lang, 'ai_signin_btn')}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ai-suggestions" class="flex gap-2 overflow-x-auto px-5 pb-2 no-scrollbar">
+      {[
+        t(lang, 'ai_suggestion_1'),
+        t(lang, 'ai_suggestion_2'),
+        t(lang, 'ai_suggestion_3'),
+      ].map((s) => (
+        <button class="ai-suggestion shrink-0 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-[11px] font-medium text-indigo-600 transition hover:bg-indigo-500/20 dark:text-indigo-300">
+          {s}
+        </button>
+      ))}
+    </div>
+
+    <form id="ai-form" class="flex items-center gap-2 border-t border-slate-200/70 p-3 dark:border-night-700">
+      <input
+        id="ai-input"
+        type="text"
+        placeholder={t(lang, 'ai_placeholder')}
+        class="input-dark flex-1"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-night-950 transition hover:brightness-110 active:scale-95"
+        aria-label={t(lang, 'ai_send')}
+      >
+        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 20.5v-17l18 8.5-18 8.5zM5 17.5L17 12 5 6.5v4l6 1.5-6 1.5v4z" />
+        </svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- ==== Onglet Image ==== -->
+  <div id="ai-tab-image" class="hidden min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
+    <div class="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-night-700 dark:bg-night-900/60">
+      <p class="text-xs text-slate-500 dark:text-slate-400">{t(lang, 'ai_image_hint')}</p>
+      <textarea
+        id="ai-img-prompt"
+        rows="3"
+        class="input-dark mt-3 w-full resize-none"
+        placeholder={t(lang, 'ai_image_placeholder')}
+      ></textarea>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          {t(lang, 'ai_image_ratio')}
+          <select id="ai-img-ratio" class="input-dark w-auto rounded-lg px-2 py-1.5 text-xs">
+            <option value="1:1">{t(lang, 'ai_ratio_square')}</option>
+            <option value="16:9">{t(lang, 'ai_ratio_landscape')}</option>
+            <option value="9:16">{t(lang, 'ai_ratio_portrait')}</option>
+          </select>
+        </label>
+        <button id="ai-img-btn" class="btn-gold ml-auto px-4 py-2 text-xs">
+          {t(lang, 'ai_image_btn')}
+        </button>
+      </div>
+    </div>
+    <div id="ai-img-result" class="mt-4 space-y-3"></div>
+  </div>
+
+  <!-- ==== Onglet Audio ==== -->
+  <div id="ai-tab-audio" class="hidden min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
+    <div class="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-night-700 dark:bg-night-900/60">
+      <p class="text-xs text-slate-500 dark:text-slate-400">{t(lang, 'ai_audio_hint')}</p>
+      <textarea
+        id="ai-audio-text"
+        rows="3"
+        class="input-dark mt-3 w-full resize-none"
+        placeholder={t(lang, 'ai_audio_placeholder')}
+      ></textarea>
+      <div class="mt-3 flex items-center gap-2">
+        <button id="ai-audio-btn" class="btn-gold ml-auto px-4 py-2 text-xs">
+          {t(lang, 'ai_audio_btn')}
+        </button>
+      </div>
+    </div>
+    <div id="ai-audio-result" class="mt-4 space-y-3"></div>
+  </div>
+</section>
+
+<!-- Modal de connexion -->
+<div id="ai-auth-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={t(lang, 'ai_signin_title')}>
+  <div id="ai-auth-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+  <div class="relative w-full max-w-sm overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-soft dark:border-night-600 dark:bg-night-800">
+    <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-4 text-white">
+      <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur">
+        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2a5 5 0 015 5v3h1a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8a2 2 0 012-2h1V7a5 5 0 015-5zm-3 8h6V7a3 3 0 10-6 0v3z" />
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <p class="font-display text-sm font-semibold">{t(lang, 'ai_modal_title')}</p>
+        <p class="truncate text-[11px] text-white/70">{t(lang, 'ai_powered')}</p>
+      </div>
+      <button id="ai-auth-close" class="ml-auto rounded-full p-1.5 text-white/80 transition hover:bg-white/10" aria-label={t(lang, 'ai_modal_later')}>
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+    <div class="p-6">
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t(lang, 'ai_modal_text')}</p>
+      <p id="ai-auth-retry" class="mt-2 text-[11px] font-medium text-gold-600 dark:text-gold-400">
+        {t(lang, 'ai_modal_retry')}
+      </p>
+      <button
+        id="ai-auth-modal-btn"
+        class="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 px-5 py-3 text-sm font-bold text-night-950 shadow-soft-gold transition hover:brightness-110 active:scale-[0.98]"
+      >
+        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 002-2V5a2 2 0 00-2-2h-8v2h8v14z" />
+        </svg>
+        {t(lang, 'ai_modal_btn')}
+      </button>
+      <button id="ai-auth-later" class="mt-2 w-full rounded-full py-2 text-xs font-semibold text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200">
+        {t(lang, 'ai_modal_later')}
+      </button>
+      <span id="ai-auth-modal-err" class="mt-2 hidden block text-center text-[11px] text-rose-500"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { t } from '@/lib/i18n';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = '{lang}' as 'fr' | 'mg';
+  const panel = document.querySelector('[data-ai-panel]') as HTMLElement;
+  const fab = document.getElementById('ai-fab');
+  const closeBtn = document.getElementById('ai-close');
+  const messagesEl = document.getElementById('ai-messages')!;
+  const form = document.getElementById('ai-form') as HTMLFormElement;
+  const input = document.getElementById('ai-input') as HTMLInputElement;
+  const offlineEl = document.getElementById('ai-offline')!;
+  const clearBtn = document.getElementById('ai-clear')!;
+  const suggestions = document.querySelectorAll('.ai-suggestion');
+
+  // Auth
+  const authOff = document.getElementById('ai-auth-off')!;
+  const authOn = document.getElementById('ai-auth-on')!;
+  const signinBtn = document.getElementById('ai-signin-btn')!;
+  const signoutBtn = document.getElementById('ai-signout-btn')!;
+  const signinErr = document.getElementById('ai-signin-err')!;
+  const userLabel = document.getElementById('ai-user-label')!;
+
+  // Modal de connexion + carte d'accueil
+  const authModal = document.getElementById('ai-auth-modal')!;
+  const authBackdrop = document.getElementById('ai-auth-backdrop')!;
+  const authClose = document.getElementById('ai-auth-close')!;
+  const authModalBtn = document.getElementById('ai-auth-modal-btn') as HTMLButtonElement;
+  const authLater = document.getElementById('ai-auth-later')!;
+  const authModalErr = document.getElementById('ai-auth-modal-err')!;
+  const authRetry = document.getElementById('ai-auth-retry')!;
+  const welcomeCard = document.getElementById('ai-welcome')!;
+  const welcomeSignin = document.getElementById('ai-welcome-signin')!;
+  let signedIn = false;
+  let pendingAction: (() => void) | null = null;
+
+  // Onglets
+  const tabs = document.querySelectorAll('.ai-tab') as NodeListOf<HTMLElement>;
+  const tabChat = document.getElementById('ai-tab-chat')!;
+  const tabImage = document.getElementById('ai-tab-image')!;
+  const tabAudio = document.getElementById('ai-tab-audio')!;
+  const imgPrompt = document.getElementById('ai-img-prompt') as HTMLTextAreaElement;
+  const imgRatio = document.getElementById('ai-img-ratio') as HTMLSelectElement;
+  const imgBtn = document.getElementById('ai-img-btn') as HTMLButtonElement;
+  const imgResult = document.getElementById('ai-img-result')!;
+  const audioText = document.getElementById('ai-audio-text') as HTMLTextAreaElement;
+  const audioBtn = document.getElementById('ai-audio-btn') as HTMLButtonElement;
+  const audioResult = document.getElementById('ai-audio-result')!;
+
+  let puter: any = null;
+  let models: string[] = [];
+  let currentModel = '';
+  let contentBundle: { media: MediaItem[] } | null = null;
+
+  // ---- Chargement Puter.js (CDN gratuit, aucune clé API) ----
+  function loadPuter(): Promise<any> {
+    return new Promise((resolve) => {
+      if ((window as any).puter) return resolve((window as any).puter);
+      const s = document.createElement('script');
+      s.src = 'https://js.puter.com/v2/';
+      s.onload = () => resolve((window as any).puter);
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+  }
+
+  // ---- Connexion Puter (e-mail / Google) ----
+  async function refreshAuth() {
+    if (!puter) return;
+    let ok = false;
+    try {
+      ok = !!(await puter.auth.isSignedIn());
+    } catch {
+      ok = false;
+    }
+    signedIn = ok;
+    if (ok) {
+      try {
+        const user = await puter.auth.getUser();
+        const label = user?.email || user?.username || user?.name || '✓';
+        userLabel.textContent = label;
+      } catch {
+        userLabel.textContent = '✓';
+      }
+      authOn.classList.remove('hidden');
+      authOff.classList.add('hidden');
+      welcomeCard.classList.add('hidden');
+    } else {
+      authOn.classList.add('hidden');
+      authOff.classList.remove('hidden');
+      welcomeCard.classList.remove('hidden');
+    }
+  }
+
+  // ---- Modal de connexion ----
+  function openAuthModal(resume?: boolean) {
+    authRetry.classList.toggle('hidden', !resume);
+    authModalErr.classList.add('hidden');
+    authModal.classList.remove('hidden');
+    authModal.classList.add('flex');
+  }
+  function closeAuthModal() {
+    authModal.classList.add('hidden');
+    authModal.classList.remove('flex');
+  }
+  // Fermeture manuelle : l'action reportée est annulée (pas de rejeu inattendu plus tard)
+  function dismissAuthModal() {
+    pendingAction = null;
+    closeAuthModal();
+  }
+  // Exécute l'action si connecté(e) ; sinon ouvre le modal et la rejoue après connexion
+  function requireAuth(action: () => void) {
+    if (!puter || signedIn) {
+      action();
+      return;
+    }
+    pendingAction = action;
+    openAuthModal(true);
+  }
+  async function doSignIn(): Promise<boolean> {
+    if (!puter) return false;
+    try {
+      await puter.auth.signIn();
+      await refreshAuth();
+      closeAuthModal();
+      const action = pendingAction;
+      pendingAction = null;
+      action?.();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function isAuthError(msg: string) {
+    return /auth|sign ?in|login|unauthor|401|403|token|permission/i.test(msg);
+  }
+
+  signinBtn?.addEventListener('click', async () => {
+    signinErr.classList.add('hidden');
+    if (!(await doSignIn())) {
+      signinErr.textContent = t(lang as any, 'ai_error_signin');
+      signinErr.classList.remove('hidden');
+    }
+  });
+
+  welcomeSignin?.addEventListener('click', () => {
+    if (puter) doSignIn();
+  });
+
+  authModalBtn?.addEventListener('click', async () => {
+    authModalBtn.disabled = true;
+    authModalBtn.textContent = lang === 'mg' ? 'Fidirana…' : 'Connexion…';
+    const ok = await doSignIn();
+    if (!ok) {
+      authRetry.classList.add('hidden');
+      authModalErr.textContent = t(lang as any, 'ai_error_signin');
+      authModalErr.classList.remove('hidden');
+    }
+    authModalBtn.disabled = false;
+    authModalBtn.textContent = t(lang as any, 'ai_modal_btn');
+  });
+  authClose?.addEventListener('click', dismissAuthModal);
+  authLater?.addEventListener('click', dismissAuthModal);
+  authBackdrop?.addEventListener('click', dismissAuthModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !authModal.classList.contains('hidden')) dismissAuthModal();
+  });
+
+  signoutBtn?.addEventListener('click', async () => {
+    try {
+      await puter.auth.signOut();
+    } catch {
+      /* ignore */
+    }
+    signedIn = false;
+    authOn.classList.add('hidden');
+    authOff.classList.remove('hidden');
+    welcomeCard.classList.remove('hidden');
+  });
+
+  // ---- Sélecteur de modèle ----
+  const modelSelect = document.createElement('select');
+  modelSelect.id = 'ai-model-select';
+  modelSelect.className =
+    'max-w-[130px] cursor-pointer rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-white/30 outline-none transition hover:bg-white/20';
+  modelSelect.title = t(lang as any, 'ai_model');
+  modelSelect.innerHTML = `<option value="">${t(lang as any, 'ai_model')}…</option>`;
+  panel.querySelector('.flex.items-center.gap-1')?.prepend(modelSelect);
+
+  modelSelect.addEventListener('change', () => {
+    currentModel = modelSelect.value;
+  });
+
+  // ---- Contexte du site (contenus pour des réponses pertinentes) ----
+  async function loadContext() {
+    try {
+      const res = await fetch('/api/content');
+      if (res.ok) {
+        contentBundle = await res.json();
+        // Persiste le contenu pour la page hors-ligne et le mode hors-ligne de l'IA
+        try {
+          localStorage.setItem('ah-content', JSON.stringify(contentBundle?.media ?? []));
+        } catch {}
+      }
+    } catch {
+      /* offline : on continue sans contexte */
+    }
+  }
+
+  function buildContextPrompt(): string {
+    if (!contentBundle?.media?.length) return '';
+    const lines = contentBundle.media.slice(0, 40).map((m) => {
+      const map: Record<string, string> = {
+        course: 'cours',
+        sermon: 'sermon',
+        audio: 'audio',
+        seminar: 'séminaire',
+        conference: 'conférence',
+        article: 'article',
+      };
+      const type = map[m.type] ?? m.type;
+      const map2: Record<string, string> = {
+        course: '/cours/',
+        sermon: '/sermons/',
+        audio: '/audio/',
+        seminar: '/seminaires/',
+        conference: '/conferences/',
+        article: '/articles/',
+      };
+      const path = map2[m.type] ?? '/';
+      return `- [${type}] "${m.title_fr}"${m.title_mg ? ` ("${m.title_mg}")` : ''}${m.speaker ? ` par ${m.speaker}` : ''} — ${path}${m.slug}`;
+    });
+    return `Voici les contenus disponibles sur la plateforme Andeaha Hizaha (à recommander quand pertinent, avec leur lien exact) :\n${lines.join('\n')}\n`;
+  }
+
+  function addMessage(role: 'user' | 'bot', text: string) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+    const bubble = document.createElement('div');
+    bubble.className =
+      role === 'user'
+        ? 'max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-br from-indigo-600 to-violet-600 px-4 py-2.5 text-sm text-white shadow'
+        : 'max-w-[90%] rounded-2xl rounded-bl-sm border border-slate-200/70 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 shadow-sm dark:border-night-600 dark:bg-night-700/80 dark:text-slate-100';
+    bubble.style.whiteSpace = 'pre-wrap';
+    bubble.textContent = text;
+    wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bubble;
+  }
+
+  async function streamAnswer(userText: string, history: string[]) {
+    if (!puter) {
+      // Mode hors-ligne : assistant local basé sur le contenu en cache
+      offlineEl.classList.remove('hidden');
+      const query = userText.toLowerCase();
+      const hits = (contentBundle?.media ?? []).filter(
+        (m) =>
+          m.title_fr.toLowerCase().includes(query) ||
+          m.title_mg?.toLowerCase().includes(query) ||
+          m.speaker?.toLowerCase().includes(query) ||
+          (m.tags ?? []).some((x) => x.toLowerCase().includes(query))
+      );
+      const intro = lang === 'mg'
+        ? 'Tsy misy aterineto ny IA. Ireto ny votoaty mifanaraka amin’ny fanontanianao :'
+        : 'L’IA est hors-ligne. Voici les contenus correspondants à votre question :';
+      const list = hits.slice(0, 5).map((m) => `• ${m.title_fr}`).join('\n');
+      return `${intro}\n\n${list || (lang === 'mg' ? 'Tsy misy valiny mifanaraka.' : 'Aucun résultat correspondant.')}`;
+    }
+
+    const system =
+      (lang === 'mg'
+        ? `Mpanampy fianarana ara-Baiboly ianao ao amin'ny Andeaha Hizaha. Valio amin'ny teny malagasy, amin'ny fomba mazava sy feno fitiavana. Mampiasà loharano ara-Baiboly rehefa ilaina. ${buildContextPrompt()}`
+        : `Tu es l'assistant d'étude biblique de la plateforme Andeaha Hizaha. Réponds en français, de façon claire, chaleureuse et fidèle aux Écritures. Cite les versets quand c'est pertinent. ${buildContextPrompt()}`) +
+      `\nQuestion de l'utilisateur : ${userText}`;
+
+    const bubble = addMessage('bot', '…');
+    try {
+      const resp = await puter.ai.chat(system, { model: currentModel || undefined, stream: true });
+      let acc = '';
+      for await (const part of resp) {
+        const text = part?.text ?? '';
+        if (text) {
+          acc += text;
+          bubble.textContent = acc;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+      }
+      bubble.textContent = acc || '…';
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (isAuthError(msg)) {
+        signedIn = false;
+        refreshAuth();
+        bubble.textContent = lang === 'mg' ? '🔒 Ilaina ny fidirana.' : '🔒 Connexion requise.';
+        openAuthModal(false);
+      } else {
+        bubble.textContent = '⚠️ Erreur : ' + msg;
+      }
+    }
+    return bubble.textContent ?? '';
+  }
+
+  function ask(userText: string) {
+    const text = userText.trim();
+    if (!text) return;
+    requireAuth(() => {
+      input.value = '';
+      addMessage('user', text);
+      suggestions.forEach((s) => s.classList.add('hidden'));
+      streamAnswer(text, []);
+    });
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    ask(input.value);
+  });
+
+  suggestions.forEach((s) =>
+    s.addEventListener('click', () => ask((s as HTMLElement).textContent ?? ''))
+  );
+
+  fab?.addEventListener('click', () => {
+    panel?.classList.toggle('translate-y-4');
+    panel?.classList.toggle('opacity-0');
+    panel?.classList.toggle('pointer-events-none');
+    panel?.setAttribute('aria-hidden', 'false');
+    if (!panel?.classList.contains('pointer-events-none')) {
+      input.focus();
+    }
+  });
+  closeBtn?.addEventListener('click', () => {
+    panel?.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    messagesEl.innerHTML = '';
+  });
+
+  // ---- Onglets ----
+  const tabViews: Record<string, HTMLElement> = { chat: tabChat, image: tabImage, audio: tabAudio };
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const id = tab.getAttribute('data-tab')!;
+      tabs.forEach((tb) => {
+        const active = tb.getAttribute('data-tab') === id;
+        tb.classList.toggle('border-slate-200/70', active);
+        tb.classList.toggle('bg-white', active);
+        tb.classList.toggle('text-gold-600', active);
+        tb.classList.toggle('dark:border-night-600', active);
+        tb.classList.toggle('dark:bg-night-800', active);
+        tb.classList.toggle('dark:text-gold-400', active);
+        tb.classList.toggle('border-transparent', !active);
+        tb.classList.toggle('text-slate-400', !active);
+      });
+      Object.entries(tabViews).forEach(([k, el]) => {
+        el.classList.toggle('hidden', k !== id);
+        el.classList.toggle('flex', k === id);
+      });
+    });
+  });
+
+  // ---- Génération d'image (txt2img) ----
+  imgBtn?.addEventListener('click', () => {
+    const prompt = imgPrompt.value.trim();
+    if (!prompt) return;
+    if (!puter) {
+      alert(t(lang as any, 'ai_offline_text'));
+      return;
+    }
+    requireAuth(async () => {
+      imgBtn.disabled = true;
+      imgBtn.textContent = t(lang as any, 'ai_image_generating');
+      const ratio = imgRatio.value;
+      const ratios: Record<string, { w: number; h: number }> = {
+        '1:1': { w: 1, h: 1 },
+        '16:9': { w: 16, h: 9 },
+        '9:16': { w: 9, h: 16 },
+      };
+      try {
+        const img = await puter.ai.txt2img(prompt, { ratio: ratios[ratio] ?? { w: 16, h: 9 }, quality: 'medium', test_mode: false });
+        const src = typeof img === 'string' ? img : img?.src;
+        if (!src) throw new Error('no image');
+        const card = document.createElement('div');
+        card.className = 'overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-night-700 dark:bg-night-800/70';
+        const im = document.createElement('img');
+        im.src = src;
+        im.alt = prompt;
+        im.className = ratio === '1:1' ? 'aspect-square w-full object-cover' : ratio === '9:16' ? 'aspect-[9/16] w-full object-cover' : 'aspect-video w-full object-cover';
+        card.appendChild(im);
+        const foot = document.createElement('div');
+        foot.className = 'flex items-center justify-between gap-2 px-3 py-2';
+        const cap = document.createElement('p');
+        cap.className = 'truncate text-[11px] text-slate-500 dark:text-slate-400';
+        cap.textContent = prompt;
+        foot.appendChild(cap);
+        const dl = document.createElement('a');
+        dl.href = src;
+        dl.download = 'andeaha-image.png';
+        dl.className = 'shrink-0 rounded-full bg-gold-500/15 px-3 py-1 text-[11px] font-semibold text-gold-600 transition hover:bg-gold-500/25 dark:text-gold-400';
+        dl.textContent = t(lang as any, 'ai_image_download');
+        foot.appendChild(dl);
+        card.appendChild(foot);
+        imgResult.prepend(card);
+        imgResult.scrollTop = 0;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (isAuthError(msg)) {
+          signedIn = false;
+          refreshAuth();
+          openAuthModal(false);
+        } else {
+          const err = document.createElement('p');
+          err.className = 'text-xs text-rose-500';
+          err.textContent = '⚠️ ' + msg;
+          imgResult.prepend(err);
+        }
+      } finally {
+        imgBtn.disabled = false;
+        imgBtn.textContent = t(lang as any, 'ai_image_btn');
+      }
+    });
+  });
+
+  // ---- Synthèse vocale (text2speech) ----
+  audioBtn?.addEventListener('click', () => {
+    const text = audioText.value.trim();
+    if (!text) return;
+    if (!puter) {
+      alert(t(lang as any, 'ai_offline_text'));
+      return;
+    }
+    requireAuth(async () => {
+      audioBtn.disabled = true;
+      audioBtn.textContent = t(lang as any, 'ai_audio_generating');
+      try {
+        const audio = await puter.ai.txt2speech(text, {
+          provider: 'openai',
+          language: 'fr-FR',
+          voice: 'alloy',
+        });
+        const src = typeof audio === 'string' ? audio : audio?.src;
+        if (!src) throw new Error('no audio');
+        const card = document.createElement('div');
+        card.className = 'rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-night-700 dark:bg-night-800/70';
+        const cap = document.createElement('p');
+        cap.className = 'mb-2 line-clamp-2 text-[11px] text-slate-500 dark:text-slate-400';
+        cap.textContent = text;
+        const player = document.createElement('audio');
+        player.src = src;
+        player.controls = true;
+        player.className = 'w-full';
+        card.appendChild(cap);
+        card.appendChild(player);
+        audioResult.prepend(card);
+        player.play().catch(() => {});
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (isAuthError(msg)) {
+          signedIn = false;
+          refreshAuth();
+          openAuthModal(false);
+        } else {
+          const err = document.createElement('p');
+          err.className = 'text-xs text-rose-500';
+          err.textContent = '⚠️ ' + msg;
+          audioResult.prepend(err);
+        }
+      } finally {
+        audioBtn.disabled = false;
+        audioBtn.textContent = t(lang as any, 'ai_audio_btn');
+      }
+    });
+  });
+
+  // ---- Init ----
+  loadPuter().then(async (p) => {
+    puter = p;
+    if (!puter) {
+      offlineEl.classList.remove('hidden');
+      return;
+    }
+    await refreshAuth();
+
+    // Modèles disponibles (select)
+    try {
+      const list = await puter.ai.listModels();
+      models = (list ?? []).map((m: any) => m?.id || m?.name || String(m)).filter(Boolean);
+      currentModel = models.find((m) => m.toLowerCase().includes('gpt-4o')) || models[0] || '';
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      const opts = models.map(
+        (m) => `<option value="${esc(m)}">${esc(m.replace(/^[^:]*[:/]/, '').slice(0, 22))}</option>`
+      );
+      modelSelect.innerHTML = opts.join('');
+      if (currentModel) modelSelect.value = currentModel;
+    } catch {
+      models = [];
+    }
+  });
+
+  loadContext();
+</script>

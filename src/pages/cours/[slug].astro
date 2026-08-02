@@ -1,0 +1,309 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { supabase } from '@/lib/supabase';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : la liste des slugs est générée au build
+// depuis Supabase, le contenu de la page est chargé côté client.
+export async function getStaticPaths() {
+  const { data } = await supabase.from('media').select('slug').eq('type', 'course');
+  return (data ?? []).map((m) => ({ params: { slug: m.slug } }));
+}
+
+const { slug } = Astro.params;
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_courses')}>
+  <!-- État de chargement -->
+  <section id="detail-loading" class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div class="h-4 w-56 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+    <div class="mt-8 grid gap-10 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <div class="aspect-[21/9] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="mt-8 h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="mt-4 aspect-video animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+      </div>
+      <aside class="space-y-4">
+        <div class="h-48 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="h-6 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="h-48 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Contenu introuvable -->
+  <section id="detail-notfound" class="hidden mx-auto max-w-3xl px-4 py-24 text-center">
+    <p class="text-6xl">📖</p>
+    <h1 class="mt-4 font-display text-3xl font-bold">{t(lang, 'not_found_title')}</h1>
+    <p class="mt-2 text-slate-500 dark:text-slate-400">{t(lang, 'not_found_text')}</p>
+    <a href="/" class="btn-gold mt-8">{t(lang, 'back_home')}</a>
+  </section>
+
+  <!-- Contenu rendu côté client -->
+  <section id="detail-content" class="hidden mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div id="detail-body"></div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase, getMediaBySlug, getMedia } from '@/lib/supabase';
+  import { clientLang, mediaCardHtml, formatViews } from '@/lib/client-render';
+  import { t, pickTitle, pickDescription } from '@/lib/i18n';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = clientLang();
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  // Slug extrait de l'URL (compatible base GitHub Pages : /base/type/slug)
+  const slug = window.location.pathname.split('/').filter(Boolean).pop() ?? '';
+
+  const esc = (s: unknown): string =>
+    String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+    );
+
+  function show(id: string, ok: boolean) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !ok);
+  }
+
+  function revealAll() {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('visible'));
+  }
+
+  function lessonLabel(l: { title_fr: string; title_mg: string }): string {
+    return lang === 'mg' && l.title_mg ? l.title_mg : l.title_fr;
+  }
+
+  function bodyHtml(item: MediaItem): string {
+    const title = pickTitle(item, lang);
+    const lessons = item.lessons ?? [];
+
+    const playlist = lessons.map((l, i) => `
+      <li>
+        <button
+          type="button"
+          class="lesson-btn group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-gold-500/10"
+          data-index="${i}"
+          data-title-fr="${esc(l.title_fr)}"
+          data-title-mg="${esc(l.title_mg)}"
+          data-video="${esc(l.video_url ?? '')}"
+          data-duration="${esc(l.duration ?? '')}"
+        >
+          <span class="lesson-num flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-bold text-indigo-600 dark:text-indigo-300">
+            ${i + 1}
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="lesson-title block truncate text-sm font-medium text-slate-700 dark:text-slate-200">${esc(lessonLabel(l))}</span>
+            <span class="text-xs text-slate-400">${esc(l.duration || '')}</span>
+          </span>
+          <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-gold-500 dark:text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7L8 5z" />
+          </svg>
+        </button>
+      </li>`).join('');
+
+    return `
+      <nav class="mb-6 text-xs text-slate-400" aria-label="Fil d'ariane">
+        <a href="${BASE}" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_home')}</a>
+        <span class="mx-1">/</span>
+        <a href="${BASE}cours" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_courses')}</a>
+        <span class="mx-1">/</span>
+        <span class="text-slate-600 dark:text-slate-300">${esc(title)}</span>
+      </nav>
+
+      <div class="grid gap-10 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+          <!-- En-tête cours -->
+          <div class="reveal overflow-hidden rounded-2xl border border-slate-200/70 shadow-sm dark:border-night-700/60">
+            <div class="relative aspect-[21/9]">
+              <img src="${esc(item.image || '/favicon.svg')}" alt="" class="h-full w-full object-cover" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div class="absolute bottom-0 p-6">
+                ${item.category ? `<span class="chip border border-emerald-500/40 bg-emerald-500/15 text-emerald-300">${lang === 'mg' ? esc(item.category.name_mg) : esc(item.category.name_fr)}</span>` : ''}
+                <h1 class="mt-2 font-display text-2xl font-bold text-white sm:text-3xl">${esc(title)}</h1>
+                <p class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
+                  ${item.speaker ? `<span>${esc(item.speaker)}</span>` : ''}
+                  <span>${lessons.length} ${t(lang, 'lessons')}</span>
+                  <span>${formatViews(item.views ?? 0)} ${t(lang, 'views')}</span>
+                </p>
+              </div>
+            </div>
+            <div class="bg-white p-6 dark:bg-night-800/70">
+              <p class="leading-relaxed text-slate-600 dark:text-slate-300">${esc(pickDescription(item, lang) || t(lang, 'no_description'))}</p>
+            </div>
+          </div>
+
+          <!-- Lecteur de leçon -->
+          <div class="reveal mt-8" id="player-wrap">
+            <p class="section-kicker">✦ ${t(lang, 'read')}</p>
+            <h2 id="lesson-title" class="mt-1 font-display text-xl font-semibold text-slate-900 dark:text-white">
+              ${lessons[0] ? esc(lessonLabel(lessons[0])) : ''}
+            </h2>
+            <div class="mt-4">
+              <video
+                id="course-player"
+                class="aspect-video w-full rounded-2xl bg-black shadow-soft"
+                controls
+                playsinline
+                preload="metadata"
+                ${item.image ? ` poster="${esc(item.image)}"` : ''}
+                src="${esc(lessons[0]?.video_url || item.video_url || '')}"
+                data-media-id="${item.id}"
+              ></video>
+            </div>
+          </div>
+        </div>
+
+        <!-- Playlist -->
+        <aside class="space-y-6">
+          <div class="reveal rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+            <div class="border-b border-slate-200/70 px-5 py-4 dark:border-night-700">
+              <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">${lessons.length} ${t(lang, 'lessons')}</h2>
+              <p id="course-progress" class="mt-1 text-xs text-slate-500 dark:text-slate-400"></p>
+            </div>
+            <ol class="max-h-[420px] overflow-y-auto p-2">${playlist}</ol>
+          </div>
+
+          <div id="related-section" class="reveal">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">${t(lang, 'related')}</h2>
+            <div id="related-grid" class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-1"></div>
+          </div>
+        </aside>
+      </div>`;
+  }
+
+  // Playlist interactive + progression localStorage
+  function bindPlaylist() {
+    const player = document.getElementById('course-player') as HTMLVideoElement | null;
+    const lessonTitle = document.getElementById('lesson-title');
+    const progressEl = document.getElementById('course-progress');
+    if (!player || !lessonTitle || !progressEl) return;
+    const courseSlug = slug;
+
+    // Comptage des vues du cours (une fois par session, via Supabase RPC)
+    const courseMediaId = player.dataset.mediaId;
+    if (courseMediaId) {
+      const vkey = 'ah-viewed-' + courseMediaId;
+      player.addEventListener('play', () => {
+        if (sessionStorage.getItem(vkey)) return;
+        sessionStorage.setItem(vkey, '1');
+        supabase.rpc('increment_views', { media_id: Number(courseMediaId) }).then(() => {}, () => {});
+      });
+    }
+
+    const lessons = Array.from(document.querySelectorAll('.lesson-btn'));
+
+    const PROGRESS_KEY = 'ah-progress-' + courseSlug;
+    let done: Record<number, boolean> = {};
+    try {
+      done = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+    } catch {
+      /* ignore */
+    }
+
+    const renderProgress = () => {
+      const total = lessons.length;
+      const n = Object.keys(done).length;
+      progressEl.textContent = n + ' / ' + total;
+      lessons.forEach((btn, i) => {
+        const num = btn.querySelector('.lesson-num');
+        if (done[i]) {
+          num!.textContent = '✓';
+          num!.classList.add('bg-emerald-500/90');
+          num!.classList.remove('bg-indigo-500/15', 'text-indigo-600');
+        }
+      });
+    };
+
+    lessons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.getAttribute('data-index'));
+        const title = btn.getAttribute('data-title-fr');
+        const titleMg = btn.getAttribute('data-title-mg');
+        const video = btn.getAttribute('data-video');
+        if (player && video) {
+          player.src = video;
+          player.play().catch(() => {});
+        }
+        if (lessonTitle) {
+          lessonTitle.textContent = lang === 'mg' && titleMg ? titleMg! : title!;
+        }
+        window.scrollTo({ top: (document.getElementById('player-wrap')?.offsetTop ?? 0) - 90, behavior: 'smooth' });
+      });
+    });
+
+    // Marquer terminée à 90% de la lecture
+    const currentIndex = (): number => {
+      const src = player.getAttribute('src') ?? '';
+      let idx = -1;
+      lessons.forEach((b, i) => {
+        if (b.getAttribute('data-video') === src) idx = i;
+      });
+      return idx;
+    };
+
+    player.addEventListener('timeupdate', () => {
+      if (!player.duration) return;
+      const idx = currentIndex();
+      if (idx === -1) return;
+      if (player.currentTime / player.duration > 0.9 && !done[idx]) {
+        done[idx] = true;
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(done));
+        renderProgress();
+      }
+    });
+
+    renderProgress();
+  }
+
+  async function load() {
+    let item: MediaItem | null = null;
+    try {
+      item = await getMediaBySlug(slug);
+    } catch {
+      item = null;
+    }
+
+    if (!item || item.type !== 'course') {
+      show('detail-loading', false);
+      show('detail-content', false);
+      show('detail-notfound', true);
+      const nf = document.getElementById('detail-notfound');
+      if (nf) {
+        const h1 = nf.querySelector('h1');
+        const p = nf.querySelector('p');
+        const a = nf.querySelector('a');
+        if (h1) h1.textContent = t(lang, 'not_found_title');
+        if (p) p.textContent = t(lang, 'not_found_text');
+        if (a) a.textContent = t(lang, 'back_home');
+      }
+      return;
+    }
+
+    show('detail-loading', false);
+    show('detail-content', true);
+    document.title = `${pickTitle(item, lang)} · Andeaha Hizaha`;
+
+    const body = document.getElementById('detail-body');
+    if (body) body.innerHTML = bodyHtml(item);
+    bindPlaylist();
+
+    // À découvrir aussi (même type, item courant exclu)
+    const related = (await getMedia({ type: 'course', limit: 3 }).catch(() => []))
+      .filter((m) => m.slug !== slug);
+    const relatedSection = document.getElementById('related-section');
+    const relatedGrid = document.getElementById('related-grid');
+    if (relatedGrid && related.length) {
+      relatedGrid.innerHTML = related.map((m) => mediaCardHtml(m, lang)).join('');
+    } else if (relatedSection) {
+      relatedSection.classList.add('hidden');
+    }
+
+    revealAll();
+  }
+
+  load();
+</script>

@@ -1,0 +1,26 @@
+---
+import type { Lang, Verse } from '@/lib/types';
+import { t } from '@/lib/i18n';
+
+interface Props {
+  verse: Verse;
+  lang?: Lang;
+}
+const { verse, lang = 'fr' } = Astro.props;
+const text = lang === 'mg' ? verse.text_mg : verse.text_fr;
+---
+
+<blockquote class="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-gold-500/10 via-transparent to-indigo-500/10 p-6 backdrop-blur">
+  <svg class="absolute -right-3 -top-3 h-24 w-24 text-gold-500/15" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M9.6 4C5.4 6.4 3 9.6 3 14.2c0 2.8 1.8 4.8 4 4.8 2 0 3.4-1.4 3.4-3.4 0-1.8-1.2-3-2.8-3-.4 0-.8 0-1 .2.4-2.2 2.6-5 5-6.4L9.6 4zm10 0c-4.2 2.4-6.6 5.6-6.6 10.2 0 2.8 1.8 4.8 4 4.8 2 0 3.4-1.4 3.4-3.4 0-1.8-1.2-3-2.8-3-.4 0-.8 0-1 .2.4-2.2 2.6-5 5-6.4L19.6 4z" />
+  </svg>
+  <p class="relative text-xs font-bold uppercase tracking-[0.25em] text-gold-600 dark:text-gold-400">
+    ✦ {t(lang, 'verse_of_day')}
+  </p>
+  <p class="relative mt-3 font-display text-lg font-medium italic leading-relaxed text-slate-800 dark:text-slate-100">
+    « {text} »
+  </p>
+  <cite class="relative mt-3 block text-sm font-semibold text-gold-600 dark:text-gold-400">
+    — {verse.reference}
+  </cite>
+</blockquote>

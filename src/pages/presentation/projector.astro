@@ -1,0 +1,540 @@
+---
+import { t, getLang } from '@/lib/i18n';
+
+const lang = getLang(Astro.url, Astro.cookies);
+---
+
+<!doctype html>
+<html lang={lang} class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t(lang, 'nav_presentation')} — Andeaha Hizaha</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; background: #000; overflow: hidden; }
+      #stage {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        opacity: 0;
+        transition: opacity 0.45s ease;
+        padding: 4vmin 6vmin;
+        text-align: center;
+      }
+      #stage.show { opacity: 1; }
+      #stage .content { width: 100%; max-width: 1200px; height: 100%; }
+      #black {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 5;
+      }
+      #black.on { opacity: 1; }
+      #hud {
+        position: fixed;
+        bottom: 2vmin;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      #hud.show { opacity: 1; }
+      .hud-chip {
+        font: 600 12px/1 system-ui, sans-serif;
+        color: #fff;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        padding: 4px 12px;
+        backdrop-filter: blur(6px);
+        letter-spacing: 0.04em;
+      }
+      #clock {
+        position: fixed;
+        top: 2.5vmin;
+        right: 3vmin;
+        z-index: 10;
+        font: 600 clamp(14px, 2.2vmin, 22px)/1 system-ui, sans-serif;
+        color: rgba(255, 255, 255, 0.8);
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      #clock.on { opacity: 1; }
+      #timer {
+        position: fixed;
+        top: 3vmin;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 12;
+        font: 800 clamp(28px, 6vmin, 72px)/1 ui-monospace, 'SF Mono', Consolas, monospace;
+        color: #fbbf24;
+        text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+        letter-spacing: 0.06em;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      #timer.on { opacity: 1; }
+      #timer.warn { color: #fb923c; }
+      #timer.danger { color: #f87171; animation: timer-pulse 1s ease-in-out infinite; }
+      @keyframes timer-pulse {
+        0%, 100% { transform: translateX(-50%) scale(1); }
+        50% { transform: translateX(-50%) scale(1.06); }
+      }
+      #ticker {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 9;
+        height: clamp(30px, 4.4vmin, 52px);
+        background: rgba(2, 6, 23, 0.72);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.35s;
+      }
+      #ticker.show { opacity: 1; }
+      #ticker .ticker-track {
+        display: inline-flex;
+        white-space: nowrap;
+        will-change: transform;
+        animation: ticker-scroll linear infinite;
+      }
+      #ticker .ticker-text {
+        flex: 0 0 auto;
+        font: 600 clamp(13px, 2vmin, 20px)/1 system-ui, sans-serif;
+        color: rgba(255, 255, 255, 0.92);
+        letter-spacing: 0.05em;
+        padding-right: 6rem;
+      }
+      /* Boucle fluide : le texte est dupliqué, on défile de 0 à -50% */
+      @keyframes ticker-scroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+      }
+      #dots {
+        position: fixed;
+        bottom: 2.2vmin;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        z-index: 8;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      #dots.show { opacity: 1; }
+      #dots span {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.25);
+      }
+      #dots span.on { background: #fbbf24; transform: scale(1.35); }
+      #help {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 20;
+        background: rgba(2, 6, 23, 0.92);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: 18px;
+        padding: 2.2rem 2.6rem;
+        color: #e2e8f0;
+        font: 400 14px/1.8 system-ui, sans-serif;
+        text-align: center;
+        display: none;
+        max-width: 90vw;
+        backdrop-filter: blur(8px);
+      }
+      #help.show { display: block; }
+      #help b { color: #fbbf24; font-weight: 700; }
+      kbd {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-bottom-width: 2px;
+        border-radius: 6px;
+        padding: 1px 7px;
+        font-family: inherit;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="black"></div>
+    <div id="dots"></div>
+    <div id="clock"></div>
+    <div id="timer"></div>
+    <div id="ticker">
+      <div class="ticker-track"><span class="ticker-text"></span><span class="ticker-text"></span></div>
+    </div>
+    <div id="hud">
+      <span class="hud-chip" id="hud-pos"></span>
+      <span class="hud-chip" id="hud-title"></span>
+      <span class="hud-chip">←/→ {t(lang, 'pres_next')}</span>
+      <span class="hud-chip"><b>B</b> {t(lang, 'pres_black_screen')}</span>
+      <span class="hud-chip"><b>T</b> ⏱</span>
+      <span class="hud-chip"><b>M</b> 📜</span>
+      <span class="hud-chip"><b>?</b> aide</span>
+    </div>
+    <div id="help">
+      <h3 style="color:#fff;font-weight:800;font-size:16px;margin-bottom:.8rem">🖥️ {t(lang, 'pres_title')}</h3>
+      <p><kbd>→</kbd> / <kbd>Espace</kbd> {t(lang, 'pres_next')} &nbsp;·&nbsp; <kbd>←</kbd> {t(lang, 'pres_prev')}</p>
+      <p><kbd>B</kbd> {t(lang, 'pres_black_screen')} &nbsp;·&nbsp; <kbd>H</kbd> {t(lang, 'pres_help_clock')} &nbsp;·&nbsp; <kbd>Maj</kbd>+<kbd>H</kbd> format horloge</p>
+      <p><kbd>T</kbd> {t(lang, 'pres_help_timer')} &nbsp;·&nbsp; <kbd>M</kbd> {t(lang, 'pres_help_ticker')}</p>
+      <p><kbd>F11</kbd> / double-clic plein écran &nbsp;·&nbsp; <kbd>?</kbd> aide &nbsp;·&nbsp; <kbd>Échap</kbd> quitter l'aide</p>
+    </div>
+
+    <script>
+      import { t } from '@/lib/i18n';
+      import {
+        DEFAULT_SETTINGS,
+        pageBackground,
+        bgMediaHtml,
+        loadPresentations,
+        loadActive,
+        loadLivePres,
+        loadOverlays,
+        saveOverlays,
+        totalPages,
+        pageAt,
+        pageHtml,
+      } from '@/lib/presentation';
+      import type { PresOverlays } from '@/lib/presentation';
+
+      const lang = document.documentElement.lang as 'fr' | 'mg';
+      const stage = document.getElementById('stage')!;
+      const black = document.getElementById('black')!;
+      const dots = document.getElementById('dots')!;
+      const clock = document.getElementById('clock')!;
+      const timerEl = document.getElementById('timer')!;
+      const tickerEl = document.getElementById('ticker')!;
+      const tickerTrack = tickerEl.querySelector('.ticker-track') as HTMLElement;
+      const hud = document.getElementById('hud')!;
+      const hudPos = document.getElementById('hud-pos')!;
+      const hudTitle = document.getElementById('hud-title')!;
+      const help = document.getElementById('help')!;
+
+      let presId: string | null = null;
+      let pageIndex = 0;
+      let pres: ReturnType<typeof loadPresentations>[number] | null = null;
+      let blackOn = false;
+      let clockOn = false;
+      let hudTimer: number | undefined;
+      let autoTimer: number | undefined;
+      const stanzaLabel = t(lang, 'pres_stanza');
+
+      // --- Superpositions (minuteur, ticker, format horloge) ---
+      let overlays: PresOverlays = loadOverlays();
+      let timerLeft = overlays.timerSeconds;
+      let timerRunning = false;
+      let timerTick: number | undefined;
+      let clockTick: number | undefined;
+      const CLOCK_FORMATS = ['hm', 'hms', 'hmd', 'full'] as const;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      function fmtDuration(total: number): string {
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+      }
+      function formatClock(d: Date, fmt: PresOverlays['clockFormat']): string {
+        const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        const sec = `:${pad(d.getSeconds())}`;
+        const date = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+        if (fmt === 'hms') return hm + sec;
+        if (fmt === 'hmd') return `${hm} · ${date}`;
+        if (fmt === 'full') return `${hm}${sec} · ${date}`;
+        return hm;
+      }
+      function tickTimer() {
+        if (!timerRunning) return;
+        if (timerLeft > 0) timerLeft--;
+        timerEl.textContent = fmtDuration(timerLeft);
+        timerEl.classList.toggle('warn', timerLeft <= 60 && timerLeft > 15);
+        timerEl.classList.toggle('danger', timerLeft <= 15);
+        if (timerLeft <= 0) timerRunning = false;
+        timerTick = window.setTimeout(tickTimer, 1000);
+      }
+      function startTimer() {
+        timerEl.classList.add('on');
+        timerRunning = true;
+        if (timerTick) clearTimeout(timerTick);
+        tickTimer();
+      }
+      function stopTimer() {
+        timerRunning = false;
+        if (timerTick) clearTimeout(timerTick);
+        timerEl.classList.remove('on', 'warn', 'danger');
+      }
+      function toggleTimer() {
+        if (timerRunning) {
+          stopTimer();
+          overlays.timerOn = false;
+        } else {
+          timerLeft = overlays.timerSeconds;
+          startTimer();
+          overlays.timerOn = true;
+        }
+        saveOverlays(overlays);
+        flashHud();
+      }
+      function resetTimer() {
+        timerLeft = overlays.timerSeconds;
+        timerEl.textContent = fmtDuration(timerLeft);
+        timerEl.classList.remove('warn', 'danger');
+        if (overlays.timerOn || timerRunning) {
+          stopTimer();
+          startTimer();
+        }
+        flashHud();
+      }
+      function applyTicker() {
+        const txt = overlays.tickerText?.trim() || '';
+        // Texte dupliqué pour une boucle fluide (translation de -50%)
+        tickerEl.querySelectorAll('.ticker-text').forEach((el) => {
+          el.textContent = txt || '📜';
+        });
+        // vitesse : durée (s) ≈ (longueur × largeur moyenne + espace) / vitesse
+        const len = Math.max(1, txt.length);
+        const speed = Math.max(1, overlays.tickerSpeed || 60);
+        tickerTrack.style.animationDuration = `${((len * 10 + 220) / speed).toFixed(1)}s`;
+        tickerEl.classList.toggle('show', overlays.tickerOn && txt.length > 0);
+      }
+      function toggleTicker() {
+        overlays.tickerOn = !overlays.tickerOn;
+        applyTicker();
+        saveOverlays(overlays);
+        flashHud();
+      }
+      function cycleClockFormat() {
+        const i = CLOCK_FORMATS.indexOf(overlays.clockFormat as (typeof CLOCK_FORMATS)[number]);
+        overlays.clockFormat = CLOCK_FORMATS[(i + 1) % CLOCK_FORMATS.length];
+        saveOverlays(overlays);
+        flashHud();
+      }
+
+      function load() {
+        const act = loadActive();
+        const list = loadPresentations();
+        const live = loadLivePres();
+        // Fallback : présentation active → présentation live (Bible/Cantique) → première de la liste
+        const found =
+          (act
+            ? list.find((p) => p.id === act.presId) ??
+              (act.presId === 'live-bible'
+                ? live.bible
+                : act.presId === 'live-cantique'
+                  ? live.cantique
+                  : null)
+            : null) ?? live.bible ?? live.cantique ?? list[0] ?? null;
+        if (!found) {
+          // Rien à projeter : message visible au lieu d'un écran noir
+          stage.style.cssText = 'background:#0b1020';
+          stage.classList.add('show');
+          stage.innerHTML =
+            '<div class="content" style="font-size:1.4rem;color:rgba(255,255,255,.75)">📋 ' +
+            t(lang, 'pres_empty') +
+            '<br/><span style="font-size:.7em;opacity:.7">' +
+            t(lang, 'pres_add_hint') +
+            '</span></div>';
+          return;
+        }
+        const changed = presId !== found.id;
+        presId = found.id;
+        pageIndex = act ? act.pageIndex ?? 0 : 0;
+        pres = found;
+        if (changed) {
+          // premières secondes : légère transparence pour montrer le passage
+          stage.classList.add('show');
+        }
+        render();
+        scheduleAuto();
+      }
+
+      function render() {
+        if (!pres) return;
+        const total = Math.max(1, totalPages(pres));
+        pageIndex = Math.max(0, Math.min(pageIndex, total - 1));
+        const at = pageAt(pres, pageIndex);
+        if (!at) return;
+        // Réglages de l'élément : personnalisation par slide (settingsOverride) fusionnée
+        const s = { ...(pres.settings ?? DEFAULT_SETTINGS), ...(at.item.settingsOverride ?? {}) };
+        stage.style.cssText = pageBackground(s);
+        stage.classList.add('show');
+        const sizePx = { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
+        const media = bgMediaHtml(s);
+        stage.innerHTML = `${media}<div class="content" style="position:relative;z-index:1;font-size:${sizePx};color:${s.textColor || '#fff'}">${pageHtml(at.item, at.page, s, stanzaLabel)}</div>`;
+        // points
+        dots.innerHTML = Array.from({ length: total }, (_, i) => `<span class="${i === pageIndex ? 'on' : ''}"></span>`).join('');
+        hudPos.textContent = `${pageIndex + 1} / ${total}`;
+        hudTitle.textContent = at.item.title;
+        flashHud();
+        saveState();
+      }
+
+      let lastSavedActive = '';
+      function saveState() {
+        if (presId == null || typeof localStorage === 'undefined') return;
+        const value = JSON.stringify({ presId, pageIndex });
+        // Écritures identiques ignorées : évite tout ping-pong studio↔projecteur
+        if (value === lastSavedActive) return;
+        lastSavedActive = value;
+        try {
+          localStorage.setItem('ah-presentation-active', value);
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function next() {
+        if (!pres) return;
+        if (pageIndex < totalPages(pres) - 1) {
+          pageIndex++;
+          blackOn = false;
+          black.classList.remove('on');
+          stage.classList.remove('show');
+          void requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('show')));
+          render();
+          scheduleAuto();
+        }
+      }
+      function prev() {
+        if (!pres) return;
+        if (pageIndex > 0) {
+          pageIndex--;
+          blackOn = false;
+          black.classList.remove('on');
+          stage.classList.remove('show');
+          void requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('show')));
+          render();
+          scheduleAuto();
+        }
+      }
+      function toggleBlack() {
+        blackOn = !blackOn;
+        black.classList.toggle('on', blackOn);
+      }
+      function toggleClock() {
+        clockOn = !clockOn;
+        clock.classList.toggle('on', clockOn);
+        if (clockOn) tickClock();
+      }
+      function tickClock() {
+        if (!clockOn) return;
+        clock.textContent = formatClock(new Date(), overlays.clockFormat);
+        clockTick = window.setTimeout(tickClock, 1000);
+      }
+      function flashHud() {
+        hud.classList.add('show');
+        if (hudTimer) clearTimeout(hudTimer);
+        hudTimer = window.setTimeout(() => hud.classList.remove('show'), 2200);
+      }
+      function scheduleAuto() {
+        if (autoTimer) clearTimeout(autoTimer);
+        const secs = pres?.settings?.autoAdvance ?? 0;
+        if (secs > 0) {
+          autoTimer = window.setTimeout(() => next(), secs * 1000);
+        }
+      }
+
+      // Synchronisation avec le studio (même origine, événement storage)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'ah-presentation-active' || e.key === 'ah-presentations' || e.key === 'ah-pres-live') {
+          load();
+        }
+        if (e.key === 'ah-pres-overlays') {
+          overlays = loadOverlays();
+          applyTicker();
+          if (!overlays.timerOn && timerRunning) stopTimer();
+          if (overlays.timerOn && !timerRunning) {
+            timerLeft = overlays.timerSeconds;
+            startTimer();
+          }
+          if (clockOn) tickClock();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          next();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prev();
+        } else if (e.key.toLowerCase() === 'b') {
+          toggleBlack();
+        } else if (e.key.toLowerCase() === 'h' && e.shiftKey) {
+          e.preventDefault();
+          cycleClockFormat();
+        } else if (e.key.toLowerCase() === 'h') {
+          toggleClock();
+        } else if (e.key.toLowerCase() === 't' && e.shiftKey) {
+          e.preventDefault();
+          resetTimer();
+        } else if (e.key.toLowerCase() === 't') {
+          toggleTimer();
+        } else if (e.key.toLowerCase() === 'm') {
+          toggleTicker();
+        } else if (e.key === 'Escape') {
+          help.classList.remove('show');
+        } else if (e.key.toLowerCase() === 'f') {
+          if (document.fullscreenElement) document.exitFullscreen();
+          else document.documentElement.requestFullscreen().catch(() => {});
+        }
+      });
+
+      document.addEventListener('pointermove', () => flashHud());
+
+      // Démarrage : plein écran au clic sur l'écran
+      stage.addEventListener('dblclick', () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen().catch(() => {});
+      });
+
+      // Raccourci clavier global du document pour "?" (Shift+/) — l'aide
+      // s'ouvre uniquement avec « ? » (Maj+H est réservé au format horloge)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '?') {
+          e.preventDefault();
+          help.classList.toggle('show');
+        }
+      });
+
+      // Chargement initial + retry (au cas où le studio vient d'écrire dans localStorage)
+      load();
+      window.setTimeout(load, 250);
+      clock.textContent = new Date().toLocaleTimeString('fr-FR');
+      applyTicker();
+      if (overlays.timerOn) {
+        timerLeft = overlays.timerSeconds;
+        startTimer();
+      }
+      if (document.documentElement.requestFullscreen) {
+        // Lance le plein écran dès le chargement (popup projection)
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    </script>
+  </body>
+</html>

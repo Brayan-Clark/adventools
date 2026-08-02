@@ -1,0 +1,16 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t, getLang } from '@/lib/i18n';
+
+const lang = getLang(Astro.url, Astro.cookies);
+---
+
+<Layout lang={lang} title="404">
+  <section class="mx-auto flex max-w-3xl flex-col items-center px-4 py-28 text-center">
+    <p class="animate-glow-pulse text-8xl">🕊️</p>
+    <h1 class="mt-6 font-display text-5xl font-bold text-slate-900 dark:text-white">404</h1>
+    <p class="mt-3 text-lg text-slate-500 dark:text-slate-400">{t(lang, 'not_found_title')}</p>
+    <p class="mt-1 text-slate-500 dark:text-slate-400">{t(lang, 'not_found_text')}</p>
+    <a href="/" class="btn-gold mt-10">{t(lang, 'back_home')}</a>
+  </section>
+</Layout>

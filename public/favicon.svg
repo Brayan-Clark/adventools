@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Ciel nocturne profond -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="55%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#4c1d95"/>
+    </linearGradient>
+    <!-- Halo doré derrière la croix -->
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#f59e0b" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Or de la croix -->
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="45%" stop-color="#f5d98b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <!-- Pages du livre -->
+    <linearGradient id="book" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdf6e3"/>
+      <stop offset="100%" stop-color="#e8d5a8"/>
+    </linearGradient>
+    <linearGradient id="bookShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d9b877"/>
+      <stop offset="100%" stop-color="#a8823f"/>
+    </linearGradient>
+    <!-- Flou pour les rayons -->
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Fond arrondi -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Étoiles discrètes -->
+  <g fill="#ffffff" opacity="0.5">
+    <circle cx="96" cy="120" r="3"/>
+    <circle cx="408" cy="92" r="2.5"/>
+    <circle cx="430" cy="196" r="2"/>
+    <circle cx="74" cy="248" r="2"/>
+    <circle cx="120" cy="330" r="2.5" opacity="0.35"/>
+    <circle cx="392" cy="330" r="2.5" opacity="0.35"/>
+  </g>
+
+  <!-- Halo -->
+  <circle cx="256" cy="218" r="200" fill="url(#glow)"/>
+
+  <!-- Rayons de lumière -->
+  <g stroke="#fde68a" stroke-width="6" stroke-linecap="round" opacity="0.55" filter="url(#soft)">
+    <line x1="256" y1="96" x2="256" y2="64"/>
+    <line x1="330" y1="132" x2="356" y2="106"/>
+    <line x1="376" y1="206" x2="408" y2="202"/>
+    <line x1="182" y1="132" x2="156" y2="106"/>
+    <line x1="136" y1="206" x2="104" y2="202"/>
+  </g>
+  <g stroke="#fde68a" stroke-width="4" stroke-linecap="round" opacity="0.8">
+    <line x1="256" y1="96" x2="256" y2="68"/>
+    <line x1="330" y1="132" x2="352" y2="110"/>
+    <line x1="376" y1="206" x2="402" y2="203"/>
+    <line x1="182" y1="132" x2="160" y2="110"/>
+    <line x1="136" y1="206" x2="110" y2="203"/>
+  </g>
+
+  <!-- Étoile de l'invitation (4 branches) -->
+  <g transform="translate(342 132)">
+    <path d="M0 -26 L8 -8 L26 0 L8 8 L0 26 L-8 8 L-26 0 L-8 -8 Z" fill="#fde68a"/>
+    <circle cx="0" cy="0" r="5" fill="#fff7d6"/>
+  </g>
+
+  <!-- Croix dorée -->
+  <g>
+    <line x1="256" y1="132" x2="256" y2="272" stroke="url(#gold)" stroke-width="30" stroke-linecap="round"/>
+    <line x1="206" y1="184" x2="306" y2="184" stroke="url(#gold)" stroke-width="30" stroke-linecap="round"/>
+    <line x1="256" y1="132" x2="256" y2="272" stroke="#fff7d6" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+    <line x1="206" y1="184" x2="306" y2="184" stroke="#fff7d6" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <!-- Livre ouvert (la Parole) -->
+  <g transform="translate(256 412)">
+    <!-- ombre du livre -->
+    <ellipse cx="0" cy="46" rx="140" ry="16" fill="#000000" opacity="0.35"/>
+    <!-- pages -->
+    <path d="M-128 0 C-92 -30 -44 -30 0 -4 C44 -30 92 -30 128 0 L112 44 C72 22 40 18 0 40 C-40 18 -72 22 -112 44 Z" fill="url(#book)"/>
+    <!-- lignes du texte -->
+    <g stroke="#c2a35c" stroke-width="4" stroke-linecap="round" opacity="0.55">
+      <line x1="-92" y1="6" x2="-30" y2="6"/>
+      <line x1="30" y1="6" x2="92" y2="6"/>
+      <line x1="-84" y1="18" x2="-22" y2="18"/>
+      <line x1="22" y1="18" x2="84" y2="18"/>
+    </g>
+    <!-- reliure -->
+    <path d="M0 -4 C-8 6 -8 26 0 40 C8 26 8 6 0 -4 Z" fill="url(#bookShadow)"/>
+    <line x1="0" y1="-4" x2="0" y2="40" stroke="#a8823f" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>

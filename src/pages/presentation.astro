@@ -1,0 +1,1643 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t, getLang } from '@/lib/i18n';
+
+const lang = getLang(Astro.url, Astro.cookies);
+// Paramètre d'ajout direct depuis une page cantique/bible : ?add=cantique|bible|doc&…
+// clang = langue du CONTENU (indépendante de la langue d'interface ?lang=)
+const add = Astro.url.searchParams.get('add');
+const addLang = Astro.url.searchParams.get('clang') ?? 'mg';
+const addId = Astro.url.searchParams.get('id') ?? '';
+const addVersion = Astro.url.searchParams.get('version') ?? '';
+const addBook = Astro.url.searchParams.get('book') ?? '';
+const addChapter = Astro.url.searchParams.get('chapter') ?? '';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_presentation')}>
+  <section
+    class="mx-auto flex max-w-[1680px] flex-col gap-3 px-3 py-3 sm:px-5 lg:h-[calc(100dvh-4rem)] lg:overflow-hidden"
+  >
+    <!-- ===== BARRE D'OUTILS (en haut) ===== -->
+    <div class="shrink-0 space-y-2.5 rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/60">
+      <!-- Ligne 1 : modes + présentation + actions -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Modes façon VideoPsalm -->
+        <div class="flex items-center gap-0.5 rounded-xl bg-slate-100 p-1 dark:bg-night-900/70">
+          <button data-mode="agenda" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📋 {t(lang, 'pres_mode_agenda')}</button>
+          <button data-mode="bible" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📖 {t(lang, 'pres_mode_bible')}</button>
+          <button data-mode="cantique" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">🎵 {t(lang, 'pres_mode_cantique')}</button>
+        </div>
+
+        <!-- Contrôles agenda -->
+        <div id="agenda-controls" class="flex flex-wrap items-center gap-2">
+          <select
+            id="pres-select"
+            class="input-dark max-w-56 flex-1 rounded-xl border border-slate-300/70 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition focus:border-gold-500 dark:border-night-600 dark:bg-night-900 dark:text-slate-100 sm:flex-none"
+            aria-label={t(lang, 'pres_presentations')}
+          ></select>
+          <button id="new-pres" class="btn-ghost px-2.5 py-1.5 text-xs" title={t(lang, 'pres_new')}>＋</button>
+          <button id="dup-pres" class="btn-ghost px-2.5 py-1.5 text-xs" title={t(lang, 'pres_duplicate')}>⧉</button>
+          <button id="del-pres" class="btn-ghost px-2.5 py-1.5 text-xs hover:!border-rose-500/60 hover:!text-rose-500" title={t(lang, 'pres_delete')}>✕</button>
+          <button id="demo-btn" class="chip border border-gold-500/50 bg-gold-500/10 px-3 py-1.5 text-xs font-semibold text-gold-600 transition hover:bg-gold-500/20 dark:text-gold-400" title={t(lang, 'pres_demo_hint')}>
+            ✨ {t(lang, 'pres_demo')}
+          </button>
+        </div>
+
+        <!-- Recherche Bible (mode Bible) -->
+        <div id="bible-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-2">
+          <input id="bible-search" class="input-dark min-w-0 flex-1 rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2 text-sm outline-none transition focus:border-sky-500" placeholder={t(lang, 'pres_bible_ref_placeholder')} />
+          <select id="bible-version-sel" class="input-dark max-w-44 rounded-xl border border-slate-300/70 bg-white px-2 py-2 text-xs dark:border-night-600 dark:bg-night-900"></select>
+          <button id="bible-go" class="btn-gold px-3 py-2 text-xs">🔍</button>
+        </div>
+
+        <!-- Recherche Cantique (mode Cantique) -->
+        <div id="cantique-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-2">
+          <input id="cantique-search" class="input-dark min-w-0 flex-1 rounded-xl border border-emerald-500/40 bg-emerald-500/5 px-3 py-2 text-sm outline-none transition focus:border-emerald-500" placeholder={t(lang, 'pres_search_song')} />
+        </div>
+
+        <span class="flex-1"></span>
+        <span class="hidden text-[10px] text-emerald-600 md:inline dark:text-emerald-400">{t(lang, 'pres_offline_ok')}</span>
+        <button id="launch-btn" class="btn-gold px-4 py-2 text-sm" disabled>🖥️ {t(lang, 'pres_launch')}</button>
+      </div>
+
+      <!-- Ligne 2 : modes d'ajout (agenda) -->
+      <div id="agenda-add-row" class="flex flex-wrap items-center gap-1.5">
+        <span class="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">＋</span>
+        <button data-add="cantique" class="chip border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300">{t(lang, 'pres_add_cantique')}</button>
+        <button data-add="bible" class="chip border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-500/20 dark:text-sky-300">{t(lang, 'pres_add_bible')}</button>
+        <button data-add="text" class="chip border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-500/20 dark:text-violet-300">{t(lang, 'pres_add_text')}</button>
+        <button data-add="image" class="chip border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300">{t(lang, 'pres_add_image')}</button>
+        <button data-add="doc" class="chip border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-500/20 dark:text-rose-300">{t(lang, 'pres_add_doc')}</button>
+        <button data-add="video" class="chip border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-500/20 dark:text-red-300">{t(lang, 'pres_add_video')}</button>
+        <button data-add="audio" class="chip border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-semibold text-fuchsia-700 transition hover:bg-fuchsia-500/20 dark:text-fuchsia-300">{t(lang, 'pres_add_audio')}</button>
+      </div>
+
+      <!-- Indice des modes -->
+      <p id="mode-hint" class="hidden text-[10px] text-slate-400 dark:text-slate-500">{t(lang, 'pres_mode_settings_memo')}</p>
+
+      <!-- Ligne 3 : paramètres d'affichage (par mode, mémorisés) -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200/60 pt-2.5 dark:border-night-700/50">
+        <span class="mr-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_settings')}>
+          ⚙️ {t(lang, 'pres_settings')}
+        </span>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          {t(lang, 'pres_bg')}
+          <span class="flex gap-1 pl-1">
+            <button data-bg="gradient" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🌄 {t(lang, 'pres_bg_presets')}</button>
+            <button data-bg="image" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🖼️ {t(lang, 'pres_bg_image')}</button>
+            <button data-bg="solid" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🎨 {t(lang, 'pres_bg_solid')}</button>
+          </span>
+        </label>
+        <div id="bg-presets" class="flex items-center gap-1.5"></div>
+        <input id="bg-value" class="input-dark w-40 rounded-lg px-2.5 py-1.5 text-xs" placeholder="…" />
+
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          {t(lang, 'pres_text_color')}
+          <input id="text-color" type="color" class="h-7 w-9 cursor-pointer rounded border-0 bg-transparent" value="#ffffff" />
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          {t(lang, 'pres_text_size')}
+          <select id="text-size" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+            <option value="sm">{t(lang, 'pres_size_sm')}</option>
+            <option value="md">{t(lang, 'pres_size_md')}</option>
+            <option value="lg" selected>{t(lang, 'pres_size_lg')}</option>
+            <option value="xl">{t(lang, 'pres_size_xl')}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          {t(lang, 'pres_position')}
+          <select id="position" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+            <option value="center">{t(lang, 'pres_pos_center')}</option>
+            <option value="left">{t(lang, 'pres_pos_left')}</option>
+            <option value="right">{t(lang, 'pres_pos_right')}</option>
+            <option value="top">{t(lang, 'pres_pos_top')}</option>
+            <option value="bottom">{t(lang, 'pres_pos_bottom')}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          {t(lang, 'pres_alignment')}
+          <select id="alignment" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+            <option value="center" selected>{t(lang, 'pres_align_center')}</option>
+            <option value="left">{t(lang, 'pres_align_left')}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-300">
+          <input id="verse-numbers" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" checked />
+          {t(lang, 'pres_verse_numbers')}
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          ⏱ {t(lang, 'pres_auto_advance')}
+          <input id="auto-advance" type="number" min="0" max="600" value="0" class="input-dark w-16 rounded-lg px-2 py-1.5 text-xs" />
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_bg_media')}>
+          🎬 {t(lang, 'pres_bg_media')}
+          <select id="bg-media-type" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+            <option value="none">{t(lang, 'pres_bg_media_none')}</option>
+            <option value="image">{t(lang, 'pres_bg_media_image')}</option>
+            <option value="video">{t(lang, 'pres_bg_media_video')}</option>
+          </select>
+        </label>
+        <input id="bg-media" class="input-dark w-52 rounded-lg px-2.5 py-1.5 text-xs" placeholder={t(lang, 'pres_bg_media_url')} />
+      </div>
+
+      <!-- Ligne 4 : superpositions du projecteur (minuteur, ticker, horloge) -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200/60 pt-2.5 dark:border-night-700/50">
+        <span class="mr-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_overlays')}>
+          ✨ {t(lang, 'pres_overlays')}
+        </span>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          🕐 {t(lang, 'pres_clock_format')}
+          <select id="ov-clock-format" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+            <option value="hm">{t(lang, 'pres_clock_fmt_hm')}</option>
+            <option value="hms">{t(lang, 'pres_clock_fmt_hms')}</option>
+            <option value="hmd">{t(lang, 'pres_clock_fmt_hmd')}</option>
+            <option value="full">{t(lang, 'pres_clock_fmt_full')}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          ⏱ {t(lang, 'pres_timer')}
+          <input id="ov-timer-sec" type="number" min="0" max="7200" step="30" value="300" class="input-dark w-20 rounded-lg px-2 py-1.5 text-xs" />
+          <input id="ov-timer-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
+          <button id="ov-timer-reset" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px] dark:border-night-600" type="button">↺ {t(lang, 'pres_timer_reset')}</button>
+        </label>
+        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          📜 {t(lang, 'pres_ticker')}
+          <input id="ov-ticker-text" class="input-dark w-56 rounded-lg px-2.5 py-1.5 text-xs" placeholder={t(lang, 'pres_ticker_text')} />
+          <input id="ov-ticker-speed" type="number" min="1" max="300" value="60" class="input-dark w-14 rounded-lg px-2 py-1.5 text-xs" title={t(lang, 'pres_ticker_speed')} />
+          <input id="ov-ticker-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
+        </label>
+      </div>
+    </div>
+
+    <!-- ===== CORPS : PANNEAU LATÉRAL (gauche, dominant) + APERÇU (droite, compact) ===== -->
+    <div class="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+      <!-- Grand aperçu (à droite, compact) -->
+      <div
+        id="preview-wrap"
+        class="relative flex min-h-[42vh] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/70 bg-night-950 shadow-inner dark:border-night-700/60 lg:order-2 lg:min-h-0"
+      >
+      <div
+        id="preview-stage"
+        class="relative overflow-hidden rounded-xl text-white shadow-2xl ring-1 ring-white/10 transition-opacity duration-300"
+        style="aspect-ratio: 16 / 9; width: 800px; height: 450px; background: linear-gradient(135deg, #0b1020 0%, #1e1b4b 55%, #3b0764 100%); font-size: 1.6rem"
+      ></div>
+
+      <!-- Navigateur superposé -->
+      <button id="preview-prev" class="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-lg text-white backdrop-blur transition hover:scale-110 hover:bg-gold-500 hover:text-night-950 sm:left-4" aria-label={t(lang, 'pres_prev')}>←</button>
+      <button id="preview-next" class="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-lg text-white backdrop-blur transition hover:scale-110 hover:bg-gold-500 hover:text-night-950 sm:right-4" aria-label={t(lang, 'pres_next')}>→</button>
+
+      <!-- Indicateurs -->
+      <div class="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[70%] flex-col gap-0.5 sm:left-4 sm:top-4">
+        <span id="preview-title" class="truncate text-xs font-bold text-white/95 drop-shadow [text-shadow:0_1px_4px_rgba(0,0,0,.6)]"></span>
+        <span id="preview-pres-name" class="truncate text-[10px] text-white/60"></span>
+      </div>
+      <span id="preview-page" class="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white/90 backdrop-blur sm:bottom-4 sm:right-4"></span>
+      </div>
+
+      <!-- Panneau latéral (à gauche, dominant) -->
+      <aside class="flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/80 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/70 lg:order-1 lg:w-[55%]">
+        <!-- ===== PANNEAUX AGENDA ===== -->
+        <div id="agenda-panels" class="flex min-h-0 flex-1 flex-col">
+          <!-- Onglets -->
+          <div class="flex items-center gap-1 border-b border-slate-200/70 px-2 pt-1.5 dark:border-night-700/50">
+            <button data-tab="items" class="tab-btn flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
+              📋 {t(lang, 'pres_tab_items')} <span id="items-count" class="rounded-full bg-slate-200/70 px-1.5 text-[10px] font-bold text-slate-500 dark:bg-night-700 dark:text-slate-300"></span>
+            </button>
+            <button data-tab="add" class="tab-btn flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
+              ➕ {t(lang, 'pres_tab_add')}
+            </button>
+            <span class="flex-1"></span>
+            <span class="hidden pb-1 pr-1 text-[10px] text-slate-400 sm:block dark:text-slate-500">{t(lang, 'pres_add_hint')}</span>
+          </div>
+
+          <!-- Panneau : Éléments -->
+          <div id="tab-items" class="min-h-0 flex-1 overflow-y-auto p-3">
+            <div id="items-list" class="grid gap-2 sm:grid-cols-2"></div>
+          </div>
+
+          <!-- Panneau : Ajouter -->
+          <div id="tab-add" class="hidden min-h-0 flex-1 overflow-y-auto p-3">
+            <div id="add-panel"></div>
+          </div>
+        </div>
+
+        <!-- ===== PANNEAU MODE BIBLE ===== -->
+        <div id="bible-panel" class="hidden min-h-0 flex-1 flex-col">
+          <div class="flex items-center gap-2 border-b border-sky-500/20 bg-sky-500/5 px-3 py-2">
+            <span class="text-xs font-bold text-sky-700 dark:text-sky-300">📖 {t(lang, 'pres_mode_bible')}</span>
+            <span class="flex-1"></span>
+            <button id="bible-add-agenda" class="chip border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold text-sky-700 transition hover:bg-sky-500/20 dark:text-sky-300">＋ {t(lang, 'pres_tab_add')}</button>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto p-3">
+            <p id="bible-empty" class="rounded-xl border border-dashed border-slate-300/70 p-4 text-center text-xs text-slate-400 dark:border-night-600">{t(lang, 'pres_bible_mode_hint')}</p>
+            <div id="bible-verse-list" class="space-y-1.5"></div>
+          </div>
+        </div>
+
+        <!-- ===== PANNEAU MODE CANTIQUE ===== -->
+        <div id="cantique-panel" class="hidden min-h-0 flex-1 flex-col">
+          <div class="flex items-center gap-2 border-b border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">🎵 {t(lang, 'pres_mode_cantique')}</span>
+            <span class="flex-1"></span>
+            <button id="cantique-add-agenda" class="chip border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300">＋ {t(lang, 'pres_tab_add')}</button>
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto p-3">
+            <p id="cantique-empty" class="rounded-xl border border-dashed border-slate-300/70 p-4 text-center text-xs text-slate-400 dark:border-night-600">{t(lang, 'pres_cantique_mode_hint')}</p>
+            <div id="cantique-song-list" class="space-y-1.5"></div>
+            <div id="cantique-stanza-list" class="mt-3 space-y-1.5"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== MODAL PERSONNALISATION D'UN ÉLÉMENT ===== -->
+  <div id="item-modal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft dark:border-night-600 dark:bg-night-800">
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">⚙️ {t(lang, 'pres_item_settings_title')}</h3>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {t(lang, 'pres_position')}
+          <select id="ip-position" class="input-dark mt-1 w-full rounded-lg px-2 py-1.5 text-xs">
+            <option value="center">{t(lang, 'pres_pos_center')}</option>
+            <option value="left">{t(lang, 'pres_pos_left')}</option>
+            <option value="right">{t(lang, 'pres_pos_right')}</option>
+            <option value="top">{t(lang, 'pres_pos_top')}</option>
+            <option value="bottom">{t(lang, 'pres_pos_bottom')}</option>
+          </select>
+        </label>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {t(lang, 'pres_text_size')}
+          <select id="ip-size" class="input-dark mt-1 w-full rounded-lg px-2 py-1.5 text-xs">
+            <option value="sm">{t(lang, 'pres_size_sm')}</option>
+            <option value="md">{t(lang, 'pres_size_md')}</option>
+            <option value="lg" selected>{t(lang, 'pres_size_lg')}</option>
+            <option value="xl">{t(lang, 'pres_size_xl')}</option>
+          </select>
+        </label>
+        <label class="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {t(lang, 'pres_text_color')}
+          <input id="ip-color" type="color" class="h-8 w-12 cursor-pointer rounded border-0 bg-transparent" value="#ffffff" />
+        </label>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {t(lang, 'pres_alignment')}
+          <select id="ip-alignment" class="input-dark mt-1 w-full rounded-lg px-2 py-1.5 text-xs">
+            <option value="center">{t(lang, 'pres_align_center')}</option>
+            <option value="left">{t(lang, 'pres_align_left')}</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+          <input id="ip-verse" type="checkbox" class="h-4 w-4 accent-amber-500" checked />
+          {t(lang, 'pres_verse_numbers')}
+        </label>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          {t(lang, 'pres_bg')}
+          <select id="ip-bgtype" class="input-dark mt-1 w-full rounded-lg px-2 py-1.5 text-xs">
+            <option value="gradient">{t(lang, 'pres_bg_presets')}</option>
+            <option value="image">{t(lang, 'pres_bg_image')}</option>
+            <option value="solid">{t(lang, 'pres_bg_solid')}</option>
+          </select>
+        </label>
+        <div class="sm:col-span-2">
+          <div id="ip-bg-presets" class="flex flex-wrap gap-1.5"></div>
+          <input id="ip-bg-value" class="input-dark mt-2 w-full rounded-lg px-2.5 py-1.5 text-xs" placeholder="…" />
+        </div>
+      </div>
+      <div class="mt-5 flex items-center justify-end gap-2">
+        <button id="ip-reset" class="btn-ghost px-3 py-2 text-xs">{t(lang, 'pres_reset')}</button>
+        <button id="ip-cancel" class="btn-ghost px-3 py-2 text-xs">✕</button>
+        <button id="ip-apply" class="btn-gold px-4 py-2 text-xs">{t(lang, 'pres_apply')}</button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import {
+    DEFAULT_SETTINGS,
+    BG_PRESETS,
+    uid,
+    loadPresentations,
+    savePresentations,
+    saveActive,
+    totalPages,
+    pageAt,
+    pageHtml,
+    bgMediaHtml,
+    itemPageCount,
+    splitStanzas,
+    demoPresentation,
+    loadModeSettings,
+    saveModeSettings,
+    loadLivePres,
+    saveLivePres,
+    loadOverlays,
+    saveOverlays,
+  } from '@/lib/presentation';
+  import type { Presentation, PresentItem, PresentSettings, PresMode, PresOverlays } from '@/lib/presentation';
+  import { t } from '@/lib/i18n';
+
+  const lang = document.documentElement.lang as 'fr' | 'mg';
+
+  // --- État ---
+  let presentations = loadPresentations();
+  let activeId: string | null = presentations[0]?.id ?? null;
+  let flatIndex = 0;
+  let mode: PresMode = 'agenda';
+  let modeSettings = loadModeSettings();
+  let customItem: PresentItem | null = null;
+
+  // État des modes Bible / Cantique
+  let bibleChapter: { reference: string; verses: { verse: number; text: string }[] } | null = null;
+  let bibleVerseIndex = 0;
+  let cantiqueSongs: { num: number; title: string; lang: string; content: string; stanzas: string[] }[] = [];
+  let cantiqueSelected: { num: number; title: string; lang: string; stanzas: string[] } | null = null;
+  let cantiqueStanzaIndex = 0;
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const presSelect = $<HTMLSelectElement>('pres-select');
+  const itemsList = $('items-list');
+  const itemsCount = $('items-count');
+  const addPanel = $('add-panel');
+  const previewStage = $('preview-stage');
+  const previewTitle = $('preview-title');
+  const previewPresName = $('preview-pres-name');
+  const previewPage = $('preview-page');
+  const launchBtn = $<HTMLButtonElement>('launch-btn');
+  const bgPresets = $('bg-presets');
+  const bgValue = $<HTMLInputElement>('bg-value');
+  const textColor = $<HTMLInputElement>('text-color');
+  const textSize = $<HTMLSelectElement>('text-size');
+  const positionSel = $<HTMLSelectElement>('position');
+  const alignment = $<HTMLSelectElement>('alignment');
+  const verseNumbers = $<HTMLInputElement>('verse-numbers');
+  const autoAdvance = $<HTMLInputElement>('auto-advance');
+  const bgMediaType = $<HTMLSelectElement>('bg-media-type');
+  const bgMedia = $<HTMLInputElement>('bg-media');
+  const ovClockFormat = $<HTMLSelectElement>('ov-clock-format');
+  const ovTimerSec = $<HTMLInputElement>('ov-timer-sec');
+  const ovTimerOn = $<HTMLInputElement>('ov-timer-on');
+  const ovTickerText = $<HTMLInputElement>('ov-ticker-text');
+  const ovTickerSpeed = $<HTMLInputElement>('ov-ticker-speed');
+  const ovTickerOn = $<HTMLInputElement>('ov-ticker-on');
+
+  // --- Superpositions (partagées avec le projecteur) ---
+  let overlays: PresOverlays = loadOverlays();
+  function syncOverlaysForm() {
+    ovClockFormat.value = overlays.clockFormat;
+    ovTimerSec.value = String(overlays.timerSeconds);
+    ovTimerOn.checked = overlays.timerOn;
+    ovTickerText.value = overlays.tickerText;
+    ovTickerSpeed.value = String(overlays.tickerSpeed);
+    ovTickerOn.checked = overlays.tickerOn;
+  }
+  function saveOverlaysForm() {
+    overlays = {
+      clockFormat: ovClockFormat.value as any,
+      timerOn: ovTimerOn.checked,
+      timerSeconds: Math.max(0, Number(ovTimerSec.value) || 0),
+      tickerOn: ovTickerOn.checked,
+      tickerText: ovTickerText.value,
+      tickerSpeed: Math.max(1, Number(ovTickerSpeed.value) || 60),
+    };
+    saveOverlays(overlays);
+  }
+  [ovClockFormat, ovTimerSec, ovTimerOn, ovTickerText, ovTickerSpeed, ovTickerOn].forEach((el) =>
+    el.addEventListener('change', saveOverlaysForm)
+  );
+  $('ov-timer-reset').addEventListener('click', () => {
+    overlays.timerOn = false;
+    overlays.timerSeconds = Math.max(0, Number(ovTimerSec.value) || 0);
+    saveOverlays(overlays);
+    syncOverlaysForm();
+  });
+
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');
+
+  function activePres(): Presentation {
+    return presentations.find((p) => p.id === activeId) ?? presentations[0];
+  }
+
+  function persist() {
+    savePresentations(presentations);
+    if (activeId) saveActive({ presId: activeId, pageIndex: flatIndex });
+  }
+
+  function persistSettings() {
+    if (mode === 'agenda') persist();
+    else saveModeSettings(modeSettings);
+  }
+
+  /** Réglages actifs selon le mode (mémorisés séparément pour chaque mode) */
+  function currentSettings(): PresentSettings {
+    if (mode === 'agenda') return activePres()?.settings ?? DEFAULT_SETTINGS;
+    return modeSettings[mode] ?? DEFAULT_SETTINGS;
+  }
+
+  // --- Modes ---
+  function showMode(m: PresMode) {
+    // Sauvegarde les réglages du mode courant avant de changer
+    persistSettings();
+    mode = m;
+    const isAgenda = m === 'agenda';
+    $('agenda-controls').classList.toggle('hidden', !isAgenda);
+    $('agenda-add-row').classList.toggle('hidden', !isAgenda);
+    $('agenda-panels').classList.toggle('hidden', !isAgenda);
+    $('bible-search-row').classList.toggle('hidden', m !== 'bible');
+    $('bible-panel').classList.toggle('hidden', m !== 'bible');
+    $('cantique-search-row').classList.toggle('hidden', m !== 'cantique');
+    $('cantique-panel').classList.toggle('hidden', m !== 'cantique');
+    $('mode-hint').classList.toggle('hidden', false);
+    document.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => {
+      const active = b.dataset.mode === m;
+      b.classList.toggle('bg-white', active);
+      b.classList.toggle('shadow-sm', active);
+      b.classList.toggle('text-gold-600', active);
+      b.classList.toggle('dark:text-gold-400', active);
+      b.classList.toggle('dark:bg-night-800', active);
+    });
+    // Réglages du mode cible
+    syncSettingsForm();
+    renderAll();
+  }
+  document.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => {
+    b.addEventListener('click', () => showMode(b.dataset.mode as PresMode));
+  });
+
+  // --- Onglets agenda ---
+  function showTab(name: 'items' | 'add') {
+    $('tab-items').classList.toggle('hidden', name !== 'items');
+    $('tab-add').classList.toggle('hidden', name !== 'add');
+    document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => {
+      const active = b.dataset.tab === name;
+      b.classList.toggle('border-gold-500', active);
+      b.classList.toggle('text-gold-600', active);
+      b.classList.toggle('dark:text-gold-400', active);
+      b.classList.toggle('bg-gold-500/10', active);
+    });
+  }
+  document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => {
+    b.addEventListener('click', () => showTab(b.dataset.tab as any));
+  });
+
+  // --- Rendu sélecteur de présentation ---
+  function renderPresList() {
+    presSelect.innerHTML = presentations
+      .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`)
+      .join('');
+    if (activeId) presSelect.value = activeId;
+  }
+
+  // --- Rendu des items (agenda) ---
+  const KIND_ICON: Record<string, string> = { cantique: '🎵', bible: '📖', text: '📝', image: '🖼️', doc: '📄', video: '🎬', audio: '🎧', blank: '⬛' };
+  function renderItems() {
+    const pres = activePres();
+    if (!pres) {
+      itemsList.innerHTML = '';
+      itemsCount.textContent = '';
+      return;
+    }
+    itemsCount.textContent = `(${pres.items.length})`;
+    if (!pres.items.length) {
+      itemsList.innerHTML = `<p class="rounded-xl border border-dashed border-slate-300/70 p-5 text-center text-xs text-slate-400 dark:border-night-600">${t(lang, 'pres_empty')}</p>`;
+      return;
+    }
+    let acc = 0;
+    itemsList.innerHTML = pres.items
+      .map((it, i) => {
+        const pages = itemPageCount(it);
+        const first = acc;
+        acc += pages;
+        const activeHere = flatIndex >= first && flatIndex < acc;
+        const detail =
+          it.kind === 'cantique'
+            ? `${it.stanzas?.length ?? 0} ${t(lang, 'pres_stanza')}`
+            : it.kind === 'bible'
+              ? `${it.verses?.length ?? 0} v`
+              : it.kind === 'text'
+                ? (it.textContent ?? '').length + ' c'
+                : it.kind === 'doc'
+                  ? 'PDF'
+                  : it.kind === 'video'
+                    ? '🎬'
+                    : it.kind === 'audio'
+                      ? '🎧'
+                      : '';
+        return `
+        <div class="group rounded-xl border px-2.5 py-2 transition ${activeHere ? 'border-gold-500 bg-gold-500/10' : 'border-slate-200/70 bg-white dark:border-night-700 dark:bg-night-900/60'}">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">${KIND_ICON[it.kind] ?? '📄'}</span>
+            <button class="item-select min-w-0 flex-1 text-left" data-first="${first}">
+              <span class="block truncate text-xs font-semibold text-slate-800 dark:text-slate-100">${esc(it.title)}</span>
+              <span class="block truncate text-[10px] text-slate-400">${it.subtitle ? esc(it.subtitle) + ' · ' : ''}${detail} · ${pages} pg</span>
+            </button>
+            <button class="item-cfg text-xs text-slate-400 transition hover:text-gold-600" data-i="${i}" title="${t(lang, 'pres_customize')}">⚙️</button>
+            <button class="item-up text-xs text-slate-400 transition hover:text-gold-600 disabled:opacity-30" data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button class="item-down text-xs text-slate-400 transition hover:text-gold-600 disabled:opacity-30" data-i="${i}" ${i === pres.items.length - 1 ? 'disabled' : ''}>↓</button>
+            <button class="item-del text-xs text-slate-400 transition hover:text-rose-500" data-i="${i}">✕</button>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  // --- Rendu liste des versets (mode Bible) ---
+  function renderBibleVerses() {
+    const box = $('bible-verse-list');
+    const empty = $('bible-empty');
+    if (!bibleChapter || !bibleChapter.verses.length) {
+      box.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    box.innerHTML = bibleChapter.verses
+      .map(
+        (v, i) => `
+        <button class="bible-verse w-full rounded-xl border px-3 py-2 text-left text-xs transition ${i === bibleVerseIndex ? 'border-sky-500 bg-sky-500/10' : 'border-slate-200/70 bg-white hover:border-sky-500/50 dark:border-night-700 dark:bg-night-900/60'}" data-i="${i}">
+          <span class="font-bold text-sky-600 dark:text-sky-300">${v.verse}</span>
+          <span class="text-slate-600 dark:text-slate-300">${esc(v.text)}</span>
+        </button>`
+      )
+      .join('');
+    const cur = $<HTMLElement>('bible-verse-list')?.querySelector('.bible-verse[data-i="' + bibleVerseIndex + '"]');
+    cur?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // --- Rendu recherche cantique ---
+  function renderCantiqueSongs() {
+    const box = $('cantique-song-list');
+    const empty = $('cantique-empty');
+    if (!cantiqueSongs.length) {
+      box.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    box.innerHTML =
+      '<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">' +
+      t(lang, 'pres_choose_song') +
+      '</p>' +
+      cantiqueSongs
+        .map(
+          (c, i) => `
+          <button class="cantique-song w-full rounded-xl border px-3 py-2 text-left text-xs transition ${cantiqueSelected && cantiqueSelected.num === c.num && cantiqueSelected.lang === c.lang ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200/70 bg-white hover:border-emerald-500/50 dark:border-night-700 dark:bg-night-900/60'}" data-i="${i}">
+            <span class="font-bold text-emerald-600 dark:text-emerald-300">${c.num}</span> ${esc(c.title)}
+            <span class="text-[10px] uppercase text-slate-400">(${c.lang})</span>
+          </button>`
+        )
+        .join('');
+  }
+
+  function renderCantiqueStanzas() {
+    const box = $('cantique-stanza-list');
+    if (!cantiqueSelected) {
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML =
+      '<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">' +
+      `${cantiqueSelected.num}. ${esc(cantiqueSelected.title)} — ${t(lang, 'pres_stanza')}` +
+      '</p>' +
+      cantiqueSelected.stanzas
+        .map(
+          (st, i) => `
+          <button class="cantique-stanza w-full rounded-xl border px-3 py-2 text-left text-xs whitespace-pre-wrap transition ${i === cantiqueStanzaIndex ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-200/70 bg-white hover:border-emerald-500/50 dark:border-night-700 dark:bg-night-900/60'}" data-i="${i}">
+            ${esc(st.slice(0, 160))}${st.length > 160 ? '…' : ''}
+          </button>`
+        )
+        .join('');
+  }
+
+  // --- Aperçu ---
+  function renderPresPreview(pres: Presentation, idx: number) {
+    const total = totalPages(pres);
+    idx = Math.max(0, Math.min(idx, total - 1));
+    const at = pageAt(pres, idx);
+    previewPage.textContent = `${idx + 1} / ${total}`;
+    previewPresName.textContent = pres.name;
+    if (!at) {
+      previewStage.innerHTML = '';
+      previewTitle.textContent = t(lang, 'pres_empty');
+      return;
+    }
+    const { item, page } = at;
+    previewTitle.textContent = item.title;
+    // Surcharge de réglages propre à l'élément (personnalisation par slide)
+    const s: PresentSettings = { ...pres.settings, ...(item.settingsOverride ?? {}) };
+    previewStage.style.background = s.bgValue;
+    const size = s.textSize ?? 'lg';
+    const base = size === 'sm' ? 1.1 : size === 'md' ? 1.35 : size === 'lg' ? 1.6 : 1.9;
+    previewStage.style.fontSize = `${(base * Math.min(previewStage.clientWidth || 900, 1400)) / 900}rem`;
+    const media = bgMediaHtml(s);
+    previewStage.innerHTML = `${media}<div style="position:relative;z-index:1;width:100%;height:100%">${pageHtml(item, page, s, t(lang, 'pres_stanza'))}</div>`;
+  }
+
+  function renderPreview() {
+    fitPreview();
+    if (mode === 'agenda') {
+      const pres = activePres();
+      if (!pres) {
+        previewStage.innerHTML = '';
+        previewTitle.textContent = '';
+        previewPresName.textContent = '';
+        previewPage.textContent = '';
+        return;
+      }
+      flatIndex = Math.max(0, Math.min(flatIndex, totalPages(pres) - 1));
+      renderPresPreview(pres, flatIndex);
+      persist();
+    } else if (mode === 'bible') {
+      if (!bibleChapter || !bibleChapter.verses.length) {
+        previewStage.innerHTML = '';
+        previewTitle.textContent = t(lang, 'pres_bible_mode_hint');
+        previewPresName.textContent = t(lang, 'pres_mode_bible');
+        previewPage.textContent = '0 / 0';
+        return;
+      }
+      const v = bibleChapter.verses[bibleVerseIndex];
+      const pres: Presentation = {
+        id: 'live-bible-preview',
+        name: t(lang, 'pres_mode_bible'),
+        settings: { ...(modeSettings.bible ?? DEFAULT_SETTINGS) },
+        updatedAt: Date.now(),
+        items: [
+          {
+            id: uid(),
+            kind: 'bible',
+            title: bibleChapter.reference,
+            subtitle: t(lang, 'pres_mode_bible'),
+            versionLabel: 'live',
+            refLabel: `${bibleChapter.reference} : ${v.verse}`,
+            perVerse: true,
+            verses: [v],
+          },
+        ],
+      };
+      renderPresPreview(pres, 0);
+    } else if (mode === 'cantique') {
+      if (!cantiqueSelected) {
+        previewStage.innerHTML = '';
+        previewTitle.textContent = t(lang, 'pres_cantique_mode_hint');
+        previewPresName.textContent = t(lang, 'pres_mode_cantique');
+        previewPage.textContent = '0 / 0';
+        return;
+      }
+      const pres: Presentation = {
+        id: 'live-cantique-preview',
+        name: t(lang, 'pres_mode_cantique'),
+        settings: { ...(modeSettings.cantique ?? DEFAULT_SETTINGS) },
+        updatedAt: Date.now(),
+        items: [
+          {
+            id: uid(),
+            kind: 'cantique',
+            title: `${cantiqueSelected.num}. ${cantiqueSelected.title}`,
+            subtitle: cantiqueSelected.lang === 'mg' ? 'Fihirana' : cantiqueSelected.lang === 'fr' ? 'Cantique' : 'Hymn',
+            cLang: cantiqueSelected.lang as any,
+            cNum: cantiqueSelected.num,
+            stanzas: cantiqueSelected.stanzas,
+          },
+        ],
+      };
+      renderPresPreview(pres, cantiqueStanzaIndex);
+    }
+  }
+
+  function fitPreview() {
+    const wrap = $('preview-wrap');
+    if (!wrap || !previewStage) return;
+    const w = wrap.clientWidth - 32;
+    const h = wrap.clientHeight - 24;
+    if (w <= 0 || h <= 0) return;
+    const scale = Math.min(w / 16, h / 9);
+    previewStage.style.width = `${Math.max(320, Math.floor(scale * 16))}px`;
+    previewStage.style.height = `${Math.max(180, Math.floor(scale * 9))}px`;
+  }
+
+  function renderAll() {
+    renderPresList();
+    renderItems();
+    renderBibleVerses();
+    renderCantiqueSongs();
+    renderCantiqueStanzas();
+    renderPreview();
+    syncSettingsForm();
+    updateLaunch();
+  }
+
+  // --- Bouton lancer selon le mode ---
+  function updateLaunch() {
+    if (mode === 'bible') {
+      launchBtn.textContent = t(lang, 'pres_present_verse');
+      launchBtn.disabled = !bibleChapter || !bibleChapter.verses.length;
+    } else if (mode === 'cantique') {
+      launchBtn.textContent = t(lang, 'pres_present_cantique');
+      launchBtn.disabled = !cantiqueSelected;
+    } else {
+      launchBtn.textContent = t(lang, 'pres_present_agenda');
+      launchBtn.disabled = !activePres() || !activePres().items.length;
+    }
+  }
+
+  // --- Formulaire de réglages ---
+  function syncSettingsForm() {
+    const s = currentSettings();
+    if (!s) return;
+    bgValue.value = s.bgValue;
+    textColor.value = s.textColor.startsWith('#') ? s.textColor : '#ffffff';
+    textSize.value = s.textSize;
+    positionSel.value = s.position;
+    alignment.value = s.alignment;
+    verseNumbers.checked = s.showVerseNumbers;
+    autoAdvance.value = String(s.autoAdvance);
+    bgMediaType.value = s.bgMediaType ?? 'none';
+    bgMedia.value = s.bgMedia ?? '';
+    syncOverlaysForm();
+    document.querySelectorAll('[data-bg]').forEach((b) => {
+      const active = (b as HTMLElement).dataset.bg === s.bgType;
+      (b as HTMLElement).classList.toggle('border-gold-500', active);
+      (b as HTMLElement).classList.toggle('text-gold-600', active);
+      (b as HTMLElement).classList.toggle('dark:text-gold-400', active);
+    });
+    bgPresets.innerHTML = BG_PRESETS.map(
+      (p) =>
+        `<button data-grad="${esc(p.value)}" class="h-8 w-8 rounded-lg border-2 border-white/40 transition hover:scale-110" style="background:${p.value}" title="${esc(p.label)}"></button>`
+    ).join('');
+  }
+
+  // --- Démo ---
+  $('demo-btn').addEventListener('click', () => {
+    const demo = demoPresentation();
+    presentations.push(demo);
+    activeId = demo.id;
+    flatIndex = 0;
+    persist();
+    renderAll();
+    showTab('add');
+    addPanel.innerHTML = `<p class="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-center text-xs font-semibold text-emerald-600 dark:text-emerald-300">${t(lang, 'pres_demo_added')}</p>`;
+  });
+
+  // --- CRUD présentations ---
+  function createDefault(): Presentation {
+    return { id: uid(), name: 'Présentation', items: [], settings: { ...DEFAULT_SETTINGS }, updatedAt: Date.now() };
+  }
+
+  $('new-pres').addEventListener('click', () => {
+    const n = prompt(t(lang, 'pres_name_placeholder'));
+    if (n === null) return;
+    const pres = createDefault();
+    pres.name = n.trim() || 'Présentation';
+    presentations.push(pres);
+    activeId = pres.id;
+    flatIndex = 0;
+    persist();
+    renderAll();
+  });
+
+  $('dup-pres').addEventListener('click', () => {
+    const src = activePres();
+    if (!src) return;
+    const copy: Presentation = { ...src, id: uid(), name: src.name + ' (2)', updatedAt: Date.now(), items: JSON.parse(JSON.stringify(src.items)) };
+    presentations.push(copy);
+    activeId = copy.id;
+    flatIndex = 0;
+    persist();
+    renderAll();
+  });
+
+  $('del-pres').addEventListener('click', () => {
+    const pres = activePres();
+    if (!pres) return;
+    if (!window.confirm(`${t(lang, 'pres_delete')} : « ${pres.name} » ?`)) return;
+    presentations = presentations.filter((p) => p.id !== pres.id);
+    activeId = presentations[0]?.id ?? null;
+    if (!presentations.length) {
+      const def = createDefault();
+      presentations.push(def);
+      activeId = def.id;
+    }
+    flatIndex = 0;
+    persist();
+    renderAll();
+  });
+
+  presSelect.addEventListener('change', () => {
+    activeId = presSelect.value || null;
+    flatIndex = 0;
+    persist();
+    renderAll();
+  });
+
+  // --- Items (agenda) ---
+  itemsList.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const pres = activePres();
+    if (!pres) return;
+    const sel = target.closest('.item-select') as HTMLElement | null;
+    if (sel) {
+      flatIndex = Number(sel.dataset.first);
+      renderAll();
+      return;
+    }
+    const i = target.dataset.i;
+    if (i === undefined) return;
+    const idx = Number(i);
+    if (target.classList.contains('item-cfg')) {
+      customItem = pres.items[idx];
+      openItemModal(customItem, pres.settings);
+      return;
+    }
+    if (target.classList.contains('item-up') && idx > 0) {
+      [pres.items[idx - 1], pres.items[idx]] = [pres.items[idx], pres.items[idx - 1]];
+      persist();
+      renderAll();
+    } else if (target.classList.contains('item-down') && idx < pres.items.length - 1) {
+      [pres.items[idx + 1], pres.items[idx]] = [pres.items[idx], pres.items[idx + 1]];
+      persist();
+      renderAll();
+    } else if (target.classList.contains('item-del')) {
+      pres.items.splice(idx, 1);
+      flatIndex = 0;
+      persist();
+      renderAll();
+    }
+  });
+
+  // --- Navigation (agenda / versets / strophes) ---
+  function nav(delta: number) {
+    if (mode === 'agenda') {
+      const pres = activePres();
+      if (pres) {
+        const t = totalPages(pres);
+        flatIndex = Math.max(0, Math.min(flatIndex + delta, t - 1));
+        persist();
+        renderAll();
+      }
+    } else if (mode === 'bible') {
+      if (bibleChapter) {
+        const ni = bibleVerseIndex + delta;
+        if (ni >= 0 && ni < bibleChapter.verses.length) {
+          bibleVerseIndex = ni;
+          renderAll();
+        }
+      }
+    } else if (mode === 'cantique') {
+      if (cantiqueSelected) {
+        const ni = cantiqueStanzaIndex + delta;
+        if (ni >= 0 && ni < cantiqueSelected.stanzas.length) {
+          cantiqueStanzaIndex = ni;
+          renderAll();
+        }
+      }
+    }
+  }
+  $('preview-prev').addEventListener('click', () => nav(-1));
+  $('preview-next').addEventListener('click', () => nav(1));
+  document.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      nav(1);
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      nav(-1);
+    }
+  });
+
+  // --- Recherche Bible (mode Bible) ---
+  const bibleSearch = $<HTMLInputElement>('bible-search');
+  const bibleVersionSel = $<HTMLSelectElement>('bible-version-sel');
+  const bibleGo = $('bible-go');
+  fetch('/api/bible?action=versions')
+    .then((r) => r.json())
+    .then((d) => {
+      bibleVersionSel.innerHTML = d.versions
+        .map((v: any) => `<option value="${v.file}">${esc(v.name)}</option>`)
+        .join('');
+    });
+  async function loadBibleChapter(version: string, book: number, chapter: number) {
+    try {
+      const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${book}&chapter=${chapter}`)).json();
+      bibleChapter = { reference: ch.reference, verses: ch.verses };
+      bibleVerseIndex = 0;
+    } catch {
+      /* ignore */
+    }
+  }
+  async function resolveBibleRef() {
+    const q = bibleSearch.value.trim();
+    const version = bibleVersionSel.value;
+    if (!q) return;
+    try {
+      const r = await fetch(`/api/bible?action=ref&version=${encodeURIComponent(version)}&q=${encodeURIComponent(q)}`);
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      const ref = data.ref;
+      await loadBibleChapter(version, ref.bookNumber, ref.chapter);
+      if (ref.verseStart && ref.verseStart > 1 && bibleChapter) {
+        bibleVerseIndex = Math.max(0, Math.min(ref.verseStart - 1, bibleChapter.verses.length - 1));
+      }
+      renderAll();
+    } catch {
+      const empty = $('bible-empty');
+      empty.classList.remove('hidden');
+      empty.innerHTML = `<p class="text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')}</p>`;
+    }
+  }
+  bibleGo.addEventListener('click', () => void resolveBibleRef());
+  bibleSearch.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void resolveBibleRef();
+  });
+  $('bible-verse-list').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('.bible-verse') as HTMLElement | null;
+    if (!b) return;
+    bibleVerseIndex = Number(b.dataset.i);
+    renderAll();
+  });
+  $('bible-add-agenda').addEventListener('click', () => {
+    if (!bibleChapter || !bibleChapter.verses.length) return;
+    const v = bibleChapter.verses[bibleVerseIndex];
+    const pres = activePres();
+    if (!pres) return;
+    pres.items.push({
+      id: uid(),
+      kind: 'bible',
+      title: `${bibleChapter.reference} : ${v.verse}`,
+      subtitle: t(lang, 'pres_mode_bible'),
+      versionLabel: 'live',
+      refLabel: `${bibleChapter.reference} : ${v.verse}`,
+      verses: [v],
+    });
+    flatIndex = totalPages(pres) - 1;
+    persist();
+    showMode('agenda');
+  });
+
+  // --- Recherche Cantique (mode Cantique) ---
+  const cantiqueSearchInput = $<HTMLInputElement>('cantique-search');
+  let cantiqueCache: Record<string, any[]> = {};
+  async function fetchCantiques(l: string) {
+    if (cantiqueCache[l]) return cantiqueCache[l];
+    const r = await fetch(`/data/cantiques_${l}.json`);
+    cantiqueCache[l] = await r.json();
+    return cantiqueCache[l];
+  }
+  async function runCantiqueSearch() {
+    const q = cantiqueSearchInput.value.trim().toLowerCase();
+    cantiqueSongs = [];
+    if (!q) {
+      renderCantiqueSongs();
+      return;
+    }
+    for (const l of ['mg', 'fr', 'en'] as const) {
+      const list = await fetchCantiques(l);
+      list
+        .filter((c) => c.content && (String(c.num).includes(q) || (c.title ?? '').toLowerCase().includes(q)))
+        .slice(0, 8)
+        .forEach((c) => {
+          cantiqueSongs.push({
+            num: c.num,
+            title: c.title,
+            lang: l,
+            content: c.content,
+            stanzas: splitStanzas(c.content),
+          });
+        });
+    }
+    renderCantiqueSongs();
+  }
+  cantiqueSearchInput.addEventListener('input', () => void runCantiqueSearch());
+  $('cantique-song-list').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('.cantique-song') as HTMLElement | null;
+    if (!b) return;
+    const c = cantiqueSongs[Number(b.dataset.i)];
+    if (!c) return;
+    cantiqueSelected = { num: c.num, title: c.title, lang: c.lang, stanzas: c.stanzas };
+    cantiqueStanzaIndex = 0;
+    renderAll();
+  });
+  $('cantique-stanza-list').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('.cantique-stanza') as HTMLElement | null;
+    if (!b) return;
+    cantiqueStanzaIndex = Number(b.dataset.i);
+    renderAll();
+  });
+  $('cantique-add-agenda').addEventListener('click', () => {
+    if (!cantiqueSelected) return;
+    const pres = activePres();
+    if (!pres) return;
+    pres.items.push({
+      id: uid(),
+      kind: 'cantique',
+      title: `${cantiqueSelected.num}. ${cantiqueSelected.title}`,
+      subtitle: cantiqueSelected.lang === 'mg' ? 'Fihirana' : cantiqueSelected.lang === 'fr' ? 'Cantique' : 'Hymn',
+      cLang: cantiqueSelected.lang as any,
+      cNum: cantiqueSelected.num,
+      stanzas: cantiqueSelected.stanzas,
+    });
+    flatIndex = totalPages(pres) - 1;
+    persist();
+    showMode('agenda');
+  });
+
+  // --- Panneaux d'ajout (agenda) ---
+  function openAdd(mode2: 'cantique' | 'bible' | 'text' | 'image' | 'doc' | 'video' | 'audio') {
+    showTab('add');
+    if (mode2 === 'cantique') renderAddCantique();
+    if (mode2 === 'bible') renderAddBible();
+    if (mode2 === 'text') renderAddText();
+    if (mode2 === 'image') renderAddImage();
+    if (mode2 === 'doc') renderAddDoc();
+    if (mode2 === 'video') renderAddVideo();
+    if (mode2 === 'audio') renderAddAudio();
+  }
+  document.querySelectorAll('[data-add]').forEach((b) => {
+    b.addEventListener('click', () => openAdd((b as HTMLElement).dataset.add as any));
+  });
+
+  function renderAddCantique() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">🎵 ${t(lang, 'pres_add_cantique')}</h3>
+      <div class="mt-3 flex gap-2">
+        <input id="cantique-search" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_search_cantique')}" />
+      </div>
+      <div id="cantique-results" class="mt-3 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2"></div>`;
+    const input = $<HTMLInputElement>('cantique-search');
+    const results = $('cantique-results');
+    const langs = ['mg', 'fr', 'en'] as const;
+    let cache: Record<string, any[]> = {};
+    const fetchLang = async (l: string) => {
+      if (cache[l]) return cache[l];
+      const r = await fetch(`/data/cantiques_${l}.json`);
+      cache[l] = await r.json();
+      return cache[l];
+    };
+    const run = async () => {
+      const q = input.value.trim().toLowerCase();
+      results.innerHTML = '';
+      if (!q) return;
+      for (const l of langs) {
+        const list = await fetchLang(l);
+        const hits = list
+          .filter((c) => c.content && (String(c.num).includes(q) || (c.title ?? '').toLowerCase().includes(q)))
+          .slice(0, 6);
+        hits.forEach((c) => {
+          const btn = document.createElement('button');
+          btn.className = 'w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left text-sm transition hover:border-gold-500/60 dark:border-night-700 dark:bg-night-800/70';
+          btn.innerHTML = `<span class="font-bold text-gold-600 dark:text-gold-400">${c.num}</span> — ${esc(c.title)} <span class="text-[10px] uppercase text-slate-400">(${l})</span>`;
+          btn.addEventListener('click', () => {
+            const item = {
+              id: uid(),
+              kind: 'cantique',
+              title: `${c.num}. ${c.title}`,
+              subtitle: l === 'mg' ? 'Fihirana' : l === 'fr' ? 'Cantique' : 'Hymn',
+              cLang: l,
+              cNum: c.num,
+              stanzas: splitStanzas(c.content),
+            };
+            activePres()!.items.push(item);
+            flatIndex = totalPages(activePres()!) - 1;
+            persist();
+            renderAll();
+            openAdd('cantique');
+          });
+          results.appendChild(btn);
+        });
+      }
+    };
+    input.addEventListener('input', () => void run());
+    input.focus();
+  }
+
+  function renderAddBible() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">📖 ${t(lang, 'pres_add_bible')}</h3>
+      <div class="mt-3 flex gap-2">
+        <input id="bible-ref" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_bible_ref_placeholder')}" />
+        <select id="bible-version" class="input-dark w-48 rounded-xl px-3 py-2.5 text-sm"></select>
+      </div>
+      <div id="bible-ref-feedback" class="mt-2"></div>
+      <div id="bible-ref-result" class="mt-2"></div>`;
+    const refInput = $<HTMLInputElement>('bible-ref');
+    const versionSel = $<HTMLSelectElement>('bible-version');
+    const feedback = $('bible-ref-feedback');
+    const result = $('bible-ref-result');
+    fetch('/api/bible?action=versions')
+      .then((r) => r.json())
+      .then((d) => {
+        versionSel.innerHTML = d.versions
+          .map((v: any) => `<option value="${v.file}">${esc(v.name)}</option>`)
+          .join('');
+      });
+    const resolve = async () => {
+      const q = refInput.value.trim();
+      const version = versionSel.value;
+      feedback.innerHTML = '';
+      result.innerHTML = '';
+      if (!q) return;
+      try {
+        const r = await fetch(`/api/bible?action=ref&version=${encodeURIComponent(version)}&q=${encodeURIComponent(q)}`);
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        const ref = data.ref;
+        const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${ref.bookNumber}&chapter=${ref.chapter}`)).json();
+        const start = ref.verseStart || 1;
+        const end = ref.verseEnd === 0 ? ch.verses.length : Math.min(ref.verseEnd, ch.verses.length);
+        const verses = ch.verses.filter((v: any) => v.verse >= start && v.verse <= end);
+        result.innerHTML = `
+          <div class="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-xs">
+            <p class="font-bold text-sky-600 dark:text-sky-300">${esc(ch.reference)} (${verses.length} v)</p>
+            <button id="bible-add-btn" class="btn-gold mt-2 px-3 py-1.5 text-xs">+ ${t(lang, 'pres_add_bible')}</button>
+          </div>`;
+        $('bible-add-btn').addEventListener('click', () => {
+          const item = {
+            id: uid(),
+            kind: 'bible',
+            title: ch.reference,
+            subtitle: ref.reference,
+            versionLabel: version,
+            refLabel: `${ch.reference}${start > 1 ? ':' + start + (end > start ? '-' + end : '') : ''}`,
+            verses,
+          };
+          activePres()!.items.push(item);
+          flatIndex = totalPages(activePres()!) - 1;
+          persist();
+          renderAll();
+          openAdd('bible');
+        });
+      } catch {
+        feedback.innerHTML = `<p class="text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')}</p>`;
+      }
+    };
+    refInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') void resolve();
+    });
+    versionSel.addEventListener('change', () => void resolve());
+    refInput.focus();
+  }
+
+  function renderAddText() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">📝 ${t(lang, 'pres_add_text')}</h3>
+      <div class="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+        <input id="text-title" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_text_title')}" />
+        <button id="text-add" class="btn-gold px-4 py-2 text-xs">+ {t(lang, 'pres_add_text')}</button>
+      </div>
+      <textarea id="text-body" class="input-dark mt-2 min-h-24 w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_text_body')}"></textarea>`;
+    $('text-add').addEventListener('click', () => {
+      const title = $<HTMLInputElement>('text-title').value.trim() || t(lang, 'pres_add_text');
+      const body = $<HTMLTextAreaElement>('text-body').value.trim();
+      if (!body) return;
+      const item = { id: uid(), kind: 'text', title, subtitle: t(lang, 'pres_add_text'), textContent: body };
+      activePres()!.items.push(item);
+      flatIndex = totalPages(activePres()!) - 1;
+      persist();
+      renderAll();
+      openAdd('text');
+    });
+  }
+
+  function renderAddVideo() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">🎬 ${t(lang, 'pres_add_video')}</h3>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">${t(lang, 'pres_video_hint')}</p>
+      <div class="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+        <input id="video-url" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_video_url')}" />
+        <button id="video-add" class="btn-gold px-4 py-2 text-xs">+ {t(lang, 'pres_add_video')}</button>
+      </div>
+      <input id="video-caption" class="input-dark mt-2 w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_video_caption')}" />`;
+    $('video-add').addEventListener('click', () => {
+      const url = $<HTMLInputElement>('video-url').value.trim();
+      if (!url) return;
+      const item = {
+        id: uid(),
+        kind: 'video',
+        title: t(lang, 'pres_add_video'),
+        subtitle: $<HTMLInputElement>('video-caption').value.trim() || undefined,
+        videoUrl: url,
+      };
+      activePres()!.items.push(item);
+      flatIndex = totalPages(activePres()!) - 1;
+      persist();
+      renderAll();
+      openAdd('video');
+    });
+    $<HTMLInputElement>('video-url').focus();
+  }
+
+  function renderAddAudio() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">🎧 ${t(lang, 'pres_add_audio')}</h3>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">${t(lang, 'pres_audio_hint')}</p>
+      <div class="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+        <input id="audio-url" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_audio_url')}" />
+        <button id="audio-add" class="btn-gold px-4 py-2 text-xs">+ {t(lang, 'pres_add_audio')}</button>
+      </div>
+      <input id="audio-cover" class="input-dark mt-2 w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_url')} (${t(lang, 'pres_video_caption')})" />`;
+    $('audio-add').addEventListener('click', () => {
+      const url = $<HTMLInputElement>('audio-url').value.trim();
+      if (!url) return;
+      const item = {
+        id: uid(),
+        kind: 'audio',
+        title: t(lang, 'pres_add_audio'),
+        audioUrl: url,
+        imageUrl: $<HTMLInputElement>('audio-cover').value.trim() || undefined,
+      };
+      activePres()!.items.push(item);
+      flatIndex = totalPages(activePres()!) - 1;
+      persist();
+      renderAll();
+      openAdd('audio');
+    });
+    $<HTMLInputElement>('audio-url').focus();
+  }
+
+  function renderAddDoc() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">📄 ${t(lang, 'pres_add_doc')}</h3>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">${t(lang, 'pres_doc_hint')}</p>
+      <div class="mt-3 flex gap-2">
+        <input id="doc-search" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'documents_search')}" />
+      </div>
+      <div id="doc-results" class="mt-3 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2"></div>`;
+    const input = $<HTMLInputElement>('doc-search');
+    const results = $('doc-results');
+    const run = async () => {
+      const q = input.value.trim();
+      results.innerHTML = '<p class="text-center text-xs text-slate-400">…</p>';
+      try {
+        const r = await fetch(`/api/documents?action=search&q=${encodeURIComponent(q)}`);
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        const list = data.results ?? [];
+        results.innerHTML = '';
+        if (!list.length) {
+          results.innerHTML = `<p class="text-center text-xs text-slate-400">${t(lang, 'documents_empty')}</p>`;
+          return;
+        }
+        list.slice(0, 30).forEach((d: any) => {
+          const btn = document.createElement('button');
+          btn.className = 'w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left text-sm transition hover:border-rose-500/60 dark:border-night-700 dark:bg-night-800/70';
+          btn.innerHTML = `<span class="block truncate font-semibold text-slate-800 dark:text-slate-100">📄 ${esc(d.title)}</span>
+            <span class="text-[10px] uppercase text-slate-400">${esc(d.category.replace(/_/g, ' '))} · ${d.sizeLabel}</span>`;
+          btn.addEventListener('click', () => {
+            const item = {
+              id: uid(),
+              kind: 'doc',
+              title: d.title,
+              subtitle: t(lang, 'pres_add_doc'),
+              docPath: d.path,
+              docUrl: d.url,
+            };
+            activePres()!.items.push(item);
+            flatIndex = totalPages(activePres()!) - 1;
+            persist();
+            renderAll();
+            openAdd('doc');
+          });
+          results.appendChild(btn);
+        });
+      } catch {
+        results.innerHTML = `<p class="text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')}</p>`;
+      }
+    };
+    input.addEventListener('input', () => void run());
+    void run();
+    input.focus();
+  }
+
+  function renderAddImage() {
+    addPanel.innerHTML = `
+      <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">🖼️ ${t(lang, 'pres_add_image')}</h3>
+      <div class="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+        <input id="image-url" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_url')}" />
+        <button id="image-add" class="btn-gold px-4 py-2 text-xs">+ {t(lang, 'pres_add_image')}</button>
+      </div>
+      <input id="image-caption" class="input-dark mt-2 w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_caption')}" />`;
+    $('image-add').addEventListener('click', () => {
+      const url = $<HTMLInputElement>('image-url').value.trim();
+      if (!url) return;
+      const item = {
+        id: uid(),
+        kind: 'image',
+        title: t(lang, 'pres_add_image'),
+        subtitle: t(lang, 'pres_add_image'),
+        imageUrl: url,
+        imageCaption: $<HTMLInputElement>('image-caption').value.trim(),
+      };
+      activePres()!.items.push(item);
+      flatIndex = totalPages(activePres()!) - 1;
+      persist();
+      renderAll();
+      openAdd('image');
+    });
+  }
+
+  // --- Réglages (barre du haut, selon le mode) ---
+  bgPresets.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('[data-grad]') as HTMLElement | null;
+    if (!b) return;
+    const s = currentSettings();
+    s.bgType = 'gradient';
+    s.bgValue = b.dataset.grad!;
+    persistSettings();
+    renderAll();
+  });
+  document.querySelectorAll('[data-bg]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const s = currentSettings();
+      s.bgType = (b as HTMLElement).dataset.bg as any;
+      if (s.bgType === 'image' && !s.bgValue.startsWith('http')) {
+        s.bgValue = 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1920&q=80';
+      }
+      persistSettings();
+      renderAll();
+    });
+  });
+  bgValue.addEventListener('change', () => {
+    currentSettings().bgValue = bgValue.value;
+    persistSettings();
+    renderAll();
+  });
+  textColor.addEventListener('input', () => {
+    currentSettings().textColor = textColor.value;
+    persistSettings();
+    renderPreview();
+  });
+  textSize.addEventListener('change', () => {
+    currentSettings().textSize = textSize.value as any;
+    persistSettings();
+    renderAll();
+  });
+  positionSel.addEventListener('change', () => {
+    currentSettings().position = positionSel.value as any;
+    persistSettings();
+    renderAll();
+  });
+  alignment.addEventListener('change', () => {
+    currentSettings().alignment = alignment.value as any;
+    persistSettings();
+    renderAll();
+  });
+  verseNumbers.addEventListener('change', () => {
+    currentSettings().showVerseNumbers = verseNumbers.checked;
+    persistSettings();
+    renderAll();
+  });
+  autoAdvance.addEventListener('change', () => {
+    currentSettings().autoAdvance = Math.max(0, Number(autoAdvance.value) || 0);
+    persistSettings();
+  });
+  bgMediaType.addEventListener('change', () => {
+    currentSettings().bgMediaType = bgMediaType.value as any;
+    persistSettings();
+    renderAll();
+  });
+  bgMedia.addEventListener('change', () => {
+    currentSettings().bgMedia = bgMedia.value.trim();
+    persistSettings();
+    renderAll();
+  });
+
+  // --- Modal personnalisation d'un élément ---
+  const ipPos = $<HTMLSelectElement>('ip-position');
+  const ipSize = $<HTMLSelectElement>('ip-size');
+  const ipColor = $<HTMLInputElement>('ip-color');
+  const ipAlign = $<HTMLSelectElement>('ip-alignment');
+  const ipVerse = $<HTMLInputElement>('ip-verse');
+  const ipBgType = $<HTMLSelectElement>('ip-bgtype');
+  const ipBgValue = $<HTMLInputElement>('ip-bg-value');
+  const ipBgPresets = $('ip-bg-presets');
+  ipBgPresets.innerHTML = BG_PRESETS.map(
+    (p) =>
+      `<button data-grad="${esc(p.value)}" class="h-8 w-8 rounded-lg border-2 border-white/40 transition hover:scale-110" style="background:${p.value}" title="${esc(p.label)}"></button>`
+  ).join('');
+  ipBgPresets.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('[data-grad]') as HTMLElement | null;
+    if (!b) return;
+    ipBgType.value = 'gradient';
+    ipBgValue.value = b.dataset.grad!;
+  });
+  function openItemModal(item: PresentItem, base: PresentSettings) {
+    const o = item.settingsOverride ?? {};
+    ipPos.value = o.position ?? base.position ?? 'center';
+    ipSize.value = o.textSize ?? base.textSize ?? 'lg';
+    ipColor.value = (o.textColor ?? base.textColor ?? '#ffffff').startsWith('#') ? (o.textColor ?? base.textColor ?? '#ffffff') : '#ffffff';
+    ipAlign.value = o.alignment ?? base.alignment ?? 'center';
+    ipVerse.checked = o.showVerseNumbers ?? base.showVerseNumbers ?? true;
+    ipBgType.value = o.bgType ?? base.bgType ?? 'gradient';
+    ipBgValue.value = o.bgValue ?? base.bgValue ?? '';
+    const modal = $('item-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+  function closeItemModal() {
+    const modal = $('item-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    customItem = null;
+  }
+  $('ip-cancel').addEventListener('click', closeItemModal);
+  $('ip-reset').addEventListener('click', () => {
+    if (customItem) {
+      customItem.settingsOverride = undefined;
+      persist();
+      renderAll();
+    }
+    closeItemModal();
+  });
+  $('ip-apply').addEventListener('click', () => {
+    if (!customItem) return;
+    customItem.settingsOverride = {
+      position: ipPos.value as any,
+      textSize: ipSize.value as any,
+      textColor: ipColor.value,
+      alignment: ipAlign.value as any,
+      showVerseNumbers: ipVerse.checked,
+      bgType: ipBgType.value as any,
+      bgValue: ipBgValue.value,
+    };
+    persist();
+    renderAll();
+    closeItemModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeItemModal();
+  });
+
+  // --- Lancer la projection (selon le mode) ---
+  launchBtn.addEventListener('click', () => {
+    if (mode === 'bible') {
+      if (!bibleChapter || !bibleChapter.verses.length) return;
+      const v = bibleChapter.verses[bibleVerseIndex];
+      const live: Presentation = {
+        id: 'live-bible',
+        name: t(lang, 'pres_mode_bible'),
+        settings: { ...(modeSettings.bible ?? DEFAULT_SETTINGS) },
+        updatedAt: Date.now(),
+        items: [
+          {
+            id: uid(),
+            kind: 'bible',
+            title: bibleChapter.reference,
+            subtitle: t(lang, 'pres_mode_bible'),
+            versionLabel: 'live',
+            refLabel: `${bibleChapter.reference} : ${v.verse}`,
+            perVerse: true,
+            verses: [v],
+          },
+        ],
+      };
+      saveLivePres('bible', live);
+      saveActive({ presId: live.id, pageIndex: 0 });
+      window.open('/presentation/projector', 'ah-projector', 'popup,width=1280,height=720');
+    } else if (mode === 'cantique') {
+      if (!cantiqueSelected) return;
+      const live: Presentation = {
+        id: 'live-cantique',
+        name: t(lang, 'pres_mode_cantique'),
+        settings: { ...(modeSettings.cantique ?? DEFAULT_SETTINGS) },
+        updatedAt: Date.now(),
+        items: [
+          {
+            id: uid(),
+            kind: 'cantique',
+            title: `${cantiqueSelected.num}. ${cantiqueSelected.title}`,
+            subtitle: cantiqueSelected.lang === 'mg' ? 'Fihirana' : cantiqueSelected.lang === 'fr' ? 'Cantique' : 'Hymn',
+            cLang: cantiqueSelected.lang as any,
+            cNum: cantiqueSelected.num,
+            stanzas: cantiqueSelected.stanzas,
+          },
+        ],
+      };
+      saveLivePres('cantique', live);
+      saveActive({ presId: live.id, pageIndex: cantiqueStanzaIndex });
+      window.open('/presentation/projector', 'ah-projector', 'popup,width=1280,height=720');
+    } else {
+      const pres = activePres();
+      if (!pres || !pres.items.length) return;
+      saveActive({ presId: pres.id, pageIndex: flatIndex });
+      window.open('/presentation/projector', 'ah-projector', 'popup,width=1280,height=720');
+    }
+  });
+
+  // --- Ajout direct via paramètre (?add=…) depuis cantique/bible ---
+  async function handleUrlAdd() {
+    const params = new URLSearchParams(location.search);
+    const add = params.get('add');
+    if (!add) return;
+    if (add === 'cantique' && params.get('id')) {
+      const l = params.get('clang') ?? 'mg';
+      const r = await fetch(`/data/cantiques_${l}.json`);
+      const list = await r.json();
+      const c = list.find((x: any) => x.id === params.get('id'));
+      if (c && c.content) {
+        const item = {
+          id: uid(),
+          kind: 'cantique',
+          title: `${c.num}. ${c.title}`,
+          subtitle: l === 'mg' ? 'Fihirana' : l === 'fr' ? 'Cantique' : 'Hymn',
+          cLang: l,
+          cNum: c.num,
+          stanzas: splitStanzas(c.content),
+        };
+        activePres()!.items.push(item);
+        flatIndex = totalPages(activePres()!) - 1;
+        persist();
+        renderAll();
+      }
+    } else if (add === 'doc' && params.get('path')) {
+      try {
+        const r = await fetch(`/api/documents?path=${encodeURIComponent(params.get('path') ?? '')}`);
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        if (d && d.path) {
+          const item = {
+            id: uid(),
+            kind: 'doc',
+            title: d.title,
+            subtitle: t(lang, 'pres_add_doc'),
+            docPath: d.path,
+            docUrl: d.url,
+          };
+          activePres()!.items.push(item);
+          flatIndex = totalPages(activePres()!) - 1;
+          persist();
+          renderAll();
+        }
+      } catch {
+        /* ignore */
+      }
+    } else if (add === 'bible' && params.get('book')) {
+      const version = params.get('version') ?? 'MG65.SQLite3';
+      const book = Number(params.get('book'));
+      const chapter = Number(params.get('chapter') ?? '1');
+      try {
+        const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${book}&chapter=${chapter}`)).json();
+        const item = {
+          id: uid(),
+          kind: 'bible',
+          title: ch.reference,
+          subtitle: version,
+          versionLabel: version,
+          refLabel: ch.reference,
+          verses: ch.verses,
+        };
+        activePres()!.items.push(item);
+        flatIndex = totalPages(activePres()!) - 1;
+        persist();
+        renderAll();
+      } catch {
+        /* ignore */
+      }
+    }
+    history.replaceState(null, '', '/presentation');
+  }
+
+  // Synchronisation : si le projecteur (autre fenêtre) navigue, on suit
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ah-presentation-active') {
+      const raw = e.newValue;
+      if (raw) {
+        try {
+          const act = JSON.parse(raw);
+          if (act && act.presId === activeId && typeof act.pageIndex === 'number') {
+            flatIndex = act.pageIndex;
+            renderAll();
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (e.key === 'ah-pres-overlays') {
+      overlays = loadOverlays();
+      syncOverlaysForm();
+    }
+  });
+
+  // Recalcule la taille de l'aperçu quand la fenêtre change
+  let resizeTimer: number | undefined;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => renderPreview(), 120);
+  });
+
+  // --- Initialisation ---
+  // Première visite : on charge la démo pour montrer toutes les possibilités
+  if (!presentations.length) {
+    presentations = [demoPresentation()];
+    activeId = presentations[0].id;
+    persist();
+  }
+  showTab('items');
+  showMode('agenda');
+  renderAll();
+  // Premier rendu après le calcul du layout pour remplir correctement l'aperçu
+  requestAnimationFrame(() => renderPreview());
+  void handleUrlAdd();
+</script>

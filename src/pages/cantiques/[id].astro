@@ -1,0 +1,184 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { supabase } from '@/lib/supabase';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : le frontmatter ne contient que la
+// coquille statique. Le contenu est chargé côté client depuis Supabase.
+
+export async function getStaticPaths() {
+  const { data } = await supabase.from('cantiques').select('id');
+  return (data ?? []).map((m) => ({ params: { id: m.id } }));
+}
+
+const lang: Lang = 'fr';
+const BASE = import.meta.env.BASE_URL ?? '/';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_cantiques')}>
+  <section class="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+    <nav class="mb-6 text-xs text-slate-400" aria-label="Fil d'ariane">
+      <a href={`${BASE}`} class="hover:text-gold-600 dark:hover:text-gold-400">{t(lang, 'nav_home')}</a>
+      <span class="mx-1">/</span>
+      <a href={`${BASE}cantiques`} class="hover:text-gold-600 dark:hover:text-gold-400">{t(lang, 'nav_cantiques')}</a>
+      <span class="mx-1">/</span>
+      <span id="crumb-current" class="text-slate-600 dark:text-slate-300"></span>
+    </nav>
+
+    <div id="cantique-root" class="reveal">
+      <div class="h-64 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-night-800/60"></div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { getCantiqueById, getCantiques, getMedia } from '@/lib/supabase';
+  import { clientLang, cantiqueDetailHtml, mediaCardHtml } from '@/lib/client-render';
+  import { t } from '@/lib/i18n';
+
+  const lang = clientLang();
+  // URL base (pour les liens internes sur GitHub Pages)
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  /**
+   * Anciennement : routage Google Drive via /api/stream (proxy serveur disparu).
+   * En statique, on pointe directement l'URL de téléchargement Google qui est
+   * lisible par l'élément <audio>.
+   */
+  function playbackSrc(url?: string): string {
+    if (!url) return '';
+    const m = url.match(/[?&]id=([A-Za-z0-9_-]+)/);
+    if (m && /drive\.google\.com|drive\.usercontent\.google\.com|docs\.google\.com/i.test(url)) {
+      return `https://drive.usercontent.google.com/download?id=${m[1]}&export=download`;
+    }
+    return url;
+  }
+
+  function observeReveal() {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+    document.querySelectorAll('.reveal:not(.visible)').forEach((el) => io.observe(el));
+  }
+
+  async function load() {
+    const root = document.getElementById('cantique-root');
+    const crumb = document.getElementById('crumb-current');
+    if (!root) return;
+
+    // Le slug id est la dernière partie du chemin (ex : /cantiques/mg_45)
+    const segs = window.location.pathname.split('/').filter(Boolean);
+    const id = decodeURIComponent(segs[segs.length - 1] ?? '');
+    const params = new URLSearchParams(window.location.search);
+    const cl = params.get('clang');
+    const cLang = (cl === 'fr' || cl === 'en' ? cl : 'mg') as 'mg' | 'fr' | 'en';
+
+    try {
+      const c = await getCantiqueById(id, cLang);
+      if (!c) throw new Error('Cantique introuvable');
+      if (crumb) crumb.textContent = `${c.num} — ${c.title}`;
+      document.title = `${c.title} · Andeaha Hizaha`;
+
+      // Liste de la même langue pour la navigation précédent / suivant
+      const list = await getCantiques(cLang).catch(() => []);
+      const idx = list.findIndex((x) => x.id === c.id);
+      const prev = idx > 0 ? list[idx - 1] : null;
+      const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+
+      const src = playbackSrc(c.playback);
+      const audio = src
+        ? `
+        <div class="reveal mt-8">
+          <div class="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white shadow-soft sm:flex-row sm:items-center">
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+              <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-display text-sm font-semibold">${c.title}</p>
+              <audio class="mt-2 w-full" controls preload="none" src="${src}">
+                Votre navigateur ne supporte pas l'audio.
+              </audio>
+            </div>
+            <a
+              href="${src}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex h-10 w-10 shrink-0 items-center justify-center self-end rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:self-auto"
+              title="${t(lang, 'cantique_listen')}"
+              aria-label="${t(lang, 'cantique_listen')}"
+            >
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6v6m-9 3l9-9" />
+              </svg>
+            </a>
+          </div>
+        </div>`
+        : '';
+
+      const nav = `
+        <div class="reveal mt-12 flex flex-wrap items-center justify-between gap-3">
+          ${prev ? `<a href="${BASE}cantiques/${prev.id}?lang=${lang}&clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">← ${prev.num} · ${prev.title}</a>` : '<span></span>'}
+          <a href="${BASE}cantiques" class="btn-gold px-4 py-2 text-xs">${t(lang, 'nav_cantiques')}</a>
+          ${next ? `<a href="${BASE}cantiques/${next.id}?lang=${lang}&clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">${next.num} · ${next.title} →</a>` : '<span></span>'}
+        </div>`;
+
+      // Audio lié (comme sur l'original)
+      let related = '';
+      try {
+        const rel = await getMedia({ type: 'audio', limit: 3 });
+        if (rel.length) {
+          related = `
+            <div class="reveal mt-14">
+              <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">${t(lang, 'audio_section')}</h2>
+              <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                ${rel.map((r) => mediaCardHtml(r, lang)).join('')}
+              </div>
+            </div>`;
+        }
+      } catch {
+        /* audio lié indisponible */
+      }
+
+      root.innerHTML = `
+        <header class="reveal text-center">
+          ${c.categories && c.categories !== 'undefined' ? `
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <span class="chip border border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-300">${c.categories}</span>
+          </div>` : ''}
+          ${c.author && c.author !== 'undefined' ? `<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">${c.author}</p>` : ''}
+          <a
+            href="${BASE}presentation?add=cantique&lang=${lang}&clang=${cLang}&id=${c.id}"
+            class="btn-gold mt-5 inline-flex items-center gap-2 px-4 py-2 text-xs"
+          >
+            🖥️ ${t(lang, 'pres_launch')}
+          </a>
+        </header>
+        ${audio}
+        <article class="reveal mt-10">${cantiqueDetailHtml(c, lang)}</article>
+        ${nav}
+        ${related}`;
+      observeReveal();
+    } catch {
+      root.innerHTML = `
+        <div class="mx-auto max-w-3xl px-4 py-24 text-center">
+          <p class="text-6xl">🎵</p>
+          <h1 class="mt-4 font-display text-3xl font-bold">${t(lang, 'not_found_title')}</h1>
+          <p class="mt-2 text-slate-500 dark:text-slate-400">${t(lang, 'not_found_text')}</p>
+          <a href="${BASE}cantiques" class="btn-gold mt-8">${t(lang, 'nav_cantiques')}</a>
+        </div>`;
+    }
+  }
+
+  load();
+</script>

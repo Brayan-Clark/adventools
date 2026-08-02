@@ -1,0 +1,168 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : les données sont chargées côté client
+// depuis Supabase. Le frontmatter ne contient que la coquille statique.
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_mofonaina')}>
+  <section class="mx-auto max-w-4xl px-4 py-14 sm:px-6">
+    <div class="reveal text-center">
+      <p class="section-kicker">✦ {t(lang, 'nav_mofonaina')}</p>
+      <h1 class="section-title mt-1 text-4xl">🕊️ {t(lang, 'mofonaina_section')}</h1>
+      <p class="mx-auto mt-4 max-w-xl text-slate-500 dark:text-slate-400">{t(lang, 'mofonaina_subtitle')}</p>
+    </div>
+
+    <!-- Méditation du jour -->
+    <div id="mofonaina-root" class="reveal mt-10">
+      <div class="h-64 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-night-800/60"></div>
+    </div>
+
+    <!-- Recherche par date -->
+    <div class="reveal mx-auto mt-14 max-w-xl rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/70">
+      <h2 class="text-center font-display text-lg font-semibold text-slate-900 dark:text-white">
+        📅 {t(lang, 'mofonaina_by_date')}
+      </h2>
+      <p class="mt-1 text-center text-xs text-slate-500 dark:text-slate-400">
+        {t(lang, 'mofonaina_search_hint')}
+      </p>
+      <form id="mofonaina-form" class="mt-4 flex flex-col gap-3 sm:flex-row">
+        <input
+          id="mofonaina-date"
+          type="date"
+          name="date"
+          class="input-dark w-full flex-1 rounded-xl px-4 py-2.5 text-sm"
+          aria-label={t(lang, 'mofonaina_date')}
+        />
+        <button type="submit" class="btn-gold shrink-0 px-5 py-2.5 text-sm">
+          🔎 {t(lang, 'search_button')}
+        </button>
+      </form>
+      <p id="mofonaina-range" class="mt-3 text-center text-[11px] text-slate-400 dark:text-slate-500"></p>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { getMofonaina, getMeditationForDate } from '@/lib/supabase';
+  import { clientLang, formatDate } from '@/lib/client-render';
+  import { t } from '@/lib/i18n';
+
+  const lang = clientLang();
+  // URL base (pour les liens internes sur GitHub Pages)
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  const root = document.getElementById('mofonaina-root');
+  const rangeEl = document.getElementById('mofonaina-range');
+  const form = document.getElementById('mofonaina-form') as HTMLFormElement | null;
+  const dateInput = document.getElementById('mofonaina-date') as HTMLInputElement | null;
+
+  function isoToday() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function observeReveal() {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+    document.querySelectorAll('.reveal:not(.visible)').forEach((el) => io.observe(el));
+  }
+
+  async function load() {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('date') ?? undefined;
+    if (!root) return;
+
+    try {
+      const meds = await getMofonaina();
+      if (!meds.length) {
+        root.innerHTML = `<p class="text-center text-sm text-slate-500">${t(lang, 'mofonaina_range')} : 0</p>`;
+        return;
+      }
+      const sorted = [...meds].sort((a, b) => (a.date < b.date ? -1 : 1));
+      const today = await getMeditationForDate(requested);
+
+      if (rangeEl) {
+        rangeEl.textContent = `${meds.length} ${t(lang, 'mofonaina_range')} · ${sorted[0]?.date ?? ''} → ${sorted[sorted.length - 1]?.date ?? ''}`;
+      }
+      if (dateInput) {
+        dateInput.max = isoToday();
+        dateInput.value = today?.date ?? '';
+      }
+      if (!today) {
+        root.innerHTML = `<p class="text-center text-sm text-slate-500">${t(lang, 'not_found_text')}</p>`;
+        return;
+      }
+
+      // Index de la méditation affichée, dans la liste triée
+      const idx = sorted.findIndex((m) => m.date === today.date);
+      const prevDate = idx > 0 ? sorted[idx - 1]?.date ?? '' : sorted[sorted.length - 1]?.date ?? '';
+      const nextDate = idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1]?.date ?? '' : sorted[0]?.date ?? '';
+
+      // Contenu formaté en paragraphes (lignes vides)
+      const content = (today.contenu || today.content || '').trim();
+      const paras = content.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+      const body = paras.length
+        ? paras.map((p) => `<p class="mt-4 whitespace-pre-line text-[16px] leading-relaxed text-slate-700 dark:text-slate-300">${p}</p>`).join('')
+        : `<p class="whitespace-pre-line text-[16px] leading-relaxed text-slate-700 dark:text-slate-300">${content}</p>`;
+
+      root.innerHTML = `
+        <article class="overflow-hidden rounded-3xl border border-gold-500/40 bg-gradient-to-b from-white to-gold-500/5 shadow-soft dark:from-night-800 dark:to-gold-500/5 dark:border-gold-500/30">
+          <div class="border-b border-gold-500/30 bg-gold-500/10 px-6 py-3">
+            <p class="text-center text-xs font-bold uppercase tracking-widest text-gold-600 dark:text-gold-400">
+              ✦ ${t(lang, 'mofonaina_today')} — ${formatDate(today.date, lang)} ✦
+            </p>
+          </div>
+          <div class="p-6 sm:p-8">
+            <h2 class="text-center font-display text-2xl font-bold text-slate-900 dark:text-white">
+              ${today.titre_du_jour}
+            </h2>
+
+            <blockquote class="mx-auto mt-6 max-w-xl rounded-2xl border-l-4 border-gold-500 bg-gold-500/5 px-5 py-4 text-center">
+              <p class="text-[15px] italic leading-relaxed text-slate-600 dark:text-slate-300">« ${today.verset_texte} »</p>
+              <footer class="mt-2 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400">
+                ${today.verset_reference}
+              </footer>
+            </blockquote>
+
+            <div class="mx-auto mt-6 max-w-2xl">${body}</div>
+
+            <!-- Navigation date -->
+            <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <a href="${BASE}mofonaina?date=${prevDate}" class="btn-ghost px-4 py-2 text-xs">
+                ← ${t(lang, 'mofonaina_prev')}
+              </a>
+              <span class="text-xs text-slate-400">${formatDate(today.date, lang)}</span>
+              <a href="${BASE}mofonaina?date=${nextDate}" class="btn-ghost px-4 py-2 text-xs">
+                ${t(lang, 'mofonaina_next')} →
+              </a>
+            </div>
+          </div>
+        </article>`;
+      observeReveal();
+    } catch {
+      root.innerHTML = `<p class="text-center text-sm text-slate-500">⚠️ ${t(lang, 'ai_offline_text')}</p>`;
+    }
+  }
+
+  // Le formulaire pointe vers la même page avec ?date= (navigation statique)
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const d = dateInput?.value ?? '';
+    window.location.href = `${BASE}mofonaina${d ? `?date=${d}` : ''}`;
+  });
+
+  load();
+</script>

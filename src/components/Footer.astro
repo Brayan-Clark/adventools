@@ -1,0 +1,112 @@
+---
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+interface Props {
+  lang?: Lang;
+}
+const { lang = 'fr' } = Astro.props;
+
+const year = new Date().getFullYear();
+const navLinks = [
+  { href: '/', label: t(lang, 'nav_home') },
+  { href: '/sermons', label: t(lang, 'nav_sermons') },
+  { href: '/cours', label: t(lang, 'nav_courses') },
+  { href: '/bible', label: t(lang, 'nav_bible') },
+  { href: '/conferences', label: t(lang, 'nav_conferences') },
+  { href: '/audio', label: t(lang, 'nav_audio') },
+  { href: '/articles', label: t(lang, 'nav_articles') },
+  { href: '/cantiques', label: t(lang, 'nav_cantiques') },
+  { href: '/mofonaina', label: t(lang, 'nav_mofonaina') },
+  { href: '/documents', label: t(lang, 'nav_documents') },
+  { href: '/seminaires', label: t(lang, 'nav_seminars') },
+  { href: '/presentation', label: t(lang, 'nav_presentation') },
+  { href: '/apropos', label: t(lang, 'nav_about') },
+  { href: '/assistant', label: t(lang, 'nav_assistant') },
+];
+---
+
+<footer class="border-t border-slate-200/60 bg-white/60 dark:border-night-700/60 dark:bg-night-900/60">
+  <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-4">
+    <!-- À propos -->
+    <div class="md:col-span-2">
+      <div class="flex items-center gap-2.5">
+        <img src="/favicon.svg" alt="" class="h-9 w-9 rounded-xl" width="36" height="36" />
+        <span class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+          Andeaha <span class="text-gradient-gold">Hizaha</span>
+        </span>
+      </div>
+      <p class="mt-4 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        {t(lang, 'footer_about_text')}
+      </p>
+      <p class="mt-4 text-xs font-medium uppercase tracking-widest text-gold-600 dark:text-gold-400">
+        {t(lang, 'footer_made')} 🇲🇬
+      </p>
+    </div>
+
+    <!-- Navigation (2 colonnes) -->
+    <div>
+      <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+        {t(lang, 'footer_links_title')}
+      </h3>
+      <ul class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+        {navLinks.map((l) => (
+          <li>
+            <a href={l.href} class="text-sm text-slate-500 transition hover:text-gold-600 dark:text-slate-400 dark:hover:text-gold-400">
+              {l.label}
+            </a>
+          </li>
+        ))}
+        <li>
+          <a href="/admin" class="text-sm text-slate-400 transition hover:text-gold-600 dark:text-slate-500 dark:hover:text-gold-400">
+            {t(lang, 'nav_admin')}
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Installer -->
+    <div>
+      <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+        {t(lang, 'install_app')}
+      </h3>
+      <p class="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        {t(lang, 'install_app_desc')}
+      </p>
+      <button
+        id="pwa-install"
+        class="btn-gold mt-4 hidden text-xs"
+      >
+        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 4a1 1 0 011 1v7.59l2.3-2.3a1 1 0 111.4 1.42l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.42l2.3 2.3V5a1 1 0 011-1zM5 18a1 1 0 011-1h12a1 1 0 110 2H6a1 1 0 01-1-1z" />
+        </svg>
+        {t(lang, 'install_app')}
+      </button>
+    </div>
+  </div>
+
+  <div class="border-t border-slate-200/60 py-5 dark:border-night-700/60">
+    <p class="text-center text-xs text-slate-400 dark:text-slate-500">
+      © {year} Andeaha Hizaha — {t(lang, 'footer_rights')}
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Bouton d'installation PWA
+  let deferredPrompt: any = null;
+  const btn = document.getElementById('pwa-install');
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    btn?.classList.remove('hidden');
+  });
+  btn?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    btn?.classList.add('hidden');
+  });
+  window.addEventListener('appinstalled', () => btn?.classList.add('hidden'));
+</script>

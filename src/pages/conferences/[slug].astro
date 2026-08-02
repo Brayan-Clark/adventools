@@ -1,0 +1,322 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { supabase } from '@/lib/supabase';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : la liste des slugs est générée au build
+// depuis Supabase, le contenu de la page est chargé côté client.
+export async function getStaticPaths() {
+  const { data } = await supabase.from('media').select('slug').eq('type', 'conference');
+  return (data ?? []).map((m) => ({ params: { slug: m.slug } }));
+}
+
+const { slug } = Astro.params;
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_conferences')}>
+  <!-- État de chargement -->
+  <section id="detail-loading" class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div class="h-4 w-56 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+    <div class="mt-8 grid gap-10 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <div class="aspect-[21/9] animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="mt-8 h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="mt-4 aspect-video animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+      </div>
+      <aside class="space-y-4">
+        <div class="h-48 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="h-6 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="h-48 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Contenu introuvable -->
+  <section id="detail-notfound" class="hidden mx-auto max-w-3xl px-4 py-24 text-center">
+    <p class="text-6xl">🎤</p>
+    <h1 class="mt-4 font-display text-3xl font-bold">{t(lang, 'not_found_title')}</h1>
+    <p class="mt-2 text-slate-500 dark:text-slate-400">{t(lang, 'not_found_text')}</p>
+    <a href="/" class="btn-gold mt-8">{t(lang, 'back_home')}</a>
+  </section>
+
+  <!-- Contenu rendu côté client -->
+  <section id="detail-content" class="hidden mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div id="detail-body"></div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase, getMediaBySlug, getMedia } from '@/lib/supabase';
+  import { clientLang, mediaCardHtml, formatViews, formatDate } from '@/lib/client-render';
+  import { t, pickTitle, pickDescription } from '@/lib/i18n';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = clientLang();
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  // Slug extrait de l'URL (compatible base GitHub Pages : /base/type/slug)
+  const slug = window.location.pathname.split('/').filter(Boolean).pop() ?? '';
+
+  const esc = (s: unknown): string =>
+    String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+    );
+
+  function show(id: string, ok: boolean) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !ok);
+  }
+
+  function revealAll() {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('visible'));
+  }
+
+  function sessionLabel(s: { title_fr: string; title_mg: string }): string {
+    return lang === 'mg' && s.title_mg ? s.title_mg : s.title_fr;
+  }
+
+  function bodyHtml(item: MediaItem): string {
+    const title = pickTitle(item, lang);
+    const sessions = item.lessons ?? [];
+    const videos = sessions.filter((s) => s.video_url);
+    const audios = sessions.filter((s) => s.audio_url && !s.video_url);
+    const firstVideo = videos[0]?.video_url || sessions.find((s) => s.video_url)?.video_url || '';
+    // N'affiche le lecteur audio au chargement que si la conférence n'a aucune vidéo
+    const firstAudio = !firstVideo ? audios[0]?.audio_url || '' : '';
+
+    const chips: string[] = [];
+    if (item.category) {
+      chips.push(
+        `<span class="chip border border-violet-500/40 bg-violet-500/15 text-violet-300">${lang === 'mg' ? esc(item.category.name_mg) : esc(item.category.name_fr)}</span>`
+      );
+    }
+    chips.push(
+      `<span class="chip border border-gold-500/40 bg-gold-500/15 text-gold-300">${sessions.length} ${t(lang, 'sessions')}</span>`
+    );
+
+    const meta: string[] = [];
+    if (item.speaker) {
+      meta.push(`<span>${t(lang, 'by_speaker')} ${esc(item.speaker)}</span>`);
+    }
+    if (item.date) {
+      meta.push(`<span>${formatDate(item.date, lang)}</span>`);
+    }
+    meta.push(`<span>${formatViews(item.views ?? 0)} ${t(lang, 'views')}</span>`);
+
+    const tags = (item.tags ?? []).length
+      ? `<div class="mt-4 flex flex-wrap gap-2">${(item.tags ?? []).map((tag) => `<span class="chip border border-slate-300/70 text-slate-500 dark:border-night-600 dark:text-slate-400">#${esc(tag)}</span>`).join('')}</div>`
+      : '';
+
+    const sessionList = sessions.map((s, i) => `
+      <li>
+        <button
+          type="button"
+          class="session-btn group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-gold-500/10"
+          data-index="${i}"
+          data-title-fr="${esc(s.title_fr)}"
+          data-title-mg="${esc(s.title_mg)}"
+          data-video="${esc(s.video_url ?? '')}"
+          data-audio="${esc(s.audio_url ?? '')}"
+          data-duration="${esc(s.duration ?? '')}"
+        >
+          <span class="session-num flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-xs font-bold text-violet-600 dark:text-violet-300">${i + 1}</span>
+          <span class="min-w-0 flex-1">
+            <span class="session-title block truncate text-sm font-medium text-slate-700 dark:text-slate-200">${esc(sessionLabel(s))}</span>
+            <span class="text-xs text-slate-400">${s.video_url ? `▶ ${esc(s.duration || '')}` : s.audio_url ? `♪ ${esc(s.duration || '')}` : esc(s.duration || '')}</span>
+          </span>
+          <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-gold-500 dark:text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="${s.video_url ? 'M8 5v14l11-7L8 5z' : 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z'}" />
+          </svg>
+        </button>
+      </li>`).join('');
+
+    return `
+      <nav class="mb-6 text-xs text-slate-400" aria-label="Fil d'ariane">
+        <a href="${BASE}" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_home')}</a>
+        <span class="mx-1">/</span>
+        <a href="${BASE}conferences" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_conferences')}</a>
+        <span class="mx-1">/</span>
+        <span class="text-slate-600 dark:text-slate-300">${esc(title)}</span>
+      </nav>
+
+      <div class="grid gap-10 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+          <!-- En-tête conférence -->
+          <div class="reveal overflow-hidden rounded-2xl border border-slate-200/70 shadow-sm dark:border-night-700/60">
+            <div class="relative aspect-[21/9]">
+              <img src="${esc(item.image || '/favicon.svg')}" alt="" class="h-full w-full object-cover" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div class="absolute bottom-0 p-6">
+                <div class="flex flex-wrap items-center gap-2">
+                  ${chips.join('')}
+                </div>
+                <h1 class="mt-3 font-display text-2xl font-bold text-white sm:text-3xl">${esc(title)}</h1>
+                <p class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">${meta.join('')}</p>
+              </div>
+            </div>
+            <div class="bg-white p-6 dark:bg-night-800/70">
+              <p class="leading-relaxed text-slate-600 dark:text-slate-300">${esc(pickDescription(item, lang) || t(lang, 'no_description'))}</p>
+              ${tags}
+            </div>
+          </div>
+
+          <!-- Lecteur de session -->
+          <div class="reveal mt-8" id="player-wrap">
+            <p class="section-kicker">✦ ${t(lang, 'watch')}</p>
+            <h2 id="session-title" class="mt-1 font-display text-xl font-semibold text-slate-900 dark:text-white">${sessions[0] ? esc(sessionLabel(sessions[0])) : ''}</h2>
+            <div class="mt-4">
+              <div id="video-box" class="${firstVideo ? '' : 'hidden'}">
+                <video
+                  id="conf-video"
+                  class="aspect-video w-full rounded-2xl bg-black shadow-soft"
+                  controls
+                  playsinline
+                  preload="metadata"
+                  ${item.image ? ` poster="${esc(item.image)}"` : ''}
+                  src="${esc(firstVideo)}"
+                  data-media-id="${item.id}"
+                ></video>
+              </div>
+              <div id="audio-box" class="${firstAudio ? '' : 'hidden'}">
+                <div class="flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-100 to-white p-4 shadow-sm dark:border-night-700 dark:from-night-800 dark:to-night-800/60">
+                  <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white">
+                    <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p id="audio-label" class="truncate font-display text-sm font-semibold text-slate-900 dark:text-white"></p>
+                    <audio id="conf-audio" class="mt-2 w-full" controls preload="none" src="${esc(firstAudio)}" data-media-id="${item.id}">
+                      Votre navigateur ne supporte pas l'audio.
+                    </audio>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Playlist des sessions -->
+        <aside class="space-y-6">
+          <div class="reveal rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+            <div class="border-b border-slate-200/70 px-5 py-4 dark:border-night-700">
+              <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">${sessions.length} ${t(lang, 'sessions')}</h2>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                ${videos.length > 0 ? `<span class="mr-3">▶ ${videos.length} vidéo${videos.length > 1 ? 's' : ''}</span>` : ''}
+                ${audios.length > 0 ? `<span>♪ ${audios.length} audio${audios.length > 1 ? 's' : ''}</span>` : ''}
+              </p>
+            </div>
+            <ol class="max-h-[520px] overflow-y-auto p-2">${sessionList}</ol>
+          </div>
+
+          <div id="related-section" class="reveal">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">${t(lang, 'related')}</h2>
+            <div id="related-grid" class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-1"></div>
+          </div>
+        </aside>
+      </div>`;
+  }
+
+  // Lecteur de sessions : bascule vidéo / audio selon la session sélectionnée
+  function bindSessions() {
+    const video = document.getElementById('conf-video') as HTMLVideoElement | null;
+    const audio = document.getElementById('conf-audio') as HTMLAudioElement | null;
+    const videoBox = document.getElementById('video-box');
+    const audioBox = document.getElementById('audio-box');
+    const audioLabel = document.getElementById('audio-label');
+    const sessionTitle = document.getElementById('session-title');
+    if (!video || !audio || !videoBox || !audioBox || !audioLabel || !sessionTitle) return;
+
+    // Comptage des vues (une fois par session, via Supabase RPC)
+    const mediaId = video.dataset.mediaId || audio.dataset.mediaId;
+    const bumpViews = () => {
+      if (!mediaId) return;
+      const key = 'ah-viewed-' + mediaId;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      supabase.rpc('increment_views', { media_id: Number(mediaId) }).then(() => {}, () => {});
+    };
+    video.addEventListener('play', bumpViews);
+    audio.addEventListener('play', bumpViews);
+
+    document.querySelectorAll('.session-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const titleFr = btn.getAttribute('data-title-fr') ?? '';
+        const titleMg = btn.getAttribute('data-title-mg') ?? '';
+        const v = btn.getAttribute('data-video') ?? '';
+        const a = btn.getAttribute('data-audio') ?? '';
+
+        sessionTitle.textContent = lang === 'mg' && titleMg ? titleMg : titleFr;
+
+        const hasVideo = !!v;
+        const hasAudio = !!a;
+
+        video.pause();
+        audio.pause();
+        if (hasVideo) {
+          if (video.src !== v) video.src = v;
+          videoBox.classList.remove('hidden');
+          audioBox.classList.add('hidden');
+          video.play().catch(() => {});
+        } else if (hasAudio) {
+          if (audio.src !== a) audio.src = a;
+          audioLabel.textContent = titleFr;
+          audioBox.classList.remove('hidden');
+          videoBox.classList.add('hidden');
+          audio.play().catch(() => {});
+        }
+        window.scrollTo({ top: (document.getElementById('player-wrap')?.offsetTop ?? 0) - 90, behavior: 'smooth' });
+      });
+    });
+  }
+
+  async function load() {
+    let item: MediaItem | null = null;
+    try {
+      item = await getMediaBySlug(slug);
+    } catch {
+      item = null;
+    }
+
+    if (!item || item.type !== 'conference') {
+      show('detail-loading', false);
+      show('detail-content', false);
+      show('detail-notfound', true);
+      const nf = document.getElementById('detail-notfound');
+      if (nf) {
+        const h1 = nf.querySelector('h1');
+        const p = nf.querySelector('p');
+        const a = nf.querySelector('a');
+        if (h1) h1.textContent = t(lang, 'not_found_title');
+        if (p) p.textContent = t(lang, 'not_found_text');
+        if (a) a.textContent = t(lang, 'back_home');
+      }
+      return;
+    }
+
+    show('detail-loading', false);
+    show('detail-content', true);
+    document.title = `${pickTitle(item, lang)} · Andeaha Hizaha`;
+
+    const body = document.getElementById('detail-body');
+    if (body) body.innerHTML = bodyHtml(item);
+    bindSessions();
+
+    // À découvrir aussi (même type, item courant exclu)
+    const related = (await getMedia({ type: 'conference', limit: 3 }).catch(() => []))
+      .filter((m) => m.slug !== slug);
+    const relatedSection = document.getElementById('related-section');
+    const relatedGrid = document.getElementById('related-grid');
+    if (relatedGrid && related.length) {
+      relatedGrid.innerHTML = related.map((m) => mediaCardHtml(m, lang)).join('');
+    } else if (relatedSection) {
+      relatedSection.classList.add('hidden');
+    }
+
+    revealAll();
+  }
+
+  load();
+</script>

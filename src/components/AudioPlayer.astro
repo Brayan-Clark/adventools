@@ -1,0 +1,51 @@
+---
+interface Props {
+  src: string;
+  title: string;
+  artist?: string;
+  cover?: string;
+  mediaId?: number;
+}
+const { src, title, artist = '', cover = '', mediaId } = Astro.props;
+---
+
+<div
+  class="flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-r from-slate-100 to-white p-4 shadow-sm dark:border-night-700 dark:from-night-800 dark:to-night-800/60"
+  data-audio-card
+>
+  <div class="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl shadow-md">
+    {cover ? (
+      <img src={cover} alt="" class="h-full w-full object-cover" />
+    ) : (
+      <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600 to-violet-600 text-white">
+        <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+    )}
+    <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100"></div>
+  </div>
+
+  <div class="min-w-0 flex-1">
+    <p class="truncate font-display text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+    {artist && <p class="truncate text-xs text-slate-500 dark:text-slate-400">{artist}</p>}
+    <audio id="audio-player" class="mt-2 w-full" controls preload="none" src={src} data-media-id={mediaId}>
+      Votre navigateur ne supporte pas l’audio.
+    </audio>
+  </div>
+</div>
+
+<script>
+  import { supabase } from '@/lib/supabase';
+
+  const audio = document.getElementById('audio-player') as HTMLAudioElement | null;
+  const mediaId = audio?.dataset.mediaId;
+  if (audio && mediaId) {
+    const key = 'ah-viewed-' + mediaId;
+    audio.addEventListener('play', () => {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      supabase.rpc('increment_views', { media_id: Number(mediaId) }).then(() => {}, () => {});
+    });
+  }
+</script>

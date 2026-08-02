@@ -1,0 +1,7 @@
+# Supabase configuration
+# Documenté : https://supabase.com/docs/reference/config-intro
+
+project_id = "andeaha-hizaha"
+
+[functions.admin-create-user]
+verify_jwt = true

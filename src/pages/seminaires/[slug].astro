@@ -1,0 +1,212 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { supabase } from '@/lib/supabase';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : la liste des slugs est générée au build
+// depuis Supabase, le contenu de la page est chargé côté client.
+export async function getStaticPaths() {
+  const { data } = await supabase.from('media').select('slug').eq('type', 'seminar');
+  return (data ?? []).map((m) => ({ params: { slug: m.slug } }));
+}
+
+const { slug } = Astro.params;
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_seminars')}>
+  <!-- État de chargement -->
+  <section id="detail-loading" class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div class="h-4 w-56 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+    <div class="mt-8 grid gap-10 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <div class="aspect-video animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="mt-6 space-y-3">
+          <div class="h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+          <div class="h-8 w-3/4 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+          <div class="h-4 w-1/2 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+          <div class="h-24 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+        </div>
+      </div>
+      <aside class="space-y-4">
+        <div class="h-6 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-night-800/70"></div>
+        <div class="h-48 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-night-800/70"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Contenu introuvable -->
+  <section id="detail-notfound" class="hidden mx-auto max-w-3xl px-4 py-24 text-center">
+    <p class="text-6xl">🎤</p>
+    <h1 class="mt-4 font-display text-3xl font-bold">{t(lang, 'not_found_title')}</h1>
+    <p class="mt-2 text-slate-500 dark:text-slate-400">{t(lang, 'not_found_text')}</p>
+    <a href="/" class="btn-gold mt-8">{t(lang, 'back_home')}</a>
+  </section>
+
+  <!-- Contenu rendu côté client -->
+  <section id="detail-content" class="hidden mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div id="detail-body"></div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase, getMediaBySlug, getMedia } from '@/lib/supabase';
+  import { clientLang, mediaCardHtml, formatViews, formatDate } from '@/lib/client-render';
+  import { t, pickTitle, pickDescription } from '@/lib/i18n';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = clientLang();
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  // Slug extrait de l'URL (compatible base GitHub Pages : /base/type/slug)
+  const slug = window.location.pathname.split('/').filter(Boolean).pop() ?? '';
+
+  const esc = (s: unknown): string =>
+    String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+    );
+
+  function show(id: string, ok: boolean) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !ok);
+  }
+
+  function revealAll() {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('visible'));
+  }
+
+  // Marque les vues une fois par lecture (Supabase RPC, comme VideoPlayer)
+  function bindViewCounter() {
+    const video = document.getElementById('video-player') as HTMLVideoElement | null;
+    const mediaId = video?.dataset.mediaId;
+    if (video && mediaId) {
+      const key = 'ah-viewed-' + mediaId;
+      video.addEventListener('play', () => {
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+        supabase.rpc('increment_views', { media_id: Number(mediaId) }).then(() => {}, () => {});
+      });
+    }
+  }
+
+  function bodyHtml(item: MediaItem): string {
+    const title = pickTitle(item, lang);
+    const chips: string[] = [];
+    if (item.category) {
+      chips.push(
+        `<span class="chip border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-300">${lang === 'mg' ? esc(item.category.name_mg) : esc(item.category.name_fr)}</span>`
+      );
+    }
+    (item.tags ?? []).forEach((tag) => {
+      chips.push(
+        `<span class="chip border border-slate-300/70 text-slate-500 dark:border-night-600 dark:text-slate-400">#${esc(tag)}</span>`
+      );
+    });
+
+    const meta: string[] = [];
+    if (item.speaker) {
+      meta.push(`<span>${t(lang, 'speaker')} : <span class="font-medium text-slate-700 dark:text-slate-200">${esc(item.speaker)}</span></span>`);
+    }
+    if (item.date) {
+      meta.push(`<span>${formatDate(item.date, lang)}</span>`);
+    }
+    if (item.duration) {
+      meta.push(`<span>${esc(item.duration)}</span>`);
+    }
+    meta.push(`<span>${formatViews(item.views ?? 0)} ${t(lang, 'views')}</span>`);
+
+    return `
+      <nav class="mb-6 text-xs text-slate-400" aria-label="Fil d'ariane">
+        <a href="${BASE}" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_home')}</a>
+        <span class="mx-1">/</span>
+        <a href="${BASE}seminaires" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_seminars')}</a>
+        <span class="mx-1">/</span>
+        <span class="text-slate-600 dark:text-slate-300">${esc(title)}</span>
+      </nav>
+
+      <div class="grid gap-10 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+          <div class="reveal">
+            <div class="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-soft">
+              <video id="video-player" class="h-full w-full" controls playsinline preload="metadata"${item.image ? ` poster="${esc(item.image)}"` : ''} src="${esc(item.video_url ?? '')}" data-media-id="${item.id}">
+                <track kind="captions" label="Piste" />
+                Votre navigateur ne supporte pas la lecture vidéo.
+              </video>
+            </div>
+          </div>
+
+          <div class="reveal mt-6">
+            <div class="flex flex-wrap items-center gap-3">
+              ${chips.join('')}
+            </div>
+
+            <h1 class="mt-4 font-display text-3xl font-bold leading-tight text-slate-900 dark:text-white">${esc(title)}</h1>
+
+            <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+              ${meta.join('')}
+            </div>
+
+            <div class="prose prose-slate mt-6 max-w-none dark:prose-invert">
+              <p class="text-base leading-relaxed text-slate-600 dark:text-slate-300">${esc(pickDescription(item, lang) || t(lang, 'no_description'))}</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="space-y-8">
+          <div id="related-section" class="reveal">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">${t(lang, 'related')}</h2>
+            <div id="related-grid" class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-1"></div>
+          </div>
+        </aside>
+      </div>`;
+  }
+
+  async function load() {
+    let item: MediaItem | null = null;
+    try {
+      item = await getMediaBySlug(slug);
+    } catch {
+      item = null;
+    }
+
+    if (!item || item.type !== 'seminar') {
+      show('detail-loading', false);
+      show('detail-content', false);
+      show('detail-notfound', true);
+      const nf = document.getElementById('detail-notfound');
+      if (nf) {
+        const h1 = nf.querySelector('h1');
+        const p = nf.querySelector('p');
+        const a = nf.querySelector('a');
+        if (h1) h1.textContent = t(lang, 'not_found_title');
+        if (p) p.textContent = t(lang, 'not_found_text');
+        if (a) a.textContent = t(lang, 'back_home');
+      }
+      return;
+    }
+
+    show('detail-loading', false);
+    show('detail-content', true);
+    document.title = `${pickTitle(item, lang)} · Andeaha Hizaha`;
+
+    const body = document.getElementById('detail-body');
+    if (body) body.innerHTML = bodyHtml(item);
+    bindViewCounter();
+
+    // À découvrir aussi (même type, item courant exclu)
+    const related = (await getMedia({ type: 'seminar', limit: 3 }).catch(() => []))
+      .filter((m) => m.slug !== slug);
+    const relatedSection = document.getElementById('related-section');
+    const relatedGrid = document.getElementById('related-grid');
+    if (relatedGrid && related.length) {
+      relatedGrid.innerHTML = related.map((m) => mediaCardHtml(m, lang)).join('');
+    } else if (relatedSection) {
+      relatedSection.classList.add('hidden');
+    }
+
+    revealAll();
+  }
+
+  load();
+</script>

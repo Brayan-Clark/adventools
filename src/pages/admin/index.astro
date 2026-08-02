@@ -1,0 +1,540 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+const lang: Lang = 'fr';
+
+const typeOptions = [
+  { value: 'sermon', label: t(lang, 'type_sermon') },
+  { value: 'course', label: t(lang, 'type_course') },
+  { value: 'conference', label: t(lang, 'type_conference') },
+  { value: 'audio', label: t(lang, 'type_audio') },
+  { value: 'article', label: t(lang, 'type_article') },
+  { value: 'seminar', label: t(lang, 'type_seminar') },
+];
+---
+
+<Layout lang={lang} title={t(lang, 'admin_login_title')}>
+  <!-- Écran de connexion -->
+  <section id="login-screen" class="mx-auto flex max-w-md flex-col items-center px-4 py-24">
+    <div class="w-full rounded-3xl border border-slate-200/70 bg-white/80 p-8 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+      <div class="text-center">
+        <img src="/favicon.svg" alt="" class="mx-auto h-14 w-14 rounded-2xl" width="56" height="56" />
+        <h1 class="mt-4 font-display text-2xl font-bold text-slate-900 dark:text-white">{t(lang, 'admin_login_title')}</h1>
+      </div>
+      <form id="login-form" class="mt-6 space-y-4">
+        <input id="email" type="email" class="input-dark" placeholder="email@example.com" autocomplete="email" required />
+        <input id="password" type="password" class="input-dark" placeholder={t(lang, 'admin_password')} autocomplete="current-password" required />
+        <button type="submit" class="btn-gold w-full">{t(lang, 'admin_login')}</button>
+        <p id="login-error" class="hidden text-center text-sm text-rose-500"></p>
+      </form>
+      <p class="mt-4 text-center text-xs text-slate-400">
+        {t(lang, 'nav_admin')} · Supabase
+      </p>
+    </div>
+  </section>
+
+  <!-- Tableau de bord -->
+  <section id="dashboard" class="hidden">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <div class="reveal flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ {t(lang, 'admin_dashboard')}</p>
+          <h1 class="section-title mt-1 text-4xl">{t(lang, 'admin_dashboard')}</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="current-user" class="text-xs text-slate-500 dark:text-slate-400"></span>
+          <button id="logout-btn" class="btn-ghost px-4 py-2 text-xs">{t(lang, 'admin_logout')}</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-grid" class="reveal mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map(() => (
+          <div class="rounded-2xl border border-slate-200/70 bg-white p-4 text-center shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+            <div class="mx-auto h-8 w-10 animate-pulse rounded bg-slate-200/60 dark:bg-night-700"></div>
+            <div class="mx-auto mt-2 h-3 w-20 animate-pulse rounded bg-slate-200/60 dark:bg-night-700"></div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Gestion des utilisateurs -->
+      <div class="reveal mt-10 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">👥 Utilisateurs & rôles</h2>
+          <button id="new-user-btn" class="btn-gold px-4 py-2 text-xs">+ Ajouter un utilisateur</button>
+        </div>
+
+        <!-- Formulaire création utilisateur -->
+        <form id="user-form" class="mt-4 hidden grid gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-4 sm:grid-cols-2 dark:border-night-700 dark:bg-night-900/40">
+          <input id="u-email" type="email" class="input-dark" placeholder="email@exemple.com" required />
+          <div class="flex gap-3">
+            <input id="u-role" class="input-dark flex-1" list="role-options" placeholder="rôle" value="viewer" />
+            <datalist id="role-options">
+              <option value="admin"></option>
+              <option value="editor"></option>
+              <option value="viewer"></option>
+            </datalist>
+          </div>
+          <input id="u-name" type="text" class="input-dark" placeholder="Nom d'affichage (optionnel)" />
+          <input id="u-password" type="password" class="input-dark" placeholder="Mot de passe (min 8)" required />
+          <div class="flex items-center gap-3 sm:col-span-2">
+            <button type="submit" class="btn-gold px-4 py-2 text-xs">Créer</button>
+            <span id="user-msg" class="text-sm text-emerald-500"></span>
+          </div>
+        </form>
+
+        <div id="users-list" class="mt-4"></div>
+      </div>
+
+      <!-- Formulaire média -->
+      <div class="reveal mt-10 grid gap-8 lg:grid-cols-5">
+        <form id="media-form" class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur lg:col-span-3 dark:border-night-700/60 dark:bg-night-800/80">
+          <input type="hidden" id="media-id" />
+          <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">{t(lang, 'admin_add')}</h2>
+
+          <div class="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_type')}</label>
+              <select id="f-type" class="input-dark">
+                {typeOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_category')}</label>
+              <select id="f-category" class="input-dark">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_title_fr')} *</label>
+              <input id="f-title-fr" class="input-dark" required />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_title_mg')}</label>
+              <input id="f-title-mg" class="input-dark" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_desc_fr')}</label>
+              <textarea id="f-desc-fr" rows="2" class="input-dark"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_desc_mg')}</label>
+              <textarea id="f-desc-mg" rows="2" class="input-dark"></textarea>
+            </div>
+
+            <div id="content-block" class="hidden sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_content_fr')}</label>
+              <textarea id="f-content-fr" rows="8" class="input-dark font-mono text-xs"></textarea>
+            </div>
+            <div id="content-block-mg" class="hidden sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_content_mg')}</label>
+              <textarea id="f-content-mg" rows="8" class="input-dark font-mono text-xs"></textarea>
+              <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{t(lang, 'admin_content_hint')}</p>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_speaker')}</label>
+              <input id="f-speaker" class="input-dark" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_duration')}</label>
+              <input id="f-duration" class="input-dark" placeholder="48:12" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_date')}</label>
+              <input id="f-date" type="date" class="input-dark" />
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_tags')}</label>
+              <input id="f-tags" class="input-dark" placeholder="foi, prière" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_image')}</label>
+              <div class="flex gap-2">
+                <input id="f-image" class="input-dark" placeholder="https://…" />
+                <input id="up-image" type="file" accept="image/*" class="hidden" />
+                <button type="button" class="btn-ghost shrink-0 px-4 py-2 text-xs" data-bucket="images" data-target="f-image" data-input="up-image">↑</button>
+              </div>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_video')}</label>
+              <div class="flex gap-2">
+                <input id="f-video" class="input-dark" placeholder="https://…" />
+                <input id="up-video" type="file" accept="video/*" class="hidden" />
+                <button type="button" class="btn-ghost shrink-0 px-4 py-2 text-xs" data-bucket="audio" data-target="up-video" data-input="up-video">↑</button>
+              </div>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(lang, 'admin_audio')}</label>
+              <div class="flex gap-2">
+                <input id="f-audio" class="input-dark" placeholder="https://…" />
+                <input id="up-audio" type="file" accept="audio/*" class="hidden" />
+                <button type="button" class="btn-ghost shrink-0 px-4 py-2 text-xs" data-bucket="audio" data-target="up-audio" data-input="up-audio">↑</button>
+              </div>
+            </div>
+
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <input id="f-featured" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-gold-500 focus:ring-gold-500" />
+              {t(lang, 'admin_featured')}
+            </label>
+          </div>
+
+          <div id="lessons-block" class="hidden mt-6">
+            <div class="flex items-center justify-between">
+              <h3 id="lessons-title" class="text-sm font-semibold text-slate-700 dark:text-slate-200">{t(lang, 'admin_lessons')}</h3>
+              <button type="button" id="add-lesson" class="text-xs font-semibold text-gold-600 hover:underline dark:text-gold-400">{t(lang, 'admin_add_lesson')}</button>
+            </div>
+            <div id="lessons-list" class="mt-3 space-y-3"></div>
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button type="submit" class="btn-gold">{t(lang, 'admin_save')}</button>
+            <button type="button" id="reset-btn" class="btn-ghost px-4 py-2 text-xs">{t(lang, 'search_all')}</button>
+            <span id="save-msg" class="text-sm font-medium text-emerald-500"></span>
+          </div>
+        </form>
+
+        <div class="lg:col-span-2">
+          <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">{t(lang, 'admin_existing')}</h2>
+            <div id="media-list" class="mt-4 max-h-[560px] space-y-2 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { t } from '@/lib/i18n';
+  import { supabase, signIn, signOut, getCurrentUser, getStats, getMedia, getCategories, createMedia, updateMedia, deleteMedia, getUsers, updateUser, getRoles } from '@/lib/supabase';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = document.documentElement.lang;
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  const loginScreen = document.getElementById('login-screen')!;
+  const dashboard = document.getElementById('dashboard')!;
+  const loginForm = document.getElementById('login-form') as HTMLFormElement;
+  const loginError = document.getElementById('login-error')!;
+  const logoutBtn = document.getElementById('logout-btn')!;
+  const currentUserEl = document.getElementById('current-user')!;
+  const mediaForm = document.getElementById('media-form') as HTMLFormElement;
+  const lessonsList = document.getElementById('lessons-list')!;
+  const lessonsBlock = document.getElementById('lessons-block')!;
+  const lessonsTitle = document.getElementById('lessons-title')!;
+  const addLessonBtn = document.getElementById('add-lesson')!;
+  const resetBtn = document.getElementById('reset-btn')!;
+  const saveMsg = document.getElementById('save-msg')!;
+  const contentBlock = document.getElementById('content-block')!;
+  const contentBlockMg = document.getElementById('content-block-mg')!;
+  const mediaListEl = document.getElementById('media-list')!;
+  const statsGrid = document.getElementById('stats-grid')!;
+  const catSelect = document.getElementById('f-category') as HTMLSelectElement;
+  const userForm = document.getElementById('user-form') as HTMLFormElement;
+  const usersListEl = document.getElementById('users-list')!;
+
+  let allMedia: MediaItem[] = [];
+
+  function updateTypeVisibility(type: string) {
+    const withLessons = type === 'course' || type === 'conference';
+    lessonsBlock.classList.toggle('hidden', !withLessons);
+    lessonsTitle.textContent = type === 'conference' ? t(lang, 'admin_sessions') : t(lang, 'admin_lessons');
+    addLessonBtn.textContent = type === 'conference' ? t(lang, 'admin_add_session') : t(lang, 'admin_add_lesson');
+    const isArticle = type === 'article';
+    contentBlock.classList.toggle('hidden', !isArticle);
+    contentBlockMg.classList.toggle('hidden', !isArticle);
+  }
+
+  function lessonRow(data: any = {}) {
+    const div = document.createElement('div');
+    div.className = 'lesson-row rounded-xl border border-slate-200/60 p-3 dark:border-night-700';
+    const esc = (v: string) => (v ?? '').replace(/"/g, '&quot;');
+    div.innerHTML = `
+      <div class="grid gap-2 sm:grid-cols-2">
+        <input class="l-title-fr input-dark" placeholder="${t(lang, 'admin_lesson_title_fr')}" value="${esc(data.title_fr)}" />
+        <input class="l-title-mg input-dark" placeholder="${t(lang, 'admin_lesson_title_mg')}" value="${esc(data.title_mg)}" />
+        <input class="l-video input-dark" placeholder="${t(lang, 'admin_lesson_video')}" value="${esc(data.video_url)}" />
+        <input class="l-audio input-dark" placeholder="${t(lang, 'admin_lesson_audio')}" value="${esc(data.audio_url)}" />
+        <div class="flex gap-2">
+          <input class="l-duration input-dark" placeholder="${t(lang, 'admin_lesson_duration')}" value="${esc(data.duration)}" />
+          <button type="button" class="l-del shrink-0 rounded-lg px-2 text-rose-400 hover:bg-rose-500/15">✕</button>
+        </div>
+      </div>`;
+    div.querySelector('.l-del')!.addEventListener('click', () => div.remove());
+    return div;
+  }
+  addLessonBtn?.addEventListener('click', () => lessonsList.appendChild(lessonRow()));
+
+  function showDashboard() {
+    loginScreen.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+  }
+
+  // --- Auth ---
+  async function checkAuth() {
+    const user = await getCurrentUser();
+    if (!user) {
+      // redirige vers la page de connexion dédiée
+      window.location.href = BASE + 'admin';
+      return null;
+    }
+    showDashboard();
+    currentUserEl.textContent = user.email;
+    return user;
+  }
+
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+    try {
+      loginError.classList.add('hidden');
+      await signIn(email, password);
+      showDashboard();
+      await init();
+    } catch {
+      loginError.textContent = t(lang, 'admin_wrong');
+      loginError.classList.remove('hidden');
+    }
+  });
+
+  logoutBtn?.addEventListener('click', async () => {
+    await signOut();
+    dashboard.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
+  });
+
+  // --- Upload (Supabase Storage) ---
+  document.querySelectorAll('.up-btn, [data-bucket]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const fileInput = document.getElementById(btn.getAttribute('data-input')!) as HTMLInputElement;
+      fileInput.click();
+    });
+  });
+  document.querySelectorAll('input[type="file"]').forEach((fileInput) => {
+    fileInput.addEventListener('change', async () => {
+      const btn = fileInput.closest('div')!.querySelector('[data-bucket]') as HTMLButtonElement;
+      const bucket = btn.getAttribute('data-bucket') || 'images';
+      const targetId = btn.getAttribute('data-target') || '';
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_')}`;
+      btn.textContent = t(lang, 'admin_uploading');
+      btn.disabled = true;
+      try {
+        const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from(bucket).getPublicUrl(data.path);
+        // Renseigne le champ texte cible (image/audio), sinon le lien vidéo/audio de la leçon
+        if (targetId.includes('f-image')) {
+          (document.getElementById('f-image') as HTMLInputElement).value = pub.publicUrl;
+        } else if (targetId.includes('f-audio')) {
+          (document.getElementById('f-audio') as HTMLInputElement).value = pub.publicUrl;
+        } else if (targetId.includes('f-video')) {
+          (document.getElementById('f-video') as HTMLInputElement).value = pub.publicUrl;
+        }
+      } catch (err) {
+        alert('Upload échoué : ' + (err as Error).message);
+      } finally {
+        btn.textContent = '↑';
+        btn.disabled = false;
+        fileInput.value = '';
+      }
+    });
+  });
+
+  // --- Users ---
+  document.getElementById('new-user-btn')!.addEventListener('click', () => {
+    document.getElementById('user-form')!.classList.toggle('hidden');
+  });
+  userForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = (document.getElementById('u-email') as HTMLInputElement).value;
+    const password = (document.getElementById('u-password') as HTMLInputElement).value;
+    const role = (document.getElementById('u-role') as HTMLInputElement).value || 'viewer';
+    const msg = document.getElementById('user-msg')!;
+    try {
+      // Appel à l'Edge Function admin-create-user
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: { email, password, role },
+      });
+      if (error) throw error;
+      msg.textContent = 'Utilisateur créé ✓';
+      userForm.reset();
+      loadUsers();
+    } catch (err) {
+      msg.textContent = 'Erreur : ' + (err as Error).message;
+    }
+  });
+
+  async function loadUsers() {
+    const users = await getUsers();
+    usersListEl.innerHTML = users.map((u) => `
+      <div class="flex items-center gap-3 rounded-xl border border-slate-200/60 p-3 dark:border-night-700">
+        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gold-500/15 font-bold text-gold-600 dark:text-gold-400">${(u.email || '?')[0].toUpperCase()}</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">${u.display_name || u.email}</p>
+          <p class="text-xs text-slate-400">${u.email} · ${u.role?.name || 'Aucun rôle'}</p>
+        </div>
+        <span class="text-xs ${u.is_active ? 'text-emerald-500' : 'text-rose-500'}">${u.is_active ? 'Actif' : 'Inactif'}</span>
+      </div>`).join('');
+  }
+
+  // --- Médias ---
+  async function loadMedia() {
+    allMedia = await getMedia({ limit: 200 });
+    mediaListEl.innerHTML = allMedia.map((m) => `
+      <div class="flex items-center gap-3 rounded-xl border border-slate-200/60 p-3 transition hover:border-gold-500/50 dark:border-night-700" data-admin-row data-id="${m.id}" data-json='${JSON.stringify({ ...m, tags: (m.tags ?? []).join(',') }).replace(/'/g, '&#39;')}'>
+        <img src="${m.image || '/favicon.svg'}" alt="" class="h-12 w-16 shrink-0 rounded-lg object-cover" loading="lazy" />
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">${m.title_mg && lang === 'mg' ? m.title_mg : m.title_fr}</p>
+          <p class="text-xs text-slate-400">${t(lang, ('type_' + m.type) as any)} · ${m.slug}</p>
+        </div>
+        <div class="flex shrink-0 gap-1">
+          <button class="edit-btn rounded-lg p-1.5 text-slate-400 transition hover:bg-gold-500/15 hover:text-gold-600" data-id="${m.id}" title="${t(lang, 'admin_edit')}">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zm17.7-10.3a1 1 0 000-1.4l-2.3-2.3a1 1 0 00-1.4 0l-1.8 1.8 3.75 3.75 1.75-1.85z"/></svg>
+          </button>
+          <button class="del-btn rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-500" data-id="${m.id}" title="${t(lang, 'admin_delete')}">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 7h12M9 7V5h6v2m-7 0l1 13h6l1-13"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+
+    // Efface les data-json pour éviter les apostrophes qui cassent l'attribut
+    mediaListEl.querySelectorAll('[data-admin-row]').forEach((row) => {
+      const data = JSON.parse(row.getAttribute('data-json')!.replace(/&quot;/g, '"').replace(/&#39;/g,"'"));
+      row.setAttribute('data-json', JSON.stringify(data));
+    });
+    bindRowEvents();
+  }
+
+  function bindRowEvents() {
+    mediaListEl.querySelectorAll('.edit-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('[data-admin-row]') as HTMLElement;
+        const data = JSON.parse(row.getAttribute('data-json')!);
+        (document.getElementById('media-id') as HTMLInputElement).value = data.id;
+        (document.getElementById('f-type') as HTMLSelectElement).value = data.type;
+        (document.getElementById('f-category') as HTMLSelectElement).value = data.category_id ?? '';
+        (document.getElementById('f-title-fr') as HTMLInputElement).value = data.title_fr || '';
+        (document.getElementById('f-title-mg') as HTMLInputElement).value = data.title_mg || '';
+        (document.getElementById('f-desc-fr') as HTMLTextAreaElement).value = data.description_fr || '';
+        (document.getElementById('f-desc-mg') as HTMLTextAreaElement).value = data.description_mg || '';
+        (document.getElementById('f-content-fr') as HTMLTextAreaElement).value = data.content_fr || '';
+        (document.getElementById('f-content-mg') as HTMLTextAreaElement).value = data.content_mg || '';
+        (document.getElementById('f-speaker') as HTMLInputElement).value = data.speaker || '';
+        (document.getElementById('f-duration') as HTMLInputElement).value = data.duration || '';
+        (document.getElementById('f-date') as HTMLInputElement).value = data.date || '';
+        (document.getElementById('f-tags') as HTMLInputElement).value = data.tags || '';
+        (document.getElementById('f-image') as HTMLInputElement).value = data.image || '';
+        (document.getElementById('f-video') as HTMLInputElement).value = data.video_url || '';
+        (document.getElementById('f-audio') as HTMLInputElement).value = data.audio_url || '';
+        (document.getElementById('f-featured') as HTMLInputElement).checked = !!data.featured;
+        lessonsList.innerHTML = '';
+        const hasLessons = data.type === 'course' || data.type === 'conference';
+        (hasLessons && data.lessons?.length ? data.lessons : [{}]).forEach((l: any) => lessonsList.appendChild(lessonRow(l)));
+        updateTypeVisibility(data.type);
+        window.scrollTo({ top: mediaForm!.offsetTop - 90, behavior: 'smooth' });
+      });
+    });
+    mediaListEl.querySelectorAll('.del-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-id'));
+        if (!confirm('Supprimer ce contenu ?')) return;
+        try {
+          await deleteMedia(id);
+          await loadMedia();
+        } catch (err) {
+          alert('Erreur : ' + (err as Error).message);
+        }
+      });
+    });
+  }
+
+  mediaForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = Number((document.getElementById('media-id') as HTMLInputElement).value) || null;
+    const lessons = Array.from(lessonsList.querySelectorAll('.lesson-row')).map((r: any) => ({
+      title_fr: r.querySelector('.l-title-fr').value,
+      title_mg: r.querySelector('.l-title-mg').value,
+      video_url: r.querySelector('.l-video').value,
+      audio_url: r.querySelector('.l-audio').value,
+      duration: r.querySelector('.l-duration').value,
+    }));
+    const tags = (document.getElementById('f-tags') as HTMLInputElement).value;
+    const payload: Partial<any> = {
+      type: (document.getElementById('f-type') as HTMLSelectElement).value,
+      category_id: (document.getElementById('f-category') as HTMLSelectElement).value || null,
+      title_fr: (document.getElementById('f-title-fr') as HTMLInputElement).value,
+      title_mg: (document.getElementById('f-title-mg') as HTMLInputElement).value,
+      description_fr: (document.getElementById('f-desc-fr') as HTMLTextAreaElement).value,
+      description_mg: (document.getElementById('f-desc-mg') as HTMLTextAreaElement).value,
+      content_fr: (document.getElementById('f-content-fr') as HTMLTextAreaElement).value,
+      content_mg: (document.getElementById('f-content-mg') as HTMLTextAreaElement).value,
+      speaker: (document.getElementById('f-speaker') as HTMLInputElement).value,
+      duration: (document.getElementById('f-duration') as HTMLInputElement).value,
+      date: (document.getElementById('f-date') as HTMLInputElement).value,
+      tags: tags.split(',').map((x) => x.trim()).filter(Boolean),
+      image: (document.getElementById('f-image') as HTMLInputElement).value,
+      video_url: (document.getElementById('f-video') as HTMLInputElement).value,
+      audio_url: (document.getElementById('f-audio') as HTMLInputElement).value,
+      featured: (document.getElementById('f-featured') as HTMLInputElement).checked,
+      lessons: lessons.filter((l) => l.title_fr || l.video_url),
+    };
+    try {
+      if (id) await updateMedia(id, payload);
+      else await createMedia(payload);
+      saveMsg.textContent = t(lang, 'admin_saved');
+      setTimeout(() => (saveMsg.textContent = ''), 3000);
+      await loadMedia();
+      resetForm();
+    } catch (err) {
+      alert('Erreur : ' + (err as Error).message);
+    }
+  });
+
+  function resetForm() {
+    mediaForm.reset();
+    (document.getElementById('media-id') as HTMLInputElement).value = '';
+    lessonsList.innerHTML = '';
+    lessonsList.appendChild(lessonRow());
+    updateTypeVisibility('sermon');
+  }
+  resetBtn?.addEventListener('click', resetForm);
+
+  (document.getElementById('f-type') as HTMLSelectElement).addEventListener('change', () => {
+    updateTypeVisibility((document.getElementById('f-type') as HTMLSelectElement).value);
+  });
+
+  // --- Init ---
+  async function loadCategories() {
+    const cats = await getCategories();
+    catSelect.innerHTML = '<option value="">—</option>' + cats.map((c) => `<option value="${c.id}">${lang === 'mg' ? c.name_mg : c.name_fr}</option>`).join('');
+  }
+
+  async function loadStats() {
+    const types = ['sermon', 'course', 'conference', 'audio', 'article', 'seminar'];
+    const labels = ['type_sermon', 'type_course', 'type_conference', 'type_audio', 'type_article', 'type_seminar'];
+    const items = await Promise.all(types.map(async (type) => {
+      const { count } = await supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', type);
+      return { n: count || 0, label: t(lang, labels[types.indexOf(type)] as any) };
+    }));
+    statsGrid.innerHTML = items.map((s) => `
+      <div class="rounded-2xl border border-slate-200/70 bg-white p-4 text-center shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+        <p class="font-display text-3xl font-bold text-gold-600 dark:text-gold-400">${s.n}</p>
+        <p class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">${s.label}</p>
+      </div>`).join('');
+  }
+
+  async function init() {
+    lessonsList.appendChild(lessonRow());
+    await Promise.all([loadCategories(), loadStats(), loadMedia(), loadUsers()]);
+  }
+
+  checkAuth();
+</script>
+

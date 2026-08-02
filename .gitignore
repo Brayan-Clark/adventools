@@ -1,0 +1,22 @@
+# Dépendances & build
+node_modules/
+dist/
+.astro/
+
+# Secrets & env
+.env
+.env.local
+.env.*.local
+
+# Données locales (servies depuis adventools branche data, pas commitées)
+data/
+public/docs/
+public/data/
+
+# Uploads
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Système
+.DS_Store
+*.log

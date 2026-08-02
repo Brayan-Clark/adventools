@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  html, body {
+    overflow-x: clip;
+  }
+  body {
+    @apply font-body antialiased;
+  }
+  ::selection {
+    @apply bg-gold-500/30 text-slate-900 dark:text-white;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl dark:bg-night-900/60;
+  }
+  .glass-strong {
+    @apply bg-white/90 backdrop-blur-xl dark:bg-night-900/85;
+  }
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-soft;
+  }
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-300 via-gold-400 to-gold-600 bg-clip-text text-transparent;
+  }
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-500 to-gold-600 px-6 py-3 text-sm font-semibold text-night-950 shadow-soft-gold transition-all duration-300 hover:brightness-110 hover:shadow-lg active:scale-95;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-300/60 bg-white/50 px-6 py-3 text-sm font-semibold text-slate-700 backdrop-blur transition-all duration-300 hover:border-gold-500/60 hover:text-gold-600 dark:border-night-600 dark:bg-night-800/50 dark:text-slate-200 dark:hover:text-gold-400 active:scale-95;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium;
+  }
+  .input-dark {
+    @apply w-full rounded-xl border border-slate-300/70 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-gold-500 focus:ring-2 focus:ring-gold-500/30 dark:border-night-600 dark:bg-night-800/70 dark:text-slate-100;
+  }
+  .section-title {
+    @apply font-display text-2xl font-semibold text-slate-900 sm:text-3xl dark:text-white;
+  }
+  .section-kicker {
+    @apply text-xs font-bold uppercase tracking-[0.2em] text-gold-600 dark:text-gold-400;
+  }
+}
+
+/* Scrollbar fine et stylée */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(224, 168, 60, 0.6);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* Animation douce d'apparition */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Défilement horizontal sans barre */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Motif décoratif subtil */
+.hero-pattern {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.35), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(224, 168, 60, 0.15), transparent),
+    radial-gradient(ellipse 50% 40% at 15% 30%, rgba(56, 189, 248, 0.12), transparent);
+}

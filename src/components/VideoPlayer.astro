@@ -1,0 +1,41 @@
+---
+interface Props {
+  src: string;
+  poster?: string;
+  title?: string;
+  mediaId?: number;
+}
+const { src, poster = '', title = '', mediaId } = Astro.props;
+---
+
+<div class="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-soft">
+  <video
+    id="video-player"
+    class="h-full w-full"
+    controls
+    playsinline
+    preload="metadata"
+    poster={poster || undefined}
+    src={src}
+    data-media-id={mediaId}
+  >
+    {title && <track kind="captions" label="Piste" />}
+    Votre navigateur ne supporte pas la lecture vidéo.
+  </video>
+</div>
+
+<script>
+  import { supabase } from '@/lib/supabase';
+
+  // Incrémente les vues une fois par lecture (directement via Supabase RPC)
+  const video = document.getElementById('video-player') as HTMLVideoElement | null;
+  const mediaId = video?.dataset.mediaId;
+  if (video && mediaId) {
+    const key = 'ah-viewed-' + mediaId;
+    video.addEventListener('play', () => {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      supabase.rpc('increment_views', { media_id: Number(mediaId) }).then(() => {}, () => {});
+    });
+  }
+</script>

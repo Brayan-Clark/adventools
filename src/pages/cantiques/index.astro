@@ -1,0 +1,226 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : les données sont chargées côté client
+// depuis Supabase. Le frontmatter ne contient que la coquille statique.
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_cantiques')}>
+  <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+    <div class="reveal text-center">
+      <p class="section-kicker">✦ {t(lang, 'nav_cantiques')}</p>
+      <h1 class="section-title mt-1 text-4xl">🎵 {t(lang, 'cantiques_section')}</h1>
+      <p class="mx-auto mt-4 max-w-xl text-slate-500 dark:text-slate-400">{t(lang, 'cantiques_subtitle')}</p>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="reveal mt-8 flex flex-wrap justify-center gap-3">
+      <span id="stat-mg" class="chip border border-emerald-500/40 bg-emerald-500/10 font-semibold text-emerald-600 dark:text-emerald-300">
+        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_mg')}
+      </span>
+      <span id="stat-fr" class="chip border border-sky-500/40 bg-sky-500/10 font-semibold text-sky-600 dark:text-sky-300">
+        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_fr')}
+      </span>
+      <span id="stat-en" class="chip border border-violet-500/40 bg-violet-500/10 font-semibold text-violet-600 dark:text-violet-300">
+        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_en')}
+      </span>
+      <span id="stat-audio" class="chip border border-gold-500/40 bg-gold-500/10 font-semibold text-gold-600 dark:text-gold-400">
+        ♪ 0 {t(lang, 'with_audio')}
+      </span>
+    </div>
+
+    <!-- Recherche + filtre langue -->
+    <div class="reveal mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
+      <div class="relative flex-1">
+        <input
+          id="cant-search"
+          type="search"
+          class="input-dark w-full pl-9"
+          placeholder={`${t(lang, 'cantique_search')} — ${t(lang, 'cantiques_by_number')} (ex : 45)`}
+          autocomplete="off"
+        />
+        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+        </svg>
+      </div>
+      <div class="flex gap-2">
+        <button class="lang-chip chip border border-gold-500 bg-gold-500/15 font-semibold text-gold-600 transition dark:text-gold-400" data-lang="mg">
+          {t(lang, 'cantiques_mg')}
+        </button>
+        <button class="lang-chip chip border border-slate-300/70 text-slate-500 transition dark:border-night-600 dark:text-slate-300" data-lang="fr">
+          {t(lang, 'cantiques_fr')}
+        </button>
+        <button class="lang-chip chip border border-slate-300/70 text-slate-500 transition dark:border-night-600 dark:text-slate-300" data-lang="en">
+          EN ♪
+        </button>
+      </div>
+    </div>
+
+    <p id="cant-count" class="reveal mt-6 text-center text-sm text-slate-500 dark:text-slate-400"></p>
+
+    <div id="cant-grid" class="reveal mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <p id="cant-empty" class="mt-12 hidden text-center text-slate-500 dark:text-slate-400">{t(lang, 'search_no_results')}</p>
+  </section>
+</Layout>
+
+<script>
+  import { getCantiques } from '@/lib/supabase';
+  import { clientLang } from '@/lib/client-render';
+  import { t } from '@/lib/i18n';
+  import type { Cantique } from '@/lib/supabase';
+
+  const lang = clientLang();
+  // URL base (pour les liens internes sur GitHub Pages)
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  const searchEl = document.getElementById('cant-search') as HTMLInputElement | null;
+  const grid = document.getElementById('cant-grid')!;
+  const countEl = document.getElementById('cant-count')!;
+  const emptyEl = document.getElementById('cant-empty')!;
+
+  const cache: Partial<Record<'mg' | 'fr' | 'en', Cantique[]>> = {};
+  const inflight: Partial<Record<'mg' | 'fr' | 'en', Promise<Cantique[]>>> = {};
+  let all: Cantique[] = [];
+  let currentLang: 'mg' | 'fr' | 'en' = 'mg';
+  let query = '';
+
+  async function fetchList(l: 'mg' | 'fr' | 'en'): Promise<Cantique[]> {
+    if (cache[l]) return cache[l]!;
+    if (!inflight[l]) {
+      inflight[l] = getCantiques(l).then((d) => {
+        cache[l] = d;
+        return d;
+      });
+    }
+    return inflight[l];
+  }
+
+  function render() {
+    const q = query.trim().toLowerCase();
+    const isNumber = /^\d+$/.test(q);
+    const numQ = isNumber ? parseInt(q, 10) : null;
+    const results = all.filter((c) => {
+      if (!q) return true;
+      // Recherche par numéro : match exact en priorité, puis début du numéro
+      if (isNumber) {
+        if (numQ !== null && String(c.num) === String(numQ)) return true;
+        if (String(c.num).startsWith(q)) return true;
+      }
+      return (
+        (c.title || '').toLowerCase().includes(q) ||
+        (c.author || '').toLowerCase().includes(q) ||
+        (c.categories || '').toLowerCase().includes(q) ||
+        (c.content || '').toLowerCase().includes(q)
+      );
+    });
+    // Tri : numéro trouvé en premier, puis ordre numérique
+    if (isNumber) {
+      results.sort((a, b) => {
+        const am = String(a.num).startsWith(q) ? 0 : 1;
+        const bm = String(b.num).startsWith(q) ? 0 : 1;
+        return am - bm || a.num - b.num;
+      });
+    }
+    countEl.textContent = `${results.length} ${t(lang, 'cantiques_total')}`;
+    emptyEl.classList.toggle('hidden', results.length > 0);
+
+    grid.innerHTML = results
+      .map(
+        (c) => `
+        <a href="${BASE}cantiques/${c.id}?lang=${lang}&clang=${c.lang}"
+          class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 font-display text-sm font-bold text-white shadow">
+            ${c.num ?? '♪'}
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-semibold text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${c.title}</span>
+            <span class="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+              ${c.playback ? '<span class="text-emerald-500">♪ ' + t(lang, 'cantique_listen') + '</span>' : ''}
+              ${c.author ? `<span class="truncate">${c.author}</span>` : ''}
+            </span>
+          </span>
+          <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-gold-500 dark:text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </a>`
+      )
+      .join('');
+  }
+
+  function renderStats(mg: Cantique[], fr: Cantique[], en: Cantique[]) {
+    const audio = [...mg, ...fr, ...en].filter((c) => c.playback).length;
+    const set = (id: string, text: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('stat-mg', `${mg.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_mg')}`);
+    set('stat-fr', `${fr.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_fr')}`);
+    set('stat-en', `${en.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_en')}`);
+    set('stat-audio', `♪ ${audio} ${t(lang, 'with_audio')}`);
+  }
+
+  async function loadStats() {
+    try {
+      const [mg, fr, en] = await Promise.all([fetchList('mg'), fetchList('fr'), fetchList('en')]);
+      renderStats(mg, fr, en);
+    } catch {
+      /* stats indisponibles */
+    }
+  }
+
+  async function load(l: 'mg' | 'fr' | 'en') {
+    try {
+      all = await fetchList(l);
+      render();
+    } catch {
+      grid.innerHTML = `<p class="col-span-full text-center text-sm text-slate-500">⚠️ ${t(lang, 'ai_offline_text')}</p>`;
+    }
+  }
+
+  // Libellés de l'interface dans la langue active (clientLang)
+  if (searchEl) {
+    searchEl.placeholder = `${t(lang, 'cantique_search')} — ${t(lang, 'cantiques_by_number')} (ex : 45)`;
+  }
+  emptyEl.textContent = t(lang, 'search_no_results');
+  const tabLabels: Record<string, string> = {
+    mg: t(lang, 'cantiques_mg'),
+    fr: t(lang, 'cantiques_fr'),
+    en: t(lang, 'cantiques_en'),
+  };
+  document.querySelectorAll('.lang-chip').forEach((btn) => {
+    const l = btn.getAttribute('data-lang')!;
+    btn.textContent = l === 'en' ? 'EN ♪' : tabLabels[l];
+  });
+
+  searchEl?.addEventListener('input', () => {
+    query = searchEl.value;
+    render();
+  });
+
+  const ACTIVE = ['border-gold-500', 'bg-gold-500/15', 'font-semibold', 'text-gold-600', 'dark:text-gold-400'];
+  const INACTIVE = ['border-slate-300/70', 'text-slate-500', 'dark:border-night-600', 'dark:text-slate-300'];
+
+  document.querySelectorAll('.lang-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const l = btn.getAttribute('data-lang') as 'mg' | 'fr' | 'en';
+      currentLang = l;
+      document.querySelectorAll('.lang-chip').forEach((b) => {
+        const active = b.getAttribute('data-lang') === l;
+        ACTIVE.forEach((c) => b.classList.toggle(c, active));
+        INACTIVE.forEach((c) => b.classList.toggle(c, !active));
+      });
+      if (cache[l]) {
+        all = cache[l]!;
+        render();
+      } else {
+        load(l);
+      }
+    });
+  });
+
+  loadStats();
+  load('mg');
+</script>

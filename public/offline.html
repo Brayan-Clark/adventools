@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hors-ligne · Andeaha Hizaha</title>
+    <meta name="theme-color" content="#0b1020" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: radial-gradient(800px 400px at 20% -10%, rgba(124,58,237,.35), transparent 60%),
+                    radial-gradient(700px 400px at 90% 10%, rgba(224,168,60,.18), transparent 55%),
+                    #070b16;
+        color: #e2e8f0;
+        text-align: center;
+      }
+      .logo { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 10px 40px -10px rgba(224,168,60,.45); }
+      h1 { font-size: 1.6rem; margin-top: 1.5rem; font-weight: 700; }
+      p { margin-top: .75rem; color: #94a3b8; max-width: 30rem; line-height: 1.6; }
+      .actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; margin-top: 2rem; }
+      a, button {
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: .8rem 1.6rem; border-radius: 999px; border: 0;
+        font-weight: 600; font-size: .9rem; cursor: pointer; text-decoration: none;
+        transition: filter .2s, transform .1s;
+      }
+      a.primary { background: linear-gradient(90deg, #e0a83c, #c98a24); color: #070b16; }
+      a.ghost { background: rgba(255,255,255,.06); color: #e2e8f0; border: 1px solid rgba(148,163,184,.3); }
+      a:hover, button:hover { filter: brightness(1.1); }
+      .cached { margin-top: 2rem; max-width: 36rem; width: 100%; text-align: left; }
+      .cached h2 { font-size: .9rem; text-transform: uppercase; letter-spacing: .15em; color: #e0a83c; }
+      .cached ul { list-style: none; margin-top: .75rem; }
+      .cached li a { display: block; padding: .65rem .9rem; border-radius: .75rem; background: rgba(255,255,255,.04); margin-top: .4rem; font-weight: 500; color: #e2e8f0; border: 1px solid transparent; }
+      .cached li a:hover { border-color: rgba(224,168,60,.5); }
+    </style>
+  </head>
+  <body>
+    <img class="logo" src="/favicon.svg" alt="Andeaha Hizaha" width="84" height="84" />
+    <h1>Vous êtes hors-ligne</h1>
+    <p>Le contenu que vous avez déjà consulté reste disponible. Reconnectez-vous pour accéder à tout le catalogue.</p>
+    <div class="actions">
+      <a class="primary" href="/">← Retour à l'accueil</a>
+      <button class="ghost" onclick="location.reload()">↻ Réessayer</button>
+    </div>
+
+    <div class="cached">
+      <h2>Contenu mis en cache</h2>
+      <ul id="cached-list"><li>Chargement…</li></ul>
+    </div>
+
+    <script>
+      // Liste le contenu du cache API (stocké via le service worker / localStorage)
+      (async function () {
+        const ul = document.getElementById('cached-list');
+        let items = [];
+        try {
+          const cached = JSON.parse(localStorage.getItem('ah-content') || '[]');
+          items = cached;
+        } catch (e) {}
+        if (!items.length) {
+          // essaie le cache réseau du SW
+          try {
+            const cache = await caches.open('ah-api');
+            const resp = await cache.match('/api/content');
+            if (resp) {
+              const bundle = await resp.json();
+              items = bundle.media || [];
+            }
+          } catch (e) {}
+        }
+        if (!items.length) {
+          ul.innerHTML = '<li>Aucun contenu en cache pour le moment.</li>';
+          return;
+        }
+        ul.innerHTML = items
+          .slice(0, 12)
+          .map(
+            (m) =>
+              `<li><a href="/${m.type === 'course' ? 'cours' : m.type === 'audio' ? 'audio' : m.type === 'seminar' ? 'seminaires' : 'sermons'}/${m.slug}">${m.title_fr}</a></li>`
+          )
+          .join('');
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,198 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+
+// Site 100% statique (GitHub Pages) : la recherche est exécutée côté client
+// depuis Supabase (searchMedia). Le frontmatter ne contient que la coquille statique.
+const lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'search_placeholder')}>
+  <section class="mx-auto max-w-5xl px-4 py-14 sm:px-6">
+    <div class="reveal text-center">
+      <p class="section-kicker">✦ {t(lang, 'search_placeholder')}</p>
+      <h1 class="section-title mt-1 text-4xl">🔍 {t(lang, 'search_placeholder')}</h1>
+    </div>
+
+    <form id="search-form" class="reveal mx-auto mt-8 flex max-w-xl gap-2" role="search">
+      <input
+        id="search-input"
+        type="search"
+        class="input-dark"
+        placeholder={t(lang, 'search_placeholder')}
+        autofocus
+        autocomplete="off"
+        value=""
+      />
+      <button type="submit" class="btn-gold shrink-0 px-5">{t(lang, 'search_button')}</button>
+    </form>
+
+    <!-- Filtres par type -->
+    <div id="type-filters" class="reveal mt-6 flex flex-wrap justify-center gap-2">
+      <button class="type-filter chip border transition border-gold-500 bg-gold-500/15 font-semibold text-gold-600 dark:text-gold-400" data-type="">
+        {t(lang, 'search_all')}
+      </button>
+      {[
+        { type: 'sermon', label: t(lang, 'type_sermon') },
+        { type: 'course', label: t(lang, 'type_course') },
+        { type: 'conference', label: t(lang, 'type_conference') },
+        { type: 'audio', label: t(lang, 'type_audio') },
+        { type: 'article', label: t(lang, 'type_article') },
+        { type: 'seminar', label: t(lang, 'type_seminar') },
+      ].map((f) => (
+        <button
+          class="type-filter chip border transition border-slate-300/70 text-slate-500 hover:border-gold-500/50 hover:text-gold-600 dark:border-night-600 dark:text-slate-300"
+          data-type={f.type}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+
+    <!-- Filtres catégories (remplis côté client) -->
+    <div id="category-filters" class="reveal mt-6 flex flex-wrap justify-center gap-2">
+      {Array.from({ length: 4 }).map(() => (
+        <div class="h-8 w-20 animate-pulse rounded-full bg-slate-200/60 dark:bg-night-800/60"></div>
+      ))}
+    </div>
+
+    <p id="result-count" class="reveal mt-8 text-sm text-slate-500 dark:text-slate-400"></p>
+    <div id="results" class="reveal mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map(() => (
+        <div class="animate-pulse overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+          <div class="aspect-video bg-slate-200/60 dark:bg-night-800/60"></div>
+          <div class="space-y-2 p-4">
+            <div class="h-4 rounded bg-slate-200/60 dark:bg-night-800/60"></div>
+            <div class="h-3 w-2/3 rounded bg-slate-200/60 dark:bg-night-800/60"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <p id="no-results" class="mt-10 hidden text-center text-slate-500 dark:text-slate-400">{t(lang, 'search_no_results')}</p>
+  </section>
+</Layout>
+
+<script>
+  import { getMedia, getCategories, searchMedia } from '@/lib/supabase';
+  import { clientLang, mediaCardHtml } from '@/lib/client-render';
+  import { t } from '@/lib/i18n';
+  import type { MediaItem } from '@/lib/types';
+
+  const lang = clientLang();
+
+  // URL base (pour les liens internes sur GitHub Pages)
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  const form = document.getElementById('search-form') as HTMLFormElement;
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const resultsEl = document.getElementById('results') as HTMLElement;
+  const countEl = document.getElementById('result-count') as HTMLElement;
+  const noResultsEl = document.getElementById('no-results') as HTMLElement;
+  const typeFiltersEl = document.getElementById('type-filters');
+  const catFiltersEl = document.getElementById('category-filters');
+
+  const params = new URLSearchParams(window.location.search);
+  let query = params.get('q') ?? '';
+  let activeCat = params.get('categorie') ?? '';
+  let type = '';
+
+  if (input) input.value = query;
+
+  function matchesQuery(m: MediaItem, q: string) {
+    const lower = q.toLowerCase();
+    return (
+      m.title_fr.toLowerCase().includes(lower) ||
+      (m.title_mg || '').toLowerCase().includes(lower) ||
+      (m.speaker || '').toLowerCase().includes(lower) ||
+      (m.description_fr || '').toLowerCase().includes(lower) ||
+      (m.description_mg || '').toLowerCase().includes(lower) ||
+      (m.tags ?? []).some((x) => x.toLowerCase().includes(lower))
+    );
+  }
+
+  function render(items: MediaItem[], q: string) {
+    countEl.textContent = q || type || activeCat
+      ? `${t(lang, 'search_results_for')} : ${items.length}`
+      : '';
+    noResultsEl.classList.toggle('hidden', items.length > 0);
+    resultsEl.innerHTML = items.map((m) => mediaCardHtml(m, lang)).join('');
+  }
+
+  async function search() {
+    const q = query.trim();
+    let items: MediaItem[] = [];
+    try {
+      if (activeCat) {
+        // Parcours par catégorie : charge les médias de la catégorie puis
+        // affûte éventuellement par texte côté client.
+        const all = await getMedia({ type: type || undefined, category: activeCat }).catch(() => []);
+        items = q ? all.filter((m) => matchesQuery(m, q)) : all;
+      } else if (q) {
+        items = await searchMedia(q, type || undefined).catch(() => []);
+      } else if (type) {
+        items = await getMedia({ type }).catch(() => []);
+      } else {
+        items = await getMedia().catch(() => []);
+      }
+    } catch (err) {
+      console.error('Erreur de recherche :', err);
+    }
+    render(items, q);
+  }
+
+  function renderCatChips(categories: { slug: string; name_fr: string; name_mg: string }[]) {
+    if (!catFiltersEl) return;
+    const allCls = !activeCat
+      ? 'border-gold-500 bg-gold-500/15 font-semibold text-gold-600 dark:text-gold-400'
+      : 'border-slate-300/70 text-slate-500 hover:border-gold-500/50 hover:text-gold-600 dark:border-night-600 dark:text-slate-300';
+    catFiltersEl.innerHTML =
+      `<a href="${BASE}recherche" class="chip border transition ${allCls}">${t(lang, 'search_all')}</a>` +
+      categories.map((c) => {
+        const cls = activeCat === c.slug
+          ? 'border-gold-500 bg-gold-500/15 font-semibold text-gold-600 dark:text-gold-400'
+          : 'border-slate-300/70 text-slate-500 hover:border-gold-500/50 hover:text-gold-600 dark:border-night-600 dark:text-slate-300';
+        const name = lang === 'mg' ? c.name_mg : c.name_fr;
+        return `<a href="${BASE}recherche?categorie=${c.slug}" class="chip border transition ${cls}">${name}</a>`;
+      }).join('');
+  }
+
+  async function init() {
+    const categories = await getCategories().catch(() => []);
+    renderCatChips(categories);
+    if (activeCat && !query && input) {
+      const cat = categories.find((c) => c.slug === activeCat);
+      if (cat) input.value = lang === 'mg' ? cat.name_mg : cat.name_fr;
+    }
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    query = input?.value ?? '';
+    search();
+  });
+
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  input?.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      query = input.value;
+      search();
+    }, 250);
+  });
+
+  typeFiltersEl?.querySelectorAll('.type-filter').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      typeFiltersEl.querySelectorAll('.type-filter').forEach((b) => {
+        b.classList.remove('border-gold-500', 'bg-gold-500/15', 'font-semibold', 'text-gold-600', 'dark:text-gold-400');
+        b.classList.add('border-slate-300/70', 'text-slate-500', 'dark:border-night-600', 'dark:text-slate-300');
+      });
+      btn.classList.remove('border-slate-300/70', 'text-slate-500', 'dark:border-night-600', 'dark:text-slate-300');
+      btn.classList.add('border-gold-500', 'bg-gold-500/15', 'font-semibold', 'text-gold-600', 'dark:text-gold-400');
+      type = btn.getAttribute('data-type') ?? '';
+      search();
+    });
+  });
+
+  init();
+  search();
+</script>

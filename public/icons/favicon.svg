@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="55%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="60%" stop-color="#e0a83c"/>
+      <stop offset="100%" stop-color="#c98a24" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="book" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5f0e6"/>
+      <stop offset="100%" stop-color="#d9cba8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="210" r="190" fill="url(#sun)" opacity="0.9"/>
+  <circle cx="256" cy="225" r="64" fill="#ffe9a8"/>
+  <!-- rayons -->
+  <g stroke="#e0a83c" stroke-width="7" stroke-linecap="round" opacity="0.85">
+    <line x1="256" y1="108" x2="256" y2="78"/>
+    <line x1="320" y1="143" x2="346" y2="117"/>
+    <line x1="360" y1="205" x2="396" y2="200"/>
+    <line x1="192" y1="143" x2="166" y2="117"/>
+    <line x1="152" y1="205" x2="116" y2="200"/>
+  </g>
+  <!-- croix -->
+  <g stroke="#f5d98b" stroke-width="22" stroke-linecap="round">
+    <line x1="256" y1="168" x2="256" y2="268"/>
+    <line x1="216" y1="212" x2="296" y2="212"/>
+  </g>
+  <!-- livre ouvert -->
+  <g transform="translate(256 400)">
+    <path d="M-130 0 C-90 -34 -40 -34 0 -6 C40 -34 90 -34 130 0 L112 52 C70 24 36 22 0 44 C-36 22 -70 24 -112 52 Z" fill="url(#book)"/>
+    <line x1="0" y1="-6" x2="0" y2="44" stroke="#b8a26a" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

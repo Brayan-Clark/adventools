@@ -1,0 +1,861 @@
+---
+// Page 100% statique : aucune donnée n'est lue côté serveur.
+// Toute la lecture des bibles (.SQLite3) se fait dans le navigateur
+// avec sql.js (SQLite compilé en WASM), fichiers téléchargés à la demande
+// depuis les URLs raw de GitHub (https://raw.githubusercontent.com/...).
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+
+// Coquille statique : la langue est résolue côté client (voir clientLang() dans le <script>).
+const lang: 'fr' | 'mg' = 'fr';
+const BASE = import.meta.env.BASE_URL ?? '/';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_bible')} description={t(lang, 'bible_subtitle')}>
+  <section class="mx-auto max-w-5xl px-4 py-14 sm:px-6">
+    <div class="reveal text-center">
+      <p class="section-kicker">✦ {t(lang, 'nav_bible')}</p>
+      <h1 class="section-title mt-1 text-4xl">📖 {t(lang, 'bible_section')}</h1>
+      <p class="mx-auto mt-4 max-w-2xl text-slate-500 dark:text-slate-400">{t(lang, 'bible_subtitle')}</p>
+    </div>
+
+    <!-- Recherche rapide -->
+    <div class="reveal mx-auto mt-8 max-w-2xl">
+      <form id="bible-search-form" class="relative" role="search" autocomplete="off">
+        <svg
+          class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path d="M21.7 20.3l-5.1-5.1a8.5 8.5 0 10-1.4 1.4l5.1 5.1a1 1 0 001.4-1.4zM4 10.5a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z" />
+        </svg>
+        <input
+          id="bible-search"
+          type="search"
+          placeholder={t(lang, 'bible_search_placeholder')}
+          class="input-dark w-full rounded-2xl py-3.5 pl-11 pr-24 text-sm shadow-inner"
+        />
+        <button
+          type="submit"
+          class="btn-gold absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 text-xs"
+        >
+          🔎 {t(lang, 'bible_search_button')}
+        </button>
+      </form>
+      <p class="mt-2 text-center text-[11px] text-slate-400 dark:text-slate-500">{t(lang, 'bible_search_hint')}</p>
+      <div id="search-recent" class="mt-3 hidden"></div>
+      <div id="search-feedback" class="hidden mt-3"></div>
+    </div>
+
+    <!-- Sélecteur de version (rendu côté client depuis le manifest distant) -->
+    <div class="reveal mx-auto mt-8 flex max-w-2xl flex-col items-center gap-3">
+      <label class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        {t(lang, 'bible_choose_version')}
+      </label>
+      <div class="flex flex-wrap justify-center gap-2" id="version-tabs"></div>
+      <p id="version-desc" class="text-xs text-slate-400 dark:text-slate-500"></p>
+    </div>
+
+    <!-- Onglets testament (rendus côté client) -->
+    <div class="reveal mt-8 flex justify-center gap-2" id="testament-tabs" role="tablist"></div>
+
+    <!-- Grille de livres (rendue côté client) -->
+    <div id="book-grid" class="reveal mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"></div>
+
+    <!-- Sélecteur de chapitre -->
+    <div id="chapter-bar" class="reveal mt-4 flex items-center gap-2">
+      <span id="chapter-label" class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        {t(lang, 'bible_loading')}
+      </span>
+      <select id="chapter-select" class="input-dark w-auto rounded-lg px-3 py-1.5 text-xs"></select>
+    </div>
+
+    <!-- Lecture -->
+    <article id="reader" class="reveal mt-8 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/80 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-gold-500/5 px-6 py-4 dark:border-night-700">
+        <h2 id="reader-title" class="font-display text-lg font-bold text-slate-900 dark:text-white">
+          {t(lang, 'bible_loading')}
+        </h2>
+        <div class="flex items-center gap-2">
+          <a
+            id="present-btn"
+            href={BASE + 'presentation'}
+            class="btn-gold px-3 py-1.5 text-xs"
+            title={t(lang, 'pres_launch')}
+          >
+            🖥️ {t(lang, 'pres_launch')}
+          </a>
+          <button id="copy-chapter" class="btn-ghost px-3 py-1.5 text-xs" title={t(lang, 'bible_copy')}>
+            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M7 4h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm0 2v10h10V6H7z" />
+            </svg>
+            {t(lang, 'bible_copy')}
+          </button>
+        </div>
+      </div>
+      <div class="max-h-[65vh] overflow-y-auto px-6 py-6 sm:px-8">
+        <div id="verses" class="space-y-4"></div>
+        <p id="verse-count" class="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+          0 {t(lang, 'bible_verses_label')}
+        </p>
+      </div>
+      <div class="flex items-center justify-between gap-3 border-t border-slate-200/70 px-6 py-4 dark:border-night-700">
+        <button id="prev-chapter" class="btn-ghost px-4 py-2 text-xs">← {t(lang, 'bible_prev_chapter')}</button>
+        <button id="next-chapter" class="btn-gold px-4 py-2 text-xs">{t(lang, 'bible_next_chapter')} →</button>
+      </div>
+    </article>
+  </section>
+</Layout>
+
+<script>
+  import initSqlJs from 'sql.js';
+  import { t, bibleVersionLabel } from '@/lib/i18n';
+
+  const BASE = import.meta.env.BASE_URL ?? '/';
+  const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/manifest.json';
+
+  // Secours si le manifest distant est indisponible : les 2 versions de référence
+  // (MG65 malgache + SBF français) sont embarquées pour que la page reste utilisable.
+  const FALLBACK_VERSIONS = [
+    {
+      id: 'MG65_SQLite3',
+      name: 'MG65',
+      file: 'MG65.SQLite3',
+      language: 'Malagasy',
+      isDefault: true,
+      url: 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/MG65.SQLite3',
+    },
+    {
+      id: 'SBF_SQLite3',
+      name: 'SBF',
+      file: 'SBF.SQLite3',
+      language: 'French',
+      isDefault: true,
+      url: 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/SBF.SQLite3',
+    },
+  ];
+
+  type Version = { id: string; name: string; file: string; language?: string; isDefault?: boolean; url: string };
+  type Book = { number: number; shortName: string; longName: string; chapters: number; testamentId: number };
+  type Verse = { verse: number; text: string };
+
+  /** Résout la langue active côté client (?lang= en priorité, puis localStorage ah-lang). */
+  function clientLang(): 'fr' | 'mg' {
+    const p = new URLSearchParams(window.location.search).get('lang');
+    if (p === 'mg' || p === 'fr') return p;
+    try {
+      const c = localStorage.getItem('ah-lang');
+      if (c === 'mg' || c === 'fr') return c;
+    } catch {
+      /* ignore */
+    }
+    return 'fr';
+  }
+  const lang = clientLang();
+
+  // --- État ---------------------------------------------------------------
+  let versions: Version[] = [];
+  let allBooks: Book[] = [];
+  let currentVersion = '';
+  let currentBook = 0;
+  let currentChapter = 1;
+  let highlightRange: { start: number; end: number } | null = null;
+  // Jeton anti-course : seule la dernière requête peut modifier le DOM
+  let loadSeq = 0;
+
+  // --- Caches --------------------------------------------------------------
+  let SQLPromise: Promise<any> | null = null;
+  const dbCache = new Map<string, any>();
+
+  function initSql(): Promise<any> {
+    if (!SQLPromise) {
+      SQLPromise = initSqlJs({ locateFile: () => BASE + 'sql-wasm.wasm' });
+    }
+    return SQLPromise;
+  }
+
+  /** Télécharge (avec persistance Cache API) et charge en mémoire une version .SQLite3. */
+  async function loadDb(file: string): Promise<any> {
+    if (dbCache.has(file)) return dbCache.get(file);
+    const v = versions.find((x) => x.file === file);
+    const url = v?.url ?? `https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible/${encodeURIComponent(file)}`;
+    let res: Response | null = null;
+    try {
+      if (typeof caches !== 'undefined') {
+        const cache = await caches.open('ah-bible-db');
+        res = await cache.match(url);
+        if (!res) {
+          const net = await fetch(url);
+          if (!net.ok) throw new Error(`HTTP ${net.status}`);
+          res = net;
+          try {
+            await cache.put(url, res.clone());
+          } catch {
+            /* stockage indisponible : on garde la réponse en mémoire */
+          }
+        }
+      }
+    } catch {
+      /* on retombe sur un fetch simple */
+    }
+    if (!res) {
+      res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    }
+    const sql = await initSql();
+    const db = new sql.Database(new Uint8Array(await res.arrayBuffer()));
+    dbCache.set(file, db);
+    return db;
+  }
+
+  /** Exécute une requête préparée (paramétrée) et renvoie les lignes sous forme d'objets. */
+  function queryAll(db: any, sql: string, params: any[] = []): any[] {
+    const stmt = db.prepare(sql);
+    try {
+      stmt.bind(params);
+      const rows: any[] = [];
+      while (stmt.step()) rows.push(stmt.getAsObject());
+      return rows;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  // --- Nettoyage du texte (balises <n>, <br/>, etc.) -----------------------
+  function cleanVerseText(text: string): string {
+    return text
+      .replace(/<n>/g, '')
+      .replace(/<\/n>/g, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // --- Lecture SQL ---------------------------------------------------------
+  function readBooks(db: any): Book[] {
+    const rows = queryAll(
+      db,
+      `SELECT b.book_number, b.short_name, b.long_name, b.testament_id,
+              COUNT(DISTINCT v.chapter) AS chapters
+       FROM books b
+       LEFT JOIN verses v ON v.book_number = b.book_number
+       GROUP BY b.book_number, b.short_name, b.long_name, b.testament_id
+       ORDER BY b.book_number`
+    );
+    return rows.map((r) => ({
+      number: r.book_number,
+      shortName: r.short_name,
+      longName: r.long_name,
+      testamentId: r.testament_id,
+      chapters: Number(r.chapters) || 0,
+    }));
+  }
+
+  function readChapter(db: any, bookNumber: number, chapter: number): Verse[] {
+    return queryAll(
+      db,
+      'SELECT verse, text FROM verses WHERE book_number = ? AND chapter = ? ORDER BY verse',
+      [bookNumber, chapter]
+    ).map((r) => ({ verse: r.verse, text: cleanVerseText(r.text) }));
+  }
+
+  function searchVerses(
+    db: any,
+    query: string,
+    limit = 30
+  ): { count: number; results: { bookNumber: number; chapter: number; verse: number; text: string; reference: string }[] } {
+    const words = query
+      .split(/\s+/)
+      .map((w) => w.trim())
+      .filter((w) => w.length >= 2);
+    if (!words.length) return { count: 0, results: [] };
+    const where = words.map(() => 'lower(text) LIKE ?').join(' AND ');
+    const params = words.map((w) => `%${w.toLowerCase()}%`);
+    const [{ c }] = queryAll(db, `SELECT COUNT(*) AS c FROM verses WHERE ${where}`, params);
+    const rows = queryAll(
+      db,
+      `SELECT book_number, chapter, verse, text FROM verses WHERE ${where} ORDER BY book_number, chapter, verse LIMIT ${limit}`,
+      params
+    );
+    const nameMap = new Map(allBooks.map((b) => [b.number, b.longName]));
+    return {
+      count: c,
+      results: rows.map((r) => ({
+        bookNumber: r.book_number,
+        chapter: r.chapter,
+        verse: r.verse,
+        text: cleanVerseText(r.text),
+        reference: `${nameMap.get(r.book_number) ?? ''} ${r.chapter}:${r.verse}`,
+      })),
+    };
+  }
+
+  // --- Références bibliques -------------------------------------------------
+  function normalizeBookName(s: string): string {
+    return s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  /** Résout le numéro canonique d'un livre depuis un nom/abréviation multilingue. */
+  function resolveBookNumber(name: string): number | null {
+    const q = normalizeBookName(name);
+    if (!q) return null;
+    const idx = new Map<number, Set<string>>();
+    for (const b of allBooks) {
+      if (!idx.has(b.number)) idx.set(b.number, new Set());
+      idx.get(b.number)!.add(normalizeBookName(b.shortName));
+      idx.get(b.number)!.add(normalizeBookName(b.longName));
+    }
+    // 1) correspondance exacte
+    for (const [num, aliases] of idx) {
+      if (aliases.has(q)) return num;
+    }
+    // 2) abréviation (l'alias commence par la saisie)
+    if (q.length >= 2) {
+      let best: number | null = null;
+      let bestLen = 0;
+      for (const [num, aliases] of idx) {
+        for (const a of aliases) {
+          if (a.startsWith(q) && a.length > bestLen) {
+            bestLen = a.length;
+            best = num;
+          }
+        }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+
+  /** Analyse « Jao.3:16 », « Genèse 1:1 », « Jao.3:16-20 »… → cible de navigation. */
+  function parseReference(input: string): {
+    bookNumber: number;
+    chapter: number;
+    verseStart: number;
+    verseEnd: number;
+    reference: string;
+    totalChapters: number;
+  } | null {
+    const s = input.trim();
+    if (!s) return null;
+    const m =
+      s.match(/^([0-9]?\s*[A-Za-zÀ-ÿ'’ .-]+?)\s*[:.]?\s*(\d{1,3})\s*[:.]\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*$/i) ??
+      s.match(/^([0-9]?\s*[A-Za-zÀ-ÿ'’ .-]+?)\s*[:.]?\s*(\d{1,3})\s*$/i);
+    if (!m) return null;
+    const bookNumber = resolveBookNumber(m[1]);
+    if (!bookNumber) return null;
+    const book = allBooks.find((b) => b.number === bookNumber);
+    if (!book) return null;
+    const chapter = Number(m[2]);
+    if (chapter < 1 || chapter > book.chapters) return null;
+    let verseStart = 1;
+    let verseEnd = 0; // 0 = tout le chapitre
+    if (m[3]) {
+      verseStart = Number(m[3]);
+      verseEnd = m[4] ? Number(m[4]) : verseStart;
+      if (verseEnd < verseStart) verseEnd = verseStart;
+    }
+    return {
+      bookNumber,
+      chapter,
+      verseStart,
+      verseEnd,
+      reference: `${book.longName} ${chapter}`,
+      totalChapters: book.chapters,
+    };
+  }
+
+  // --- DOM -----------------------------------------------------------------
+  const bookGrid = document.getElementById('book-grid')!;
+  const chapterSelect = document.getElementById('chapter-select') as HTMLSelectElement;
+  const chapterLabel = document.getElementById('chapter-label')!;
+  const readerTitle = document.getElementById('reader-title')!;
+  const versesEl = document.getElementById('verses')!;
+  const verseCount = document.getElementById('verse-count')!;
+  const versionDesc = document.getElementById('version-desc')!;
+  const prevBtn = document.getElementById('prev-chapter') as HTMLButtonElement;
+  const nextBtn = document.getElementById('next-chapter') as HTMLButtonElement;
+  const copyBtn = document.getElementById('copy-chapter') as HTMLButtonElement;
+  const presentBtn = document.getElementById('present-btn') as HTMLAnchorElement;
+  const searchForm = document.getElementById('bible-search-form') as HTMLFormElement;
+  const searchInput = document.getElementById('bible-search') as HTMLInputElement;
+  const searchFeedback = document.getElementById('search-feedback') as HTMLDivElement;
+  const searchRecent = document.getElementById('search-recent') as HTMLDivElement;
+  const testamentNames: Record<number, string> = {
+    1: t(lang, 'bible_ot'),
+    2: t(lang, 'bible_nt'),
+    3: t(lang, 'bible_apocrypha'),
+  };
+
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // --- Rendu -----------------------------------------------------------------
+  function renderVersionChips() {
+    const tabs = document.getElementById('version-tabs');
+    if (!tabs) return;
+    tabs.innerHTML = versions
+      .map((v) => {
+        const active = v.file === currentVersion;
+        return `<button type="button" data-version="${esc(v.file)}"
+          class="version-chip chip border transition ${active ? 'border-gold-500 bg-gold-500/15 font-semibold text-gold-600 dark:text-gold-400' : 'border-slate-300/70 text-slate-500 hover:border-gold-500/50 hover:text-gold-600 dark:border-night-600 dark:text-slate-300'}">${esc(bibleVersionLabel(lang, v))}</button>`;
+      })
+      .join('');
+  }
+
+  function renderBooks(testamentId: number) {
+    bookGrid.innerHTML = allBooks
+      .filter((b) => b.testamentId === testamentId)
+      .map(
+        (b) => `
+        <button type="button" data-book="${b.number}"
+          class="book-chip rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-gold-500/60 hover:text-gold-600 dark:border-night-700/60 dark:bg-night-800/70 dark:text-slate-200">
+          <span class="block truncate">${esc(b.longName)}</span>
+          <span class="text-[10px] text-slate-400">${b.chapters} ${t(lang, 'bible_chapters')}</span>
+        </button>`
+      )
+      .join('');
+  }
+
+  function syncVersionChips(activeVersion: string) {
+    document.querySelectorAll('.version-chip').forEach((c) => {
+      const active = (c as HTMLElement).dataset.version === activeVersion;
+      c.classList.toggle('border-gold-500', active);
+      c.classList.toggle('bg-gold-500/15', active);
+      c.classList.toggle('font-semibold', active);
+      c.classList.toggle('text-gold-600', active);
+      c.classList.toggle('dark:text-gold-400', active);
+      c.classList.toggle('border-slate-300/70', !active);
+      c.classList.toggle('text-slate-500', !active);
+      c.classList.toggle('dark:border-night-600', !active);
+      c.classList.toggle('dark:text-slate-300', !active);
+    });
+  }
+
+  function renderTestaments(activeTid: number) {
+    const tabs = document.getElementById('testament-tabs');
+    if (!tabs) return;
+    const present = [...new Set(allBooks.map((b) => b.testamentId))].sort((a, b) => a - b);
+    tabs.innerHTML = present
+      .map((tid) => {
+        const label = testamentNames[tid];
+        if (!label) return '';
+        const active = tid === activeTid;
+        return `<button type="button" data-testament="${tid}" class="testament-chip rounded-full px-4 py-2 text-xs font-semibold transition ${active ? 'bg-gold-500/15 text-gold-600 ring-1 ring-gold-500/50 dark:text-gold-400' : 'text-slate-500 hover:bg-gold-500/10 hover:text-gold-600 dark:text-slate-300'}">${label}</button>`;
+      })
+      .join('');
+  }
+
+  function setActiveBook(book: number) {
+    bookGrid.querySelectorAll('.book-chip').forEach((el) => {
+      const active = Number((el as HTMLElement).dataset.book) === book;
+      el.classList.toggle('border-gold-500', active);
+      el.classList.toggle('bg-gold-500/10', active);
+      el.classList.toggle('text-gold-600', active);
+      el.classList.toggle('dark:border-gold-500/60', active);
+      el.classList.toggle('dark:text-gold-400', active);
+      el.classList.toggle('border-slate-200/70', !active);
+      el.classList.toggle('bg-white', !active);
+      el.classList.toggle('text-slate-700', !active);
+      el.classList.toggle('dark:border-night-700/60', !active);
+      el.classList.toggle('dark:bg-night-800/70', !active);
+      el.classList.toggle('dark:text-slate-200', !active);
+    });
+  }
+
+  function isHighlighted(verse: number) {
+    if (!highlightRange) return false;
+    if (highlightRange.end === 0) return verse >= highlightRange.start;
+    return verse >= highlightRange.start && verse <= highlightRange.end;
+  }
+
+  function scrollToHighlight() {
+    const el = versesEl.querySelector('.verse-highlight');
+    if (el) {
+      const y = (el as HTMLElement).getBoundingClientRect().top + window.scrollY - 120;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: readerTitle.offsetTop - 110, behavior: 'smooth' });
+    }
+  }
+
+  // --- Chargement d'un chapitre ----------------------------------------------
+  async function loadChapter() {
+    const seq = ++loadSeq;
+    readerTitle.textContent = t(lang, 'bible_loading');
+    try {
+      const db = await loadDb(currentVersion);
+      const book = allBooks.find((b) => b.number === currentBook);
+      if (!book) throw new Error('book inconnu');
+      const verses = readChapter(db, currentBook, currentChapter);
+      if (seq !== loadSeq) return; // une requête plus récente a pris la main
+      const reference = `${book.longName} ${currentChapter}`;
+      readerTitle.textContent = reference;
+      chapterLabel.textContent = reference;
+      versionDesc.textContent = reference;
+      presentBtn.href = `${BASE}presentation?add=bible&version=${encodeURIComponent(currentVersion)}&book=${currentBook}&chapter=${currentChapter}`;
+      chapterSelect.innerHTML = Array.from({ length: book.chapters }, (_, i) => i + 1)
+        .map((c) => `<option value="${c}" ${c === currentChapter ? 'selected' : ''}>${t(lang, 'bible_chapters')} ${c}</option>`)
+        .join('');
+      versesEl.innerHTML = verses
+        .map(
+          (v) => `
+          <p class="bible-verse flex gap-3 text-[16px] leading-relaxed text-slate-700 dark:text-slate-200${isHighlighted(v.verse) ? ' verse-highlight bg-gold-500/15 ring-1 ring-gold-500/60 rounded-lg -mx-2 px-2' : ''}" data-verse="${v.verse}">
+            <span class="w-7 shrink-0 text-right text-sm font-bold text-gold-600 dark:text-gold-400">${v.verse}</span>
+            <span class="min-w-0">${esc(v.text)}</span>
+          </p>`
+        )
+        .join('');
+      verseCount.textContent = `${verses.length} ${t(lang, 'bible_verses_label')}`;
+      setActiveBook(currentBook);
+      if (highlightRange) scrollToHighlight();
+      else window.scrollTo({ top: readerTitle.offsetTop - 110, behavior: 'smooth' });
+    } catch {
+      if (seq !== loadSeq) return;
+      readerTitle.textContent = '⚠️ ' + t(lang, 'bible_error');
+    }
+  }
+
+  // --- Manifest & initialisation --------------------------------------------
+  async function loadManifest(): Promise<Version[]> {
+    try {
+      const res = await fetch(MANIFEST_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return Array.isArray(data.versions) ? (data.versions as Version[]) : [];
+    } catch {
+      return FALLBACK_VERSIONS;
+    }
+  }
+
+  /** ?version= en priorité, puis isDefault, puis MG65/SBF (références), puis première version. */
+  function pickDefaultVersion(vs: Version[]): string {
+    const q = new URLSearchParams(location.search).get('version');
+    if (q) {
+      const m = vs.find((v) => v.file === q || v.id === q);
+      if (m) return m.file;
+    }
+    const def = vs.find((v) => v.isDefault === true);
+    if (def) return def.file;
+    const mg = vs.find((v) => v.file === 'MG65.SQLite3');
+    if (mg) return mg.file;
+    const sbf = vs.find((v) => v.file === 'SBF.SQLite3');
+    if (sbf) return sbf.file;
+    return vs[0]?.file ?? 'MG65.SQLite3';
+  }
+
+  async function init() {
+    versions = await loadManifest();
+    currentVersion = pickDefaultVersion(versions);
+    renderVersionChips();
+    syncVersionChips(currentVersion);
+    let db: any;
+    try {
+      db = await loadDb(currentVersion);
+      allBooks = readBooks(db);
+    } catch {
+      readerTitle.textContent = '⚠️ ' + t(lang, 'bible_error');
+      return;
+    }
+    // Deep-link ?ref=… (ex : ?ref=Jao.3:16)
+    const qRef = new URLSearchParams(location.search).get('ref');
+    const initialRef = qRef ? parseReference(qRef) : null;
+    currentBook = initialRef?.bookNumber ?? allBooks[0]?.number ?? 0;
+    currentChapter = initialRef?.chapter ?? 1;
+    highlightRange = initialRef ? { start: initialRef.verseStart || 1, end: initialRef.verseEnd || 0 } : null;
+    const tid = allBooks.find((b) => b.number === currentBook)?.testamentId ?? 1;
+    renderTestaments(tid);
+    renderBooks(tid);
+    await loadChapter();
+  }
+
+  // --- Événements ------------------------------------------------------------
+  // Version (délégation : les chips sont rendus dynamiquement)
+  document.getElementById('version-tabs')?.addEventListener('click', async (e) => {
+    const chip = (e.target as HTMLElement).closest('.version-chip') as HTMLElement | null;
+    if (!chip) return;
+    const v = chip.dataset.version!;
+    if (v === currentVersion) return;
+    const prev = currentVersion;
+    currentVersion = v;
+    syncVersionChips(v);
+    try {
+      const db = await loadDb(v);
+      allBooks = readBooks(db);
+      currentBook = allBooks[0]?.number ?? 0;
+      currentChapter = 1;
+      const tid = allBooks[0]?.testamentId ?? 1;
+      renderTestaments(tid);
+      renderBooks(tid);
+      const vb = allBooks.find((b) => b.number === currentBook);
+      versionDesc.textContent = vb ? `${vb.longName} 1` : '';
+      highlightRange = null;
+      await loadChapter();
+    } catch {
+      // Revert : la version n'a pas pu être chargée
+      currentVersion = prev;
+      syncVersionChips(currentVersion);
+      versionDesc.textContent = '⚠️ ' + t(lang, 'bible_error');
+    }
+  });
+
+  // Testament (délégation : les onglets sont re-rendus dynamiquement)
+  document.getElementById('testament-tabs')?.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest('.testament-chip') as HTMLElement | null;
+    if (!chip) return;
+    const tid = Number(chip.dataset.testament);
+    renderTestaments(tid);
+    renderBooks(tid);
+  });
+
+  // Livre
+  bookGrid.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.book-chip') as HTMLElement | null;
+    if (!btn) return;
+    currentBook = Number(btn.dataset.book);
+    currentChapter = 1;
+    highlightRange = null;
+    const b = allBooks.find((x) => x.number === currentBook);
+    chapterSelect.innerHTML = Array.from({ length: b?.chapters ?? 0 }, (_, i) => i + 1)
+      .map((c) => `<option value="${c}" ${c === 1 ? 'selected' : ''}>${t(lang, 'bible_chapters')} ${c}</option>`)
+      .join('');
+    chapterSelect.value = '1';
+    loadChapter();
+  });
+
+  // Chapitre
+  chapterSelect?.addEventListener('change', () => {
+    currentChapter = Number(chapterSelect.value);
+    highlightRange = null;
+    loadChapter();
+  });
+
+  // Précédent / suivant
+  prevBtn?.addEventListener('click', () => {
+    if (currentChapter > 1) {
+      currentChapter--;
+      chapterSelect.value = String(currentChapter);
+      highlightRange = null;
+      loadChapter();
+    } else {
+      // recule d'un livre
+      const idx = allBooks.findIndex((b) => b.number === currentBook);
+      const prevBook = allBooks[idx - 1];
+      if (prevBook) {
+        currentBook = prevBook.number;
+        currentChapter = prevBook.chapters;
+        const tid = prevBook.testamentId;
+        renderTestaments(tid);
+        renderBooks(tid);
+        chapterSelect.value = String(currentChapter);
+        highlightRange = null;
+        loadChapter();
+      }
+    }
+  });
+  nextBtn?.addEventListener('click', () => {
+    const b = allBooks.find((x) => x.number === currentBook);
+    if (b && currentChapter < b.chapters) {
+      currentChapter++;
+      chapterSelect.value = String(currentChapter);
+      highlightRange = null;
+      loadChapter();
+    } else {
+      const idx = allBooks.findIndex((x) => x.number === currentBook);
+      const nextBook = allBooks[idx + 1];
+      if (nextBook) {
+        currentBook = nextBook.number;
+        currentChapter = 1;
+        const tid = nextBook.testamentId;
+        renderTestaments(tid);
+        renderBooks(tid);
+        chapterSelect.value = '1';
+        highlightRange = null;
+        loadChapter();
+      }
+    }
+  });
+
+  // Copier le chapitre
+  copyBtn?.addEventListener('click', async () => {
+    const text = Array.from(versesEl.querySelectorAll('.bible-verse'))
+      .map((p) => {
+        const num = p.querySelector('span')?.textContent ?? '';
+        const txt = p.querySelector('span:last-child')?.textContent ?? '';
+        return `${num}. ${txt}`;
+      })
+      .join('\n');
+    const header = `${readerTitle.textContent} (${currentVersion.replace('.SQLite3', '')})\n\n`;
+    try {
+      await navigator.clipboard.writeText(header + text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = header + text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    const old = copyBtn.innerHTML;
+    copyBtn.textContent = t(lang, 'bible_copied');
+    setTimeout(() => (copyBtn.innerHTML = old), 1800);
+  });
+
+  // ---- Recherche rapide -----------------------------------------------------
+  const RECENT_KEY = 'ah-bible-recent';
+
+  function getRecent(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+    } catch {
+      return [];
+    }
+  }
+  function saveRecent(q: string) {
+    const list = [q, ...getRecent().filter((x) => x !== q)].slice(0, 6);
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+    } catch {
+      /* stockage indisponible */
+    }
+    renderRecent();
+  }
+  function renderRecent() {
+    const list = getRecent();
+    if (!list.length) {
+      searchRecent.classList.add('hidden');
+      return;
+    }
+    searchRecent.classList.remove('hidden');
+    searchRecent.innerHTML = `
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <span class="text-[11px] text-slate-400 dark:text-slate-500">🕘 ${t(lang, 'bible_search_recent')} :</span>
+        ${list
+          .map(
+            (q) =>
+              `<button type="button" class="recent-chip chip border border-slate-300/60 px-3 py-1 text-xs text-slate-500 transition hover:border-gold-500/60 hover:text-gold-600 dark:border-night-600 dark:text-slate-300">${esc(q)}</button>`
+          )
+          .join('')}
+        <button type="button" id="search-clear-recent" class="text-[11px] text-slate-400 underline-offset-2 hover:underline dark:text-slate-500">${t(lang, 'bible_search_clear')}</button>
+      </div>`;
+  }
+  searchRecent.addEventListener('click', (e) => {
+    const chip = (e.target as HTMLElement).closest('.recent-chip') as HTMLElement | null;
+    if (chip) {
+      searchInput.value = chip.textContent ?? '';
+      searchForm.dispatchEvent(new Event('submit'));
+      return;
+    }
+    if ((e.target as HTMLElement).id === 'search-clear-recent') {
+      try {
+        localStorage.removeItem(RECENT_KEY);
+      } catch {
+        /* ignore */
+      }
+      renderRecent();
+    }
+  });
+
+  function showFeedback(html: string) {
+    searchFeedback.innerHTML = html;
+    searchFeedback.classList.remove('hidden');
+  }
+  function hideFeedback() {
+    searchFeedback.classList.add('hidden');
+  }
+
+  // Saute vers un livre/chapitre + plage de versets à surligner
+  async function gotoChapter(bookNumber: number, chapter: number, hl?: { start: number; end: number }) {
+    const b = allBooks.find((x) => x.number === bookNumber);
+    if (!b) return false;
+    currentBook = bookNumber;
+    currentChapter = chapter;
+    const tid = b.testamentId;
+    renderTestaments(tid);
+    renderBooks(tid);
+    setActiveBook(bookNumber);
+    chapterSelect.value = String(chapter);
+    highlightRange = hl ?? null;
+    await loadChapter();
+    return true;
+  }
+
+  searchForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = searchInput.value.trim();
+    if (!q) return;
+    hideFeedback();
+    // 1) Tentative de référence biblique (Jao.3:16, Genèse 1:1, Jao.3:16-20…)
+    const ref = parseReference(q);
+    if (ref) {
+      const b = allBooks.find((x) => x.number === ref.bookNumber);
+      saveRecent(q);
+      await gotoChapter(ref.bookNumber, ref.chapter, {
+        start: ref.verseStart || 1,
+        end: ref.verseEnd || 0,
+      });
+      showFeedback(
+        `<p class="rounded-xl bg-gold-500/10 px-3 py-2 text-center text-xs text-gold-600 dark:text-gold-400">📖 ${t(lang, 'bible_search_found')} : <strong>${esc(b ? b.longName : ref.reference)} ${ref.chapter}${ref.verseStart ? ':' + ref.verseStart + (ref.verseEnd > ref.verseStart ? '-' + ref.verseEnd : '') : ''}</strong></p>`
+      );
+      return;
+    }
+    // 2) Recherche plein-texte (mots-clés / phrases)
+    try {
+      const db = await loadDb(currentVersion);
+      const data = searchVerses(db, q);
+      saveRecent(q);
+      if (!data.count) {
+        showFeedback(
+          `<p class="rounded-xl bg-rose-500/10 px-3 py-2 text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')} « ${esc(q)} »</p>`
+        );
+        return;
+      }
+      const items = data.results
+        .slice(0, 25)
+        .map((r) => {
+          const preview = r.text.length > 110 ? r.text.slice(0, 110) + '…' : r.text;
+          return `<button type="button" class="search-hit block w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2.5 text-left transition hover:border-gold-500/60 hover:bg-gold-500/5 dark:border-night-700/60 dark:bg-night-800/70" data-book="${r.bookNumber}" data-chapter="${r.chapter}" data-verse="${r.verse}">
+            <span class="block text-xs font-bold text-gold-600 dark:text-gold-400">${esc(r.reference)}</span>
+            <span class="mt-0.5 block text-[13px] leading-snug text-slate-600 dark:text-slate-300">${esc(preview)}</span>
+          </button>`;
+        })
+        .join('');
+      showFeedback(
+        `<div class="space-y-1.5">
+          <p class="text-center text-xs text-slate-500 dark:text-slate-400">🔎 <strong>${data.count}</strong> ${t(lang, 'bible_search_results')} pour « ${esc(q)} »</p>
+          <div class="max-h-72 overflow-y-auto space-y-1.5">${items}</div>
+        </div>`
+      );
+      // Clic sur un résultat → ouvre le chapitre et surligne le verset
+      searchFeedback.querySelectorAll('.search-hit').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const el = btn as HTMLElement;
+          await gotoChapter(Number(el.dataset.book), Number(el.dataset.chapter), {
+            start: Number(el.dataset.verse),
+            end: Number(el.dataset.verse),
+          });
+          hideFeedback();
+        });
+      });
+    } catch {
+      showFeedback(`<p class="text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_error')}</p>`);
+    }
+  });
+
+  // Raccourci clavier : « / » pour focus la recherche
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape') hideFeedback();
+  });
+
+  renderRecent();
+  init();
+</script>

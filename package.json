@@ -1,0 +1,40 @@
+{
+  "name": "andeaha-hizaha",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Andeaha Hizaha — Plateforme publique d'étude biblique : sermons vidéo, cours, audio & séminaires (PWA + IA)",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/fix-base.mjs",
+    "preview": "astro preview",
+    "seed": "node scripts/seed.ts",
+    "icons": "node scripts/generate-icons.mjs",
+    "setup": "node scripts/generate-icons.mjs && node scripts/seed.ts",
+    "sync": "node --loader ts-node/esm scripts/sync-adventools.ts",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.2",
+    "@astrojs/tailwind": "^6.0.2",
+    "@supabase/supabase-js": "^2.111.0",
+    "@vite-pwa/astro": "^1.2.0",
+    "astro": "^5.18.2",
+    "better-sqlite3": "^13.0.2",
+    "sql.js": "^1.14.1",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.1.2",
+    "sharp": "^0.34.1",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.6.3"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.27.7": true
+  }
+}

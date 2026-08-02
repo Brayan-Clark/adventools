@@ -1,0 +1,453 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import VerseCard from '@/components/VerseCard.astro';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+// Site 100% statique (GitHub Pages) : les données sont chargées côté client
+// depuis Supabase. Le frontmatter ne contient que la coquille statique.
+const lang: Lang = 'fr';
+
+const heroImage =
+  'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1920&q=80';
+
+const catIcons: Record<string, string> = {
+  book: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 2h10v1.5H7V8zm0 3h10v1.5H7V11zm0 3h6v1.5H7V14z',
+  music: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z',
+  heart: 'M12 21s-7.5-4.9-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 19.5 12c-2 4.1-7.5 9-7.5 9z',
+  flame: 'M12 2s5 4.5 5 10a5 5 0 01-10 0c0-1.5.5-2.8 1.2-4C9.5 9.5 10 11 12 11s2.5-1.5 2.5-3.5C14.5 5 12 2 12 2z',
+  scroll: 'M8 3h9a2 2 0 012 2v2h-2V5H8V3zm-1 0a1 1 0 100 2v14a2 2 0 01-2 2 1 1 0 01-1-1V4a1 1 0 011-1h2zm4 7h7v2h-7v-2zm0 4h7v2h-7v-2z',
+  sparkles: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zm7 10l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15z',
+};
+const catColors: Record<string, string> = {
+  indigo: 'from-indigo-600 to-violet-600',
+  gold: 'from-amber-500 to-orange-600',
+  rose: 'from-rose-500 to-pink-600',
+  orange: 'from-orange-500 to-red-500',
+  emerald: 'from-emerald-500 to-teal-600',
+  sky: 'from-sky-500 to-blue-600',
+};
+---
+
+<Layout lang={lang} title={t(lang, 'hero_title')} description={t(lang, 'hero_subtitle')}>
+  <!-- ==================== HERO ==================== -->
+  <section class="hero-pattern relative overflow-hidden border-b border-slate-200/60 dark:border-night-700/60">
+    <div class="pointer-events-none absolute inset-0">
+      <img
+        src={heroImage}
+        alt=""
+        class="h-full w-full object-cover opacity-15 dark:opacity-10"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#f6f3ee] dark:to-night-950" />
+    </div>
+
+    <div class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+      <div class="max-w-3xl">
+        <span class="animate-fade-up chip border border-gold-500/40 bg-gold-500/10 text-gold-600 dark:text-gold-400">
+          <svg class="mr-1.5 h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2z" />
+          </svg>
+          <span data-i18n="hero_badge">{t(lang, 'hero_badge')}</span>
+        </span>
+
+        <h1 class="animate-fade-up mt-6 font-display text-4xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl dark:text-white" style="animation-delay: 0.1s">
+          Andeaha <span class="text-gradient-gold">Hizaha</span>
+        </h1>
+
+        <p class="animate-fade-up mt-6 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-300" style="animation-delay: 0.2s">
+          <span data-i18n="hero_subtitle">{t(lang, 'hero_subtitle')}</span>
+        </p>
+
+        <div class="animate-fade-up mt-8 flex flex-wrap items-center gap-3" style="animation-delay: 0.3s">
+          <a href="/sermons" class="btn-gold">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7L8 5z" />
+            </svg>
+            <span data-i18n="hero_cta_sermons">{t(lang, 'hero_cta_sermons')}</span>
+          </a>
+          <a href="/assistant" class="btn-ghost">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2zm7 11l.95 2.55L22.5 16.5l-2.55.95L19 20l-.95-2.55L15.5 16.5l2.55-.95L19 13z" />
+            </svg>
+            <span data-i18n="hero_cta_ai">{t(lang, 'hero_cta_ai')}</span>
+          </a>
+        </div>
+
+        <!-- Verset du jour -->
+        <div id="verse-of-day" class="animate-fade-up mt-10 max-w-lg" style="animation-delay: 0.4s">
+          <div class="h-40 animate-pulse rounded-2xl bg-slate-200/60 dark:bg-night-800/60"></div>
+        </div>
+      </div>
+
+      <!-- Statistiques -->
+      <div id="stats-grid" class="animate-fade-up mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6" style="animation-delay: 0.5s">
+        {Array.from({ length: 6 }).map(() => (
+          <div class="glass flex items-center gap-3 rounded-2xl border border-slate-200/60 px-4 py-3.5 dark:border-night-700/60">
+            <span class="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-slate-200/60 dark:bg-night-800/60"></span>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 w-10 animate-pulse rounded bg-slate-200/60 dark:bg-night-800/60"></div>
+              <div class="h-3 w-20 animate-pulse rounded bg-slate-200/60 dark:bg-night-800/60"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== EN VEDETTE ==================== -->
+  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <div class="reveal flex items-end justify-between gap-4">
+      <div>
+        <p class="section-kicker">✦ <span data-i18n="featured">{t(lang, 'featured')}</span></p>
+        <h2 class="section-title mt-1"><span data-i18n="featured">{t(lang, 'featured')}</span></h2>
+      </div>
+      <a href="/sermons" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+        {t(lang, 'view_all')} →
+      </a>
+    </div>
+    <div id="featured-grid" class="reveal mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"></div>
+  </section>
+
+  <!-- ==================== CATÉGORIES ==================== -->
+  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div class="reveal flex items-end justify-between gap-4">
+      <div>
+        <p class="section-kicker">✦ <span data-i18n="categories_section">{t(lang, 'categories_section')}</span></p>
+        <h2 class="section-title mt-1"><span data-i18n="categories_section">{t(lang, 'categories_section')}</span></h2>
+      </div>
+    </div>
+    <div id="categories-grid" class="reveal mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"></div>
+  </section>
+
+  <!-- ==================== DERNIERS SERMONS ==================== -->
+  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <div class="reveal flex items-end justify-between gap-4">
+      <div>
+        <p class="section-kicker">✦ <span data-i18n="latest_sermons">{t(lang, 'latest_sermons')}</span></p>
+        <h2 class="section-title mt-1"><span data-i18n="latest_sermons">{t(lang, 'latest_sermons')}</span></h2>
+      </div>
+      <a href="/sermons" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+        {t(lang, 'view_all')} →
+      </a>
+    </div>
+    <div id="sermons-grid" class="reveal mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"></div>
+  </section>
+
+  <!-- ==================== COURS ==================== -->
+  <section id="courses-section" class="hidden bg-gradient-to-b from-transparent to-indigo-500/5 py-16 dark:to-indigo-500/5">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="reveal flex items-end justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ <span data-i18n="courses_section">{t(lang, 'courses_section')}</span></p>
+          <h2 class="section-title mt-1"><span data-i18n="courses_section">{t(lang, 'courses_section')}</span></h2>
+        </div>
+        <a href="/cours" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+          {t(lang, 'view_all')} →
+        </a>
+      </div>
+      <div id="courses-grid" class="reveal mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+  </section>
+
+  <!-- ==================== AUDIO ==================== -->
+  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <div class="reveal flex items-end justify-between gap-4">
+      <div>
+        <p class="section-kicker">✦ <span data-i18n="audio_section">{t(lang, 'audio_section')}</span></p>
+        <h2 class="section-title mt-1"><span data-i18n="audio_section">{t(lang, 'audio_section')}</span></h2>
+      </div>
+      <a href="/audio" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+        {t(lang, 'view_all')} →
+      </a>
+    </div>
+    <div id="audio-grid" class="reveal mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"></div>
+  </section>
+
+  <!-- ==================== CONFÉRENCES ==================== -->
+  <section id="conferences-section" class="hidden bg-gradient-to-b from-transparent to-violet-500/5 py-16 dark:to-violet-500/5">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="reveal flex items-end justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ <span data-i18n="conferences_section">{t(lang, 'conferences_section')}</span></p>
+          <h2 class="section-title mt-1"><span data-i18n="conferences_section">{t(lang, 'conferences_section')}</span></h2>
+        </div>
+        <a href="/conferences" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+          {t(lang, 'view_all')} →
+        </a>
+      </div>
+      <div id="conferences-grid" class="reveal mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+  </section>
+
+  <!-- ==================== CANTIQUES ==================== -->
+  <section id="cantiques-section" class="hidden bg-gradient-to-b from-transparent to-emerald-500/5 py-16 dark:to-emerald-500/5">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="reveal flex items-end justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ <span data-i18n="cantiques_section">{t(lang, 'cantiques_section')}</span></p>
+          <h2 class="section-title mt-1">🎵 <span data-i18n="cantiques_section">{t(lang, 'cantiques_section')}</span></h2>
+        </div>
+        <a href="/cantiques" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+          {t(lang, 'view_all')} →
+        </a>
+      </div>
+      <p id="cantiques-stats" class="reveal mt-2 text-sm text-slate-500 dark:text-slate-400"></p>
+      <div id="cantiques-grid" class="reveal mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+  </section>
+
+  <!-- ==================== BIBLE ==================== -->
+  <section id="bible-section" class="hidden bg-gradient-to-b from-transparent to-sky-500/5 py-16 dark:to-sky-500/5">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="reveal flex items-end justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ <span data-i18n="nav_bible">{t(lang, 'nav_bible')}</span></p>
+          <h2 class="section-title mt-1">📖 <span data-i18n="bible_section">{t(lang, 'bible_section')}</span></h2>
+        </div>
+        <a href="/bible" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+          {t(lang, 'bible_open_reader')} →
+        </a>
+      </div>
+      <p class="reveal mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400"><span data-i18n="bible_subtitle">{t(lang, 'bible_subtitle')}</span></p>
+      <div id="bible-grid" class="reveal mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+    </div>
+  </section>
+
+  <!-- ==================== BIBLIOTHÈQUE DE DOCUMENTS ==================== -->
+  <section id="docs-section" class="hidden bg-gradient-to-b from-transparent to-rose-500/5 py-16 dark:to-rose-500/5">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6">
+      <div class="reveal flex items-end justify-between gap-4">
+        <div>
+          <p class="section-kicker">✦ <span data-i18n="nav_documents">{t(lang, 'nav_documents')}</span></p>
+          <h2 class="section-title mt-1">📚 <span data-i18n="documents_section">{t(lang, 'documents_section')}</span></h2>
+        </div>
+        <a href="/documents" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+          {t(lang, 'view_all')} →
+        </a>
+      </div>
+      <p class="reveal mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400"><span data-i18n="documents_subtitle">{t(lang, 'documents_subtitle')}</span></p>
+      <div id="docs-grid" class="reveal mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+    </div>
+  </section>
+
+  <!-- ==================== MOFONAINA ==================== -->
+  <section id="mofonaina-section" class="hidden mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+    <div class="reveal flex items-end justify-between gap-4">
+      <div>
+        <p class="section-kicker">✦ <span data-i18n="mofonaina_section">{t(lang, 'mofonaina_section')}</span></p>
+        <h2 class="section-title mt-1">🕊️ <span data-i18n="mofonaina_today">{t(lang, 'mofonaina_today')}</span></h2>
+      </div>
+      <a href="/mofonaina" class="hidden text-sm font-semibold text-gold-600 transition hover:underline sm:block dark:text-gold-400">
+        {t(lang, 'view_all')} →
+      </a>
+    </div>
+    <div class="reveal mt-8 overflow-hidden rounded-3xl border border-gold-500/40 bg-gradient-to-b from-white to-gold-500/5 shadow-soft dark:from-night-800 dark:to-gold-500/5 dark:border-gold-500/30">
+      <div class="p-6 sm:p-8">
+        <div class="flex flex-wrap items-start gap-6">
+          <div class="min-w-0 flex-1">
+            <h3 id="mofonaina-title" class="font-display text-xl font-bold text-slate-900 dark:text-white"></h3>
+            <p id="mofonaina-ref" class="mt-2 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400"></p>
+            <blockquote class="mt-3 border-l-4 border-gold-500 pl-4">
+              <p id="mofonaina-verse" class="text-[15px] italic leading-relaxed text-slate-600 dark:text-slate-300"></p>
+            </blockquote>
+            <p id="mofonaina-content" class="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400"></p>
+            <a href="/mofonaina" class="btn-gold mt-5 px-4 py-2 text-xs">
+              {t(lang, 'read')} →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase, getMedia, getCategories, getVerseOfDay, getCantiques, getCantiquesWithPlayback, getMeditationForDate, getStats } from '@/lib/supabase';
+  import { clientLang, mediaCardHtml, verseCardHtml } from '@/lib/client-render';
+  import { t, bibleVersionLabel, bibleLanguageName } from '@/lib/i18n';
+
+  const lang = clientLang();
+
+  // URL base (pour les liens internes sur GitHub Pages)
+  const BASE = import.meta.env.BASE_URL ?? '/';
+
+  const ADVENTOOLS = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
+
+  function show(el: HTMLElement | null, ok: boolean) {
+    if (!el) return;
+    el.classList.toggle('hidden', !ok);
+  }
+
+  async function load() {
+    try {
+      const [featured, categories, latestSermons, courses, audioItems, conferences, cantiques, meditation, stats] = await Promise.all([
+        getMedia({ featured: true, limit: 4 }).catch(() => []),
+        getCategories().catch(() => []),
+        getMedia({ type: 'sermon', limit: 4 }).catch(() => []),
+        getMedia({ type: 'course', limit: 3 }).catch(() => []),
+        getMedia({ type: 'audio', limit: 4 }).catch(() => []),
+        getMedia({ type: 'conference', limit: 3 }).catch(() => []),
+        getCantiquesWithPlayback('mg').catch(() => []),
+        getMeditationForDate().catch(() => null),
+        getStats().catch(() => null),
+      ]);
+
+      // Verset du jour
+      const verse = await getVerseOfDay().catch(() => null);
+      const verseEl = document.getElementById('verse-of-day');
+      if (verseEl && verse) {
+        verseEl.innerHTML = verseCardHtml(verse, lang);
+      } else if (verseEl) {
+        verseEl.remove();
+      }
+
+      // Stats
+      const statDefs = [
+        { key: 'sermons', label: t(lang, 'stat_sermons'), icon: 'M15 10l4.55-2.28A1 1 0 0121 8.6v6.8a1 1 0 01-1.45.88L15 14v-4z' },
+        { key: 'courses', label: t(lang, 'stat_courses'), icon: 'M12 3l9 5-9 5-9-5 9-5zm-7 8.5v4.5c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5v-4.5L12 13l-7-1.5z' },
+        { key: 'audio', label: t(lang, 'stat_audio'), icon: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z' },
+        { key: 'seminars', label: t(lang, 'stat_seminars'), icon: 'M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.56-.12-1.1-.33-1.58M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.56.12-1.1.33-1.58m0 0a5 5 0 019.34 0M15 6a3 3 0 11-6 0 3 3 0 016 0z' },
+        { key: 'conferences', label: t(lang, 'stat_conferences'), icon: 'M8 5v14l11-7L8 5zm8 1a2 2 0 110-4 2 2 0 010 4zM5 7a3 3 0 013 3v8a3 3 0 01-6 0v-8a3 3 0 013-3z' },
+        { key: 'articles', label: t(lang, 'stat_articles'), icon: 'M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h10v2H4v-2zm0 4h16v2H4v-2z' },
+      ];
+      const statsGrid = document.getElementById('stats-grid');
+      if (statsGrid && stats) {
+        statsGrid.innerHTML = statDefs.map((s) => `
+          <div class="glass flex items-center gap-3 rounded-2xl border border-slate-200/60 px-4 py-3.5 dark:border-night-700/60">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-500/15 text-gold-600 dark:text-gold-400">
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="${s.icon}" /></svg>
+            </span>
+            <div>
+              <p class="font-display text-xl font-bold text-slate-900 dark:text-white">${stats[s.key as keyof typeof stats] ?? 0}</p>
+              <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">${s.label}</p>
+            </div>
+          </div>`).join('');
+      }
+
+      // En vedette
+      const featuredGrid = document.getElementById('featured-grid');
+      if (featuredGrid && featured.length) {
+        featuredGrid.innerHTML = featured.map((m) => mediaCardHtml(m, lang)).join('');
+      }
+
+      // Catégories
+      const catGrid = document.getElementById('categories-grid');
+      if (catGrid) {
+        const icons = { book: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 2h10v1.5H7V8zm0 3h10v1.5H7V11zm0 3h6v1.5H7V14z', music: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z', heart: 'M12 21s-7.5-4.9-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 19.5 12c-2 4.1-7.5 9-7.5 9z', flame: 'M12 2s5 4.5 5 10a5 5 0 01-10 0c0-1.5.5-2.8 1.2-4C9.5 9.5 10 11 12 11s2.5-1.5 2.5-3.5C14.5 5 12 2 12 2z', scroll: 'M8 3h9a2 2 0 012 2v2h-2V5H8V3zm-1 0a1 1 0 100 2v14a2 2 0 01-2 2 1 1 0 01-1-1V4a1 1 0 011-1h2zm4 7h7v2h-7v-2zm0 4h7v2h-7v-2z', sparkles: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zm7 10l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15z' };
+        const colors: Record<string, string> = { indigo: 'from-indigo-600 to-violet-600', gold: 'from-amber-500 to-orange-600', rose: 'from-rose-500 to-pink-600', orange: 'from-orange-500 to-red-500', emerald: 'from-emerald-500 to-teal-600', sky: 'from-sky-500 to-blue-600' };
+        catGrid.innerHTML = categories.map((c) => `
+          <a href="${BASE}recherche?categorie=${c.slug}" class="card-hover group flex flex-col items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-5 text-center shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${colors[c.color] ?? 'from-indigo-600 to-violet-600'} text-white shadow-lg transition-transform duration-300 group-hover:scale-110">
+              <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="${icons[c.icon] ?? icons.book}" /></svg>
+            </span>
+            <span class="text-sm font-semibold leading-tight text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${lang === 'mg' ? c.name_mg : c.name_fr}</span>
+          </a>`).join('');
+      }
+
+      // Sermons
+      const sermonsGrid = document.getElementById('sermons-grid');
+      if (sermonsGrid && latestSermons.length) sermonsGrid.innerHTML = latestSermons.map((m) => mediaCardHtml(m, lang)).join('');
+
+      // Cours
+      show(document.getElementById('courses-section'), courses.length > 0);
+      const coursesGrid = document.getElementById('courses-grid');
+      if (coursesGrid && courses.length) coursesGrid.innerHTML = courses.map((m) => mediaCardHtml(m, lang)).join('');
+
+      // Audio
+      const audioGrid = document.getElementById('audio-grid');
+      if (audioGrid && audioItems.length) audioGrid.innerHTML = audioItems.map((m) => mediaCardHtml(m, lang)).join('');
+
+      // Conférences
+      show(document.getElementById('conferences-section'), conferences.length > 0);
+      const confGrid = document.getElementById('conferences-grid');
+      if (confGrid && conferences.length) confGrid.innerHTML = conferences.map((m) => mediaCardHtml(m, lang)).join('');
+
+      // Cantiques
+      show(document.getElementById('cantiques-section'), cantiques.length > 0);
+      const cantStats = document.getElementById('cantiques-stats');
+      if (cantStats && stats) {
+        cantStats.textContent = `${stats.cantiques.mg} ${t(lang, 'cantiques_total')} · ${cantiques.length} ${t(lang, 'with_audio')}`;
+      }
+      const cantGrid = document.getElementById('cantiques-grid');
+      if (cantGrid && cantiques.length) {
+        cantGrid.innerHTML = cantiques.slice(0, 6).map((c) => `
+          <a href="${BASE}cantiques/${c.id}?lang=${lang}&clang=${c.lang}" class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 font-display text-sm font-bold text-white shadow">${c.num ?? '♪'}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-semibold text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${c.title}</span>
+              <span class="text-[11px] text-emerald-500">♪ ${t(lang, 'cantique_listen')}</span>
+            </span>
+          </a>`).join('');
+      }
+
+      // Bible (manifest depuis adventools, pas de duplication)
+      try {
+        const manifest = await fetch(`${ADVENTOOLS}/bible/manifest.json`).then((r) => r.json());
+        const versions = (manifest.versions ?? []).slice(0, 8);
+        show(document.getElementById('bible-section'), versions.length > 0);
+        const bibleGrid = document.getElementById('bible-grid');
+        if (bibleGrid && versions.length) {
+          bibleGrid.innerHTML = versions.map((v: any) => `
+            <a href="${BASE}bible?version=${encodeURIComponent(v.file)}" class="card-hover group rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+              <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow transition-transform duration-300 group-hover:scale-110">
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zm-7 8.5v4.5c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5v-4.5L12 13l-7-1.5z" /></svg>
+              </span>
+              <p class="mt-3 font-display text-base font-semibold text-slate-900 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400">${bibleVersionLabel(lang, v)}</p>
+              <p class="mt-0.5 text-xs text-slate-400">${bibleLanguageName(lang, v.language ?? '')}</p>
+            </a>`).join('');
+        }
+      } catch {
+        /* bible indisponible */
+      }
+
+      // Documents (manifest depuis adventools)
+      try {
+        const docManifest = await fetch(`${ADVENTOOLS}/docs/manifest.json`).then((r) => r.json());
+        const cats = (docManifest.categories ?? docManifest.documents_categories ?? []).slice(0, 8);
+        show(document.getElementById('docs-section'), cats.length > 0);
+        const docsGrid = document.getElementById('docs-grid');
+        if (docsGrid && cats.length) {
+          docsGrid.innerHTML = cats.map((c: any) => `
+            <a href="${BASE}documents" class="card-hover group rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+              <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow transition-transform duration-300 group-hover:scale-110">
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm8 1.5V7h3.5L14 3.5zM8 12h8v1.5H8V12zm0 4h8v1.5H8V16z" /></svg>
+              </span>
+              <p class="mt-3 font-display text-base font-semibold text-slate-900 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400">${String(c.id ?? c.slug ?? c.name ?? 'Document').replace(/_/g, ' ')}</p>
+              <p class="mt-0.5 text-xs text-slate-400">${c.count ?? ''} ${t(lang, 'documents_total')}</p>
+            </a>`).join('');
+        }
+      } catch {
+        /* documents indisponibles */
+      }
+
+      // Mofonaina
+      show(document.getElementById('mofonaina-section'), !!meditation);
+      if (meditation) {
+        (document.getElementById('mofonaina-title') as HTMLElement).textContent = meditation.titre_du_jour;
+        (document.getElementById('mofonaina-ref') as HTMLElement).textContent = meditation.verset_reference || '';
+        (document.getElementById('mofonaina-verse') as HTMLElement).textContent = meditation.verset_texte || '';
+        (document.getElementById('mofonaina-content') as HTMLElement).textContent = (meditation.contenu || meditation.content || '').replace(/\n+/g, ' ');
+      }
+
+      // Déclencher les animations reveal
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add('visible');
+              io.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.08 }
+      );
+      document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+    } catch (err) {
+      console.error('Erreur de chargement de la page d\'accueil :', err);
+    }
+  }
+
+  load();
+</script>
