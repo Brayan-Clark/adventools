@@ -178,7 +178,7 @@ export async function importPresentationsZip(file: File): Promise<{ presentation
       const ext = originalName.split('.').pop()?.toLowerCase() ?? '';
       const mimeMap: Record<string, string> = {
         mp4: 'video/mp4', webm: 'video/webm', ogg: 'video/ogg',
-        mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
+        mp3: 'audio/mpeg', wav: 'audio/wav',
         png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
         gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp',
         pdf: 'application/pdf',
