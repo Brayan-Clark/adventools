@@ -9,8 +9,10 @@ dist/
 .env.*.local
 
 # Données lourdes locales (SQLite, PDF) — servies depuis adventools
-data/
+/data/
 public/docs/
+# Public/data (JSON cantiques/mofonaina) DOIT être commité pour le build CI
+!public/data/
 
 # Uploads
 public/uploads/*

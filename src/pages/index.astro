@@ -264,8 +264,8 @@ const catColors: Record<string, string> = {
 </Layout>
 
 <script>
-  import { supabase, getMedia, getCategories, getVerseOfDay, getMeditationForDate, getStats } from '@/lib/supabase';
-  import { getCantiquesJson } from '@/lib/static-data';
+  import { supabase, getMedia, getCategories, getVerseOfDay, getStats } from '@/lib/supabase';
+  import { getCantiquesJson, getMeditationForDateJson } from '@/lib/static-data';
   import { clientLang, mediaCardHtml, verseCardHtml } from '@/lib/client-render';
   import { t, bibleVersionLabel, bibleLanguageName } from '@/lib/i18n';
 
@@ -291,7 +291,7 @@ const catColors: Record<string, string> = {
         getMedia({ type: 'audio', limit: 4 }).catch(() => []),
         getMedia({ type: 'conference', limit: 3 }).catch(() => []),
         getCantiquesJson('mg').then((list) => list.filter((c) => c.playback)).catch(() => []),
-        getMeditationForDate().catch(() => null),
+        getMeditationForDateJson().catch(() => null),
         getStats().catch(() => null),
       ]);
 

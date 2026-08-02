@@ -1,11 +1,14 @@
 /**
- * Chargement de données statiques depuis des JSON servis en statique
- * (cantiques, mofonaina), avec cache localStorage pour l'offline.
+ * Chargement des données de référence (cantiques, mofonaina) DIRECTEMENT depuis
+ * la branche `data` du dépôt adventools (URLs raw GitHub), avec :
+ *   - cache localStorage pour l'offline (TTL 24h)
+ *   - fallback sur les JSON locaux public/data/ si le réseau échoue
  *
- * Pattern : localStorage → fetch → cache → retour.
- * Pas de dépendance Supabase pour ces données.
+ * Avantage : quand la branche `data` d'adventools est mise à jour, l'app est
+ * à jour automatiquement (même principe que la bible via sql.js).
  */
 
+const RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
 const BASE = import.meta.env.BASE_URL ?? '/';
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 heures
 
@@ -37,27 +40,29 @@ function setCache<T>(key: string, data: T): void {
   }
 }
 
-/**
- * Récupère un JSON avec cache localStorage + fetch avec fallback.
- * @param cacheKey Clé localStorage
- * @param url URL du fichier JSON (relatif au site ou absolu)
- */
-export async function fetchWithCache<T>(cacheKey: string, url: string): Promise<T | null> {
-  // 1. Cache
-  const cached = getCache<T>(cacheKey);
-  if (cached) return cached;
-
-  // 2. Fetch (relatif au base path)
-  const fullUrl = url.startsWith('http') ? url : `${BASE.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(fullUrl);
+    const res = await fetch(url);
     if (!res.ok) return null;
-    const data: T = await res.json();
-    setCache(cacheKey, data);
-    return data;
+    return (await res.json()) as T;
   } catch {
     return null;
   }
+}
+
+/**
+ * Récupère un JSON local avec cache localStorage.
+ * @param cacheKey Clé localStorage
+ * @param url Chemin relatif au site
+ */
+export async function fetchWithCache<T>(cacheKey: string, url: string): Promise<T | null> {
+  const cached = getCache<T>(cacheKey);
+  if (cached) return cached;
+
+  const fullUrl = url.startsWith('http') ? url : `${BASE.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+  const data = await fetchJson<T>(fullUrl);
+  if (data) setCache(cacheKey, data);
+  return data;
 }
 
 // ── Types cantiques ──
@@ -72,10 +77,61 @@ export interface CantiqueJson {
   content?: string;
   playback?: string;
   source?: string;
-  lang?: string;
 }
 
-// ── Types mofonaina ──
+interface HymneVersion {
+  id: string;
+  name: string;
+  language: string;
+  url: string;
+}
+
+interface HymneManifest {
+  versions: HymneVersion[];
+}
+
+const LANG_MAP: Record<string, 'mg' | 'fr' | 'en'> = {
+  Malagasy: 'mg',
+  French: 'fr',
+  English: 'en',
+};
+
+// ── Fetch cantiques (depuis la branche data, fallback local) ──
+
+export async function getCantiquesJson(lang: 'mg' | 'fr' | 'en' = 'mg'): Promise<CantiqueJson[]> {
+  const cacheKey = `cantiques-${lang}`;
+
+  // 1. Cache localStorage
+  const cached = getCache<CantiqueJson[]>(cacheKey);
+  if (cached) return cached;
+
+  // 2. Branche data (auto-update)
+  const manifest = await fetchJson<HymneManifest>(`${RAW}/hymnes/manifest.json`);
+  if (manifest?.versions) {
+    const version = manifest.versions.find((v) => LANG_MAP[v.language] === lang);
+    if (version?.url) {
+      const data = await fetchJson<CantiqueJson[]>(version.url);
+      if (data && Array.isArray(data)) {
+        setCache(cacheKey, data);
+        return data;
+      }
+    }
+  }
+
+  // 3. Fallback local (offline)
+  return (await fetchWithCache<CantiqueJson[]>(cacheKey, `data/cantiques_${lang}.json`)) ?? [];
+}
+
+export async function getCantiqueByIdJson(id: string): Promise<CantiqueJson | null> {
+  for (const lang of ['mg', 'fr', 'en'] as const) {
+    const list = await getCantiquesJson(lang);
+    const found = list.find((c) => c.id === id);
+    if (found) return found;
+  }
+  return null;
+}
+
+// ── Fetch mofonaina (depuis la branche data, fallback local) ──
 
 export interface MofonainaDayJson {
   date: string;
@@ -87,35 +143,33 @@ export interface MofonainaDayJson {
   source?: string;
 }
 
-// ── Fetch cantiques ──
-
-const CANTIQUE_FILES: Record<string, string> = {
-  mg: 'cantiques_mg.json',
-  fr: 'cantiques_fr.json',
-  en: 'cantiques_en.json',
-};
-
-export async function getCantiquesJson(lang: 'mg' | 'fr' | 'en' = 'mg'): Promise<CantiqueJson[]> {
-  const file = CANTIQUE_FILES[lang] ?? CANTIQUE_FILES.mg;
-  const data = await fetchWithCache<CantiqueJson[]>(`cantiques-${lang}`, `data/${file}`);
-  return data ?? [];
+function quarterOf(date: Date): string {
+  const y = date.getFullYear();
+  const q = Math.floor(date.getMonth() / 3) + 1;
+  return `${y}-Q${q}`;
 }
-
-export async function getCantiqueByIdJson(id: string): Promise<CantiqueJson | null> {
-  // Cherche dans toutes les langues
-  for (const lang of ['mg', 'fr', 'en'] as const) {
-    const list = await getCantiquesJson(lang);
-    const found = list.find((c) => c.id === id);
-    if (found) return found;
-  }
-  return null;
-}
-
-// ── Fetch mofonaina ──
 
 export async function getMofonainaJson(): Promise<MofonainaDayJson[]> {
-  const data = await fetchWithCache<MofonainaDayJson[]>('mofonaina', 'data/mofonaina.json');
-  return data ?? [];
+  const cacheKey = 'mofonaina';
+
+  // 1. Cache localStorage
+  const cached = getCache<MofonainaDayJson[]>(cacheKey);
+  if (cached) return cached;
+
+  // 2. Branche data (auto-update) — fichier du trimestre courant
+  const file = `${quarterOf(new Date())}.json`;
+  const raw = await fetchJson<{ meditations?: MofonainaDayJson[] }>(`${RAW}/mofonaina/${file}`);
+  if (raw && Array.isArray(raw.meditations)) {
+    setCache(cacheKey, raw.meditations);
+    return raw.meditations;
+  }
+
+  // 3. Fallback local (offline)
+  const local = await fetchWithCache<{ meditations?: MofonainaDayJson[] }>(cacheKey, 'data/mofonaina.json');
+  if (local && Array.isArray(local.meditations)) {
+    return local.meditations;
+  }
+  return [];
 }
 
 export async function getMeditationForDateJson(date?: string): Promise<MofonainaDayJson | null> {
