@@ -12,7 +12,7 @@ CREATE POLICY "Utilisateurs peuvent créer leur profil" ON users
 INSERT INTO public.users (id, email, display_name, role_id, is_active)
 SELECT id, email, 'Admin', (SELECT id FROM public.roles WHERE name = 'admin'), true
 FROM auth.users
-WHERE email = '<TON_EMAIL>'
+WHERE email = 'clarco.dev@mada-digital.net'
 ON CONFLICT (id) DO UPDATE
   SET role_id = (SELECT id FROM public.roles WHERE name = 'admin'),
       is_active = true;

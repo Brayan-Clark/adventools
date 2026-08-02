@@ -2,16 +2,32 @@
 import Layout from '@/layouts/Layout.astro';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Données cantiques : JSON statiques servis depuis public/data/
 // avec cache localStorage pour l'offline. Pas de Supabase.
 //
-// Astro exige getStaticPaths() pour une route [id]. On génère un placeholder
-// (la route existe), et le script client lit le VRAI id depuis
-// window.location.pathname pour afficher le bon cantique.
+// getStaticPaths PRÉ-GÉNÈRE une route pour CHAQUE cantique des JSON locaux
+// (public/data/cantiques_*.json) → /cantiques/33 existe sur GitHub Pages.
+// Le script client lit le VRAI id depuis window.location.pathname et affiche
+// le cantique (il re-fetch aussi depuis la branche data si besoin).
 
 export function getStaticPaths() {
-  return [{ params: { id: 'placeholder' } }];
+  const DATA_FILES = ['cantiques_mg.json', 'cantiques_fr.json', 'cantiques_en.json'];
+  const ids = new Set<string>();
+  for (const f of DATA_FILES) {
+    try {
+      const file = path.join(process.cwd(), 'public', 'data', f);
+      const list: Array<{ id: string | number }> = JSON.parse(fs.readFileSync(file, 'utf8'));
+      list.forEach((c) => ids.add(String(c.id)));
+    } catch {
+      // fichier absent (CI sans données) — route placeholder quand même
+    }
+  }
+  // Au moins une route (placeholder) pour que le build ne plante pas
+  const routes = [...ids].map((id) => ({ params: { id } }));
+  return routes.length ? routes : [{ params: { id: 'placeholder' } }];
 }
 
 const lang: Lang = 'fr';

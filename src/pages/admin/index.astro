@@ -275,15 +275,18 @@ const typeOptions = [
   }
 
   // --- Auth ---
+  // La page admin affiche le formulaire de connexion intégré (login-screen).
+  // NE PAS rediriger ici : /adventools/admin → 301 → /adventools/admin/ → boucle infinie.
   async function checkAuth() {
     const user = await getCurrentUser();
     if (!user) {
-      // redirige vers la page de connexion dédiée
-      window.location.href = BASE + 'admin';
+      dashboard.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
       return null;
     }
     showDashboard();
     currentUserEl.textContent = user.email;
+    await init(); // charge les données du dashboard (déjà connecté)
     return user;
   }
 
