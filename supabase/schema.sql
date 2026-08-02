@@ -180,6 +180,12 @@ CREATE POLICY "Lecture publique verses" ON verses FOR SELECT USING (true);
 -- Politiques pour les utilisateurs authentifiés
 CREATE POLICY "Utilisateurs peuvent voir leur profil" ON users FOR SELECT USING (auth.uid() = id);
 
+-- AUTO-VALIDATION : un utilisateur connecté (compte créé via le dashboard ou
+-- l'admin) peut créer son propre profil au premier login. Le rôle est NULL
+-- (aucun accès) jusqu'à ce qu'un admin lui attribue un rôle (admin/editor/viewer).
+CREATE POLICY "Utilisateurs peuvent créer leur profil" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id AND role_id IS NULL);
+
 -- Fonction pour vérifier le rôle
 CREATE OR REPLACE FUNCTION has_role(role_name TEXT)
 RETURNS BOOLEAN AS $$

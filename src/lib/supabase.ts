@@ -163,6 +163,32 @@ export async function getCurrentUser() {
     .eq('id', user.id)
     .single();
 
+  // AUTO-VALIDATION : si le compte existe dans Supabase auth mais n'a pas encore
+  // de profil (créé via le dashboard), on crée son profil au premier login.
+  // Le rôle est NULL → aucun accès tant qu'un admin ne l'a pas activé.
+  if (!userProfile && user.email) {
+    const { data: created } = await supabase
+      .from('users')
+      .insert({
+        id: user.id,
+        email: user.email,
+        display_name: user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? user.email.split('@')[0],
+        role_id: null,
+        is_active: true
+      })
+      .select('*, role:roles(*)')
+      .single();
+
+    if (created) return created as User;
+    // Si l'insertion échoue (profil déjà créé entre-temps), on re-lit
+    const { data: retry } = await supabase
+      .from('users')
+      .select('*, role:roles(*)')
+      .eq('id', user.id)
+      .single();
+    return retry as User | null;
+  }
+
   return userProfile as User | null;
 }
 
