@@ -4,7 +4,7 @@ import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
 
 // Site 100% statique (GitHub Pages) : les données sont chargées côté client
-// depuis Supabase. Le frontmatter ne contient que la coquille statique.
+// depuis les JSON public/data/ (cache localStorage). Le frontmatter ne contient que la coquille statique.
 const lang: Lang = 'fr';
 ---
 
@@ -67,10 +67,10 @@ const lang: Lang = 'fr';
 </Layout>
 
 <script>
-  import { getCantiques } from '@/lib/supabase';
+  import { getCantiquesJson } from '@/lib/static-data';
   import { clientLang } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
-  import type { Cantique } from '@/lib/supabase';
+  import type { CantiqueJson } from '@/lib/static-data';
 
   const lang = clientLang();
   // URL base (pour les liens internes sur GitHub Pages)
@@ -81,16 +81,16 @@ const lang: Lang = 'fr';
   const countEl = document.getElementById('cant-count')!;
   const emptyEl = document.getElementById('cant-empty')!;
 
-  const cache: Partial<Record<'mg' | 'fr' | 'en', Cantique[]>> = {};
-  const inflight: Partial<Record<'mg' | 'fr' | 'en', Promise<Cantique[]>>> = {};
-  let all: Cantique[] = [];
+  const cache: Partial<Record<'mg' | 'fr' | 'en', CantiqueJson[]>> = {};
+  const inflight: Partial<Record<'mg' | 'fr' | 'en', Promise<CantiqueJson[]>>> = {};
+  let all: CantiqueJson[] = [];
   let currentLang: 'mg' | 'fr' | 'en' = 'mg';
   let query = '';
 
-  async function fetchList(l: 'mg' | 'fr' | 'en'): Promise<Cantique[]> {
+  async function fetchList(l: 'mg' | 'fr' | 'en'): Promise<CantiqueJson[]> {
     if (cache[l]) return cache[l]!;
     if (!inflight[l]) {
-      inflight[l] = getCantiques(l).then((d) => {
+      inflight[l] = getCantiquesJson(l).then((d) => {
         cache[l] = d;
         return d;
       });
@@ -150,7 +150,7 @@ const lang: Lang = 'fr';
       .join('');
   }
 
-  function renderStats(mg: Cantique[], fr: Cantique[], en: Cantique[]) {
+  function renderStats(mg: CantiqueJson[], fr: CantiqueJson[], en: CantiqueJson[]) {
     const audio = [...mg, ...fr, ...en].filter((c) => c.playback).length;
     const set = (id: string, text: string) => {
       const el = document.getElementById(id);

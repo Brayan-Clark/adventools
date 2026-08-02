@@ -1,15 +1,17 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import { supabase } from '@/lib/supabase';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
 
-// Site 100% statique (GitHub Pages) : le frontmatter ne contient que la
-// coquille statique. Le contenu est chargé côté client depuis Supabase.
+// Données cantiques : JSON statiques servis depuis public/data/
+// avec cache localStorage pour l'offline. Pas de Supabase.
+//
+// Astro exige getStaticPaths() pour une route [id]. On génère un placeholder
+// (la route existe), et le script client lit le VRAI id depuis
+// window.location.pathname pour afficher le bon cantique.
 
-export async function getStaticPaths() {
-  const { data } = await supabase.from('cantiques').select('id');
-  return (data ?? []).map((m) => ({ params: { id: m.id } }));
+export function getStaticPaths() {
+  return [{ params: { id: 'placeholder' } }];
 }
 
 const lang: Lang = 'fr';
@@ -33,27 +35,12 @@ const BASE = import.meta.env.BASE_URL ?? '/';
 </Layout>
 
 <script>
-  import { getCantiqueById, getCantiques, getMedia } from '@/lib/supabase';
-  import { clientLang, cantiqueDetailHtml, mediaCardHtml } from '@/lib/client-render';
+  import { getCantiqueByIdJson, getCantiquesJson, playbackSrc } from '@/lib/static-data';
+  import { clientLang, cantiqueDetailHtml } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
 
   const lang = clientLang();
-  // URL base (pour les liens internes sur GitHub Pages)
   const BASE = import.meta.env.BASE_URL ?? '/';
-
-  /**
-   * Anciennement : routage Google Drive via /api/stream (proxy serveur disparu).
-   * En statique, on pointe directement l'URL de téléchargement Google qui est
-   * lisible par l'élément <audio>.
-   */
-  function playbackSrc(url?: string): string {
-    if (!url) return '';
-    const m = url.match(/[?&]id=([A-Za-z0-9_-]+)/);
-    if (m && /drive\.google\.com|drive\.usercontent\.google\.com|docs\.google\.com/i.test(url)) {
-      return `https://drive.usercontent.google.com/download?id=${m[1]}&export=download`;
-    }
-    return url;
-  }
 
   function observeReveal() {
     const io = new IntersectionObserver(
@@ -75,7 +62,6 @@ const BASE = import.meta.env.BASE_URL ?? '/';
     const crumb = document.getElementById('crumb-current');
     if (!root) return;
 
-    // Le slug id est la dernière partie du chemin (ex : /cantiques/mg_45)
     const segs = window.location.pathname.split('/').filter(Boolean);
     const id = decodeURIComponent(segs[segs.length - 1] ?? '');
     const params = new URLSearchParams(window.location.search);
@@ -83,13 +69,12 @@ const BASE = import.meta.env.BASE_URL ?? '/';
     const cLang = (cl === 'fr' || cl === 'en' ? cl : 'mg') as 'mg' | 'fr' | 'en';
 
     try {
-      const c = await getCantiqueById(id, cLang);
+      const c = await getCantiqueByIdJson(id);
       if (!c) throw new Error('Cantique introuvable');
       if (crumb) crumb.textContent = `${c.num} — ${c.title}`;
       document.title = `${c.title} · Andeaha Hizaha`;
 
-      // Liste de la même langue pour la navigation précédent / suivant
-      const list = await getCantiques(cLang).catch(() => []);
+      const list = await getCantiquesJson(cLang).catch(() => []);
       const idx = list.findIndex((x) => x.id === c.id);
       const prev = idx > 0 ? list[idx - 1] : null;
       const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
@@ -128,27 +113,10 @@ const BASE = import.meta.env.BASE_URL ?? '/';
 
       const nav = `
         <div class="reveal mt-12 flex flex-wrap items-center justify-between gap-3">
-          ${prev ? `<a href="${BASE}cantiques/${prev.id}?lang=${lang}&clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">← ${prev.num} · ${prev.title}</a>` : '<span></span>'}
+          ${prev ? `<a href="${BASE}cantiques/${prev.id}?clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">← ${prev.num} · ${prev.title}</a>` : '<span></span>'}
           <a href="${BASE}cantiques" class="btn-gold px-4 py-2 text-xs">${t(lang, 'nav_cantiques')}</a>
-          ${next ? `<a href="${BASE}cantiques/${next.id}?lang=${lang}&clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">${next.num} · ${next.title} →</a>` : '<span></span>'}
+          ${next ? `<a href="${BASE}cantiques/${next.id}?clang=${cLang}" class="btn-ghost px-4 py-2 text-xs">${next.num} · ${next.title} →</a>` : '<span></span>'}
         </div>`;
-
-      // Audio lié (comme sur l'original)
-      let related = '';
-      try {
-        const rel = await getMedia({ type: 'audio', limit: 3 });
-        if (rel.length) {
-          related = `
-            <div class="reveal mt-14">
-              <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">${t(lang, 'audio_section')}</h2>
-              <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                ${rel.map((r) => mediaCardHtml(r, lang)).join('')}
-              </div>
-            </div>`;
-        }
-      } catch {
-        /* audio lié indisponible */
-      }
 
       root.innerHTML = `
         <header class="reveal text-center">
@@ -158,7 +126,7 @@ const BASE = import.meta.env.BASE_URL ?? '/';
           </div>` : ''}
           ${c.author && c.author !== 'undefined' ? `<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">${c.author}</p>` : ''}
           <a
-            href="${BASE}presentation?add=cantique&lang=${lang}&clang=${cLang}&id=${c.id}"
+            href="${BASE}presentation?add=cantique&clang=${cLang}&id=${c.id}"
             class="btn-gold mt-5 inline-flex items-center gap-2 px-4 py-2 text-xs"
           >
             🖥️ ${t(lang, 'pres_launch')}
@@ -166,8 +134,7 @@ const BASE = import.meta.env.BASE_URL ?? '/';
         </header>
         ${audio}
         <article class="reveal mt-10">${cantiqueDetailHtml(c, lang)}</article>
-        ${nav}
-        ${related}`;
+        ${nav}`;
       observeReveal();
     } catch {
       root.innerHTML = `

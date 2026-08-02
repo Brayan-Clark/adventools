@@ -57,6 +57,9 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
 
         <span class="flex-1"></span>
         <span class="hidden text-[10px] text-emerald-600 md:inline dark:text-emerald-400">{t(lang, 'pres_offline_ok')}</span>
+        <button id="export-zip" class="btn-ghost px-3 py-1.5 text-xs" title="Sauvegarder toutes les présentations + fichiers en ZIP">📥 Exporter ZIP</button>
+        <button id="import-zip-btn" class="btn-ghost px-3 py-1.5 text-xs" title="Restaurer depuis un ZIP">📤 Importer ZIP</button>
+        <input id="import-zip" type="file" accept=".zip" class="hidden" />
         <button id="launch-btn" class="btn-gold px-4 py-2 text-sm" disabled>🖥️ {t(lang, 'pres_launch')}</button>
       </div>
 
@@ -1640,4 +1643,49 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
   // Premier rendu après le calcul du layout pour remplir correctement l'aperçu
   requestAnimationFrame(() => renderPreview());
   void handleUrlAdd();
+
+  // --- Export / Import ZIP ---
+  document.getElementById('export-zip')?.addEventListener('click', async () => {
+    const btn = document.getElementById('export-zip')!;
+    btn.textContent = '⏳ Exportation…';
+    btn.disabled = true;
+    try {
+      const { downloadZip } = await import('@/lib/presentation-export');
+      await downloadZip();
+      btn.textContent = '✅ Exporté !';
+      setTimeout(() => { btn.textContent = '📥 Exporter ZIP'; btn.disabled = false; }, 2000);
+    } catch (err) {
+      btn.textContent = '❌ Erreur';
+      alert('Export échoué : ' + (err as Error).message);
+      setTimeout(() => { btn.textContent = '📥 Exporter ZIP'; btn.disabled = false; }, 2000);
+    }
+  });
+
+  document.getElementById('import-zip-btn')?.addEventListener('click', () => {
+    document.getElementById('import-zip')?.click();
+  });
+
+  document.getElementById('import-zip')?.addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const btn = document.getElementById('import-zip-btn')!;
+    btn.textContent = '⏳ Importation…';
+    btn.disabled = true;
+    try {
+      const { importPresentationsZip } = await import('@/lib/presentation-export');
+      const result = await importPresentationsZip(file);
+      btn.textContent = `✅ ${result.presentations} présentation(s), ${result.files} fichier(s)`;
+      setTimeout(() => {
+        btn.textContent = '📤 Importer ZIP';
+        btn.disabled = false;
+        location.reload(); // Recharger pour afficher les présentations importées
+      }, 1500);
+    } catch (err) {
+      btn.textContent = '❌ Erreur';
+      alert('Import échoué : ' + (err as Error).message);
+      setTimeout(() => { btn.textContent = '📤 Importer ZIP'; btn.disabled = false; }, 2000);
+    }
+    input.value = '';
+  });
 </script>

@@ -4,7 +4,7 @@ import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
 
 // Site 100% statique (GitHub Pages) : les données sont chargées côté client
-// depuis Supabase. Le frontmatter ne contient que la coquille statique.
+// depuis les JSON public/data/ (cache localStorage). Le frontmatter ne contient que la coquille statique.
 const lang: Lang = 'fr';
 ---
 
@@ -47,7 +47,7 @@ const lang: Lang = 'fr';
 </Layout>
 
 <script>
-  import { getMofonaina, getMeditationForDate } from '@/lib/supabase';
+  import { getMofonainaJson, getMeditationForDateJson } from '@/lib/static-data';
   import { clientLang, formatDate } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
 
@@ -86,13 +86,13 @@ const lang: Lang = 'fr';
     if (!root) return;
 
     try {
-      const meds = await getMofonaina();
+      const meds = await getMofonainaJson();
       if (!meds.length) {
         root.innerHTML = `<p class="text-center text-sm text-slate-500">${t(lang, 'mofonaina_range')} : 0</p>`;
         return;
       }
       const sorted = [...meds].sort((a, b) => (a.date < b.date ? -1 : 1));
-      const today = await getMeditationForDate(requested);
+      const today = await getMeditationForDateJson(requested);
 
       if (rangeEl) {
         rangeEl.textContent = `${meds.length} ${t(lang, 'mofonaina_range')} · ${sorted[0]?.date ?? ''} → ${sorted[sorted.length - 1]?.date ?? ''}`;

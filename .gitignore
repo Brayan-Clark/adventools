@@ -8,10 +8,9 @@ dist/
 .env.local
 .env.*.local
 
-# Données locales (servies depuis adventools branche data, pas commitées)
+# Données lourdes locales (SQLite, PDF) — servies depuis adventools
 data/
 public/docs/
-public/data/
 
 # Uploads
 public/uploads/*
