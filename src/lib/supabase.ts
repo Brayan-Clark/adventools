@@ -23,10 +23,13 @@ export const supabase = IS_CONFIGURED
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
-      }
+      },
+      // Site 100% statique : pas de Realtime nécessaire (évite WebSocket)
+      realtime: { enabled: false }
     })
   : createClient('https://placeholder.supabase.co', 'placeholder', {
-      auth: { persistSession: false }
+      auth: { persistSession: false },
+      realtime: { enabled: false }
     });
 
 // Types pour les tables
