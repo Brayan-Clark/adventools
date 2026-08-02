@@ -17,158 +17,154 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
   <section
     class="mx-auto flex max-w-[1680px] flex-col gap-3 px-3 py-3 sm:px-5 lg:h-[calc(100dvh-4rem)] lg:overflow-hidden"
   >
-    <!-- ===== BARRE D'OUTILS (en haut) ===== -->
-    <div class="shrink-0 space-y-2.5 rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/60">
+    <!-- ===== BARRE D'OUTILS COMPACTE (en haut) ===== -->
+    <div class="shrink-0 space-y-1.5 rounded-2xl border border-slate-200/70 bg-white/70 p-2 shadow-soft backdrop-blur dark:border-night-700/60 dark:bg-night-800/60">
       <!-- Ligne 1 : modes + présentation + actions -->
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Modes façon VideoPsalm -->
-        <div class="flex items-center gap-0.5 rounded-xl bg-slate-100 p-1 dark:bg-night-900/70">
-          <button data-mode="agenda" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📋 {t(lang, 'pres_mode_agenda')}</button>
-          <button data-mode="bible" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📖 {t(lang, 'pres_mode_bible')}</button>
-          <button data-mode="cantique" class="mode-tab flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">🎵 {t(lang, 'pres_mode_cantique')}</button>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <!-- Modes façon VideoPsalm (compact) -->
+        <div class="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5 dark:bg-night-900/70">
+          <button data-mode="agenda" class="mode-tab flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📋 <span class="hidden xl:inline">{t(lang, 'pres_mode_agenda')}</span></button>
+          <button data-mode="bible" class="mode-tab flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">📖 <span class="hidden xl:inline">{t(lang, 'pres_mode_bible')}</span></button>
+          <button data-mode="cantique" class="mode-tab flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">🎵 <span class="hidden xl:inline">{t(lang, 'pres_mode_cantique')}</span></button>
         </div>
 
         <!-- Contrôles agenda -->
-        <div id="agenda-controls" class="flex flex-wrap items-center gap-2">
+        <div id="agenda-controls" class="flex items-center gap-1">
           <select
             id="pres-select"
-            class="input-dark max-w-56 flex-1 rounded-xl border border-slate-300/70 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition focus:border-gold-500 dark:border-night-600 dark:bg-night-900 dark:text-slate-100 sm:flex-none"
+            class="input-dark w-40 rounded-lg border border-slate-300/70 bg-white px-2 py-1.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-gold-500 dark:border-night-600 dark:bg-night-900 dark:text-slate-100"
             aria-label={t(lang, 'pres_presentations')}
           ></select>
-          <button id="new-pres" class="btn-ghost px-2.5 py-1.5 text-xs" title={t(lang, 'pres_new')}>＋</button>
-          <button id="dup-pres" class="btn-ghost px-2.5 py-1.5 text-xs" title={t(lang, 'pres_duplicate')}>⧉</button>
-          <button id="del-pres" class="btn-ghost px-2.5 py-1.5 text-xs hover:!border-rose-500/60 hover:!text-rose-500" title={t(lang, 'pres_delete')}>✕</button>
-          <button id="demo-btn" class="chip border border-gold-500/50 bg-gold-500/10 px-3 py-1.5 text-xs font-semibold text-gold-600 transition hover:bg-gold-500/20 dark:text-gold-400" title={t(lang, 'pres_demo_hint')}>
-            ✨ {t(lang, 'pres_demo')}
-          </button>
+          <button id="new-pres" class="btn-ghost px-2 py-1.5 text-xs" title={t(lang, 'pres_new')}>＋</button>
+          <button id="dup-pres" class="btn-ghost px-2 py-1.5 text-xs" title={t(lang, 'pres_duplicate')}>⧉</button>
+          <button id="del-pres" class="btn-ghost px-2 py-1.5 text-xs hover:!border-rose-500/60 hover:!text-rose-500" title={t(lang, 'pres_delete')}>✕</button>
         </div>
 
         <!-- Recherche Bible (mode Bible) -->
-        <div id="bible-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-2">
-          <input id="bible-search" class="input-dark min-w-0 flex-1 rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2 text-sm outline-none transition focus:border-sky-500" placeholder={t(lang, 'pres_bible_ref_placeholder')} />
-          <select id="bible-version-sel" class="input-dark max-w-44 rounded-xl border border-slate-300/70 bg-white px-2 py-2 text-xs dark:border-night-600 dark:bg-night-900"></select>
-          <button id="bible-go" class="btn-gold px-3 py-2 text-xs">🔍</button>
+        <div id="bible-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-1">
+          <input id="bible-search" class="input-dark min-w-0 flex-1 rounded-lg border border-sky-500/40 bg-sky-500/5 px-2 py-1.5 text-xs outline-none transition focus:border-sky-500" placeholder={t(lang, 'pres_bible_ref_placeholder')} />
+          <select id="bible-version-sel" class="input-dark w-36 rounded-lg border border-slate-300/70 bg-white px-2 py-1.5 text-xs dark:border-night-600 dark:bg-night-900"></select>
+          <button id="bible-go" class="btn-gold px-2.5 py-1.5 text-xs">🔍</button>
         </div>
 
         <!-- Recherche Cantique (mode Cantique) -->
-        <div id="cantique-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-2">
-          <input id="cantique-search" class="input-dark min-w-0 flex-1 rounded-xl border border-emerald-500/40 bg-emerald-500/5 px-3 py-2 text-sm outline-none transition focus:border-emerald-500" placeholder={t(lang, 'pres_search_song')} />
+        <div id="cantique-search-row" class="hidden min-w-0 flex-1 flex-wrap items-center gap-1">
+          <input id="cantique-search" class="input-dark min-w-0 flex-1 rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-2 py-1.5 text-xs outline-none transition focus:border-emerald-500" placeholder={t(lang, 'pres_search_song')} />
         </div>
 
         <span class="flex-1"></span>
-        <span class="hidden text-[10px] text-emerald-600 md:inline dark:text-emerald-400">{t(lang, 'pres_offline_ok')}</span>
-        <button id="export-zip" class="btn-ghost px-3 py-1.5 text-xs" title="Sauvegarder toutes les présentations + fichiers en ZIP">📥 Exporter ZIP</button>
-        <button id="import-zip-btn" class="btn-ghost px-3 py-1.5 text-xs" title="Restaurer depuis un ZIP">📤 Importer ZIP</button>
+        <button id="export-zip" class="btn-ghost px-2 py-1.5 text-xs" title="Sauvegarder toutes les présentations + fichiers en ZIP">📥</button>
+        <button id="import-zip-btn" class="btn-ghost px-2 py-1.5 text-xs" title="Restaurer depuis un ZIP">📤</button>
         <input id="import-zip" type="file" accept=".zip" class="hidden" />
-        <button id="launch-btn" class="btn-gold px-4 py-2 text-sm" disabled>🖥️ {t(lang, 'pres_launch')}</button>
+        <button id="launch-btn" class="btn-gold px-3 py-1.5 text-xs" disabled>🖥️</button>
       </div>
 
       <!-- Ligne 2 : modes d'ajout (agenda) -->
-      <div id="agenda-add-row" class="flex flex-wrap items-center gap-1.5">
-        <span class="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">＋</span>
-        <button data-add="cantique" class="chip border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300">{t(lang, 'pres_add_cantique')}</button>
-        <button data-add="bible" class="chip border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-500/20 dark:text-sky-300">{t(lang, 'pres_add_bible')}</button>
-        <button data-add="text" class="chip border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-500/20 dark:text-violet-300">{t(lang, 'pres_add_text')}</button>
-        <button data-add="image" class="chip border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300">{t(lang, 'pres_add_image')}</button>
-        <button data-add="doc" class="chip border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-500/20 dark:text-rose-300">{t(lang, 'pres_add_doc')}</button>
-        <button data-add="video" class="chip border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-500/20 dark:text-red-300">{t(lang, 'pres_add_video')}</button>
-        <button data-add="audio" class="chip border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-semibold text-fuchsia-700 transition hover:bg-fuchsia-500/20 dark:text-fuchsia-300">{t(lang, 'pres_add_audio')}</button>
+      <div id="agenda-add-row" class="flex flex-wrap items-center gap-1">
+        <span class="mr-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">＋</span>
+        <button data-add="cantique" class="chip border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300">🎵 {t(lang, 'pres_add_cantique')}</button>
+        <button data-add="bible" class="chip border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[11px] font-semibold text-sky-700 transition hover:bg-sky-500/20 dark:text-sky-300">📖 {t(lang, 'pres_add_bible')}</button>
+        <button data-add="text" class="chip border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition hover:bg-violet-500/20 dark:text-violet-300">{t(lang, 'pres_add_text')}</button>
+        <button data-add="image" class="chip border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300">🖼️ {t(lang, 'pres_add_image')}</button>
+        <button data-add="doc" class="chip border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-500/20 dark:text-rose-300">{t(lang, 'pres_add_doc')}</button>
+        <button data-add="video" class="chip border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-700 transition hover:bg-red-500/20 dark:text-red-300">🎬 {t(lang, 'pres_add_video')}</button>
+        <button data-add="audio" class="chip border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-500/20 dark:text-fuchsia-300">🎧 {t(lang, 'pres_add_audio')}</button>
+        <span class="flex-1"></span>
+        <button id="demo-btn" class="chip border border-gold-500/50 bg-gold-500/10 px-2 py-1 text-[11px] font-semibold text-gold-600 transition hover:bg-gold-500/20 dark:text-gold-400" title={t(lang, 'pres_demo_hint')}>✨</button>
       </div>
 
-      <!-- Indice des modes -->
-      <p id="mode-hint" class="hidden text-[10px] text-slate-400 dark:text-slate-500">{t(lang, 'pres_mode_settings_memo')}</p>
-
-      <!-- Ligne 3 : paramètres d'affichage (par mode, mémorisés) -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200/60 pt-2.5 dark:border-night-700/50">
-        <span class="mr-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_settings')}>
-          ⚙️ {t(lang, 'pres_settings')}
-        </span>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+      <!-- Ligne 3 : réglages visibles — fond + texte (compact) -->
+      <div id="settings-row" class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-200/60 pt-1.5 dark:border-night-700/50">
+        <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
           {t(lang, 'pres_bg')}
-          <span class="flex gap-1 pl-1">
-            <button data-bg="gradient" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🌄 {t(lang, 'pres_bg_presets')}</button>
-            <button data-bg="image" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🖼️ {t(lang, 'pres_bg_image')}</button>
-            <button data-bg="solid" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px]">🎨 {t(lang, 'pres_bg_solid')}</button>
+          <span class="flex gap-1 pl-0.5">
+            <button data-bg="gradient" class="set-btn chip border border-slate-300/70 px-1.5 py-0.5 text-[10px]" title={t(lang, 'pres_bg_presets')}>🌄</button>
+            <button data-bg="image" class="set-btn chip border border-slate-300/70 px-1.5 py-0.5 text-[10px]" title={t(lang, 'pres_bg_image')}>🖼️</button>
+            <button data-bg="solid" class="set-btn chip border border-slate-300/70 px-1.5 py-0.5 text-[10px]" title={t(lang, 'pres_bg_solid')}>🎨</button>
           </span>
         </label>
-        <div id="bg-presets" class="flex items-center gap-1.5"></div>
-        <input id="bg-value" class="input-dark w-40 rounded-lg px-2.5 py-1.5 text-xs" placeholder="…" />
-
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <div id="bg-presets" class="flex items-center gap-1"></div>
+        <input id="bg-value" class="input-dark w-36 rounded-lg px-2 py-1 text-[11px]" placeholder={t(lang, 'pres_bg_url_or_color')} />
+        <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
           {t(lang, 'pres_text_color')}
-          <input id="text-color" type="color" class="h-7 w-9 cursor-pointer rounded border-0 bg-transparent" value="#ffffff" />
+          <input id="text-color" type="color" class="h-6 w-8 cursor-pointer rounded border-0 bg-transparent" value="#ffffff" />
         </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
           {t(lang, 'pres_text_size')}
-          <select id="text-size" class="input-dark rounded-lg px-2 py-1.5 text-xs">
+          <select id="text-size" class="input-dark rounded-lg px-1.5 py-1 text-[11px]">
             <option value="sm">{t(lang, 'pres_size_sm')}</option>
             <option value="md">{t(lang, 'pres_size_md')}</option>
             <option value="lg" selected>{t(lang, 'pres_size_lg')}</option>
             <option value="xl">{t(lang, 'pres_size_xl')}</option>
           </select>
         </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          {t(lang, 'pres_position')}
-          <select id="position" class="input-dark rounded-lg px-2 py-1.5 text-xs">
-            <option value="center">{t(lang, 'pres_pos_center')}</option>
-            <option value="left">{t(lang, 'pres_pos_left')}</option>
-            <option value="right">{t(lang, 'pres_pos_right')}</option>
-            <option value="top">{t(lang, 'pres_pos_top')}</option>
-            <option value="bottom">{t(lang, 'pres_pos_bottom')}</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          {t(lang, 'pres_alignment')}
-          <select id="alignment" class="input-dark rounded-lg px-2 py-1.5 text-xs">
-            <option value="center" selected>{t(lang, 'pres_align_center')}</option>
-            <option value="left">{t(lang, 'pres_align_left')}</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-300">
-          <input id="verse-numbers" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" checked />
-          {t(lang, 'pres_verse_numbers')}
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          ⏱ {t(lang, 'pres_auto_advance')}
-          <input id="auto-advance" type="number" min="0" max="600" value="0" class="input-dark w-16 rounded-lg px-2 py-1.5 text-xs" />
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_bg_media')}>
-          🎬 {t(lang, 'pres_bg_media')}
-          <select id="bg-media-type" class="input-dark rounded-lg px-2 py-1.5 text-xs">
-            <option value="none">{t(lang, 'pres_bg_media_none')}</option>
-            <option value="image">{t(lang, 'pres_bg_media_image')}</option>
-            <option value="video">{t(lang, 'pres_bg_media_video')}</option>
-          </select>
-        </label>
-        <input id="bg-media" class="input-dark w-52 rounded-lg px-2.5 py-1.5 text-xs" placeholder={t(lang, 'pres_bg_media_url')} />
+        <span class="flex-1"></span>
+        <button id="advanced-toggle" type="button" class="set-btn flex items-center gap-1 rounded-lg border border-slate-300/70 px-2 py-1 text-[10px] font-semibold text-slate-500 transition hover:text-gold-600 dark:border-night-600 dark:text-slate-300">⚙️ {t(lang, 'pres_advanced')} <span id="advanced-arrow">▾</span></button>
       </div>
 
-      <!-- Ligne 4 : superpositions du projecteur (minuteur, ticker, horloge) -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200/60 pt-2.5 dark:border-night-700/50">
-        <span class="mr-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_overlays')}>
-          ✨ {t(lang, 'pres_overlays')}
-        </span>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          🕐 {t(lang, 'pres_clock_format')}
-          <select id="ov-clock-format" class="input-dark rounded-lg px-2 py-1.5 text-xs">
-            <option value="hm">{t(lang, 'pres_clock_fmt_hm')}</option>
-            <option value="hms">{t(lang, 'pres_clock_fmt_hms')}</option>
-            <option value="hmd">{t(lang, 'pres_clock_fmt_hmd')}</option>
-            <option value="full">{t(lang, 'pres_clock_fmt_full')}</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          ⏱ {t(lang, 'pres_timer')}
-          <input id="ov-timer-sec" type="number" min="0" max="7200" step="30" value="300" class="input-dark w-20 rounded-lg px-2 py-1.5 text-xs" />
-          <input id="ov-timer-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
-          <button id="ov-timer-reset" class="set-btn chip border border-slate-300/70 px-2 py-1 text-[10px] dark:border-night-600" type="button">↺ {t(lang, 'pres_timer_reset')}</button>
-        </label>
-        <label class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          📜 {t(lang, 'pres_ticker')}
-          <input id="ov-ticker-text" class="input-dark w-56 rounded-lg px-2.5 py-1.5 text-xs" placeholder={t(lang, 'pres_ticker_text')} />
-          <input id="ov-ticker-speed" type="number" min="1" max="300" value="60" class="input-dark w-14 rounded-lg px-2 py-1.5 text-xs" title={t(lang, 'pres_ticker_speed')} />
-          <input id="ov-ticker-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
-        </label>
+      <!-- Ligne 4 : réglages avancés (repliés) — position, alignement, superpositions -->
+      <div id="advanced-body" class="hidden border-t border-slate-200/60 pt-1.5 dark:border-night-700/50">
+        <p id="mode-hint" class="mb-1.5 text-[10px] text-slate-400 dark:text-slate-500">{t(lang, 'pres_mode_settings_memo')}</p>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            {t(lang, 'pres_position')}
+            <select id="position" class="input-dark rounded-lg px-1.5 py-1 text-[11px]">
+              <option value="center">{t(lang, 'pres_pos_center')}</option>
+              <option value="left">{t(lang, 'pres_pos_left')}</option>
+              <option value="right">{t(lang, 'pres_pos_right')}</option>
+              <option value="top">{t(lang, 'pres_pos_top')}</option>
+              <option value="bottom">{t(lang, 'pres_pos_bottom')}</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            {t(lang, 'pres_alignment')}
+            <select id="alignment" class="input-dark rounded-lg px-1.5 py-1 text-[11px]">
+              <option value="center" selected>{t(lang, 'pres_align_center')}</option>
+              <option value="left">{t(lang, 'pres_align_left')}</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-300">
+            <input id="verse-numbers" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" checked />
+            {t(lang, 'pres_verse_numbers')}
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            ⏱ {t(lang, 'pres_auto_advance')}
+            <input id="auto-advance" type="number" min="0" max="600" value="0" class="input-dark w-16 rounded-lg px-1.5 py-1 text-[11px]" />
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500" title={t(lang, 'pres_bg_media')}>
+            🎬 {t(lang, 'pres_bg_media')}
+            <select id="bg-media-type" class="input-dark rounded-lg px-1.5 py-1 text-[11px]">
+              <option value="none">{t(lang, 'pres_bg_media_none')}</option>
+              <option value="image">{t(lang, 'pres_bg_media_image')}</option>
+              <option value="video">{t(lang, 'pres_bg_media_video')}</option>
+            </select>
+          </label>
+          <input id="bg-media" class="input-dark w-48 rounded-lg px-2 py-1 text-[11px]" placeholder={t(lang, 'pres_bg_media_url')} />
+        </div>
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-200/60 pt-1.5 dark:border-night-700/50">
+          <span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">✨ {t(lang, 'pres_overlays')}</span>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            🕐 {t(lang, 'pres_clock_format')}
+            <select id="ov-clock-format" class="input-dark rounded-lg px-1.5 py-1 text-[11px]">
+              <option value="hm">{t(lang, 'pres_clock_fmt_hm')}</option>
+              <option value="hms">{t(lang, 'pres_clock_fmt_hms')}</option>
+              <option value="hmd">{t(lang, 'pres_clock_fmt_hmd')}</option>
+              <option value="full">{t(lang, 'pres_clock_fmt_full')}</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            ⏱ {t(lang, 'pres_timer')}
+            <input id="ov-timer-sec" type="number" min="0" max="7200" step="30" value="300" class="input-dark w-16 rounded-lg px-1.5 py-1 text-[11px]" />
+            <input id="ov-timer-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
+            <button id="ov-timer-reset" class="set-btn chip border border-slate-300/70 px-1.5 py-0.5 text-[10px] dark:border-night-600" type="button">↺</button>
+          </label>
+          <label class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            📜 {t(lang, 'pres_ticker')}
+            <input id="ov-ticker-text" class="input-dark w-44 rounded-lg px-2 py-1 text-[11px]" placeholder={t(lang, 'pres_ticker_text')} />
+            <input id="ov-ticker-speed" type="number" min="1" max="300" value="60" class="input-dark w-14 rounded-lg px-1.5 py-1 text-[11px]" title={t(lang, 'pres_ticker_speed')} />
+            <input id="ov-ticker-on" type="checkbox" class="h-3.5 w-3.5 accent-amber-500" />
+          </label>
+        </div>
       </div>
     </div>
 
@@ -339,6 +335,14 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
   } from '@/lib/presentation';
   import type { Presentation, PresentItem, PresentSettings, PresMode, PresOverlays } from '@/lib/presentation';
   import { t } from '@/lib/i18n';
+  import {
+    setBase as setBibleBase,
+    loadVersions as loadBibleVersions,
+    loadDb as loadBibleDb,
+    readBooks as readBibleBooks,
+    readChapter as readBibleChapter,
+    resolveBookNumber as resolveBibleBook,
+  } from '@/lib/client-bible';
 
   const lang = document.documentElement.lang as 'fr' | 'mg';
 
@@ -910,38 +914,80 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
     }
   });
 
-  // --- Recherche Bible (mode Bible) ---
+  // --- Recherche Bible (mode Bible) — sql.js client-side, pas d'API ---
   const bibleSearch = $<HTMLInputElement>('bible-search');
   const bibleVersionSel = $<HTMLSelectElement>('bible-version-sel');
   const bibleGo = $('bible-go');
-  fetch('/api/bible?action=versions')
-    .then((r) => r.json())
-    .then((d) => {
-      bibleVersionSel.innerHTML = d.versions
-        .map((v: any) => `<option value="${v.file}">${esc(v.name)}</option>`)
-        .join('');
-    });
-  async function loadBibleChapter(version: string, book: number, chapter: number) {
+  let bibleVersions: Array<{ file: string; name: string; url: string }> = [];
+  let bibleDb: any = null;
+  let bibleBooks: any[] = [];
+
+  async function ensureBibleDb(file: string): Promise<boolean> {
     try {
-      const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${book}&chapter=${chapter}`)).json();
-      bibleChapter = { reference: ch.reference, verses: ch.verses };
+      setBibleBase(BASE);
+      if (!bibleVersions.length) bibleVersions = await loadBibleVersions();
+      if (bibleVersionSel.options.length === 1) {
+        bibleVersionSel.innerHTML = bibleVersions
+          .map((v) => `<option value="${esc(v.file)}">${esc(v.name)}</option>`)
+          .join('');
+      }
+      bibleDb = await loadBibleDb(bibleVersions, file || bibleVersions[0]?.file);
+      if (!bibleBooks.length) bibleBooks = readBibleBooks(bibleDb);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function loadBibleChapter(version: string, book: number, chapter: number) {
+    if (!(await ensureBibleDb(version))) return;
+    try {
+      const verses = readBibleChapter(bibleDb, book, chapter);
+      const bookObj = bibleBooks.find((b) => b.number === book);
+      bibleChapter = { reference: `${bookObj?.longName ?? ''} ${chapter}`, verses };
       bibleVerseIndex = 0;
     } catch {
       /* ignore */
     }
   }
+
+  /** Résout une référence "Genèse 1:2-5" → livre/chapitre/vérsets. */
+  async function resolveBibleRefQuery(q: string, version: string) {
+    if (!(await ensureBibleDb(version))) return null;
+    const m = q.match(/^([^0-9]+?)\s*(\d+)(?::(\d+)(?:-(\d+))?)?$/i);
+    let bookNumber: number | null = null;
+    let chapter = 0;
+    let verseStart = 1;
+    let verseEnd = 0;
+    if (m) {
+      bookNumber = resolveBibleBook(bibleBooks, m[1].trim());
+      chapter = parseInt(m[2], 10);
+      if (m[3]) {
+        verseStart = parseInt(m[3], 10);
+        verseEnd = m[4] ? parseInt(m[4], 10) : verseStart;
+      }
+    }
+    if (bookNumber === null || chapter < 1) return null;
+    const verses = readBibleChapter(bibleDb, bookNumber, chapter);
+    if (!verses.length) return null;
+    const bookObj = bibleBooks.find((b) => b.number === bookNumber);
+    return {
+      ref: { bookNumber, chapter, verseStart, verseEnd },
+      reference: `${bookObj?.longName ?? ''} ${chapter}`,
+      verses,
+    };
+  }
+
   async function resolveBibleRef() {
     const q = bibleSearch.value.trim();
     const version = bibleVersionSel.value;
     if (!q) return;
     try {
-      const r = await fetch(`/api/bible?action=ref&version=${encodeURIComponent(version)}&q=${encodeURIComponent(q)}`);
-      if (!r.ok) throw new Error();
-      const data = await r.json();
-      const ref = data.ref;
-      await loadBibleChapter(version, ref.bookNumber, ref.chapter);
-      if (ref.verseStart && ref.verseStart > 1 && bibleChapter) {
-        bibleVerseIndex = Math.max(0, Math.min(ref.verseStart - 1, bibleChapter.verses.length - 1));
+      const out = await resolveBibleRefQuery(q, version);
+      if (!out) throw new Error();
+      bibleChapter = { reference: out.reference, verses: out.verses };
+      if (out.ref.verseStart > 1) {
+        bibleVerseIndex = Math.max(0, Math.min(out.ref.verseStart - 1, out.verses.length - 1));
       }
       renderAll();
     } catch {
@@ -950,6 +996,8 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
       empty.innerHTML = `<p class="text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')}</p>`;
     }
   }
+  // Pré-remplissage du sélecteur de versions (au chargement)
+  void ensureBibleDb(bibleVersionSel.value);
   bibleGo.addEventListener('click', () => void resolveBibleRef());
   bibleSearch.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') void resolveBibleRef();
@@ -984,7 +1032,7 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
   let cantiqueCache: Record<string, any[]> = {};
   async function fetchCantiques(l: string) {
     if (cantiqueCache[l]) return cantiqueCache[l];
-    const r = await fetch(`/data/cantiques_${l}.json`);
+    const r = await fetch(`${BASE}data/cantiques_${l}.json`);
     cantiqueCache[l] = await r.json();
     return cantiqueCache[l];
   }
@@ -1074,7 +1122,7 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
     let cache: Record<string, any[]> = {};
     const fetchLang = async (l: string) => {
       if (cache[l]) return cache[l];
-      const r = await fetch(`/data/cantiques_${l}.json`);
+      const r = await fetch(`${BASE}data/cantiques_${l}.json`);
       cache[l] = await r.json();
       return cache[l];
     };
@@ -1128,13 +1176,19 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
     const versionSel = $<HTMLSelectElement>('bible-version');
     const feedback = $('bible-ref-feedback');
     const result = $('bible-ref-result');
-    fetch('/api/bible?action=versions')
-      .then((r) => r.json())
-      .then((d) => {
-        versionSel.innerHTML = d.versions
-          .map((v: any) => `<option value="${v.file}">${esc(v.name)}</option>`)
+    // Remplit le sélecteur de versions (sql.js, pas d'API)
+    const fillVersions = async () => {
+      try {
+        setBibleBase(BASE);
+        if (!bibleVersions.length) bibleVersions = await loadBibleVersions();
+        versionSel.innerHTML = bibleVersions
+          .map((v: any) => `<option value="${esc(v.file)}">${esc(v.name)}</option>`)
           .join('');
-      });
+      } catch {
+        /* offline */
+      }
+    };
+    void fillVersions();
     const resolve = async () => {
       const q = refInput.value.trim();
       const version = versionSel.value;
@@ -1142,28 +1196,26 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
       result.innerHTML = '';
       if (!q) return;
       try {
-        const r = await fetch(`/api/bible?action=ref&version=${encodeURIComponent(version)}&q=${encodeURIComponent(q)}`);
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        const ref = data.ref;
-        const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${ref.bookNumber}&chapter=${ref.chapter}`)).json();
+        const out = await resolveBibleRefQuery(q, version);
+        if (!out) throw new Error();
+        const { ref, reference, verses } = out;
         const start = ref.verseStart || 1;
-        const end = ref.verseEnd === 0 ? ch.verses.length : Math.min(ref.verseEnd, ch.verses.length);
-        const verses = ch.verses.filter((v: any) => v.verse >= start && v.verse <= end);
+        const end = ref.verseEnd === 0 ? verses.length : Math.min(ref.verseEnd, verses.length);
+        const range = verses.filter((v: any) => v.verse >= start && v.verse <= end);
         result.innerHTML = `
           <div class="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-xs">
-            <p class="font-bold text-sky-600 dark:text-sky-300">${esc(ch.reference)} (${verses.length} v)</p>
+            <p class="font-bold text-sky-600 dark:text-sky-300">${esc(reference)} (${range.length} v)</p>
             <button id="bible-add-btn" class="btn-gold mt-2 px-3 py-1.5 text-xs">+ ${t(lang, 'pres_add_bible')}</button>
           </div>`;
         $('bible-add-btn').addEventListener('click', () => {
           const item = {
             id: uid(),
             kind: 'bible',
-            title: ch.reference,
-            subtitle: ref.reference,
+            title: reference,
+            subtitle: reference,
             versionLabel: version,
-            refLabel: `${ch.reference}${start > 1 ? ':' + start + (end > start ? '-' + end : '') : ''}`,
-            verses,
+            refLabel: `${reference}${start > 1 ? ':' + start + (end > start ? '-' + end : '') : ''}`,
+            verses: range,
           };
           activePres()!.items.push(item);
           flatIndex = totalPages(activePres()!) - 1;
@@ -1269,44 +1321,65 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
       <div id="doc-results" class="mt-3 grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2"></div>`;
     const input = $<HTMLInputElement>('doc-search');
     const results = $('doc-results');
-    const run = async () => {
-      const q = input.value.trim();
-      results.innerHTML = '<p class="text-center text-xs text-slate-400">…</p>';
+
+    // Manifest des documents depuis la branche data (statique, pas d'API)
+    const DOC_MANIFEST = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json';
+    const DOC_CACHE_KEY = 'docs-manifest-v1';
+    let docsCache: Array<{ id: string; title: string; categoryId: string; url: string; size?: string }> | null = null;
+
+    const loadDocs = async () => {
+      if (docsCache) return docsCache;
       try {
-        const r = await fetch(`/api/documents?action=search&q=${encodeURIComponent(q)}`);
+        const cached = localStorage.getItem(DOC_CACHE_KEY);
+        if (cached) {
+          const entry = JSON.parse(cached);
+          if (Array.isArray(entry?.data?.docs)) { docsCache = entry.data.docs; return docsCache; }
+        }
+        const r = await fetch(DOC_MANIFEST);
         if (!r.ok) throw new Error();
         const data = await r.json();
-        const list = data.results ?? [];
-        results.innerHTML = '';
-        if (!list.length) {
-          results.innerHTML = `<p class="text-center text-xs text-slate-400">${t(lang, 'documents_empty')}</p>`;
-          return;
-        }
-        list.slice(0, 30).forEach((d: any) => {
-          const btn = document.createElement('button');
-          btn.className = 'w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left text-sm transition hover:border-rose-500/60 dark:border-night-700 dark:bg-night-800/70';
-          btn.innerHTML = `<span class="block truncate font-semibold text-slate-800 dark:text-slate-100">📄 ${esc(d.title)}</span>
-            <span class="text-[10px] uppercase text-slate-400">${esc(d.category.replace(/_/g, ' '))} · ${d.sizeLabel}</span>`;
-          btn.addEventListener('click', () => {
-            const item = {
-              id: uid(),
-              kind: 'doc',
-              title: d.title,
-              subtitle: t(lang, 'pres_add_doc'),
-              docPath: d.path,
-              docUrl: d.url,
-            };
-            activePres()!.items.push(item);
-            flatIndex = totalPages(activePres()!) - 1;
-            persist();
-            renderAll();
-            openAdd('doc');
-          });
-          results.appendChild(btn);
-        });
+        docsCache = data.documents ?? [];
+        try { localStorage.setItem(DOC_CACHE_KEY, JSON.stringify({ data: { docs: docsCache }, ts: Date.now() })); } catch { /* quota */ }
       } catch {
-        results.innerHTML = `<p class="text-center text-xs text-rose-500">⚠️ ${t(lang, 'bible_search_no_results')}</p>`;
+        docsCache = [];
       }
+      return docsCache;
+    };
+
+    const run = async () => {
+      const q = input.value.trim().toLowerCase();
+      results.innerHTML = '<p class="text-center text-xs text-slate-400">…</p>';
+      const docs = await loadDocs();
+      const list = q
+        ? docs.filter((d) => (d.title + ' ' + (d.categoryId ?? '')).toLowerCase().includes(q))
+        : docs;
+      results.innerHTML = '';
+      if (!list.length) {
+        results.innerHTML = `<p class="text-center text-xs text-slate-400">${t(lang, 'documents_empty')}</p>`;
+        return;
+      }
+      list.slice(0, 30).forEach((d) => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left text-sm transition hover:border-rose-500/60 dark:border-night-700 dark:bg-night-800/70';
+        btn.innerHTML = `<span class="block truncate font-semibold text-slate-800 dark:text-slate-100">📄 ${esc(d.title)}</span>
+          <span class="text-[10px] uppercase text-slate-400">${esc((d.categoryId ?? '').replace(/_/g, ' '))} · ${esc(d.size ?? '')}</span>`;
+        btn.addEventListener('click', () => {
+          const item = {
+            id: uid(),
+            kind: 'doc',
+            title: d.title,
+            subtitle: t(lang, 'pres_add_doc'),
+            docPath: d.url,
+            docUrl: d.url,
+          };
+          activePres()!.items.push(item);
+          flatIndex = totalPages(activePres()!) - 1;
+          persist();
+          renderAll();
+          openAdd('doc');
+        });
+        results.appendChild(btn);
+      });
     };
     input.addEventListener('input', () => void run());
     void run();
@@ -1316,13 +1389,27 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
   function renderAddImage() {
     addPanel.innerHTML = `
       <h3 class="font-display text-sm font-semibold text-slate-900 dark:text-white">🖼️ ${t(lang, 'pres_add_image')}</h3>
-      <div class="mt-3 grid gap-2 lg:grid-cols-[1fr_auto]">
+      <div class="mt-3 grid gap-2">
         <input id="image-url" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_url')}" />
-        <button id="image-add" class="btn-gold px-4 py-2 text-xs">+ {t(lang, 'pres_add_image')}</button>
-      </div>
-      <input id="image-caption" class="input-dark mt-2 w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_caption')}" />`;
-    $('image-add').addEventListener('click', () => {
-      const url = $<HTMLInputElement>('image-url').value.trim();
+        <div class="grid gap-2 sm:grid-cols-2">
+          <button id="image-add" class="btn-gold px-4 py-2 text-xs">＋ ${t(lang, 'pres_add_image')}</button>
+          <button id="image-file-btn" class="btn-ghost px-4 py-2 text-xs">📁 ${t(lang, 'pres_image_local')}</button>
+        </div>
+        <input id="image-file" type="file" accept="image/*" class="hidden" />
+        <input id="image-caption" class="input-dark w-full rounded-xl px-4 py-2.5 text-sm" placeholder="${t(lang, 'pres_image_caption')}" />
+        <p id="image-status" class="hidden text-center text-xs font-semibold text-emerald-600 dark:text-emerald-400"></p>
+      </div>`;
+
+    // Convertit un fichier local en data-URL (persistant, stocké avec la présentation)
+    const fileToDataUrl = (file: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+    const addImageItem = async (url: string) => {
       if (!url) return;
       const item = {
         id: uid(),
@@ -1336,9 +1423,40 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
       flatIndex = totalPages(activePres()!) - 1;
       persist();
       renderAll();
+      const status = $('image-status');
+      status.textContent = `✅ ${t(lang, 'pres_added')}`;
+      status.classList.remove('hidden');
+      $<HTMLInputElement>('image-url').value = '';
+      setTimeout(() => status.classList.add('hidden'), 1800);
       openAdd('image');
+    };
+
+    $('image-add').addEventListener('click', () => {
+      void addImageItem($<HTMLInputElement>('image-url').value.trim());
+    });
+    $('image-file-btn').addEventListener('click', () => {
+      $<HTMLInputElement>('image-file').click();
+    });
+    $<HTMLInputElement>('image-file').addEventListener('change', async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      (e.target as HTMLInputElement).value = '';
+      if (!file) return;
+      try {
+        const url = await fileToDataUrl(file);
+        await addImageItem(url);
+      } catch {
+        alert('Impossible de lire le fichier image.');
+      }
     });
   }
+
+  // --- Toggle "Réglages avancés" ---
+  document.getElementById('advanced-toggle')?.addEventListener('click', () => {
+    const body = document.getElementById('advanced-body')!;
+    const arrow = document.getElementById('advanced-arrow')!;
+    body.classList.toggle('hidden');
+    arrow.textContent = body.classList.contains('hidden') ? '▸' : '▾';
+  });
 
   // --- Réglages (barre du haut, selon le mode) ---
   bgPresets.addEventListener('click', (e) => {
@@ -1535,7 +1653,7 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
     if (!add) return;
     if (add === 'cantique' && params.get('id')) {
       const l = params.get('clang') ?? 'mg';
-      const r = await fetch(`/data/cantiques_${l}.json`);
+      const r = await fetch(`${BASE}data/cantiques_${l}.json`);
       const list = await r.json();
       const c = list.find((x: any) => x.id === params.get('id'));
       if (c && c.content) {
@@ -1553,52 +1671,52 @@ const addChapter = Astro.url.searchParams.get('chapter') ?? '';
         persist();
         renderAll();
       }
-    } else if (add === 'doc' && params.get('path')) {
-      try {
-        const r = await fetch(`/api/documents?path=${encodeURIComponent(params.get('path') ?? '')}`);
-        if (!r.ok) throw new Error();
-        const d = await r.json();
-        if (d && d.path) {
-          const item = {
-            id: uid(),
-            kind: 'doc',
-            title: d.title,
-            subtitle: t(lang, 'pres_add_doc'),
-            docPath: d.path,
-            docUrl: d.url,
-          };
-          activePres()!.items.push(item);
-          flatIndex = totalPages(activePres()!) - 1;
-          persist();
-          renderAll();
-        }
-      } catch {
-        /* ignore */
+    } else if (add === 'doc' && params.get('url')) {
+      // Lien profond : ?add=doc&url=…&title=… (URL directe, pas d'API)
+      const url = params.get('url') ?? '';
+      const title = params.get('title') ?? url.split('/').pop() ?? t(lang, 'pres_add_doc');
+      if (url) {
+        const item = {
+          id: uid(),
+          kind: 'doc',
+          title,
+          subtitle: t(lang, 'pres_add_doc'),
+          docPath: url,
+          docUrl: url,
+        };
+        activePres()!.items.push(item);
+        flatIndex = totalPages(activePres()!) - 1;
+        persist();
+        renderAll();
       }
     } else if (add === 'bible' && params.get('book')) {
       const version = params.get('version') ?? 'MG65.SQLite3';
       const book = Number(params.get('book'));
       const chapter = Number(params.get('chapter') ?? '1');
       try {
-        const ch = await (await fetch(`/api/bible?action=chapter&version=${encodeURIComponent(version)}&book=${book}&chapter=${chapter}`)).json();
-        const item = {
-          id: uid(),
-          kind: 'bible',
-          title: ch.reference,
-          subtitle: version,
-          versionLabel: version,
-          refLabel: ch.reference,
-          verses: ch.verses,
-        };
-        activePres()!.items.push(item);
-        flatIndex = totalPages(activePres()!) - 1;
-        persist();
-        renderAll();
+        if (await ensureBibleDb(version)) {
+          const verses = readBibleChapter(bibleDb, book, chapter);
+          const bookObj = bibleBooks.find((b) => b.number === book);
+          const reference = `${bookObj?.longName ?? ''} ${chapter}`;
+            const item = {
+              id: uid(),
+              kind: 'bible',
+              title: reference,
+              subtitle: version,
+              versionLabel: version,
+              refLabel: reference,
+              verses,
+            };
+            activePres()!.items.push(item);
+            flatIndex = totalPages(activePres()!) - 1;
+            persist();
+            renderAll();
+          }
       } catch {
         /* ignore */
       }
     }
-    history.replaceState(null, '', '/presentation');
+    history.replaceState(null, '', `${BASE}presentation`);
   }
 
   // Synchronisation : si le projecteur (autre fenêtre) navigue, on suit

@@ -1,21 +1,13 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import { t, getLang } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
 
-const lang = getLang(Astro.url, Astro.cookies);
+// Site 100% statique (GitHub Pages) : les documents sont chargés côté client
+// depuis le manifest de la branche `data` d'adventools (raw.githubusercontent),
+// avec cache localStorage pour l'offline. Pas de dépendance public/docs/.
 
-let payload = '{"docs":[],"cats":[]}';
-try {
-  const { getDocCategories, getDocs, formatSize } = await import('@/lib/documents');
-  const categories = getDocCategories();
-  const docs = getDocs();
-  payload = JSON.stringify({
-    docs: docs.map((d: any) => ({ ...d, sizeLabel: formatSize(d.size) })),
-    cats: categories.map((c: any) => ({ ...c, sizeLabel: formatSize(c.size) })),
-  });
-} catch {
-  // Dossier docs absent (CI, GitHub Pages) — page vide
-}
+const lang: Lang = 'fr';
 ---
 
 <Layout lang={lang} title={t(lang, 'nav_documents')}>
@@ -49,9 +41,6 @@ try {
     <!-- Grille -->
     <div id="doc-grid" class="reveal mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
     <p id="doc-empty" class="mt-12 hidden text-center text-slate-500 dark:text-slate-400">{t(lang, 'documents_empty')}</p>
-
-    <!-- Données sérialisées (réutilisées par le script ci-dessous) -->
-    <script type="application/json" id="docs-payload" set:html={payload}></script>
   </section>
 </Layout>
 
@@ -65,69 +54,116 @@ try {
   const countEl = document.getElementById('doc-count')!;
   const emptyEl = document.getElementById('doc-empty')!;
 
-  const payload = JSON.parse(document.getElementById('docs-payload')!.textContent!);
-  const ALL = payload.docs;
-  const CATS = payload.cats;
+  const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json';
+  const CACHE_KEY = 'docs-manifest-v1';
+  const CACHE_TTL = 1000 * 60 * 60 * 24; // 24h
 
-  const KIND_LABEL: Record<string, string> = {
-    dossiers_eglise: '🏛️',
-    dossiers_JA: '🌱',
-    esprit_prophetie_fr: '📖',
-    esprit_prophetie_mg: '📖',
-    etudes_bibliques: '🔍',
-    etudes_islamiques: '☪️',
-    semaine_priere: '🙏',
-    toriteny_special: '🎙️',
-    dossier_MINENF: '🧒',
-    autres: '📁',
-  };
+  interface DocCat { id: string; title: string; icon?: string; color?: string; bg?: string }
+  interface DocItem { id: string; title: string; fileName: string; categoryId: string; url: string; size: string; isAsset?: boolean; tags?: string[] }
+
+  let ALL: DocItem[] = [];
+  let CATS: DocCat[] = [];
+  let catFilter: string | null = null;
+  let query = '';
+
+  function getCache(): { data: { docs: DocItem[]; cats: DocCat[] }; ts: number } | null {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (Date.now() - entry.ts > CACHE_TTL) { localStorage.removeItem(CACHE_KEY); return null; }
+      return entry;
+    } catch { return null; }
+  }
+
+  async function loadManifest() {
+    // 1. Cache
+    const cached = getCache();
+    if (cached && Array.isArray(cached.data.docs)) {
+      ALL = cached.data.docs;
+      CATS = cached.data.cats;
+      return;
+    }
+    // 2. Réseau
+    try {
+      const res = await fetch(MANIFEST_URL);
+      if (res.ok) {
+        const data = await res.json();
+        ALL = data.documents ?? [];
+        CATS = data.categories ?? [];
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: { docs: ALL, cats: CATS }, ts: Date.now() }));
+        } catch { /* quota */ }
+        return;
+      }
+    } catch { /* offline */ }
+    // 3. Fallback vide
+    ALL = [];
+    CATS = [];
+  }
 
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  // Titre de catégorie lisible (nom de dossier → espaces)
-  const catLabel = (id: string) => id.replace(/_/g, ' ');
+  const catById = (id: string) => CATS.find((c) => c.id === id);
 
-  let catFilter: string | null = null;
-  let query = '';
+  function catLabel(id: string): string {
+    const c = catById(id);
+    return c?.title ?? id.replace(/_/g, ' ');
+  }
+
+  function catIcon(id: string): string {
+    const c = catById(id);
+    if (c?.icon === 'BookOpen') return '📖';
+    if (c?.icon === 'FileText') return '📄';
+    if (c?.icon === 'Users') return '👥';
+    if (c?.icon === 'Heart') return '💖';
+    if (c?.icon === 'Clock') return '⏰';
+    if (c?.icon === 'Music') return '🎵';
+    if (c?.icon === 'Globe') return '🌍';
+    return '📁';
+  }
 
   function renderCats() {
     catsEl.innerHTML = [
-      `<button data-cat="" class="doc-cat chip font-semibold ${catFilter === null ? 'border-gold-500 bg-gold-500/15 text-gold-600 dark:text-gold-400' : 'border-slate-300/70 text-slate-500 dark:border-night-600 dark:text-slate-300'}">${t(lang, 'documents_all')}</button>`,
+      `<button data-cat="" class="doc-cat chip font-semibold ${catFilter === null ? 'border-gold-500 bg-gold-500/15 text-gold-600 dark:text-gold-400' : 'border-slate-300/70 text-slate-500 dark:border-night-700/60 dark:text-slate-400'}">✦ ${t(lang, 'documents_all')}</button>`,
       ...CATS.map(
         (c) =>
-          `<button data-cat="${esc(c.id)}" class="doc-cat chip ${catFilter === c.id ? 'border-gold-500 bg-gold-500/15 font-semibold text-gold-600 dark:text-gold-400' : 'border-slate-300/70 text-slate-500 dark:border-night-600 dark:text-slate-300'}">${KIND_LABEL[c.id] ?? '📄'} ${esc(catLabel(c.id))} · ${c.count}</button>`
+          `<button data-cat="${esc(c.id)}" class="doc-cat chip font-semibold ${catFilter === c.id ? 'border-gold-500 bg-gold-500/15 text-gold-600 dark:text-gold-400' : 'border-slate-300/70 text-slate-500 dark:border-night-700/60 dark:text-slate-400'}">${catIcon(c.id)} ${esc(c.title)}</button>`
       ),
     ].join('');
   }
 
   function render() {
-    const q = query.trim().toLowerCase();
-    const results = ALL.filter((d: any) => {
-      if (catFilter && d.category !== catFilter) return false;
+    const q = query.toLowerCase().trim();
+    const visible = ALL.filter((d) => {
+      if (catFilter && d.categoryId !== catFilter) return false;
       if (!q) return true;
-      return (
-        d.title.toLowerCase().includes(q) ||
-        d.category.toLowerCase().includes(q) ||
-        d.path.toLowerCase().includes(q)
-      );
+      return (d.title + ' ' + d.fileName).toLowerCase().includes(q);
     });
-    countEl.textContent = `${results.length} ${t(lang, 'documents_total')}`;
-    emptyEl.classList.toggle('hidden', results.length > 0);
 
-    grid.innerHTML = results
+    countEl.textContent = `${visible.length} ${t(lang, 'documents_count')}`;
+    emptyEl.classList.toggle('hidden', visible.length > 0);
+
+    grid.innerHTML = visible
       .map(
-        (d: any) => `
-        <a href="/documents/${d.path.split('/').map(encodeURIComponent).join('/')}"
-          class="card-hover group flex flex-col rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+        (d) => `
+        <a
+          href="${esc(d.url)}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group flex flex-col rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-gold-400/60 hover:shadow-lg dark:border-night-700/60 dark:bg-night-800/70"
+        >
           <div class="flex items-start gap-3">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-lg text-white shadow">${KIND_LABEL[d.category] ?? '📄'}</span>
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-500/10 text-xl">
+              ${catIcon(d.categoryId)}
+            </div>
             <div class="min-w-0 flex-1">
               <p class="line-clamp-2 text-sm font-semibold leading-snug text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${esc(d.title)}</p>
               <p class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
-                <span class="truncate">${esc(catLabel(d.category))}</span>
+                <span class="truncate">${esc(catLabel(d.categoryId))}</span>
                 <span>·</span>
-                <span class="shrink-0">${d.sizeLabel}</span>
+                <span class="shrink-0">${esc(d.size ?? '')}</span>
               </p>
             </div>
           </div>
@@ -152,6 +188,11 @@ try {
     render();
   });
 
-  renderCats();
-  render();
+  // Chargement
+  (async () => {
+    grid.innerHTML = '<div class="col-span-full h-40 animate-pulse rounded-2xl bg-slate-200/60 dark:bg-night-800/60"></div>';
+    await loadManifest();
+    renderCats();
+    render();
+  })();
 </script>

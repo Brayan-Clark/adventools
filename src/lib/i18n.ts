@@ -332,6 +332,8 @@ const dict = {
   pres_text_body: { fr: 'Contenu (une ligne par ligne affichée)', mg: 'Votoaty (andalan-tsoratra isaky ny tsiroaroa)' },
   pres_image_url: { fr: 'URL de l’image (fond)', mg: 'URL-ny sary (fototra)' },
   pres_image_caption: { fr: 'Légende (optionnel)', mg: 'Sokajy (tsi-voatery)' },
+  pres_image_local: { fr: 'Fichier local…', mg: 'Rakitra eo an-toerana…' },
+  pres_added: { fr: 'Ajouté !', mg: 'Nampidirina !' },
   pres_settings: { fr: 'Réglages d’affichage', mg: 'Fanamboarana fisehoana' },
   pres_bg: { fr: 'Fond', mg: 'Fototra' },
   pres_bg_presets: { fr: 'Dégradés', mg: 'Gradiant' },
@@ -385,6 +387,11 @@ const dict = {
   pres_doc_hint: {
     fr: 'Choisissez un document de la bibliothèque à projeter (plein écran).',
     mg: 'Misafidia antontan-taratasy avy amin’ny tranomboky haseho (efijery feno).',
+  },
+  pres_advanced: { fr: 'Avancé', mg: 'Be kely' },
+  pres_bg_url_or_color: {
+    fr: 'URL image ou couleur (#hex)',
+    mg: 'URL sary na loko (#hex)',
   },
   pres_add_video: { fr: '🎬 Vidéo', mg: '🎬 Lahatsary' },
   pres_video_url: {
