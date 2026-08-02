@@ -6,11 +6,16 @@
  *
  * Avantage : quand la branche `data` d'adventools est mise à jour, l'app est
  * à jour automatiquement (même principe que la bible via sql.js).
+ *
+ * ⚠️ Les clés de cache sont versionnées (v2) : toute ancienne entrée au format
+ * incorrect (stockée par une ancienne version du code) est automatiquement
+ * ignorée, et on re-fetch à la place.
  */
 
 const RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 heures
+const CACHE_VER = 'v2';
 
 interface CacheEntry<T> {
   data: T;
@@ -37,6 +42,20 @@ function setCache<T>(key: string, data: T): void {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
   } catch {
     /* quota exceeded — silent */
+  }
+}
+
+/** Purge toutes les entrées de cache de données statiques. */
+export function clearStaticCache(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('cantiques-') || k?.startsWith('mofonaina')) keys.push(k);
+    }
+    keys.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* ignore */
   }
 }
 
@@ -99,11 +118,11 @@ const LANG_MAP: Record<string, 'mg' | 'fr' | 'en'> = {
 // ── Fetch cantiques (depuis la branche data, fallback local) ──
 
 export async function getCantiquesJson(lang: 'mg' | 'fr' | 'en' = 'mg'): Promise<CantiqueJson[]> {
-  const cacheKey = `cantiques-${lang}`;
+  const cacheKey = `cantiques-${lang}-${CACHE_VER}`;
 
-  // 1. Cache localStorage
+  // 1. Cache localStorage (validé : doit être un array, sinon re-fetch)
   const cached = getCache<CantiqueJson[]>(cacheKey);
-  if (cached) return cached;
+  if (Array.isArray(cached)) return cached;
 
   // 2. Branche data (auto-update)
   const manifest = await fetchJson<HymneManifest>(`${RAW}/hymnes/manifest.json`);
@@ -150,11 +169,11 @@ function quarterOf(date: Date): string {
 }
 
 export async function getMofonainaJson(): Promise<MofonainaDayJson[]> {
-  const cacheKey = 'mofonaina';
+  const cacheKey = `mofonaina-${CACHE_VER}`;
 
-  // 1. Cache localStorage
+  // 1. Cache localStorage (validé : doit être un array, sinon re-fetch)
   const cached = getCache<MofonainaDayJson[]>(cacheKey);
-  if (cached) return cached;
+  if (Array.isArray(cached)) return cached;
 
   // 2. Branche data (auto-update) — fichier du trimestre courant
   const file = `${quarterOf(new Date())}.json`;
