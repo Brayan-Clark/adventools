@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Le build Astro ignore les erreurs de typage : sans cette étape, une
+      # régression de type partait en production sans rien signaler.
+      - name: Type check
+        run: npm run check
+
       - name: Build
         env:
           # Secrets configurés dans les réglages du repo (Settings → Secrets and variables)

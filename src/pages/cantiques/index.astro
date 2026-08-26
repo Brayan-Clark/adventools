@@ -3,224 +3,405 @@ import Layout from '@/layouts/Layout.astro';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
 
-// Site 100% statique (GitHub Pages) : les données sont chargées côté client
-// depuis les JSON public/data/ (cache localStorage). Le frontmatter ne contient que la coquille statique.
+// Page unique liste + détail (100 % client, GitHub Pages).
+// Le détail s'ouvre via ?c=<recueil>-<numéro> sans rechargement : une seule
+// page HTML au lieu des ~1500 routes prérendues qui pesaient 78 Mo dans dist/
+// alors qu'elles servaient toutes exactement la même coquille vide.
 const lang: Lang = 'fr';
 ---
 
 <Layout lang={lang} title={t(lang, 'nav_cantiques')}>
-  <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-    <div class="reveal text-center">
-      <p class="section-kicker">✦ {t(lang, 'nav_cantiques')}</p>
-      <h1 class="section-title mt-1 text-4xl">🎵 {t(lang, 'cantiques_section')}</h1>
-      <p class="mx-auto mt-4 max-w-xl text-slate-500 dark:text-slate-400">{t(lang, 'cantiques_subtitle')}</p>
-    </div>
-
-    <!-- Statistiques -->
-    <div class="reveal mt-8 flex flex-wrap justify-center gap-3">
-      <span id="stat-mg" class="chip border border-emerald-500/40 bg-emerald-500/10 font-semibold text-emerald-600 dark:text-emerald-300">
-        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_mg')}
-      </span>
-      <span id="stat-fr" class="chip border border-sky-500/40 bg-sky-500/10 font-semibold text-sky-600 dark:text-sky-300">
-        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_fr')}
-      </span>
-      <span id="stat-en" class="chip border border-violet-500/40 bg-violet-500/10 font-semibold text-violet-600 dark:text-violet-300">
-        0 {t(lang, 'cantiques_total')} · {t(lang, 'cantiques_en')}
-      </span>
-      <span id="stat-audio" class="chip border border-gold-500/40 bg-gold-500/10 font-semibold text-gold-600 dark:text-gold-400">
-        ♪ 0 {t(lang, 'with_audio')}
-      </span>
-    </div>
-
-    <!-- Recherche + filtre langue -->
-    <div class="reveal mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
-      <div class="relative flex-1">
-        <input
-          id="cant-search"
-          type="search"
-          class="input-dark w-full pl-9"
-          placeholder={`${t(lang, 'cantique_search')} — ${t(lang, 'cantiques_by_number')} (ex : 45)`}
-          autocomplete="off"
-        />
-        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-        </svg>
+  <section class="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+    <!-- ===== LISTE ===== -->
+    <div id="view-list">
+      <div class="text-center">
+        <p class="section-kicker">✦ {t(lang, 'nav_cantiques')}</p>
+        <h1 class="section-title mt-1 text-4xl">🎵 {t(lang, 'cantiques_section')}</h1>
+        <p class="mx-auto mt-4 max-w-xl text-slate-500 dark:text-slate-400">{t(lang, 'cantiques_subtitle')}</p>
       </div>
-      <div class="flex gap-2">
-        <button class="lang-chip chip border border-gold-500 bg-gold-500/15 font-semibold text-gold-600 transition dark:text-gold-400" data-lang="mg">
-          {t(lang, 'cantiques_mg')}
-        </button>
-        <button class="lang-chip chip border border-slate-300/70 text-slate-500 transition dark:border-night-600 dark:text-slate-300" data-lang="fr">
-          {t(lang, 'cantiques_fr')}
-        </button>
-        <button class="lang-chip chip border border-slate-300/70 text-slate-500 transition dark:border-night-600 dark:text-slate-300" data-lang="en">
-          EN ♪
-        </button>
+
+      <!-- Recherche -->
+      <div class="mx-auto mt-8 max-w-2xl">
+        <div class="relative">
+          <input
+            id="cant-search"
+            type="search"
+            class="input-dark w-full pl-9"
+            placeholder={t(lang, 'cantique_search')}
+            autocomplete="off"
+            enterkeyhint="search"
+          />
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Recueils -->
+      <div id="cant-cols" class="mt-5 flex flex-wrap justify-center gap-2"></div>
+
+      <p id="cant-count" class="mt-5 text-center text-sm text-slate-500 dark:text-slate-400"></p>
+      <p id="cant-status" class="mt-3 hidden text-center text-sm"></p>
+
+      <div id="cant-grid" class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+      <div class="mt-8 text-center">
+        <button id="cant-more" class="btn-ghost hidden px-5 py-2 text-sm">{t(lang, 'cantiques_show_more')}</button>
       </div>
     </div>
 
-    <p id="cant-count" class="reveal mt-6 text-center text-sm text-slate-500 dark:text-slate-400"></p>
-
-    <div id="cant-grid" class="reveal mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
-    <p id="cant-empty" class="mt-12 hidden text-center text-slate-500 dark:text-slate-400">{t(lang, 'search_no_results')}</p>
+    <!-- ===== DÉTAIL ===== -->
+    <div id="view-detail" class="hidden"></div>
   </section>
 </Layout>
 
 <script>
-  import { getCantiquesJson } from '@/lib/static-data';
+  import {
+    COLLECTIONS,
+    collectionById,
+    loadCollection,
+    searchSongs,
+    splitStanzas,
+    playbackSrc,
+  } from '@/lib/hymnals';
+  import type { Song } from '@/lib/hymnals';
   import { clientLang } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
-  import type { CantiqueJson } from '@/lib/static-data';
 
   const lang = clientLang();
-  // URL base (pour les liens internes sur GitHub Pages)
   const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+  const PAGE_SIZE = 60;
 
-  const searchEl = document.getElementById('cant-search') as HTMLInputElement | null;
-  const grid = document.getElementById('cant-grid')!;
-  const countEl = document.getElementById('cant-count')!;
-  const emptyEl = document.getElementById('cant-empty')!;
+  const $ = (id: string) => document.getElementById(id)!;
+  const viewList = $('view-list');
+  const viewDetail = $('view-detail');
+  const searchEl = $('cant-search') as HTMLInputElement;
+  const colsEl = $('cant-cols');
+  const grid = $('cant-grid');
+  const countEl = $('cant-count');
+  const statusEl = $('cant-status');
+  const moreBtn = $('cant-more') as HTMLButtonElement;
 
-  const cache: Partial<Record<'mg' | 'fr' | 'en', CantiqueJson[]>> = {};
-  const inflight: Partial<Record<'mg' | 'fr' | 'en', Promise<CantiqueJson[]>>> = {};
-  let all: CantiqueJson[] = [];
-  let currentLang: 'mg' | 'fr' | 'en' = 'mg';
+  const esc = (s: string) =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  let currentCol = COLLECTIONS[0].id;
+  let songs: Song[] = [];
+  let visible = PAGE_SIZE;
   let query = '';
+  let searchTimer: number | undefined;
+  /** Anti-course : seule la dernière demande de recueil peut rendre. */
+  let loadSeq = 0;
 
-  async function fetchList(l: 'mg' | 'fr' | 'en'): Promise<CantiqueJson[]> {
-    if (cache[l]) return cache[l]!;
-    if (!inflight[l]) {
-      inflight[l] = getCantiquesJson(l).then((d) => {
-        cache[l] = d;
-        return d;
-      });
+  // ── Recueils ─────────────────────────────────────────────────────────────
+
+  function renderCollections() {
+    colsEl.innerHTML = COLLECTIONS.map((c) => {
+      const active = c.id === currentCol;
+      const badge =
+        c.kind === 'db'
+          ? `<span class="ml-1.5 text-[10px] font-normal opacity-60">↓</span>`
+          : '';
+      const count = c.count ? `<span class="ml-1.5 text-[10px] opacity-60">${c.count}</span>` : '';
+      return `<button data-col="${esc(c.id)}" title="${esc(
+        c.kind === 'db' ? t(lang, 'cantiques_collection_remote') : t(lang, 'cantiques_collection_offline')
+      )}" class="chip font-semibold transition ${
+        active
+          ? 'border-gold-500 bg-gold-500/15 text-gold-600 dark:text-gold-400'
+          : 'border-slate-300/70 text-slate-500 hover:border-gold-400/60 dark:border-night-600 dark:text-slate-300'
+      }">${esc(c.name)}${badge}${count}</button>`;
+    }).join('');
+  }
+
+  colsEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-col]') as HTMLElement | null;
+    if (!btn || !btn.dataset.col || btn.dataset.col === currentCol) return;
+    currentCol = btn.dataset.col;
+    renderCollections();
+    void openCollection(currentCol);
+  });
+
+  function setStatus(html: string, tone: 'info' | 'error' = 'info') {
+    if (!html) {
+      statusEl.classList.add('hidden');
+      statusEl.innerHTML = '';
+      return;
     }
-    return inflight[l];
+    statusEl.className = `mt-3 text-center text-sm ${
+      tone === 'error' ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'
+    }`;
+    statusEl.innerHTML = html;
+  }
+
+  function skeleton() {
+    grid.innerHTML = Array.from({ length: 6 })
+      .map(() => '<div class="h-[68px] animate-pulse rounded-2xl bg-slate-200/60 dark:bg-night-800/60"></div>')
+      .join('');
+    countEl.textContent = '';
+    moreBtn.classList.add('hidden');
+  }
+
+  async function openCollection(id: string) {
+    const seq = ++loadSeq;
+    const col = collectionById(id);
+    skeleton();
+    setStatus(col?.kind === 'db' ? t(lang, 'cantiques_downloading') : '');
+    try {
+      const list = await loadCollection(id);
+      if (seq !== loadSeq) return;
+      songs = list;
+      visible = PAGE_SIZE;
+      setStatus('');
+      renderCollections();
+      render();
+    } catch {
+      if (seq !== loadSeq) return;
+      songs = [];
+      grid.innerHTML = '';
+      countEl.textContent = '';
+      moreBtn.classList.add('hidden');
+      setStatus(
+        `${t(lang, 'cantiques_download_failed')} <button id="cant-retry" class="chip ml-2 border border-rose-500/50 px-2 py-0.5 text-xs font-semibold">${t(
+          lang,
+          'cantiques_retry'
+        )}</button>`,
+        'error'
+      );
+      $('cant-retry')?.addEventListener('click', () => void openCollection(id));
+    }
+  }
+
+  // ── Liste ────────────────────────────────────────────────────────────────
+
+  function results(): Song[] {
+    return searchSongs(songs, query, Number.MAX_SAFE_INTEGER);
+  }
+
+  function cardHtml(s: Song): string {
+    const hasAudio = Boolean(s.playback);
+    return `
+      <a href="${BASE}cantiques/?c=${encodeURIComponent(s.id)}" data-song="${esc(s.id)}"
+        class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 font-display text-sm font-bold text-white shadow">${s.num}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-semibold text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${esc(s.title)}</span>
+          <span class="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+            ${hasAudio ? `<span class="text-emerald-500">♪ ${esc(t(lang, 'cantique_listen'))}</span>` : ''}
+            ${s.author ? `<span class="truncate">${esc(s.author)}</span>` : ''}
+          </span>
+        </span>
+        <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-gold-500 dark:text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </a>`;
   }
 
   function render() {
-    const q = query.trim().toLowerCase();
-    const isNumber = /^\d+$/.test(q);
-    const numQ = isNumber ? parseInt(q, 10) : null;
-    const results = all.filter((c) => {
-      if (!q) return true;
-      // Recherche par numéro : match exact en priorité, puis début du numéro
-      if (isNumber) {
-        if (numQ !== null && String(c.num) === String(numQ)) return true;
-        if (String(c.num).startsWith(q)) return true;
-      }
-      return (
-        (c.title || '').toLowerCase().includes(q) ||
-        (c.author || '').toLowerCase().includes(q) ||
-        (c.categories || '').toLowerCase().includes(q) ||
-        (c.content || '').toLowerCase().includes(q)
-      );
-    });
-    // Tri : numéro trouvé en premier, puis ordre numérique
-    if (isNumber) {
-      results.sort((a, b) => {
-        const am = String(a.num).startsWith(q) ? 0 : 1;
-        const bm = String(b.num).startsWith(q) ? 0 : 1;
-        return am - bm || a.num - b.num;
-      });
-    }
-    countEl.textContent = `${results.length} ${t(lang, 'cantiques_total')}`;
-    emptyEl.classList.toggle('hidden', results.length > 0);
-
-    grid.innerHTML = results
-      .map(
-        (c) => `
-        <a href="${BASE}cantiques/${c.id}?lang=${lang}&clang=${c.lang}"
-          class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
-          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 font-display text-sm font-bold text-white shadow">
-            ${c.num ?? '♪'}
-          </span>
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-semibold text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${c.title}</span>
-            <span class="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-              ${c.playback ? '<span class="text-emerald-500">♪ ' + t(lang, 'cantique_listen') + '</span>' : ''}
-              ${c.author ? `<span class="truncate">${c.author}</span>` : ''}
-            </span>
-          </span>
-          <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-gold-500 dark:text-slate-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </a>`
-      )
-      .join('');
+    const list = results();
+    countEl.textContent = `${list.length} ${t(lang, 'cantiques_total')}`;
+    const shown = list.slice(0, visible);
+    grid.innerHTML = shown.length
+      ? shown.map(cardHtml).join('')
+      : `<p class="col-span-full py-10 text-center text-slate-500 dark:text-slate-400">${esc(t(lang, 'search_no_results'))}</p>`;
+    moreBtn.classList.toggle('hidden', list.length <= visible);
   }
 
-  function renderStats(mg: CantiqueJson[], fr: CantiqueJson[], en: CantiqueJson[]) {
-    const audio = [...mg, ...fr, ...en].filter((c) => c.playback).length;
-    const set = (id: string, text: string) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    };
-    set('stat-mg', `${mg.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_mg')}`);
-    set('stat-fr', `${fr.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_fr')}`);
-    set('stat-en', `${en.length} ${t(lang, 'cantiques_total')} · ${t(lang, 'cantiques_en')}`);
-    set('stat-audio', `♪ ${audio} ${t(lang, 'with_audio')}`);
-  }
-
-  async function loadStats() {
-    try {
-      const [mg, fr, en] = await Promise.all([fetchList('mg'), fetchList('fr'), fetchList('en')]);
-      renderStats(mg, fr, en);
-    } catch {
-      /* stats indisponibles */
-    }
-  }
-
-  async function load(l: 'mg' | 'fr' | 'en') {
-    try {
-      all = await fetchList(l);
-      render();
-    } catch {
-      grid.innerHTML = `<p class="col-span-full text-center text-sm text-slate-500">⚠️ ${t(lang, 'ai_offline_text')}</p>`;
-    }
-  }
-
-  // Libellés de l'interface dans la langue active (clientLang)
-  if (searchEl) {
-    searchEl.placeholder = `${t(lang, 'cantique_search')} — ${t(lang, 'cantiques_by_number')} (ex : 45)`;
-  }
-  emptyEl.textContent = t(lang, 'search_no_results');
-  const tabLabels: Record<string, string> = {
-    mg: t(lang, 'cantiques_mg'),
-    fr: t(lang, 'cantiques_fr'),
-    en: t(lang, 'cantiques_en'),
-  };
-  document.querySelectorAll('.lang-chip').forEach((btn) => {
-    const l = btn.getAttribute('data-lang')!;
-    btn.textContent = l === 'en' ? 'EN ♪' : tabLabels[l];
-  });
-
-  searchEl?.addEventListener('input', () => {
-    query = searchEl.value;
+  moreBtn.addEventListener('click', () => {
+    visible += PAGE_SIZE;
     render();
   });
 
-  const ACTIVE = ['border-gold-500', 'bg-gold-500/15', 'font-semibold', 'text-gold-600', 'dark:text-gold-400'];
-  const INACTIVE = ['border-slate-300/70', 'text-slate-500', 'dark:border-night-600', 'dark:text-slate-300'];
-
-  document.querySelectorAll('.lang-chip').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const l = btn.getAttribute('data-lang') as 'mg' | 'fr' | 'en';
-      currentLang = l;
-      document.querySelectorAll('.lang-chip').forEach((b) => {
-        const active = b.getAttribute('data-lang') === l;
-        ACTIVE.forEach((c) => b.classList.toggle(c, active));
-        INACTIVE.forEach((c) => b.classList.toggle(c, !active));
-      });
-      if (cache[l]) {
-        all = cache[l]!;
-        render();
-      } else {
-        load(l);
-      }
-    });
+  searchEl.addEventListener('input', () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => {
+      query = searchEl.value;
+      visible = PAGE_SIZE;
+      render();
+    }, 150);
   });
 
-  loadStats();
-  load('mg');
+  // Navigation SPA : on intercepte les clics sur les cartes.
+  grid.addEventListener('click', (e) => {
+    const a = (e.target as HTMLElement).closest('[data-song]') as HTMLAnchorElement | null;
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    const id = a.dataset.song!;
+    history.pushState({ song: id }, '', `${BASE}cantiques/?c=${encodeURIComponent(id)}`);
+    void showDetail(id);
+  });
+
+  // ── Détail ───────────────────────────────────────────────────────────────
+
+  function detailHtml(s: Song, prev: Song | null, next: Song | null): string {
+    const col = collectionById(s.collection);
+    const stanzas = splitStanzas(s.content);
+    const src = playbackSrc(s.playback);
+
+    const audio = src
+      ? `<div class="mt-8 flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white shadow-soft sm:flex-row sm:items-center">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+            <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-display text-sm font-semibold">${esc(s.title)}</p>
+            <audio class="mt-2 w-full" controls preload="none" src="${esc(src)}"></audio>
+          </div>
+        </div>`
+      : '';
+
+    const body = stanzas.length
+      ? `<div class="mt-6 space-y-5">${stanzas
+          .map(
+            (st, i) =>
+              `<div><p class="text-center text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400">${esc(
+                t(lang, 'pres_stanza')
+              )} ${i + 1}</p><pre class="mt-2 whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-slate-700 dark:text-slate-200">${esc(
+                st
+              )}</pre></div>`
+          )
+          .join('')}</div>`
+      : `<p class="mt-6 rounded-xl border border-dashed border-slate-300/70 p-5 text-center text-sm text-slate-500 dark:border-night-600 dark:text-slate-400">${esc(
+          src ? t(lang, 'cantiques_audio_only') : t(lang, 'cantique_no_lyrics')
+        )}</p>`;
+
+    const navBtn = (s2: Song | null, dir: 'prev' | 'next') =>
+      s2
+        ? `<button data-goto="${esc(s2.id)}" class="btn-ghost max-w-[45%] truncate px-4 py-2 text-xs">${
+            dir === 'prev' ? '← ' : ''
+          }${s2.num} · ${esc(s2.title)}${dir === 'next' ? ' →' : ''}</button>`
+        : '<span></span>';
+
+    return `
+      <nav class="mb-6 text-xs text-slate-400">
+        <a href="${BASE}" class="hover:text-gold-600 dark:hover:text-gold-400">${esc(t(lang, 'nav_home'))}</a>
+        <span class="mx-1">/</span>
+        <button id="crumb-back" class="hover:text-gold-600 dark:hover:text-gold-400">${esc(t(lang, 'nav_cantiques'))}</button>
+        <span class="mx-1">/</span>
+        <span class="text-slate-600 dark:text-slate-300">${s.num} — ${esc(s.title)}</span>
+      </nav>
+
+      <div class="mx-auto max-w-3xl">
+        <header class="text-center">
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <span class="chip border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">${esc(col?.name ?? '')}</span>
+            ${
+              s.categories && s.categories !== 'undefined'
+                ? `<span class="chip border border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-300">${esc(s.categories)}</span>`
+                : ''
+            }
+            ${s.key ? `<span class="chip border border-slate-300/70 text-slate-500 dark:border-night-600 dark:text-slate-300">${esc(t(lang, 'cantique_key'))} ${esc(s.key)}</span>` : ''}
+          </div>
+          ${s.author && s.author !== 'undefined' ? `<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">${esc(s.author)}</p>` : ''}
+          <a href="${BASE}presentation?add=cantique&song=${encodeURIComponent(s.id)}" class="btn-gold mt-5 inline-flex items-center gap-2 px-4 py-2 text-xs">🖥️ ${esc(t(lang, 'pres_launch'))}</a>
+        </header>
+
+        ${audio}
+
+        <article class="mt-8 rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur sm:p-8 dark:border-night-700/60 dark:bg-night-800/80">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-500 font-display text-lg font-bold text-night-950">${s.num}</span>
+            <h1 class="min-w-0 flex-1 font-display text-2xl font-bold text-slate-900 dark:text-white">${esc(s.title)}</h1>
+          </div>
+          ${body}
+        </article>
+
+        <div class="mt-10 flex flex-wrap items-center justify-between gap-3">
+          ${navBtn(prev, 'prev')}
+          <button id="detail-back" class="btn-gold px-4 py-2 text-xs">${esc(t(lang, 'cantiques_back_to_list'))}</button>
+          ${navBtn(next, 'next')}
+        </div>
+      </div>`;
+  }
+
+  async function showDetail(id: string) {
+    const colId = id.includes('-') ? id.slice(0, id.lastIndexOf('-')) : currentCol;
+    viewList.classList.add('hidden');
+    viewDetail.classList.remove('hidden');
+    viewDetail.innerHTML = '<div class="mx-auto h-64 max-w-3xl animate-pulse rounded-3xl bg-slate-200/60 dark:bg-night-800/60"></div>';
+
+    let list: Song[] = songs.length && songs[0].collection === colId ? songs : [];
+    if (!list.length) {
+      try {
+        list = await loadCollection(colId);
+      } catch {
+        viewDetail.innerHTML = `<div class="py-20 text-center"><p class="text-6xl">🎵</p><p class="mt-4 text-slate-500 dark:text-slate-400">${esc(
+          t(lang, 'cantiques_download_failed')
+        )}</p><button id="detail-back" class="btn-gold mt-8 px-4 py-2 text-xs">${esc(t(lang, 'cantiques_back_to_list'))}</button></div>`;
+        wireDetail();
+        return;
+      }
+    }
+
+    const idx = list.findIndex((s) => s.id === id);
+    if (idx < 0) {
+      viewDetail.innerHTML = `<div class="py-20 text-center"><p class="text-6xl">🎵</p><h1 class="mt-4 font-display text-3xl font-bold">${esc(
+        t(lang, 'not_found_title')
+      )}</h1><button id="detail-back" class="btn-gold mt-8 px-4 py-2 text-xs">${esc(t(lang, 'cantiques_back_to_list'))}</button></div>`;
+      wireDetail();
+      return;
+    }
+
+    const s = list[idx];
+    document.title = `${s.num}. ${s.title} · Andeaha Hizaha`;
+    viewDetail.innerHTML = detailHtml(s, list[idx - 1] ?? null, list[idx + 1] ?? null);
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    wireDetail();
+  }
+
+  function wireDetail() {
+    viewDetail.querySelectorAll<HTMLElement>('[data-goto]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const id = b.dataset.goto!;
+        history.pushState({ song: id }, '', `${BASE}cantiques/?c=${encodeURIComponent(id)}`);
+        void showDetail(id);
+      })
+    );
+    viewDetail.querySelectorAll('#detail-back, #crumb-back').forEach((b) =>
+      b.addEventListener('click', () => {
+        history.pushState({}, '', `${BASE}cantiques/`);
+        showList();
+      })
+    );
+  }
+
+  function showList() {
+    viewDetail.classList.add('hidden');
+    viewDetail.innerHTML = '';
+    viewList.classList.remove('hidden');
+    document.title = `${t(lang, 'nav_cantiques')} · Andeaha Hizaha`;
+  }
+
+  // ── Amorçage ─────────────────────────────────────────────────────────────
+
+  function routeFromUrl() {
+    const id = new URLSearchParams(location.search).get('c');
+    if (id) void showDetail(id);
+    else showList();
+  }
+
+  window.addEventListener('popstate', routeFromUrl);
+
+  renderCollections();
+  // Le recueil demandé par l'URL est chargé en premier pour éviter un
+  // téléchargement inutile du recueil par défaut.
+  const initial = new URLSearchParams(location.search).get('c');
+  if (initial) {
+    const colId = initial.slice(0, initial.lastIndexOf('-'));
+    if (collectionById(colId)) currentCol = colId;
+    renderCollections();
+    void showDetail(initial);
+    void openCollection(currentCol);
+  } else {
+    void openCollection(currentCol);
+  }
+
+  // Compteurs des recueils embarqués (affichés sur les puces) sans bloquer.
+  Promise.allSettled(
+    COLLECTIONS.filter((c) => c.kind === 'json').map((c) => loadCollection(c.id))
+  ).then(() => renderCollections());
 </script>

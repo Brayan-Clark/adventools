@@ -1,21 +1,17 @@
 /**
- * Chargement des données de référence (cantiques, mofonaina) DIRECTEMENT depuis
- * la branche `data` du dépôt adventools (URLs raw GitHub), avec :
- *   - cache localStorage pour l'offline (TTL 24h)
- *   - fallback sur les JSON locaux public/data/ si le réseau échoue
+ * Méditations quotidiennes (mofonaina) chargées depuis la branche `data`
+ * d'adventools, avec cache localStorage (TTL 24 h) et repli sur le JSON
+ * embarqué dans le site pour le hors-ligne.
  *
- * Avantage : quand la branche `data` d'adventools est mise à jour, l'app est
- * à jour automatiquement (même principe que la bible via sql.js).
- *
- * ⚠️ Les clés de cache sont versionnées (v2) : toute ancienne entrée au format
- * incorrect (stockée par une ancienne version du code) est automatiquement
- * ignorée, et on re-fetch à la place.
+ * Les cantiques ne passent plus par ici : ils ont leur propre module
+ * (`hymnals.ts`), car leurs sources sont des bases SQLite et non des JSON.
  */
 
 const RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
-const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+// `import.meta.env` n'existe que sous Vite : lecture défensive.
+const BASE = ((import.meta as any).env?.BASE_URL ?? '/').replace(/\/?$/, '/');
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 heures
-const CACHE_VER = 'v2';
+const CACHE_KEY = 'mofonaina-v3';
 
 interface CacheEntry<T> {
   data: T;
@@ -41,17 +37,19 @@ function setCache<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
   } catch {
-    /* quota exceeded — silent */
+    /* quota dépassé — le cache est un confort, pas une obligation */
   }
 }
 
-/** Purge toutes les entrées de cache de données statiques. */
+/** Purge le cache des données de référence (bouton « vider le cache »). */
 export function clearStaticCache(): void {
   try {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k?.startsWith('cantiques-') || k?.startsWith('mofonaina')) keys.push(k);
+      if (k?.startsWith('mofonaina') || k?.startsWith('cantiques-') || k?.startsWith('docs-manifest')) {
+        keys.push(k);
+      }
     }
     keys.forEach((k) => localStorage.removeItem(k));
   } catch {
@@ -69,89 +67,6 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
-/**
- * Récupère un JSON local avec cache localStorage.
- * @param cacheKey Clé localStorage
- * @param url Chemin relatif au site
- */
-export async function fetchWithCache<T>(cacheKey: string, url: string): Promise<T | null> {
-  const cached = getCache<T>(cacheKey);
-  if (cached) return cached;
-
-  const fullUrl = url.startsWith('http') ? url : `${BASE.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
-  const data = await fetchJson<T>(fullUrl);
-  if (data) setCache(cacheKey, data);
-  return data;
-}
-
-// ── Types cantiques ──
-
-export interface CantiqueJson {
-  id: string;
-  num: number;
-  title: string;
-  key?: string;
-  author?: string;
-  categories?: string;
-  content?: string;
-  playback?: string;
-  source?: string;
-}
-
-interface HymneVersion {
-  id: string;
-  name: string;
-  language: string;
-  url: string;
-}
-
-interface HymneManifest {
-  versions: HymneVersion[];
-}
-
-const LANG_MAP: Record<string, 'mg' | 'fr' | 'en'> = {
-  Malagasy: 'mg',
-  French: 'fr',
-  English: 'en',
-};
-
-// ── Fetch cantiques (depuis la branche data, fallback local) ──
-
-export async function getCantiquesJson(lang: 'mg' | 'fr' | 'en' = 'mg'): Promise<CantiqueJson[]> {
-  const cacheKey = `cantiques-${lang}-${CACHE_VER}`;
-
-  // 1. Cache localStorage (validé : doit être un array, sinon re-fetch)
-  const cached = getCache<CantiqueJson[]>(cacheKey);
-  if (Array.isArray(cached)) return cached;
-
-  // 2. Branche data (auto-update)
-  const manifest = await fetchJson<HymneManifest>(`${RAW}/hymnes/manifest.json`);
-  if (manifest?.versions) {
-    const version = manifest.versions.find((v) => LANG_MAP[v.language] === lang);
-    if (version?.url) {
-      const data = await fetchJson<CantiqueJson[]>(version.url);
-      if (data && Array.isArray(data)) {
-        setCache(cacheKey, data);
-        return data;
-      }
-    }
-  }
-
-  // 3. Fallback local (offline)
-  return (await fetchWithCache<CantiqueJson[]>(cacheKey, `data/cantiques_${lang}.json`)) ?? [];
-}
-
-export async function getCantiqueByIdJson(id: string): Promise<CantiqueJson | null> {
-  for (const lang of ['mg', 'fr', 'en'] as const) {
-    const list = await getCantiquesJson(lang);
-    const found = list.find((c) => c.id === id);
-    if (found) return found;
-  }
-  return null;
-}
-
-// ── Fetch mofonaina (depuis la branche data, fallback local) ──
-
 export interface MofonainaDayJson {
   date: string;
   titre_du_jour: string;
@@ -162,50 +77,71 @@ export interface MofonainaDayJson {
   source?: string;
 }
 
-function quarterOf(date: Date): string {
-  const y = date.getFullYear();
-  const q = Math.floor(date.getMonth() / 3) + 1;
-  return `${y}-Q${q}`;
+interface MofonainaFile {
+  trimestre?: { annee?: number; numero_trimestre?: number; titre_principal?: string };
+  meditations?: MofonainaDayJson[];
 }
 
+/** Nom de fichier `YYYY-QN` d'un trimestre, décalé de `offset` trimestres. */
+function quarterFile(date: Date, offset = 0): string {
+  const q = Math.floor(date.getMonth() / 3) + offset;
+  const y = date.getFullYear() + Math.floor(q / 4);
+  const qq = ((q % 4) + 4) % 4;
+  return `${y}-Q${qq + 1}`;
+}
+
+/**
+ * Méditations du trimestre courant. Si le fichier du trimestre n'est pas
+ * (encore) publié sur la branche `data`, on essaie le trimestre précédent
+ * avant de retomber sur le JSON embarqué : sans ce repli, la page devenait
+ * vide au changement de trimestre.
+ */
 export async function getMofonainaJson(): Promise<MofonainaDayJson[]> {
-  const cacheKey = `mofonaina-${CACHE_VER}`;
+  const cached = getCache<MofonainaDayJson[]>(CACHE_KEY);
+  if (Array.isArray(cached) && cached.length) return cached;
 
-  // 1. Cache localStorage (validé : doit être un array, sinon re-fetch)
-  const cached = getCache<MofonainaDayJson[]>(cacheKey);
-  if (Array.isArray(cached)) return cached;
-
-  // 2. Branche data (auto-update) — fichier du trimestre courant
-  const file = `${quarterOf(new Date())}.json`;
-  const raw = await fetchJson<{ meditations?: MofonainaDayJson[] }>(`${RAW}/mofonaina/${file}`);
-  if (raw && Array.isArray(raw.meditations)) {
-    setCache(cacheKey, raw.meditations);
-    return raw.meditations;
+  const now = new Date();
+  for (const offset of [0, -1]) {
+    const file = await fetchJson<MofonainaFile>(`${RAW}/mofonaina/${quarterFile(now, offset)}.json`);
+    if (file && Array.isArray(file.meditations) && file.meditations.length) {
+      setCache(CACHE_KEY, file.meditations);
+      return file.meditations;
+    }
   }
 
-  // 3. Fallback local (offline)
-  const local = await fetchWithCache<{ meditations?: MofonainaDayJson[] }>(cacheKey, 'data/mofonaina.json');
-  if (local && Array.isArray(local.meditations)) {
-    return local.meditations;
-  }
+  const local = await fetchJson<MofonainaFile>(`${BASE}data/mofonaina.json`);
+  if (local && Array.isArray(local.meditations)) return local.meditations;
   return [];
 }
 
+/** Date du jour au format `YYYY-MM-DD`, en heure locale. */
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Méditation d'une date donnée (par défaut celle du jour). Si la date exacte
+ * est absente, on renvoie la méditation la plus proche dans le passé plutôt
+ * que la toute première du trimestre, qui pouvait être vieille de trois mois.
+ */
 export async function getMeditationForDateJson(date?: string): Promise<MofonainaDayJson | null> {
   const meds = await getMofonainaJson();
   if (!meds.length) return null;
-  if (date) {
-    const found = meds.find((m) => m.date === date);
-    if (found) return found;
-  }
-  const today = new Date();
-  const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const t = meds.find((m) => m.date === iso);
-  return t ?? meds[0] ?? null;
+
+  const target = date ?? todayIso();
+  const exact = meds.find((m) => m.date === target);
+  if (exact) return exact;
+
+  const past = meds.filter((m) => m.date <= target).sort((a, b) => (a.date < b.date ? 1 : -1));
+  return past[0] ?? meds[0] ?? null;
 }
 
-// ── Playback src Google Drive ──
-
+/**
+ * URL de lecture directe pour un lien audio.
+ * Les liens Google Drive « uc?export=download » renvoient une page
+ * d'avertissement ; `drive.usercontent.google.com` sert le flux directement.
+ */
 export function playbackSrc(url?: string): string {
   if (!url) return '';
   const m = url.match(/[?&]id=([A-Za-z0-9_-]+)/);

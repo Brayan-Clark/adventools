@@ -24,12 +24,9 @@ export const supabase = IS_CONFIGURED
         autoRefreshToken: true,
         detectSessionInUrl: true
       },
-      // Site 100% statique : pas de Realtime nécessaire (évite WebSocket)
-      realtime: { enabled: false }
     })
   : createClient('https://placeholder.supabase.co', 'placeholder', {
       auth: { persistSession: false },
-      realtime: { enabled: false }
     });
 
 // Types pour les tables
@@ -53,57 +50,13 @@ export interface User {
   role?: Role;
 }
 
-export interface Category {
-  id: number;
-  slug: string;
-  name_fr: string;
-  name_mg: string;
-  icon: string;
-  color: string;
-  created_at: string;
-}
-
-export interface MediaItem {
-  id: number;
-  type: 'sermon' | 'course' | 'audio' | 'seminar' | 'conference' | 'article';
-  slug: string;
-  title_fr: string;
-  title_mg: string | null;
-  description_fr: string;
-  description_mg: string;
-  content_fr: string;
-  content_mg: string;
-  speaker: string;
-  image: string;
-  video_url: string;
-  audio_url: string;
-  duration: string;
-  date: string;
-  category_id: number | null;
-  tags: string[];
-  featured: boolean;
-  views: number;
-  lessons: Lesson[];
-  created_at: string;
-  updated_at: string;
-  category?: Category;
-}
-
-export interface Lesson {
-  title_fr: string;
-  title_mg: string;
-  video_url?: string;
-  audio_url?: string;
-  duration?: string;
-}
-
-export interface Verse {
-  id: number;
-  text_fr: string;
-  text_mg: string;
-  reference: string;
-  created_at: string;
-}
+// Catégories, médias, leçons et versets ont une seule définition, dans
+// `types.ts`. Ce fichier en dupliquait une variante plus stricte (colonnes
+// malgaches non nullables, `category_id` numérique obligatoire) : les deux
+// types portaient le même nom et ne se mélangeaient pas, ce qui rendait
+// l'admin intypable.
+export type { Category, Lesson, MediaItem, Verse, MediaType } from './types';
+import type { Category, MediaItem, Verse } from './types';
 
 export interface Cantique {
   id: string;
@@ -469,43 +422,33 @@ export async function getRoles() {
 // STATISTIQUES
 // ============================================================
 
+/**
+ * Compte les lignes d'un type de média. Chaque compteur est isolé : une table
+ * absente ou une base injoignable renvoie 0 au lieu de faire échouer tout le
+ * bloc de statistiques (l'ancien Promise.all vidait la page entière dès qu'une
+ * seule requête échouait).
+ */
+async function countMedia(type: MediaItem['type']): Promise<number> {
+  try {
+    const { count } = await supabase
+      .from('media')
+      .select('*', { count: 'exact', head: true })
+      .eq('type', type);
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function getStats() {
-  const [
-    { count: sermons },
-    { count: courses },
-    { count: audio },
-    { count: seminars },
-    { count: conferences },
-    { count: articles },
-    { count: cantiquesMg },
-    { count: cantiquesFr },
-    { count: cantiquesEn },
-    { count: meditations }
-  ] = await Promise.all([
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'sermon'),
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'course'),
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'audio'),
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'seminar'),
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'conference'),
-    supabase.from('media').select('*', { count: 'exact', head: true }).eq('type', 'article'),
-    supabase.from('cantiques').select('*', { count: 'exact', head: true }).eq('lang', 'mg'),
-    supabase.from('cantiques').select('*', { count: 'exact', head: true }).eq('lang', 'fr'),
-    supabase.from('cantiques').select('*', { count: 'exact', head: true }).eq('lang', 'en'),
-    supabase.from('mofonaina').select('*', { count: 'exact', head: true })
+  const [sermons, courses, audio, seminars, conferences, articles] = await Promise.all([
+    countMedia('sermon'),
+    countMedia('course'),
+    countMedia('audio'),
+    countMedia('seminar'),
+    countMedia('conference'),
+    countMedia('article'),
   ]);
 
-  return {
-    sermons: sermons || 0,
-    courses: courses || 0,
-    audio: audio || 0,
-    seminars: seminars || 0,
-    conferences: conferences || 0,
-    articles: articles || 0,
-    cantiques: {
-      mg: cantiquesMg || 0,
-      fr: cantiquesFr || 0,
-      en: cantiquesEn || 0
-    },
-    meditations: meditations || 0
-  };
+  return { sermons, courses, audio, seminars, conferences, articles };
 }

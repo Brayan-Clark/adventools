@@ -213,7 +213,7 @@ const typeOptions = [
   import { supabase, signIn, signOut, getCurrentUser, getStats, getMedia, getCategories, createMedia, updateMedia, deleteMedia, getUsers, updateUser, getRoles } from '@/lib/supabase';
   import type { MediaItem } from '@/lib/types';
 
-  const lang = document.documentElement.lang;
+  const lang = (document.documentElement.lang === 'mg' ? 'mg' : 'fr') as 'fr' | 'mg';
   const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 
   const loginScreen = document.getElementById('login-screen')!;
@@ -318,7 +318,7 @@ const typeOptions = [
       fileInput.click();
     });
   });
-  document.querySelectorAll('input[type="file"]').forEach((fileInput) => {
+  document.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach((fileInput) => {
     fileInput.addEventListener('change', async () => {
       const btn = fileInput.closest('div')!.querySelector('[data-bucket]') as HTMLButtonElement;
       const bucket = btn.getAttribute('data-bucket') || 'images';
@@ -469,9 +469,11 @@ const typeOptions = [
       duration: r.querySelector('.l-duration').value,
     }));
     const tags = (document.getElementById('f-tags') as HTMLInputElement).value;
-    const payload: Partial<any> = {
-      type: (document.getElementById('f-type') as HTMLSelectElement).value,
-      category_id: (document.getElementById('f-category') as HTMLSelectElement).value || null,
+    const payload: Partial<MediaItem> & { title_fr: string; type: MediaItem['type'] } = {
+      type: (document.getElementById('f-type') as HTMLSelectElement).value as MediaItem['type'],
+      // `category_id` est un entier en base : le `value` du <select> est une
+      // chaîne, qui était envoyée telle quelle à Supabase.
+      category_id: Number((document.getElementById('f-category') as HTMLSelectElement).value) || null,
       title_fr: (document.getElementById('f-title-fr') as HTMLInputElement).value,
       title_mg: (document.getElementById('f-title-mg') as HTMLInputElement).value,
       description_fr: (document.getElementById('f-desc-fr') as HTMLTextAreaElement).value,

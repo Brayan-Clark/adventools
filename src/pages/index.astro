@@ -1,6 +1,5 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import VerseCard from '@/components/VerseCard.astro';
 import { t } from '@/lib/i18n';
 import type { Lang } from '@/lib/types';
 
@@ -11,22 +10,6 @@ const lang: Lang = 'fr';
 const heroImage =
   'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1920&q=80';
 
-const catIcons: Record<string, string> = {
-  book: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 2h10v1.5H7V8zm0 3h10v1.5H7V11zm0 3h6v1.5H7V14z',
-  music: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z',
-  heart: 'M12 21s-7.5-4.9-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 19.5 12c-2 4.1-7.5 9-7.5 9z',
-  flame: 'M12 2s5 4.5 5 10a5 5 0 01-10 0c0-1.5.5-2.8 1.2-4C9.5 9.5 10 11 12 11s2.5-1.5 2.5-3.5C14.5 5 12 2 12 2z',
-  scroll: 'M8 3h9a2 2 0 012 2v2h-2V5H8V3zm-1 0a1 1 0 100 2v14a2 2 0 01-2 2 1 1 0 01-1-1V4a1 1 0 011-1h2zm4 7h7v2h-7v-2zm0 4h7v2h-7v-2z',
-  sparkles: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zm7 10l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15z',
-};
-const catColors: Record<string, string> = {
-  indigo: 'from-indigo-600 to-violet-600',
-  gold: 'from-amber-500 to-orange-600',
-  rose: 'from-rose-500 to-pink-600',
-  orange: 'from-orange-500 to-red-500',
-  emerald: 'from-emerald-500 to-teal-600',
-  sky: 'from-sky-500 to-blue-600',
-};
 ---
 
 <Layout lang={lang} title={t(lang, 'hero_title')} description={t(lang, 'hero_subtitle')}>
@@ -96,8 +79,11 @@ const catColors: Record<string, string> = {
     </div>
   </section>
 
+  <!-- Bandeau affiché uniquement si la base de données ne répond pas -->
+  <div id="backend-notice" class="mx-auto mt-10 hidden max-w-3xl px-4 sm:px-6"></div>
+
   <!-- ==================== EN VEDETTE ==================== -->
-  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+  <section id="featured-section" class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
     <div class="reveal flex items-end justify-between gap-4">
       <div>
         <p class="section-kicker">✦ <span data-i18n="featured">{t(lang, 'featured')}</span></p>
@@ -111,7 +97,7 @@ const catColors: Record<string, string> = {
   </section>
 
   <!-- ==================== CATÉGORIES ==================== -->
-  <section class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+  <section id="categories-section" class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
     <div class="reveal flex items-end justify-between gap-4">
       <div>
         <p class="section-kicker">✦ <span data-i18n="categories_section">{t(lang, 'categories_section')}</span></p>
@@ -122,7 +108,7 @@ const catColors: Record<string, string> = {
   </section>
 
   <!-- ==================== DERNIERS SERMONS ==================== -->
-  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+  <section id="sermons-section" class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
     <div class="reveal flex items-end justify-between gap-4">
       <div>
         <p class="section-kicker">✦ <span data-i18n="latest_sermons">{t(lang, 'latest_sermons')}</span></p>
@@ -265,9 +251,11 @@ const catColors: Record<string, string> = {
 
 <script>
   import { supabase, getMedia, getCategories, getVerseOfDay, getStats } from '@/lib/supabase';
-  import { getCantiquesJson, getMeditationForDateJson } from '@/lib/static-data';
-  import { clientLang, mediaCardHtml, verseCardHtml } from '@/lib/client-render';
+  import { getMeditationForDateJson } from '@/lib/static-data';
+  import { loadCollection } from '@/lib/hymnals';
+  import { clientLang, mediaCardHtml, verseCardHtml, settle, backendDownHtml, wireBackendRetry } from '@/lib/client-render';
   import { t, bibleVersionLabel, bibleLanguageName } from '@/lib/i18n';
+  import { ICONS as ICON_SET, CATEGORY_ICONS } from '@/lib/icons';
 
   const lang = clientLang();
 
@@ -283,17 +271,35 @@ const catColors: Record<string, string> = {
 
   async function load() {
     try {
-      const [featured, categories, latestSermons, courses, audioItems, conferences, cantiques, meditation, stats] = await Promise.all([
-        getMedia({ featured: true, limit: 4 }).catch(() => []),
+      const [featuredRes, categories, latestSermons, courses, audioItems, conferences, cantiques, meditation, stats] = await Promise.all([
+        settle(getMedia({ featured: true, limit: 4 }), [] as Awaited<ReturnType<typeof getMedia>>),
         getCategories().catch(() => []),
         getMedia({ type: 'sermon', limit: 4 }).catch(() => []),
         getMedia({ type: 'course', limit: 3 }).catch(() => []),
         getMedia({ type: 'audio', limit: 4 }).catch(() => []),
         getMedia({ type: 'conference', limit: 3 }).catch(() => []),
-        getCantiquesJson('mg').then((list) => list.filter((c) => c.playback)).catch(() => []),
+        loadCollection('adventista').then((list) => list.filter((c) => c.playback)).catch(() => []),
         getMeditationForDateJson().catch(() => null),
         getStats().catch(() => null),
       ]);
+
+      const featured = featuredRes.data;
+
+      // Base injoignable : un bandeau unique, et on masque les sections qui en
+      // dépendent au lieu de laisser des grilles vides sans explication.
+      // Les sections locales (Bible, cantiques, mofonaina, bibliothèque)
+      // continuent de s'afficher normalement.
+      const notice = document.getElementById('backend-notice');
+      if (featuredRes.failed) {
+        if (notice) {
+          notice.innerHTML = backendDownHtml(lang);
+          notice.classList.remove('hidden');
+          wireBackendRetry(notice, () => location.reload());
+        }
+        ['featured-section', 'categories-section', 'sermons-section'].forEach((id) =>
+          document.getElementById(id)?.classList.add('hidden')
+        );
+      }
 
       // Verset du jour
       const verse = await getVerseOfDay().catch(() => null);
@@ -306,15 +312,18 @@ const catColors: Record<string, string> = {
 
       // Stats
       const statDefs = [
-        { key: 'sermons', label: t(lang, 'stat_sermons'), icon: 'M15 10l4.55-2.28A1 1 0 0121 8.6v6.8a1 1 0 01-1.45.88L15 14v-4z' },
-        { key: 'courses', label: t(lang, 'stat_courses'), icon: 'M12 3l9 5-9 5-9-5 9-5zm-7 8.5v4.5c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5v-4.5L12 13l-7-1.5z' },
-        { key: 'audio', label: t(lang, 'stat_audio'), icon: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z' },
-        { key: 'seminars', label: t(lang, 'stat_seminars'), icon: 'M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.56-.12-1.1-.33-1.58M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.56.12-1.1.33-1.58m0 0a5 5 0 019.34 0M15 6a3 3 0 11-6 0 3 3 0 016 0z' },
-        { key: 'conferences', label: t(lang, 'stat_conferences'), icon: 'M8 5v14l11-7L8 5zm8 1a2 2 0 110-4 2 2 0 010 4zM5 7a3 3 0 013 3v8a3 3 0 01-6 0v-8a3 3 0 013-3z' },
-        { key: 'articles', label: t(lang, 'stat_articles'), icon: 'M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h10v2H4v-2zm0 4h16v2H4v-2z' },
+        { key: 'sermons', label: t(lang, 'stat_sermons'), icon: ICON_SET.video },
+        { key: 'courses', label: t(lang, 'stat_courses'), icon: ICON_SET.cap },
+        { key: 'audio', label: t(lang, 'stat_audio'), icon: ICON_SET.music },
+        { key: 'seminars', label: t(lang, 'stat_seminars'), icon: ICON_SET.users },
+        { key: 'conferences', label: t(lang, 'stat_conferences'), icon: ICON_SET.mic },
+        { key: 'articles', label: t(lang, 'stat_articles'), icon: ICON_SET.article },
       ];
       const statsGrid = document.getElementById('stats-grid');
-      if (statsGrid && stats) {
+      if (statsGrid && featuredRes.failed) {
+        // Des compteurs à zéro seraient trompeurs quand la base est absente.
+        statsGrid.classList.add('hidden');
+      } else if (statsGrid && stats) {
         statsGrid.innerHTML = statDefs.map((s) => `
           <div class="glass flex items-center gap-3 rounded-2xl border border-slate-200/60 px-4 py-3.5 dark:border-night-700/60">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-500/15 text-gold-600 dark:text-gold-400">
@@ -336,7 +345,9 @@ const catColors: Record<string, string> = {
       // Catégories
       const catGrid = document.getElementById('categories-grid');
       if (catGrid) {
-        const icons = { book: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm3 2h10v1.5H7V8zm0 3h10v1.5H7V11zm0 3h6v1.5H7V14z', music: 'M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z', heart: 'M12 21s-7.5-4.9-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 19.5 12c-2 4.1-7.5 9-7.5 9z', flame: 'M12 2s5 4.5 5 10a5 5 0 01-10 0c0-1.5.5-2.8 1.2-4C9.5 9.5 10 11 12 11s2.5-1.5 2.5-3.5C14.5 5 12 2 12 2z', scroll: 'M8 3h9a2 2 0 012 2v2h-2V5H8V3zm-1 0a1 1 0 100 2v14a2 2 0 01-2 2 1 1 0 01-1-1V4a1 1 0 011-1h2zm4 7h7v2h-7v-2zm0 4h7v2h-7v-2z', sparkles: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zm7 10l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15z' };
+        // Icônes partagées : la note de musique de cette table était un tracé
+        // de contour rendu en aplat, donc illisible.
+        const icons = CATEGORY_ICONS;
         const colors: Record<string, string> = { indigo: 'from-indigo-600 to-violet-600', gold: 'from-amber-500 to-orange-600', rose: 'from-rose-500 to-pink-600', orange: 'from-orange-500 to-red-500', emerald: 'from-emerald-500 to-teal-600', sky: 'from-sky-500 to-blue-600' };
         catGrid.innerHTML = categories.map((c) => `
           <a href="${BASE}recherche?categorie=${c.slug}" class="card-hover group flex flex-col items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-5 text-center shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
@@ -368,13 +379,15 @@ const catColors: Record<string, string> = {
       // Cantiques
       show(document.getElementById('cantiques-section'), cantiques.length > 0);
       const cantStats = document.getElementById('cantiques-stats');
-      if (cantStats && stats) {
-        cantStats.textContent = `${stats.cantiques.mg} ${t(lang, 'cantiques_total')} · ${cantiques.length} ${t(lang, 'with_audio')}`;
+      // Le total vient du recueil réellement chargé : la table Supabase
+      // `cantiques` n'est pas alimentée, elle renvoyait toujours 0.
+      if (cantStats && cantiques.length) {
+        cantStats.textContent = `${cantiques.length} ${t(lang, 'with_audio')}`;
       }
       const cantGrid = document.getElementById('cantiques-grid');
       if (cantGrid && cantiques.length) {
         cantGrid.innerHTML = cantiques.slice(0, 6).map((c) => `
-          <a href="${BASE}cantiques/${c.id}?lang=${lang}&clang=${c.lang}" class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
+          <a href="${BASE}cantiques/?c=${encodeURIComponent(c.id)}" class="card-hover group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 font-display text-sm font-bold text-white shadow">${c.num ?? '♪'}</span>
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-semibold text-slate-800 group-hover:text-gold-600 dark:text-slate-100 dark:group-hover:text-gold-400">${c.title}</span>
@@ -393,7 +406,7 @@ const catColors: Record<string, string> = {
           bibleGrid.innerHTML = versions.map((v: any) => `
             <a href="${BASE}bible?version=${encodeURIComponent(v.file)}" class="card-hover group rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
               <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow transition-transform duration-300 group-hover:scale-110">
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zm-7 8.5v4.5c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5v-4.5L12 13l-7-1.5z" /></svg>
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="${ICON_SET.book}" /></svg>
               </span>
               <p class="mt-3 font-display text-base font-semibold text-slate-900 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400">${bibleVersionLabel(lang, v)}</p>
               <p class="mt-0.5 text-xs text-slate-400">${bibleLanguageName(lang, v.language ?? '')}</p>
@@ -413,7 +426,7 @@ const catColors: Record<string, string> = {
           docsGrid.innerHTML = cats.map((c: any) => `
             <a href="${BASE}documents" class="card-hover group rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
               <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow transition-transform duration-300 group-hover:scale-110">
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm8 1.5V7h3.5L14 3.5zM8 12h8v1.5H8V12zm0 4h8v1.5H8V16z" /></svg>
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="${ICON_SET.document}" /></svg>
               </span>
               <p class="mt-3 font-display text-base font-semibold text-slate-900 group-hover:text-gold-600 dark:text-white dark:group-hover:text-gold-400">${String(c.id ?? c.slug ?? c.name ?? 'Document').replace(/_/g, ' ')}</p>
               <p class="mt-0.5 text-xs text-slate-400">${c.count ?? ''} ${t(lang, 'documents_total')}</p>

@@ -6,7 +6,9 @@
 import Layout from '@/layouts/Layout.astro';
 import { t } from '@/lib/i18n';
 
-// Coquille statique : la langue est résolue côté client (voir clientLang() dans le <script>).
+// Coquille statique : la langue est résolue côté client par clientLang().
+// (Ne pas écrire de balise script littérale ici : le scanner de dépendances
+// d'astro dev la prend pour une vraie ouverture de bloc et coupe le fichier.)
 const lang: 'fr' | 'mg' = 'fr';
 const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 ---
@@ -183,7 +185,7 @@ const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
     try {
       if (typeof caches !== 'undefined') {
         const cache = await caches.open('ah-bible-db');
-        res = await cache.match(url);
+        res = (await cache.match(url)) ?? null;
         if (!res) {
           const net = await fetch(url);
           if (!net.ok) throw new Error(`HTTP ${net.status}`);

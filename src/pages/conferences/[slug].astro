@@ -147,7 +147,10 @@ const lang: Lang = 'fr';
           <div class="reveal overflow-hidden rounded-2xl border border-slate-200/70 shadow-sm dark:border-night-700/60">
             <div class="relative aspect-[21/9]">
               <img src="${esc(item.image || '/favicon.svg')}" alt="" class="h-full w-full object-cover" />
-              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <!-- Balise fermée explicitement : une div auto-fermante n'existe
+                   pas en HTML, elle restait ouverte et le titre puis la
+                   description se retrouvaient dans ce calque superposé. -->
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
               <div class="absolute bottom-0 p-6">
                 <div class="flex flex-wrap items-center gap-2">
                   ${chips.join('')}

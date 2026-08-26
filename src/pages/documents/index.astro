@@ -46,6 +46,8 @@ const lang: Lang = 'fr';
 
 <script>
   import { t } from '@/lib/i18n';
+  import { loadDocsManifest, docsCatById, docsCatIcon } from '@/lib/docs-manifest';
+  import type { DocCat, DocItem } from '@/lib/docs-manifest';
 
   const lang = document.documentElement.lang as 'fr' | 'mg';
   const searchEl = document.getElementById('doc-search') as HTMLInputElement;
@@ -54,75 +56,16 @@ const lang: Lang = 'fr';
   const countEl = document.getElementById('doc-count')!;
   const emptyEl = document.getElementById('doc-empty')!;
 
-  const MANIFEST_URL = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json';
-  const CACHE_KEY = 'docs-manifest-v1';
-  const CACHE_TTL = 1000 * 60 * 60 * 24; // 24h
-
-  interface DocCat { id: string; title: string; icon?: string; color?: string; bg?: string }
-  interface DocItem { id: string; title: string; fileName: string; categoryId: string; url: string; size: string; isAsset?: boolean; tags?: string[] }
-
   let ALL: DocItem[] = [];
   let CATS: DocCat[] = [];
   let catFilter: string | null = null;
   let query = '';
 
-  function getCache(): { data: { docs: DocItem[]; cats: DocCat[] }; ts: number } | null {
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return null;
-      const entry = JSON.parse(raw);
-      if (Date.now() - entry.ts > CACHE_TTL) { localStorage.removeItem(CACHE_KEY); return null; }
-      return entry;
-    } catch { return null; }
-  }
-
-  async function loadManifest() {
-    // 1. Cache
-    const cached = getCache();
-    if (cached && Array.isArray(cached.data.docs)) {
-      ALL = cached.data.docs;
-      CATS = cached.data.cats;
-      return;
-    }
-    // 2. Réseau
-    try {
-      const res = await fetch(MANIFEST_URL);
-      if (res.ok) {
-        const data = await res.json();
-        ALL = data.documents ?? [];
-        CATS = data.categories ?? [];
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: { docs: ALL, cats: CATS }, ts: Date.now() }));
-        } catch { /* quota */ }
-        return;
-      }
-    } catch { /* offline */ }
-    // 3. Fallback vide
-    ALL = [];
-    CATS = [];
-  }
-
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  const catById = (id: string) => CATS.find((c) => c.id === id);
-
-  function catLabel(id: string): string {
-    const c = catById(id);
-    return c?.title ?? id.replace(/_/g, ' ');
-  }
-
-  function catIcon(id: string): string {
-    const c = catById(id);
-    if (c?.icon === 'BookOpen') return '📖';
-    if (c?.icon === 'FileText') return '📄';
-    if (c?.icon === 'Users') return '👥';
-    if (c?.icon === 'Heart') return '💖';
-    if (c?.icon === 'Clock') return '⏰';
-    if (c?.icon === 'Music') return '🎵';
-    if (c?.icon === 'Globe') return '🌍';
-    return '📁';
-  }
+  const catLabel = (id: string) => docsCatById(CATS, id)?.title ?? id.replace(/_/g, ' ');
+  const catIcon = (id: string) => docsCatIcon(docsCatById(CATS, id));
 
   function renderCats() {
     catsEl.innerHTML = [
@@ -188,10 +131,14 @@ const lang: Lang = 'fr';
     render();
   });
 
-  // Chargement
+  // Chargement (cache localStorage + réseau, module partagé avec la présentation)
   (async () => {
     grid.innerHTML = '<div class="col-span-full h-40 animate-pulse rounded-2xl bg-slate-200/60 dark:bg-night-800/60"></div>';
-    await loadManifest();
+    const data = await loadDocsManifest();
+    if (data) {
+      ALL = data.docs;
+      CATS = data.cats;
+    }
     renderCats();
     render();
   })();

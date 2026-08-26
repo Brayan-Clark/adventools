@@ -49,8 +49,26 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,wasm}'],
-        globIgnores: ['**/uploads/**', '**/icons/logo.svg'],
+        // Le précache ne contient QUE la coquille de l'application.
+        //
+        // L'ancien motif embarquait tout le HTML et tous les binaires générés :
+        // 1591 entrées pour 71 Mo, que le navigateur téléchargeait dès la
+        // première visite (dont 373 Mo de PDF et 78 Mo de pages cantiques).
+        // Les contenus lourds (PDF, bases SQLite, JSON de données) sont
+        // désormais mis en cache à l'usage via runtimeCaching.
+        globPatterns: ['**/*.{js,css,woff2}', 'index.html', 'offline.html', '404.html'],
+        globIgnores: [
+          '**/uploads/**',
+          '**/docs/**',
+          '**/data/**',
+          '**/icons/logo.svg',
+          '**/*.SQLite3',
+          '**/*.db',
+        ],
+        // Un fichier .wasm de 648 Ko ne doit pas être imposé à qui ne lit
+        // jamais la Bible : il est mis en cache au premier usage.
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
         navigateFallback: BASE + '/offline.html',
         runtimeCaching: [
           {
@@ -81,6 +99,46 @@ export default defineConfig({
               cacheName: 'ah-bible-db',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 90 },
+            },
+          },
+          {
+            // Recueils de cantiques SQLite (adventools raw) : même principe
+            urlPattern: ({ url }) => url.hostname.includes('githubusercontent.com') && url.pathname.includes('/hymnes/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ah-hymnal-db',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 90 },
+            },
+          },
+          {
+            // Manifests et documents PDF de la bibliothèque
+            urlPattern: ({ url }) => url.hostname.includes('githubusercontent.com') && url.pathname.includes('/docs/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ah-docs',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            // Données embarquées (JSON cantiques/mofonaina) + moteur SQLite WASM :
+            // servis depuis le cache, rafraîchis en arrière-plan.
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && (url.pathname.includes('/data/') || url.pathname.endsWith('.wasm')),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'ah-static-data',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            // Icônes, favicon et images du site
+            urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === 'image',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'ah-local-images',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
           {

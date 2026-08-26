@@ -12,17 +12,24 @@ interface Props {
   image?: string;
 }
 
+// Les chemins des fichiers de public/ doivent inclure le base path : Astro ne
+// préfixe que ses propres assets. Ils étaient écrits en dur (`/favicon.svg`) et
+// rattrapés après coup par scripts/fix-base.mjs, ce qui laissait `astro dev`
+// en erreur permanente sur chaque page.
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+
 const {
   title = 'Andeaha Hizaha — Plateforme d’étude biblique',
   description = 'Sermons vidéo, cours bibliques, audio & séminaires pour grandir ensemble dans la foi.',
   lang = 'fr',
-  image = '/favicon.svg',
+  image = `${BASE}favicon.svg`,
 } = Astro.props;
 
-const isMg = lang === 'mg';
 const siteTitle = 'Andeaha Hizaha';
-const tagline = isMg ? 'Sehatra fianarana an’ny rehetra' : 'Plateforme d’étude publique';
 const fullTitle = `${title} · ${siteTitle}`;
+
+// og:image doit être une URL absolue pour les aperçus de partage.
+const ogImage = image.startsWith('http') ? image : new URL(image, Astro.site ?? Astro.url).href;
 ---
 
 <!doctype html>
@@ -36,14 +43,14 @@ const fullTitle = `${title} · ${siteTitle}`;
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content={image} />
+    <meta property="og:image" content={ogImage} />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
+    <link rel="icon" type="image/png" sizes="32x32" href={`${BASE}favicon-32.png`} />
+    <link rel="apple-touch-icon" href={`${BASE}icons/apple-touch-icon.png`} />
+    <link rel="manifest" href={`${BASE}manifest.webmanifest`} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -88,8 +95,51 @@ const fullTitle = `${title} · ${siteTitle}`;
 
     <!-- Enregistrement du service worker PWA -->
     <script>
-      import { registerSW } from 'virtual:pwa-register';
-      registerSW({ immediate: true });
+      // Le service worker n'est généré qu'au build (devOptions.enabled: false) :
+      // l'enregistrer en dev produisait des 404 en boucle sur /sw.js.
+      if (import.meta.env.PROD) {
+        const { registerSW } = await import('virtual:pwa-register');
+        registerSW({ immediate: true });
+      }
+
+      // Purge des service workers hérités : ceux enregistrés à la racine (avant
+      // que le site ne vive sous /adventools/) survivent aux mises à jour et
+      // continuent de rejouer d'anciennes URL, dont les /api/* supprimées.
+      if ('serviceWorker' in navigator) {
+        const base = new URL(import.meta.env.BASE_URL ?? '/', location.origin).href;
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((regs) =>
+            Promise.all(
+              regs.filter((r) => !r.scope.startsWith(base)).map((r) => r.unregister())
+            )
+          )
+          .catch(() => {
+            /* API indisponible : rien à purger */
+          });
+      }
+    </script>
+    <script>
+      // Langue côté client.
+      //
+      // Le site est prérendu en français : le cookie `ah-lang` que posait le
+      // sélecteur de langue n'était jamais lu (il n'y a pas de serveur). On
+      // applique donc la langue dans le navigateur : `<html lang>` est corrigé
+      // — c'est lui que lisent tous les scripts de page — et les éléments
+      // porteurs de `data-i18n` sont retraduits.
+      import { t } from '@/lib/i18n';
+      import { clientLang, setClientLang } from '@/lib/client-render';
+
+      const lang = clientLang();
+      setClientLang(lang);
+      document.documentElement.lang = lang;
+
+      if (lang !== 'fr') {
+        document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
+          const key = el.dataset.i18n;
+          if (key) el.textContent = t(lang, key as any);
+        });
+      }
     </script>
     <script>
       // Révélation douce des sections au scroll

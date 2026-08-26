@@ -86,7 +86,7 @@ export async function loadDb(versions: BibleVersion[], file: string): Promise<an
   try {
     if (typeof caches !== 'undefined') {
       const cache = await caches.open('ah-bible-db');
-      res = await cache.match(url);
+      res = (await cache.match(url)) ?? null;
       if (!res) {
         const net = await fetch(url);
         if (!net.ok) throw new Error(`HTTP ${net.status}`);

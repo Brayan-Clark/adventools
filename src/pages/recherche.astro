@@ -94,7 +94,7 @@ const lang = 'fr';
   const params = new URLSearchParams(window.location.search);
   let query = params.get('q') ?? '';
   let activeCat = params.get('categorie') ?? '';
-  let type = '';
+  let type: MediaItem['type'] | '' = '';
 
   if (input) input.value = query;
 
@@ -188,7 +188,7 @@ const lang = 'fr';
       });
       btn.classList.remove('border-slate-300/70', 'text-slate-500', 'dark:border-night-600', 'dark:text-slate-300');
       btn.classList.add('border-gold-500', 'bg-gold-500/15', 'font-semibold', 'text-gold-600', 'dark:text-gold-400');
-      type = btn.getAttribute('data-type') ?? '';
+      type = (btn.getAttribute('data-type') ?? '') as MediaItem['type'] | '';
       search();
     });
   });

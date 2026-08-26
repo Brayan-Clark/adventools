@@ -429,6 +429,8 @@ export function bgMediaHtml(settings: PresentSettings): string {
  * (texte, cantique, Bible, annonce, image, document, vidéo, audio). Utilisée
  * au premier lancement et via le bouton « Charger la démo ».
  */
+const DATA_RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
+
 export function demoPresentation(): Presentation {
   return {
     id: uid(),
@@ -490,8 +492,9 @@ export function demoPresentation(): Presentation {
         kind: 'doc',
         title: 'Education',
         subtitle: 'Esprit de Prophétie (FR)',
+        // URL de la branche `data` : le dossier public/docs n'est pas déployé.
         docPath: 'esprit_prophetie_fr/Education.PDF',
-        docUrl: '/docs/esprit_prophetie_fr/Education.PDF',
+        docUrl: `${DATA_RAW}/docs/esprit_prophetie_fr/Education.PDF`,
       },
       {
         id: uid(),
@@ -507,7 +510,8 @@ export function demoPresentation(): Presentation {
         subtitle: 'Exemple de slide audio',
         imageUrl:
           'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1200&q=80',
-        audioUrl: '/api/stream?id=1DP_ogB5zF19g8o_4uxQ_W4X65zZKKYcG',
+        // Lecture directe : /api/stream n'existe pas sur un site statique.
+        audioUrl: 'https://drive.usercontent.google.com/download?id=1DP_ogB5zF19g8o_4uxQ_W4X65zZKKYcG&export=download',
       },
       {
         id: uid(),

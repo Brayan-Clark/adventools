@@ -1,7 +1,12 @@
 ---
-import { t, getLang } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
 
-const lang = getLang(Astro.url, Astro.cookies);
+// Page prérendue : les cookies et en-têtes ne sont pas disponibles au build
+// (`getLang(Astro.url, Astro.cookies)` déclenchait un avertissement Astro et
+// renvoyait de toute façon toujours « fr »). Seuls le HUD et l'aide sont
+// traduits ici ; le contenu projeté vient de la présentation.
+const lang: Lang = 'fr';
 ---
 
 <!doctype html>

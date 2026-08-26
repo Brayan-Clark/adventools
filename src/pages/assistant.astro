@@ -1,9 +1,11 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import AiChat from '@/components/AiChat.astro';
-import { t, getLang } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
 
-const lang = getLang(Astro.url, Astro.cookies);
+// Page prérendue : cookies et en-têtes indisponibles au build.
+const lang: Lang = 'fr';
 const suggestions = [
   t(lang, 'ai_suggestion_1'),
   t(lang, 'ai_suggestion_2'),

@@ -1,11 +1,15 @@
 ---
 import Layout from '@/layouts/Layout.astro';
-import { t, getLang } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
 
-const lang = getLang(Astro.url, Astro.cookies);
+// Page prérendue : cookies et en-têtes indisponibles au build.
+const lang: Lang = 'fr';
 
 const loginTitle = t(lang, 'admin_login_title');
-const loginSubtitle = lang === 'mg' ? "Fidirana an'i mpitantana" : 'Connexion administrateur';
+// Page prérendue en français ; le sous-titre malgache est appliqué côté client
+// s'il y a lieu (voir le script de langue du layout).
+const loginSubtitle = 'Connexion administrateur';
 const loginLabel = t(lang, 'admin_login');
 const passwordLabel = t(lang, 'admin_password');
 const backHome = t(lang, 'back_home');

@@ -470,18 +470,32 @@ const { lang = 'fr', embedded = false } = Astro.props;
   });
 
   // ---- Contexte du site (contenus pour des réponses pertinentes) ----
+  //
+  // L'endpoint SSR /api/content n'existe plus (site statique) : il renvoyait un
+  // 404 à chaque chargement de page. On lit maintenant Supabase, et seulement
+  // quand le panneau est ouvert — le contexte ne sert qu'à la conversation.
+  let contextLoaded = false;
   async function loadContext() {
+    if (contextLoaded) return;
+    contextLoaded = true;
+    // Repli immédiat sur le dernier contexte connu (utile hors-ligne).
     try {
-      const res = await fetch('/api/content');
-      if (res.ok) {
-        contentBundle = await res.json();
-        // Persiste le contenu pour la page hors-ligne et le mode hors-ligne de l'IA
-        try {
-          localStorage.setItem('ah-content', JSON.stringify(contentBundle?.media ?? []));
-        } catch {}
+      const cached = localStorage.getItem('ah-content');
+      if (cached) contentBundle = { media: JSON.parse(cached) };
+    } catch {
+      /* cache illisible : on tente le réseau */
+    }
+    try {
+      const { getMedia } = await import('@/lib/supabase');
+      const media = await getMedia({ limit: 60 });
+      contentBundle = { media };
+      try {
+        localStorage.setItem('ah-content', JSON.stringify(media));
+      } catch {
+        /* quota dépassé */
       }
     } catch {
-      /* offline : on continue sans contexte */
+      /* hors-ligne ou base injoignable : on garde le cache */
     }
   }
 
@@ -606,6 +620,7 @@ const { lang = 'fr', embedded = false } = Astro.props;
     panel?.setAttribute('aria-hidden', 'false');
     if (!panel?.classList.contains('pointer-events-none')) {
       input.focus();
+      void loadContext();
     }
   });
   closeBtn?.addEventListener('click', () => {
@@ -777,5 +792,4 @@ const { lang = 'fr', embedded = false } = Astro.props;
     }
   });
 
-  loadContext();
 </script>

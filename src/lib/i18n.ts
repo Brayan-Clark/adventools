@@ -20,6 +20,16 @@ const dict = {
   nav_group_listen: { fr: 'Écoute', mg: 'Feo' },
   nav_group_study: { fr: 'Études', mg: 'Fianarana' },
 
+  backend_down_title: {
+    fr: 'Contenu momentanément indisponible',
+    mg: 'Tsy azo ny votoaty amin’izao fotoana izao',
+  },
+  backend_down_text: {
+    fr: 'La base de données ne répond pas. La Bible, les cantiques, les méditations et la bibliothèque restent accessibles.',
+    mg: 'Tsy mamaly ny angona. Mbola azo jerena ny Baiboly, ny fihirana, ny mofonaina ary ny tranomboky.',
+  },
+  backend_retry: { fr: 'Réessayer', mg: 'Andramo indray' },
+
   search_placeholder: { fr: 'Rechercher sermons, cours…', mg: 'Karohy toriteny, fampianarana…' },
   search_button: { fr: 'Rechercher', mg: 'Karohy' },
   search_no_results: { fr: 'Aucun résultat trouvé.', mg: 'Tsy misy valiny.' },
@@ -198,6 +208,23 @@ const dict = {
   cantiques_total: { fr: 'cantiques', mg: 'fihirana' },
   with_audio: { fr: 'avec audio', mg: 'misy feo' },
   source: { fr: 'Source', mg: 'Loharano' },
+  cantiques_collection: { fr: 'Recueil', mg: 'Fihirana' },
+  cantiques_collection_offline: { fr: 'Hors-ligne', mg: 'Tsy mila aterineto' },
+  cantiques_collection_remote: { fr: 'À télécharger', mg: 'Alaina an-tserasera' },
+  cantiques_downloading: { fr: 'Téléchargement du recueil…', mg: 'Am-pakana ny fihirana…' },
+  cantiques_download_failed: {
+    fr: 'Recueil indisponible (connexion requise la première fois).',
+    mg: 'Tsy azo ny fihirana (mila aterineto ny voalohany).',
+  },
+  cantiques_retry: { fr: 'Réessayer', mg: 'Andramo indray' },
+  cantiques_show_more: { fr: 'Afficher plus', mg: 'Asehoy bebe kokoa' },
+  cantiques_back_to_list: { fr: 'Retour à la liste', mg: 'Miverina amin’ny lisitra' },
+  cantiques_audio_only: {
+    fr: 'Ce recueil ne fournit que l’audio, sans paroles.',
+    mg: 'Feo ihany no omen’ity fihirana ity, tsy misy tononkira.',
+  },
+  cantique_prev: { fr: 'Précédent', mg: 'Teo aloha' },
+  cantique_next: { fr: 'Suivant', mg: 'Manaraka' },
 
   mofonaina_subtitle: {
     fr: 'La méditation quotidienne de l’Esprit de Prophétie pour nourrir votre journée.',
@@ -375,6 +402,7 @@ const dict = {
   },
   documents_total: { fr: 'documents', mg: 'antontan-taratasy' },
   documents_all: { fr: 'Tout', mg: 'Rehetra' },
+  documents_count: { fr: 'document(s)', mg: 'antontan-taratasy' },
   documents_empty: { fr: 'Aucun document trouvé.', mg: 'Tsy misy antontan-taratasy hita.' },
   documents_read: { fr: 'Lire', mg: 'Vakio' },
   documents_open: { fr: 'Ouvrir en grand', mg: 'Sokafy midadasika' },
@@ -470,6 +498,56 @@ const dict = {
   pres_bg_media_image: { fr: '🖼️ Image', mg: '🖼️ Sary' },
   pres_bg_media_video: { fr: '🎬 Vidéo', mg: '🎬 Lahatsary' },
   pres_bg_media_url: { fr: 'URL du média (image ou vidéo)', mg: 'URL-ny média (sary na lahatsary)' },
+  // --- Studio de présentation (refonte) ---
+  pres_library: { fr: 'Bibliothèque', mg: 'Tahiry' },
+  pres_order: { fr: 'Déroulé', mg: 'Fandaharana' },
+  pres_preview: { fr: 'Aperçu', mg: 'Topi-maso' },
+  pres_appearance: { fr: 'Apparence', mg: 'Endrika' },
+  pres_project: { fr: 'Projeter', mg: 'Asehoy' },
+  pres_project_now: { fr: 'Projeter maintenant', mg: 'Asehoy izao' },
+  pres_source_hymns: { fr: 'Cantiques', mg: 'Fihirana' },
+  pres_source_bible: { fr: 'Bible', mg: 'Baiboly' },
+  // Libellés courts : les quatre onglets partagent une colonne étroite.
+  pres_source_docs: { fr: 'Docs', mg: 'Taratasy' },
+  pres_up_next: { fr: 'À venir', mg: 'Ho avy' },
+  pres_source_other: { fr: 'Autres', mg: 'Hafa' },
+  pres_add: { fr: 'Ajouter', mg: 'Ampio' },
+  pres_clear_all: { fr: 'Tout retirer', mg: 'Esory daholo' },
+  pres_clear_confirm: {
+    fr: 'Retirer tous les éléments du déroulé ?',
+    mg: 'Esorina daholo ve ny zavatra rehetra ao amin’ny fandaharana ?',
+  },
+  pres_per_verse: { fr: 'Un verset par page', mg: 'Andininy iray isaky ny pejy' },
+  pres_whole_passage: { fr: 'Passage entier', mg: 'Andalana manontolo' },
+  pres_drag_hint: { fr: 'Glissez pour réordonner', mg: 'Sintomy hanovana ny filaharana' },
+  pres_no_hits: { fr: 'Aucun résultat', mg: 'Tsy misy valiny' },
+  pres_page_label: { fr: 'Page', mg: 'Pejy' },
+  pres_shortcuts: { fr: 'Raccourcis', mg: 'Fanalefahana' },
+  pres_shortcut_nav: { fr: 'page précédente / suivante', mg: 'pejy teo aloha / manaraka' },
+  pres_shortcut_search: { fr: 'aller à la recherche', mg: 'ho amin’ny fikarohana' },
+  pres_shortcut_project: { fr: 'ouvrir le projecteur', mg: 'sokafy ny mpaneho' },
+  pres_shortcut_close: { fr: 'fermer les panneaux', mg: 'akatony ny takelaka' },
+  pres_export_zip: { fr: 'Exporter (ZIP)', mg: 'Hamoaka (ZIP)' },
+  pres_import_zip: { fr: 'Importer (ZIP)', mg: 'Hampiditra (ZIP)' },
+  pres_exporting: { fr: 'Exportation…', mg: 'Am-pamoahana…' },
+  pres_importing: { fr: 'Importation…', mg: 'Am-pampidirana…' },
+  pres_export_failed: { fr: 'Export échoué', mg: 'Tsy nahomby ny famoahana' },
+  pres_import_failed: { fr: 'Import échoué', mg: 'Tsy nahomby ny fampidirana' },
+  pres_bible_version: { fr: 'Version', mg: 'Dikan-teny' },
+  pres_hymnal: { fr: 'Recueil', mg: 'Fihirana' },
+  pres_projector_open: { fr: 'Projecteur ouvert', mg: 'Misokatra ny mpaneho' },
+  pres_popup_blocked: {
+    fr: 'La fenêtre de projection a été bloquée — autorisez les fenêtres surgissantes pour ce site.',
+    mg: 'Voasakana ny varavarankely fanehoana — avelao ny varavarankely mipoitra.',
+  },
+  pres_bg_reset: { fr: 'Réinitialiser le fond', mg: 'Averina ny fototra' },
+  pres_image_error: { fr: 'Impossible de lire le fichier image.', mg: 'Tsy afaka mamaky ny rakitra sary.' },
+  pres_loading: { fr: 'Chargement…', mg: 'Am-panangonana…' },
+  pres_no_connection: {
+    fr: 'Connexion requise — vérifiez votre réseau puis réessayez.',
+    mg: 'Mila tambajotra — jereo ny fifandraisanao ary andramo indray.',
+  },
+  pres_retry: { fr: 'Réessayer', mg: 'Andramo indray' },
   pres_help_timer: { fr: 'Minuteur (T — réinit. Maj+T)', mg: 'Timer (T — averina Maj+T)' },
   pres_help_ticker: { fr: 'Message défilant (M)', mg: 'Hafatra mandeha (M)' },
   pres_help_clock: { fr: 'Horloge (H — format Maj+H)', mg: 'Famantaranandro (H — fomba Maj+H)' },
@@ -557,7 +635,15 @@ const dict = {
 export type I18nKey = keyof typeof dict;
 
 export function t(lang: Lang, key: I18nKey): string {
-  return dict[key][lang] ?? dict[key].fr;
+  // Une clé absente ne doit pas interrompre le script de la page : jusqu'ici
+  // `dict[key][lang]` levait une TypeError qui vidait toute la page (c'est ce
+  // qui cassait la bibliothèque avec la clé `documents_count` manquante).
+  const entry = dict[key as keyof typeof dict] as { fr: string; mg: string } | undefined;
+  if (!entry) {
+    if (import.meta.env?.DEV) console.warn(`[i18n] clé inconnue : ${key}`);
+    return String(key);
+  }
+  return entry[lang] ?? entry.fr;
 }
 
 // --- Langues des Bibles --------------------------------------------------
@@ -626,11 +712,16 @@ export function slugify(text: string): string {
     .slice(0, 80);
 }
 
-export function pickTitle(item: { title_fr: string; title_mg: string }, lang: Lang): string {
+// Les colonnes malgaches de Supabase sont nullables : la signature doit le
+// refléter, sinon chaque appelant produit une erreur de type.
+export function pickTitle(item: { title_fr: string; title_mg?: string | null }, lang: Lang): string {
   return lang === 'mg' && item.title_mg ? item.title_mg : item.title_fr;
 }
 
-export function pickDescription(item: { description_fr: string; description_mg: string }, lang: Lang): string {
+export function pickDescription(
+  item: { description_fr: string; description_mg?: string | null },
+  lang: Lang
+): string {
   return lang === 'mg' && item.description_mg ? item.description_mg : item.description_fr;
 }
 

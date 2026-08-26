@@ -1,7 +1,8 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"],
+  "_comment": "supabase/functions tourne sous Deno (globale `Deno`, imports npm:) : hors périmètre du typage Astro.",
+  "exclude": ["dist", "supabase/functions"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

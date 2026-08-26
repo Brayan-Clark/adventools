@@ -43,7 +43,7 @@ const lang = 'fr';
 
 <script>
   import { getMedia, getCategories } from '@/lib/supabase';
-  import { clientLang, mediaCardHtml } from '@/lib/client-render';
+  import { clientLang, mediaCardHtml, settle, backendDownHtml, wireBackendRetry } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
 
   const lang = clientLang();
@@ -76,23 +76,32 @@ const lang = 'fr';
       : 'border-slate-300/70 text-slate-500 hover:border-gold-500/50 hover:text-gold-600 dark:border-night-600 dark:text-slate-300';
     filtersEl.innerHTML =
       `<a href="${BASE}${PAGE}" class="chip border transition ${allCls}">${t(lang, 'search_all')}</a>` +
-      categories.map((c) => chip(c, active)).join('');
+      // `active` est le slug de la catégorie : comparer, et non le passer
+      // tel quel comme booléen (toute catégorie paraissait alors active).
+      categories.map((c) => chip(c, c.slug === active)).join('');
   }
 
   async function load() {
     const active = getActiveCat();
-    try {
-      const [categories, items] = await Promise.all([
-        getCategories().catch(() => []),
-        getMedia({ type: TYPE, category: active || undefined }).catch(() => []),
-      ]);
-      renderFilters(categories, active);
-      if (gridEl) gridEl.innerHTML = items.map((m) => mediaCardHtml(m, lang)).join('');
-      if (noResultsEl) noResultsEl.classList.toggle('hidden', items.length > 0);
-    } catch (err) {
-      console.error('Erreur de chargement des sermons :', err);
+    const [cats, media] = await Promise.all([
+      settle(getCategories(), [] as Awaited<ReturnType<typeof getCategories>>),
+      settle(getMedia({ type: TYPE, category: active || undefined }), [] as Awaited<ReturnType<typeof getMedia>>),
+    ]);
+
+    renderFilters(cats.data, active);
+
+    // Base injoignable : on le dit explicitement au lieu d'afficher
+    // « Aucun résultat », qui laissait croire à un contenu vide.
+    if (media.failed) {
+      if (gridEl) gridEl.innerHTML = `<div class="col-span-full">${backendDownHtml(lang)}</div>`;
+      if (noResultsEl) noResultsEl.classList.add('hidden');
+      if (gridEl) wireBackendRetry(gridEl, () => void load());
+      return;
     }
+
+    if (gridEl) gridEl.innerHTML = media.data.map((m) => mediaCardHtml(m, lang)).join('');
+    if (noResultsEl) noResultsEl.classList.toggle('hidden', media.data.length > 0);
   }
 
-  load();
+  void load();
 </script>
