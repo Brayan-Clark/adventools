@@ -31,7 +31,8 @@ export const DOC_MANIFEST_URL =
   'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/docs/manifest.json';
 
 const CACHE_KEY = 'docs-manifest-v1';
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 h
+// 1 heure : un document ajouté sur la branche `data` doit apparaître vite.
+const CACHE_TTL = 1000 * 60 * 60;
 
 interface DocsCache {
   docs: DocItem[];
@@ -70,7 +71,7 @@ export async function loadDocsManifest(): Promise<{ docs: DocItem[]; cats: DocCa
   const cached = getDocsCache();
   if (cached) return { docs: cached.docs, cats: cached.cats };
   try {
-    const res = await fetch(DOC_MANIFEST_URL);
+    const res = await fetch(DOC_MANIFEST_URL, { cache: 'no-cache' });
     if (!res.ok) return null;
     const data = await res.json();
     const docs: DocItem[] = Array.isArray(data?.documents) ? data.documents : [];

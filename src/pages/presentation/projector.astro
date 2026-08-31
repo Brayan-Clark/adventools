@@ -227,6 +227,7 @@ const lang: Lang = 'fr';
         pageHtml,
       } from '@/lib/presentation';
       import type { PresOverlays } from '@/lib/presentation';
+      import { hydratePdfSlides } from '@/lib/doc-viewer';
 
       const lang = document.documentElement.lang as 'fr' | 'mg';
       const stage = document.getElementById('stage')!;
@@ -391,6 +392,7 @@ const lang: Lang = 'fr';
         const sizePx = { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
         const media = bgMediaHtml(s);
         stage.innerHTML = `${media}<div class="content" style="position:relative;z-index:1;font-size:${sizePx};color:${s.textColor || '#fff'}">${pageHtml(at.item, at.page, s, stanzaLabel)}</div>`;
+        void hydratePdfSlides(stage);
         // points
         dots.innerHTML = Array.from({ length: total }, (_, i) => `<span class="${i === pageIndex ? 'on' : ''}"></span>`).join('');
         hudPos.textContent = `${pageIndex + 1} / ${total}`;

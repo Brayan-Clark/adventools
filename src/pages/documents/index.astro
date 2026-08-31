@@ -48,6 +48,7 @@ const lang: Lang = 'fr';
   import { t } from '@/lib/i18n';
   import { loadDocsManifest, docsCatById, docsCatIcon } from '@/lib/docs-manifest';
   import type { DocCat, DocItem } from '@/lib/docs-manifest';
+  import { openDocViewer, docKind } from '@/lib/doc-viewer';
 
   const lang = document.documentElement.lang as 'fr' | 'mg';
   const searchEl = document.getElementById('doc-search') as HTMLInputElement;
@@ -93,6 +94,7 @@ const lang: Lang = 'fr';
         (d) => `
         <a
           href="${esc(d.url)}"
+          data-doc="${esc(d.id)}"
           target="_blank"
           rel="noopener noreferrer"
           class="group flex flex-col rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-gold-400/60 hover:shadow-lg dark:border-night-700/60 dark:bg-night-800/70"
@@ -111,12 +113,24 @@ const lang: Lang = 'fr';
             </div>
           </div>
           <span class="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-gold-500/10 px-3 py-1 text-xs font-semibold text-gold-600 dark:text-gold-400">
-            ${t(lang, 'documents_read')} →
+            ${docKind(d.fileName) === 'office' ? t(lang, 'doc_download') : t(lang, 'documents_read')} →
           </span>
         </a>`
       )
       .join('');
   }
+
+  // Ouverture dans le lecteur intégré. GitHub sert ces fichiers en
+  // `application/octet-stream` : suivre le lien déclenchait un téléchargement
+  // au lieu d'afficher le document. Le clic milieu et Ctrl+clic restent libres.
+  grid.addEventListener('click', (e) => {
+    const a = (e.target as HTMLElement).closest('[data-doc]') as HTMLAnchorElement | null;
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || (e as MouseEvent).button !== 0) return;
+    const doc = ALL.find((d) => d.id === a.dataset.doc);
+    if (!doc) return;
+    e.preventDefault();
+    void openDocViewer({ url: doc.url, title: doc.title, fileName: doc.fileName, lang });
+  });
 
   searchEl?.addEventListener('input', () => {
     query = searchEl.value;

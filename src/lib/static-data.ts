@@ -10,7 +10,9 @@
 const RAW = 'https://raw.githubusercontent.com/Brayan-Clark/adventools/data';
 // `import.meta.env` n'existe que sous Vite : lecture défensive.
 const BASE = ((import.meta as any).env?.BASE_URL ?? '/').replace(/\/?$/, '/');
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 heures
+// 1 heure : la revalidation conditionnelle rend le rafraîchissement bon marché,
+// un TTL de 24 h retardait d'une journée toute correction publiée sur `data`.
+const CACHE_TTL = 1000 * 60 * 60;
 const CACHE_KEY = 'mofonaina-v3';
 
 interface CacheEntry<T> {
@@ -59,7 +61,7 @@ export function clearStaticCache(): void {
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {

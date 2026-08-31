@@ -63,10 +63,13 @@ const lang: Lang = 'fr';
     searchSongs,
     splitStanzas,
     playbackSrc,
+    playbackBlocked,
+    driveViewUrl,
   } from '@/lib/hymnals';
   import type { Song } from '@/lib/hymnals';
   import { clientLang } from '@/lib/client-render';
   import { t } from '@/lib/i18n';
+  import { ICONS } from '@/lib/icons';
 
   const lang = clientLang();
   const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
@@ -242,17 +245,28 @@ const lang: Lang = 'fr';
     const stanzas = splitStanzas(s.content);
     const src = playbackSrc(s.playback);
 
-    const audio = src
-      ? `<div class="mt-8 flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white shadow-soft sm:flex-row sm:items-center">
+    // Sur un hébergeur bloquant (Google Drive), le lecteur resterait muet sans
+    // le moindre message : on propose directement le lien qui, lui, fonctionne.
+    const blocked = playbackBlocked(s.playback);
+    const audio = !src
+      ? ''
+      : `<div class="mt-8 flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-4 text-white shadow-soft sm:flex-row sm:items-center">
           <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-            <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="${ICONS.music}" /></svg>
           </div>
           <div class="min-w-0 flex-1">
             <p class="truncate font-display text-sm font-semibold">${esc(s.title)}</p>
-            <audio class="mt-2 w-full" controls preload="none" src="${esc(src)}"></audio>
+            ${
+              blocked
+                ? `<p class="mt-1 text-xs text-white/80">${esc(t(lang, 'audio_blocked_text'))}</p>
+                   <a href="${esc(driveViewUrl(s.playback))}" target="_blank" rel="noopener noreferrer"
+                      class="mt-2 inline-flex rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/30">
+                     ${esc(t(lang, 'audio_open_drive'))} →
+                   </a>`
+                : `<audio class="mt-2 w-full" controls preload="none" src="${esc(src)}"></audio>`
+            }
           </div>
-        </div>`
-      : '';
+        </div>`;
 
     const body = stanzas.length
       ? `<div class="mt-6 space-y-5">${stanzas

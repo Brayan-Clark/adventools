@@ -1,0 +1,438 @@
+/**
+ * Lecteur de documents intégré (superposition plein écran).
+ *
+ * Pourquoi ce module existe : la branche `data` est servie par
+ * raw.githubusercontent.com, qui renvoie **tous** les fichiers en
+ * `application/octet-stream` avec `X-Content-Type-Options: nosniff`. Aucun
+ * navigateur n'affichera un tel flux — ni en navigation directe, ni dans un
+ * `<iframe>`, ni dans un `<embed>` : il propose systématiquement le
+ * téléchargement. C'est exactement ce qu'on observait en cliquant sur un
+ * document de la bibliothèque.
+ *
+ * La réponse porte en revanche `Access-Control-Allow-Origin: *` : on peut donc
+ * récupérer les octets nous-mêmes et faire le rendu dans la page. Les PDF sont
+ * dessinés avec pdf.js, le texte et le Markdown sont mis en forme ici.
+ *
+ * Les formats bureautiques (doc, docx, ppt…) ne sont pas rendus : ils
+ * demanderaient un convertisseur bien plus lourd que l'application entière.
+ * Le lecteur l'explique et propose le téléchargement.
+ */
+
+import { t } from './i18n';
+import type { Lang } from './types';
+
+export type DocKind = 'pdf' | 'markdown' | 'text' | 'office' | 'unknown';
+
+/** Devine le type de document depuis son nom de fichier ou son URL. */
+export function docKind(nameOrUrl: string): DocKind {
+  const ext = (nameOrUrl.split(/[?#]/)[0].match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase();
+  if (ext === 'pdf') return 'pdf';
+  if (ext === 'md' || ext === 'markdown') return 'markdown';
+  if (ext === 'txt' || ext === 'text' || ext === 'log' || ext === 'csv') return 'text';
+  if (['doc', 'docx', 'ppt', 'pptx', 'pptm', 'odp', 'odt', 'xls', 'xlsx'].includes(ext)) return 'office';
+  return 'unknown';
+}
+
+const esc = (s: unknown) =>
+  String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  );
+
+// ── Rendu Markdown ─────────────────────────────────────────────────────────
+
+/**
+ * Sous-ensemble de Markdown suffisant pour des documents d'étude : titres,
+ * gras, italique, code, citations, listes, liens, règles horizontales.
+ * Le texte est échappé AVANT toute transformation : aucun HTML de la source
+ * n'est interprété.
+ */
+export function renderMarkdown(src: string): string {
+  const lines = esc(src).replace(/\r\n?/g, '\n').split('\n');
+  const out: string[] = [];
+  let inList: 'ul' | 'ol' | null = null;
+  let inCode = false;
+  let paragraph: string[] = [];
+
+  const inline = (s: string) =>
+    s
+      .replace(/`([^`]+)`/g, '<code class="rounded bg-slate-200/60 px-1 py-0.5 text-[0.9em] dark:bg-night-700">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+      .replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-gold-600 underline dark:text-gold-400">$1</a>'
+      );
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      out.push(`<p class="my-3 leading-relaxed">${inline(paragraph.join(' '))}</p>`);
+      paragraph = [];
+    }
+  };
+  const closeList = () => {
+    if (inList) {
+      out.push(`</${inList}>`);
+      inList = null;
+    }
+  };
+
+  for (const line of lines) {
+    if (/^```/.test(line)) {
+      flushParagraph();
+      closeList();
+      out.push(inCode ? '</code></pre>' : '<pre class="my-4 overflow-x-auto rounded-xl bg-slate-900 p-4 text-sm text-slate-100"><code>');
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) {
+      out.push(line + '\n');
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const level = heading[1].length;
+      const size = ['text-3xl', 'text-2xl', 'text-xl', 'text-lg', 'text-base', 'text-sm'][level - 1];
+      out.push(`<h${level} class="mt-6 mb-2 font-display ${size} font-bold">${inline(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    if (/^\s*(?:---|\*\*\*|___)\s*$/.test(line)) {
+      flushParagraph();
+      closeList();
+      out.push('<hr class="my-6 border-slate-200 dark:border-night-700" />');
+      continue;
+    }
+
+    // Le texte est échappé en amont : un « > » de citation est déjà `&gt;`.
+    const quote = line.match(/^\s*&gt;\s?(.*)$/);
+    if (quote) {
+      flushParagraph();
+      closeList();
+      out.push(`<blockquote class="my-3 border-l-4 border-gold-500/60 pl-4 italic text-slate-600 dark:text-slate-300">${inline(quote[1])}</blockquote>`);
+      continue;
+    }
+
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (ul || ol) {
+      flushParagraph();
+      const want = ul ? 'ul' : 'ol';
+      if (inList !== want) {
+        closeList();
+        out.push(`<${want} class="my-3 ${want === 'ul' ? 'list-disc' : 'list-decimal'} space-y-1 pl-6">`);
+        inList = want;
+      }
+      out.push(`<li>${inline((ul ?? ol)![1])}</li>`);
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+    paragraph.push(line.trim());
+  }
+
+  flushParagraph();
+  closeList();
+  if (inCode) out.push('</code></pre>');
+  return out.join('');
+}
+
+// ── pdf.js ─────────────────────────────────────────────────────────────────
+
+let pdfLibPromise: Promise<typeof import('pdfjs-dist')> | null = null;
+
+async function pdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = (async () => {
+      const lib = await import('pdfjs-dist');
+      // Le worker est chargé depuis le bundle : Vite en produit une URL stable.
+      const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+      lib.GlobalWorkerOptions.workerSrc = workerUrl;
+      return lib;
+    })();
+  }
+  return pdfLibPromise;
+}
+
+// ── Superposition ──────────────────────────────────────────────────────────
+
+export interface DocViewerOptions {
+  url: string;
+  title: string;
+  /** Nom de fichier, utilisé pour deviner le type quand l'URL ne suffit pas. */
+  fileName?: string;
+  lang?: Lang;
+}
+
+let activeCleanup: (() => void) | null = null;
+
+/** Ferme le lecteur s'il est ouvert. */
+export function closeDocViewer(): void {
+  activeCleanup?.();
+}
+
+/**
+ * Ouvre le document dans une superposition. Ne lève jamais : les erreurs de
+ * chargement sont montrées dans le lecteur, avec un lien de téléchargement.
+ */
+export async function openDocViewer(opts: DocViewerOptions): Promise<void> {
+  const lang: Lang = opts.lang ?? 'fr';
+  const T = (k: string) => t(lang, k as any);
+  const kind = docKind(opts.fileName || opts.url);
+
+  closeDocViewer();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[120] flex flex-col bg-night-950/95 backdrop-blur';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', opts.title);
+  overlay.innerHTML = `
+    <header class="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
+      <span class="min-w-0 flex-1 truncate text-sm font-semibold text-white">${esc(opts.title)}</span>
+      <div id="dv-tools" class="flex items-center gap-1"></div>
+      <a href="${esc(opts.url)}" download class="chip border border-white/20 px-2.5 py-1 text-xs font-semibold text-white/80 transition hover:bg-white/10">
+        ${esc(T('doc_download'))}
+      </a>
+      <button id="dv-close" class="chip border border-white/20 px-2.5 py-1 text-xs font-semibold text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_close'))}">✕</button>
+    </header>
+    <div id="dv-body" class="min-h-0 flex-1 overflow-auto"></div>`;
+
+  document.body.appendChild(overlay);
+  const previousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  const body = overlay.querySelector<HTMLElement>('#dv-body')!;
+  const tools = overlay.querySelector<HTMLElement>('#dv-tools')!;
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') closeDocViewer();
+  };
+  document.addEventListener('keydown', onKey);
+
+  activeCleanup = () => {
+    document.removeEventListener('keydown', onKey);
+    document.body.style.overflow = previousOverflow;
+    overlay.remove();
+    activeCleanup = null;
+  };
+  overlay.querySelector('#dv-close')!.addEventListener('click', () => closeDocViewer());
+
+  const message = (html: string) => {
+    body.innerHTML = `<div class="mx-auto max-w-lg px-6 py-24 text-center text-white/80">${html}</div>`;
+  };
+
+  message(`<p class="animate-pulse">${esc(T('doc_loading'))}</p>`);
+
+  try {
+    if (kind === 'pdf') {
+      await renderPdf(body, tools, opts.url, T);
+    } else if (kind === 'markdown' || kind === 'text') {
+      const res = await fetch(opts.url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.text();
+      body.innerHTML = `<article class="mx-auto max-w-3xl px-6 py-10 text-slate-100">${
+        kind === 'markdown'
+          ? renderMarkdown(raw)
+          : `<pre class="whitespace-pre-wrap font-mono text-sm leading-relaxed">${esc(raw)}</pre>`
+      }</article>`;
+    } else if (kind === 'office') {
+      message(`
+        <p class="text-4xl">📁</p>
+        <p class="mt-4 font-semibold text-white">${esc(T('doc_office_title'))}</p>
+        <p class="mt-2 text-sm">${esc(T('doc_office_text'))}</p>
+        <a href="${esc(opts.url)}" download class="btn-gold mt-6 inline-flex px-4 py-2 text-xs">${esc(T('doc_download'))}</a>`);
+    } else {
+      message(`
+        <p class="text-4xl">📄</p>
+        <p class="mt-4 text-sm">${esc(T('doc_unsupported'))}</p>
+        <a href="${esc(opts.url)}" download class="btn-gold mt-6 inline-flex px-4 py-2 text-xs">${esc(T('doc_download'))}</a>`);
+    }
+  } catch (err) {
+    message(`
+      <p class="text-4xl">⚠️</p>
+      <p class="mt-4 text-sm text-rose-300">${esc(T('doc_error'))}</p>
+      <p class="mt-1 text-xs text-white/50">${esc((err as Error).message)}</p>
+      <a href="${esc(opts.url)}" download class="btn-gold mt-6 inline-flex px-4 py-2 text-xs">${esc(T('doc_download'))}</a>`);
+  }
+}
+
+/** Rendu PDF page par page sur un canvas, avec navigation et zoom. */
+async function renderPdf(
+  body: HTMLElement,
+  tools: HTMLElement,
+  url: string,
+  T: (k: string) => string
+): Promise<void> {
+  const lib = await pdfLib();
+  // `destroy()` est porté par la tâche de chargement, pas par le document :
+  // c'est elle qui libère le worker et coupe les requêtes réseau en cours.
+  const task = lib.getDocument({ url });
+  const doc = await task.promise;
+
+  let page = 1;
+  let zoom = 0; // 0 = ajusté à la largeur
+  let renderTask: { cancel(): void } | null = null;
+
+  body.innerHTML = `<div class="flex min-h-full items-start justify-center p-4"><canvas id="dv-canvas" class="max-w-full rounded-lg bg-white shadow-2xl"></canvas></div>`;
+  const canvas = body.querySelector<HTMLCanvasElement>('#dv-canvas')!;
+
+  tools.innerHTML = `
+    <button id="dv-prev" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_prev_page'))}">←</button>
+    <span class="px-1 text-xs text-white/70"><span id="dv-page">1</span> / ${doc.numPages}</span>
+    <button id="dv-next" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_next_page'))}">→</button>
+    <button id="dv-zoom-out" class="chip ml-1 border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_zoom_out'))}">−</button>
+    <button id="dv-zoom-fit" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10">${esc(T('doc_fit'))}</button>
+    <button id="dv-zoom-in" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_zoom_in'))}">+</button>`;
+
+  async function draw() {
+    // Une page rendue plus vite que la précédente peindrait par-dessus.
+    renderTask?.cancel();
+    const p = await doc.getPage(page);
+    const base = p.getViewport({ scale: 1 });
+    // Ajusté à la largeur disponible, plafonné pour rester lisible sur écran large.
+    const fit = Math.min((body.clientWidth - 48) / base.width, 2.5);
+    const scale = zoom > 0 ? zoom : Math.max(0.4, fit);
+    const viewport = p.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = `${viewport.width / (window.devicePixelRatio || 1)}px`;
+    canvas.style.height = `${viewport.height / (window.devicePixelRatio || 1)}px`;
+
+    const task = p.render({ canvasContext: canvas.getContext('2d')!, viewport, canvas });
+    renderTask = task;
+    try {
+      await task.promise;
+    } catch {
+      /* rendu annulé par une navigation plus récente */
+    }
+    tools.querySelector('#dv-page')!.textContent = String(page);
+  }
+
+  const go = (delta: number) => {
+    const next = Math.min(Math.max(1, page + delta), doc.numPages);
+    if (next === page) return;
+    page = next;
+    void draw();
+  };
+
+  tools.querySelector('#dv-prev')!.addEventListener('click', () => go(-1));
+  tools.querySelector('#dv-next')!.addEventListener('click', () => go(1));
+  tools.querySelector('#dv-zoom-in')!.addEventListener('click', () => {
+    zoom = (zoom || 1) * 1.25;
+    void draw();
+  });
+  tools.querySelector('#dv-zoom-out')!.addEventListener('click', () => {
+    zoom = Math.max(0.25, (zoom || 1) / 1.25);
+    void draw();
+  });
+  tools.querySelector('#dv-zoom-fit')!.addEventListener('click', () => {
+    zoom = 0;
+    void draw();
+  });
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+      e.preventDefault();
+      go(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      go(-1);
+    }
+  };
+  document.addEventListener('keydown', onKey);
+
+  let resizeTimer: number | undefined;
+  const onResize = () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => void draw(), 150);
+  };
+  window.addEventListener('resize', onResize);
+
+  // Les écouteurs suivent le cycle de vie de la superposition.
+  const previous = activeCleanup!;
+  activeCleanup = () => {
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', onResize);
+    window.clearTimeout(resizeTimer);
+    renderTask?.cancel();
+    void task.destroy();
+    previous();
+  };
+
+  await draw();
+}
+
+/**
+ * Peint les canevas déposés par les slides « document » du studio.
+ * Chaque canevas porte `data-pdf-url` et `data-pdf-page` ; on ignore ceux qui
+ * ont déjà été rendus pour ne pas re-télécharger à chaque re-rendu.
+ */
+export async function hydratePdfSlides(root: ParentNode): Promise<void> {
+  const canvases = root.querySelectorAll<HTMLCanvasElement>('canvas[data-pdf-url]:not([data-pdf-done])');
+  for (const canvas of canvases) {
+    canvas.dataset.pdfDone = '1';
+    const ok = await renderPdfPageInto(
+      canvas,
+      canvas.dataset.pdfUrl!,
+      Number(canvas.dataset.pdfPage) || 1
+    );
+    if (!ok) {
+      const fallback = document.createElement('div');
+      fallback.style.cssText =
+        'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.5em;opacity:.7';
+      fallback.textContent = '📄';
+      canvas.replaceWith(fallback);
+    }
+  }
+}
+
+/** Nombre de pages d'un PDF (0 si illisible). */
+export async function pdfPageCount(url: string): Promise<number> {
+  try {
+    const lib = await pdfLib();
+    const task = lib.getDocument({ url });
+    const doc = await task.promise;
+    const n = doc.numPages;
+    void task.destroy();
+    return n;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Rend la première page d'un PDF dans un canvas fourni (aperçu et projection).
+ * Retourne `false` si le document est illisible, pour laisser l'appelant
+ * afficher un repli.
+ */
+export async function renderPdfPageInto(
+  canvas: HTMLCanvasElement,
+  url: string,
+  pageNumber = 1,
+  maxWidth = 1600
+): Promise<boolean> {
+  try {
+    const lib = await pdfLib();
+    const task = lib.getDocument({ url });
+    const doc = await task.promise;
+    const p = await doc.getPage(Math.min(Math.max(1, pageNumber), doc.numPages));
+    const base = p.getViewport({ scale: 1 });
+    const viewport = p.getViewport({ scale: Math.min(maxWidth / base.width, 3) });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await p.render({ canvasContext: canvas.getContext('2d')!, viewport, canvas }).promise;
+    void task.destroy();
+    return true;
+  } catch {
+    return false;
+  }
+}

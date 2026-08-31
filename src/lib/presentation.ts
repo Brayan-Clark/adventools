@@ -50,6 +50,8 @@ export interface PresentItem {
   /** Document PDF (bibliothèque) */
   docPath?: string;
   docUrl?: string;
+  /** Nombre de pages du PDF : une page projetée par page du document. */
+  docPages?: number;
   /** Vidéo (YouTube ou fichier mp4) */
   videoUrl?: string;
   /** Audio (stream ou fichier mp3) */
@@ -243,6 +245,8 @@ export function itemPageCount(item: PresentItem): number {
       return Math.max(1, item.stanzas?.length ?? 1);
     case 'bible':
       return item.perVerse ? Math.max(1, item.verses?.length ?? 1) : 1;
+    case 'doc':
+      return Math.max(1, item.docPages ?? 1);
     default:
       return 1;
   }
@@ -349,9 +353,11 @@ export function pageHtml(
       return `${titleHtml()}<div style="display:flex;flex-direction:column;align-items:center;gap:1.4em;width:100%">${cover}<audio src="${src}" controls autoplay style="width:min(90%,680px)"></audio></div>`;
     }
     case 'doc': {
-      // URL d'un document PDF de la bibliothèque (plein écran)
-      const url = cssSafe(item.docUrl ?? '');
-      return `<iframe src="${url}" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff" title="${esc(item.title)}"></iframe>`;
+      // Les PDF de la bibliothèque sont servis en `application/octet-stream` :
+      // un `<iframe>` déclenchait un téléchargement au lieu d'afficher la page.
+      // On dépose un canevas que `hydratePdfSlides` peint avec pdf.js.
+      const url = esc(item.docUrl ?? '');
+      return `<canvas data-pdf-url="${url}" data-pdf-page="${page + 1}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff"></canvas>`;
     }
     case 'cantique': {
       const stanza = item.stanzas?.[page] ?? item.stanzas?.[0] ?? '';

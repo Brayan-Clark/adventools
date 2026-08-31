@@ -90,18 +90,38 @@ export function splitStanzas(content: string): string[] {
     .filter(Boolean);
 }
 
+/** Identifiant de fichier Google Drive contenu dans une URL, s'il y en a un. */
+export function driveFileId(url?: string): string | null {
+  if (!url) return null;
+  if (!/drive\.google\.com|drive\.usercontent\.google\.com|docs\.google\.com/i.test(url)) return null;
+  return url.match(/[?&]id=([A-Za-z0-9_-]+)/)?.[1] ?? url.match(/\/d\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
+}
+
 /**
  * URL de lecture directe pour un playback.
- * Les liens Google Drive « uc?export=download » renvoient une page
- * d'avertissement ; `drive.usercontent.google.com` sert le flux directement.
+ *
+ * ⚠️ Google Drive ne permet plus la lecture d'un fichier depuis un site tiers :
+ * la réponse porte `Content-Disposition: attachment`, et Chrome la rejette via
+ * l'Opaque Response Blocking (`ERR_BLOCKED_BY_ORB`) aussi bien pour un élément
+ * `<audio>` que pour un `fetch`. `drive.google.com/uc` répond même 403.
+ * Aucune variante d'URL n'y échappe : les fichiers doivent être ré-hébergés.
+ * `playbackBlocked()` permet d'afficher un repli au lieu d'un lecteur muet.
  */
 export function playbackSrc(url?: string): string {
   if (!url) return '';
-  const m = url.match(/[?&]id=([A-Za-z0-9_-]+)/);
-  if (m && /drive\.google\.com|drive\.usercontent\.google\.com|docs\.google\.com/i.test(url)) {
-    return `https://drive.usercontent.google.com/download?id=${m[1]}&export=download`;
-  }
-  return url;
+  const id = driveFileId(url);
+  return id ? `https://drive.usercontent.google.com/download?id=${id}&export=download` : url;
+}
+
+/** Vrai si la source ne peut pas être jouée en ligne (hébergeur bloquant). */
+export function playbackBlocked(url?: string): boolean {
+  return driveFileId(url) !== null;
+}
+
+/** Page Drive où le fichier reste écoutable. */
+export function driveViewUrl(url?: string): string {
+  const id = driveFileId(url);
+  return id ? `https://drive.google.com/file/d/${id}/view` : (url ?? '');
 }
 
 // ── Source JSON (embarquée) ────────────────────────────────────────────────
@@ -118,7 +138,7 @@ interface RawJsonSong {
 }
 
 async function loadJsonCollection(col: Collection): Promise<Song[]> {
-  const res = await fetch(`${BASE}${col.src}`);
+  const res = await fetch(`${BASE}${col.src}`, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const rows = (await res.json()) as RawJsonSong[];
   if (!Array.isArray(rows)) throw new Error('format inattendu');
@@ -143,32 +163,38 @@ function initSql(): Promise<any> {
   return (sqlPromise ??= initSqlJs({ locateFile: () => `${BASE}sql-wasm.wasm` }));
 }
 
-/** Télécharge le .db (persisté dans la Cache API) et l'ouvre avec sql.js. */
-async function fetchDb(url: string): Promise<Uint8Array> {
-  let res: Response | null = null;
+/**
+ * Télécharge un fichier de la branche `data` avec revalidation.
+ *
+ * L'ancienne version renvoyait la copie en cache sans jamais la vérifier :
+ * une base mise à jour sur GitHub n'atteignait jamais les visiteurs. On
+ * interroge maintenant le réseau avec `cache: 'no-cache'`, ce qui déclenche une
+ * requête conditionnelle (`If-None-Match`) : quelques octets si rien n'a
+ * changé, le fichier complet sinon. Le cache reste le secours hors-ligne.
+ */
+export async function fetchDataFile(url: string, cacheName: string): Promise<Uint8Array> {
+  const store = typeof caches !== 'undefined' ? await caches.open(cacheName).catch(() => null) : null;
+
   try {
-    if (typeof caches !== 'undefined') {
-      const store = await caches.open('ah-hymnal-db');
-      res = (await store.match(url)) ?? null;
-      if (!res) {
-        const net = await fetch(url);
-        if (!net.ok) throw new Error(`HTTP ${net.status}`);
-        res = net;
-        try {
-          await store.put(url, res.clone());
-        } catch {
-          /* stockage plein : on garde la réponse en mémoire */
-        }
+    const net = await fetch(url, { cache: 'no-cache' });
+    if (!net.ok) throw new Error(`HTTP ${net.status}`);
+    if (store) {
+      try {
+        await store.put(url, net.clone());
+      } catch {
+        /* quota dépassé : la réponse reste utilisable en mémoire */
       }
     }
-  } catch {
-    /* Cache API indisponible : fetch simple ci-dessous */
+    return new Uint8Array(await net.arrayBuffer());
+  } catch (err) {
+    const cached = await store?.match(url);
+    if (cached) return new Uint8Array(await cached.arrayBuffer());
+    throw err;
   }
-  if (!res) {
-    res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  }
-  return new Uint8Array(await res.arrayBuffer());
+}
+
+function fetchDb(url: string): Promise<Uint8Array> {
+  return fetchDataFile(url, 'ah-hymnal-db');
 }
 
 async function loadDbCollection(col: Collection): Promise<Song[]> {

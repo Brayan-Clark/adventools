@@ -92,31 +92,31 @@ export default defineConfig({
             },
           },
           {
-            // Fichiers SQLite bible (adventools raw) : cache à la demande
-            urlPattern: ({ url }) => url.hostname.includes('githubusercontent.com') && url.pathname.includes('/bible/'),
-            handler: 'CacheFirst',
+            // Index et listes de la branche `data` : ils décrivent ce qui
+            // existe, ils doivent donc toujours être frais. En CacheFirst
+            // (l'ancien réglage), un recueil ou un document ajouté sur GitHub
+            // n'apparaissait jamais — le service worker resservait sa copie
+            // pendant 30 à 90 jours.
+            urlPattern: ({ url }) =>
+              url.hostname.includes('githubusercontent.com') && url.pathname.endsWith('.json'),
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'ah-bible-db',
+              cacheName: 'ah-data-index',
+              networkTimeoutSeconds: 5,
               cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
           {
-            // Recueils de cantiques SQLite (adventools raw) : même principe
-            urlPattern: ({ url }) => url.hostname.includes('githubusercontent.com') && url.pathname.includes('/hymnes/'),
+            // Fichiers lourds de la branche `data` (bases SQLite, PDF).
+            // Le contenu applicatif revalide lui-même ces fichiers ; le cache
+            // du service worker ne sert que de secours hors-ligne.
+            urlPattern: ({ url }) =>
+              url.hostname.includes('githubusercontent.com') &&
+              /\.(db|sqlite3?|pdf|docx?|pptx?|odp)$/i.test(url.pathname),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'ah-hymnal-db',
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 90 },
-            },
-          },
-          {
-            // Manifests et documents PDF de la bibliothèque
-            urlPattern: ({ url }) => url.hostname.includes('githubusercontent.com') && url.pathname.includes('/docs/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'ah-docs',
+              cacheName: 'ah-data-files',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },

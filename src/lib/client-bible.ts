@@ -7,6 +7,7 @@
  */
 
 import initSqlJs from 'sql.js';
+import { fetchDataFile } from './hymnals';
 
 export const BIBLE_RAW =
   'https://raw.githubusercontent.com/Brayan-Clark/adventools/data/bible';
@@ -82,31 +83,11 @@ export async function loadDb(versions: BibleVersion[], file: string): Promise<an
   if (dbCache.has(file)) return dbCache.get(file);
   const v = versions.find((x) => x.file === file);
   const url = v?.url ?? `${BIBLE_RAW}/${encodeURIComponent(file)}`;
-  let res: Response | null = null;
-  try {
-    if (typeof caches !== 'undefined') {
-      const cache = await caches.open('ah-bible-db');
-      res = (await cache.match(url)) ?? null;
-      if (!res) {
-        const net = await fetch(url);
-        if (!net.ok) throw new Error(`HTTP ${net.status}`);
-        res = net;
-        try {
-          await cache.put(url, res.clone());
-        } catch {
-          /* stockage indisponible : on garde la réponse en mémoire */
-        }
-      }
-    }
-  } catch {
-    /* on retombe sur un fetch simple */
-  }
-  if (!res) {
-    res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  }
+  // Revalidation conditionnelle partagée avec les recueils de cantiques : le
+  // cache seul ne voyait jamais les mises à jour de la branche `data`.
+  const bytes = await fetchDataFile(url, 'ah-bible-db');
   const sql = await initSql();
-  const db = new sql.Database(new Uint8Array(await res.arrayBuffer()));
+  const db = new sql.Database(bytes);
   dbCache.set(file, db);
   return db;
 }
@@ -114,7 +95,7 @@ export async function loadDb(versions: BibleVersion[], file: string): Promise<an
 /** Charge la liste des versions depuis le manifest distant (avec secours). */
 export async function loadVersions(): Promise<BibleVersion[]> {
   try {
-    const res = await fetch(BIBLE_MANIFEST_URL);
+    const res = await fetch(BIBLE_MANIFEST_URL, { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data?.versions)) {

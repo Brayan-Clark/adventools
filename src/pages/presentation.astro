@@ -296,6 +296,7 @@ const lang: Lang = 'fr';
     type DocsData,
   } from '@/lib/presentation-sources';
   import { t } from '@/lib/i18n';
+  import { hydratePdfSlides, pdfPageCount } from '@/lib/doc-viewer';
 
   const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
   const lang = (document.documentElement.lang === 'mg' ? 'mg' : 'fr') as 'fr' | 'mg';
@@ -819,6 +820,7 @@ const lang: Lang = 'fr';
     const base = { sm: 1.1, md: 1.35, lg: 1.6, xl: 1.9 }[s.textSize ?? 'lg'];
     stage.style.fontSize = `${(base * Math.min(stage.clientWidth || 900, 1400)) / 900}rem`;
     stage.innerHTML = `${bgMediaHtml(s)}<div style="position:relative;z-index:1;width:100%;height:100%">${pageHtml(at.item, at.page, s, T('pres_stanza'))}</div>`;
+    void hydratePdfSlides(stage);
 
     previewTitle.textContent = at.item.title;
     previewSub.textContent = p.name;

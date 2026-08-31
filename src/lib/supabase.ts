@@ -382,6 +382,39 @@ export async function deleteMedia(id: number) {
   if (error) throw error;
 }
 
+/**
+ * Transforme un titre en identifiant d'URL : minuscules, sans accents, tirets.
+ * `media.slug` est `UNIQUE NOT NULL` en base ; le formulaire d'administration
+ * ne le renseignait pas du tout, donc **toute création échouait**.
+ */
+export function slugify(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+/**
+ * Rend un slug unique en lui ajoutant un suffixe numérique si besoin.
+ * `excludeId` évite qu'un contenu entre en conflit avec lui-même à la mise à jour.
+ */
+export async function uniqueSlug(base: string, excludeId?: number | null): Promise<string> {
+  const root = slugify(base) || `contenu-${Date.now().toString(36)}`;
+  const { data } = await supabase.from('media').select('id, slug').like('slug', `${root}%`);
+  const taken = new Set(
+    (data ?? []).filter((r: { id: number }) => r.id !== excludeId).map((r: { slug: string }) => r.slug)
+  );
+  if (!taken.has(root)) return root;
+  for (let i = 2; i < 1000; i++) {
+    if (!taken.has(`${root}-${i}`)) return `${root}-${i}`;
+  }
+  return `${root}-${Date.now().toString(36)}`;
+}
+
 // ============================================================
 // FONCTIONS ADMIN - GESTION UTILISATEURS
 // ============================================================
