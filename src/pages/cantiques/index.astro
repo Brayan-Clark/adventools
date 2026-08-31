@@ -258,13 +258,15 @@ const lang: Lang = 'fr';
             <p class="truncate font-display text-sm font-semibold">${esc(s.title)}</p>
             ${
               blocked
-                ? `<p class="mt-1 text-xs text-white/80">${esc(t(lang, 'audio_blocked_text'))}</p>
-                   <a href="${esc(driveViewUrl(s.playback))}" target="_blank" rel="noopener noreferrer"
-                      class="mt-2 inline-flex rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/30">
-                     ${esc(t(lang, 'audio_open_drive'))} →
-                   </a>`
-                : `<audio class="mt-2 w-full" controls preload="none" src="${esc(src)}"></audio>`
+                ? `<p class="mt-1 text-xs text-white/80">${esc(t(lang, 'audio_blocked_text'))}</p>`
+                : // `crossorigin` est indispensable : l'API Drive répond en CORS,
+                  // et sans cet attribut la requête serait opaque donc bloquée.
+                  `<audio id="cant-audio" class="mt-2 w-full" controls preload="none" crossorigin="anonymous" src="${esc(src)}"></audio>`
             }
+            <a id="cant-audio-fallback" href="${esc(driveViewUrl(s.playback))}" target="_blank" rel="noopener noreferrer"
+               class="mt-2 ${blocked ? 'inline-flex' : 'hidden'} rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/30">
+              ${esc(t(lang, 'audio_open_drive'))} →
+            </a>
           </div>
         </div>`;
 
@@ -368,6 +370,17 @@ const lang: Lang = 'fr';
   }
 
   function wireDetail() {
+    // Si la source refuse de se charger (clé absente ou invalide, hébergeur
+    // bloquant), on bascule sur le lien qui, lui, fonctionne — plutôt que de
+    // laisser un lecteur silencieux.
+    const player = viewDetail.querySelector<HTMLAudioElement>('#cant-audio');
+    player?.addEventListener('error', () => {
+      player.classList.add('hidden');
+      const fb = viewDetail.querySelector('#cant-audio-fallback');
+      fb?.classList.remove('hidden');
+      fb?.classList.add('inline-flex');
+    });
+
     viewDetail.querySelectorAll<HTMLElement>('[data-goto]').forEach((b) =>
       b.addEventListener('click', () => {
         const id = b.dataset.goto!;

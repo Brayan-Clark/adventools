@@ -276,76 +276,158 @@ async function renderPdf(
   // c'est elle qui libère le worker et coupe les requêtes réseau en cours.
   const task = lib.getDocument({ url });
   const doc = await task.promise;
+  const total = doc.numPages;
 
-  let page = 1;
-  let zoom = 0; // 0 = ajusté à la largeur
-  let renderTask: { cancel(): void } | null = null;
+  /** 0 = ajusté à la largeur disponible. */
+  let zoom = 0;
+  let current = 1;
+  const rendered = new Map<number, { cancel(): void }>();
 
-  body.innerHTML = `<div class="flex min-h-full items-start justify-center p-4"><canvas id="dv-canvas" class="max-w-full rounded-lg bg-white shadow-2xl"></canvas></div>`;
-  const canvas = body.querySelector<HTMLCanvasElement>('#dv-canvas')!;
+  body.innerHTML = `<div id="dv-pages" class="mx-auto flex w-fit flex-col items-center gap-4 p-4"></div>`;
+  const container = body.querySelector<HTMLElement>('#dv-pages')!;
 
   tools.innerHTML = `
     <button id="dv-prev" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_prev_page'))}">←</button>
-    <span class="px-1 text-xs text-white/70"><span id="dv-page">1</span> / ${doc.numPages}</span>
+    <span class="px-1 text-xs text-white/70">
+      <input id="dv-page-input" type="number" min="1" max="${total}" value="1"
+        class="w-12 rounded border border-white/20 bg-transparent px-1 py-0.5 text-center text-xs text-white" />
+      / ${total}
+    </span>
     <button id="dv-next" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_next_page'))}">→</button>
     <button id="dv-zoom-out" class="chip ml-1 border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_zoom_out'))}">−</button>
     <button id="dv-zoom-fit" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10">${esc(T('doc_fit'))}</button>
     <button id="dv-zoom-in" class="chip border border-white/20 px-2 py-1 text-xs text-white/80 transition hover:bg-white/10" aria-label="${esc(T('doc_zoom_in'))}">+</button>`;
 
-  async function draw() {
-    // Une page rendue plus vite que la précédente peindrait par-dessus.
-    renderTask?.cancel();
-    const p = await doc.getPage(page);
-    const base = p.getViewport({ scale: 1 });
-    // Ajusté à la largeur disponible, plafonné pour rester lisible sur écran large.
-    const fit = Math.min((body.clientWidth - 48) / base.width, 2.5);
-    const scale = zoom > 0 ? zoom : Math.max(0.4, fit);
-    const viewport = p.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+  const pageInput = tools.querySelector<HTMLInputElement>('#dv-page-input')!;
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    canvas.style.width = `${viewport.width / (window.devicePixelRatio || 1)}px`;
-    canvas.style.height = `${viewport.height / (window.devicePixelRatio || 1)}px`;
+  // Le gabarit vient de la première page : réserver la hauteur de chaque page
+  // évite que le défilement saute pendant les rendus. Interroger les 892 pages
+  // d'un livre juste pour connaître leurs dimensions serait bien plus coûteux.
+  const first = await doc.getPage(1);
+  const ratio = first.getViewport({ scale: 1 }).height / first.getViewport({ scale: 1 }).width;
 
-    const task = p.render({ canvasContext: canvas.getContext('2d')!, viewport, canvas });
-    renderTask = task;
+  const scaleFor = (viewportWidth: number) =>
+    zoom > 0 ? zoom : Math.max(0.4, Math.min((body.clientWidth - 48) / viewportWidth, 2.5));
+
+  /** Dessine une page dans son emplacement, une seule fois. */
+  async function drawPage(slot: HTMLElement) {
+    const n = Number(slot.dataset.page);
+    if (slot.dataset.done === '1') return;
+    slot.dataset.done = '1';
     try {
-      await task.promise;
+      const p = await doc.getPage(n);
+      const base = p.getViewport({ scale: 1 });
+      const dpr = window.devicePixelRatio || 1;
+      const scale = scaleFor(base.width);
+      const viewport = p.getViewport({ scale: scale * dpr });
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'block rounded-lg bg-white shadow-2xl';
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = `${viewport.width / dpr}px`;
+      canvas.style.height = `${viewport.height / dpr}px`;
+
+      const t = p.render({ canvasContext: canvas.getContext('2d')!, viewport, canvas });
+      rendered.set(n, t);
+      await t.promise;
+      slot.replaceChildren(canvas);
+      slot.style.height = '';
     } catch {
-      /* rendu annulé par une navigation plus récente */
+      // Rendu annulé (changement de zoom) : l'emplacement sera repeint.
+      slot.dataset.done = '';
     }
-    tools.querySelector('#dv-page')!.textContent = String(page);
   }
 
-  const go = (delta: number) => {
-    const next = Math.min(Math.max(1, page + delta), doc.numPages);
-    if (next === page) return;
-    page = next;
-    void draw();
-  };
+  /** (Re)construit les emplacements, vides, à la taille attendue. */
+  function buildSlots() {
+    rendered.forEach((t) => t.cancel());
+    rendered.clear();
+    const width = zoom > 0 ? first.getViewport({ scale: zoom }).width : Math.min(body.clientWidth - 48, 1200);
+    container.replaceChildren(
+      ...Array.from({ length: total }, (_, i) => {
+        const slot = document.createElement('div');
+        slot.dataset.page = String(i + 1);
+        slot.className = 'relative flex items-center justify-center rounded-lg bg-white/5';
+        slot.style.width = `${width}px`;
+        slot.style.height = `${width * ratio}px`;
+        return slot;
+      })
+    );
+    container.querySelectorAll<HTMLElement>('[data-page]').forEach((el) => observer.observe(el));
+  }
 
-  tools.querySelector('#dv-prev')!.addEventListener('click', () => go(-1));
-  tools.querySelector('#dv-next')!.addEventListener('click', () => go(1));
+  // Seules les pages proches du viewport sont rendues : indispensable pour un
+  // document de plusieurs centaines de pages.
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) void drawPage(e.target as HTMLElement);
+      }
+    },
+    { root: body, rootMargin: '250% 0px' }
+  );
+
+  // Indicateur de page : la page la plus proche du haut de la zone visible.
+  const spy = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          current = Number((e.target as HTMLElement).dataset.page);
+          if (document.activeElement !== pageInput) pageInput.value = String(current);
+        }
+      }
+    },
+    { root: body, rootMargin: '-45% 0px -45% 0px' }
+  );
+
+  const observeSpy = () =>
+    container.querySelectorAll<HTMLElement>('[data-page]').forEach((el) => spy.observe(el));
+
+  function goTo(n: number, smooth = true) {
+    const target = Math.min(Math.max(1, n), total);
+    const slot = container.querySelector<HTMLElement>(`[data-page="${target}"]`);
+    if (!slot) return;
+    body.scrollTo({ top: slot.offsetTop - container.offsetTop, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  function rebuild() {
+    const keep = current;
+    buildSlots();
+    observeSpy();
+    goTo(keep, false);
+  }
+
+  tools.querySelector('#dv-prev')!.addEventListener('click', () => goTo(current - 1));
+  tools.querySelector('#dv-next')!.addEventListener('click', () => goTo(current + 1));
+  pageInput.addEventListener('change', () => goTo(Number(pageInput.value) || 1));
   tools.querySelector('#dv-zoom-in')!.addEventListener('click', () => {
-    zoom = (zoom || 1) * 1.25;
-    void draw();
+    zoom = (zoom || scaleFor(first.getViewport({ scale: 1 }).width)) * 1.25;
+    rebuild();
   });
   tools.querySelector('#dv-zoom-out')!.addEventListener('click', () => {
-    zoom = Math.max(0.25, (zoom || 1) / 1.25);
-    void draw();
+    zoom = Math.max(0.25, (zoom || scaleFor(first.getViewport({ scale: 1 }).width)) / 1.25);
+    rebuild();
   });
   tools.querySelector('#dv-zoom-fit')!.addEventListener('click', () => {
     zoom = 0;
-    void draw();
+    rebuild();
   });
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+    if (document.activeElement === pageInput) return;
+    if (e.key === 'PageDown') {
       e.preventDefault();
-      go(1);
-    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      goTo(current + 1);
+    } else if (e.key === 'PageUp') {
       e.preventDefault();
-      go(-1);
+      goTo(current - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goTo(1);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goTo(total);
     }
   };
   document.addEventListener('keydown', onKey);
@@ -353,22 +435,24 @@ async function renderPdf(
   let resizeTimer: number | undefined;
   const onResize = () => {
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => void draw(), 150);
+    resizeTimer = window.setTimeout(rebuild, 200);
   };
   window.addEventListener('resize', onResize);
 
-  // Les écouteurs suivent le cycle de vie de la superposition.
   const previous = activeCleanup!;
   activeCleanup = () => {
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', onResize);
     window.clearTimeout(resizeTimer);
-    renderTask?.cancel();
+    observer.disconnect();
+    spy.disconnect();
+    rendered.forEach((t) => t.cancel());
     void task.destroy();
     previous();
   };
 
-  await draw();
+  buildSlots();
+  observeSpy();
 }
 
 /**

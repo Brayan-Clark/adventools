@@ -98,24 +98,38 @@ export function driveFileId(url?: string): string | null {
 }
 
 /**
+ * Clé d'API Google (facultative). Voir `.env.example` : elle débloque la
+ * lecture en ligne des playbacks hébergés sur Google Drive.
+ */
+const GOOGLE_API_KEY: string = (import.meta as any).env?.PUBLIC_GOOGLE_API_KEY ?? '';
+
+/**
  * URL de lecture directe pour un playback.
  *
- * ⚠️ Google Drive ne permet plus la lecture d'un fichier depuis un site tiers :
- * la réponse porte `Content-Disposition: attachment`, et Chrome la rejette via
- * l'Opaque Response Blocking (`ERR_BLOCKED_BY_ORB`) aussi bien pour un élément
- * `<audio>` que pour un `fetch`. `drive.google.com/uc` répond même 403.
- * Aucune variante d'URL n'y échappe : les fichiers doivent être ré-hébergés.
- * `playbackBlocked()` permet d'afficher un repli au lieu d'un lecteur muet.
+ * Les liens de partage Google Drive ne sont **pas** lisibles depuis un site
+ * tiers : `drive.usercontent.google.com` renvoie `Content-Disposition:
+ * attachment`, que Chrome rejette via l'Opaque Response Blocking
+ * (`ERR_BLOCKED_BY_ORB`), et `drive.google.com/uc` répond 403.
+ *
+ * L'API Drive, elle, sert le fichier avec les bons en-têtes CORS
+ * (`Access-Control-Allow-Origin` reflète l'origine appelante) : c'est la seule
+ * voie qui permet de lire l'audio dans la page. Elle exige une clé d'API ;
+ * sans clé, on renvoie le lien de partage et l'appelant propose l'ouverture
+ * dans Drive.
  */
 export function playbackSrc(url?: string): string {
   if (!url) return '';
   const id = driveFileId(url);
-  return id ? `https://drive.usercontent.google.com/download?id=${id}&export=download` : url;
+  if (!id) return url;
+  if (GOOGLE_API_KEY) {
+    return `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${encodeURIComponent(GOOGLE_API_KEY)}`;
+  }
+  return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
 }
 
-/** Vrai si la source ne peut pas être jouée en ligne (hébergeur bloquant). */
+/** Vrai si la source ne peut pas être jouée en ligne faute de clé d'API. */
 export function playbackBlocked(url?: string): boolean {
-  return driveFileId(url) !== null;
+  return driveFileId(url) !== null && !GOOGLE_API_KEY;
 }
 
 /** Page Drive où le fichier reste écoutable. */

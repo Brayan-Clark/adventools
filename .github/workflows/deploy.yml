@@ -40,6 +40,8 @@ jobs:
           # Secrets configurés dans les réglages du repo (Settings → Secrets and variables)
           PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Facultatif : débloque la lecture des playbacks Google Drive.
+          PUBLIC_GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: npm run build
 
       - name: Upload artifact
