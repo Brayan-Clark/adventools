@@ -213,6 +213,10 @@ export interface TranslationSchema {
   read_today: string;
   no_content: string;
   download_success: string;
+  download_partial: string;
+  download_interrupted: string;
+  no_new_lessons: string;
+  lessons_unit: string;
   delete_success: string;
   updated: string;
   offline_available: string;

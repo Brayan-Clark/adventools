@@ -61,6 +61,39 @@ try {
 const WEB_BASE = "https://inverse.sspmadventist.org";
 const OFFLINE_LESSONS_PREFIX = "adventools_ss_offline_";
 const LESSONS_DIR = `${FileSystem.documentDirectory}ss_offline/`;
+// Sidecar file recording which lessons of a quarterly are actually on disk,
+// so an incomplete download can be topped up later instead of restarted.
+const PROGRESS_SUFFIX = ".progress.json";
+
+interface DownloadProgress {
+  downloaded: string[];   // lesson numbers already saved, e.g. ["01", "02"]
+  expected: number;       // how many lessons the quarterly announces
+  lastUpdate: string;     // ISO date of the last successful pass
+}
+
+const progressPath = (downloadId: string) => `${LESSONS_DIR}${downloadId}${PROGRESS_SUFFIX}`;
+
+const readProgress = async (downloadId: string): Promise<DownloadProgress | null> => {
+  try {
+    const path = progressPath(downloadId);
+    const info = await FileSystem.getInfoAsync(path);
+    if (!info.exists) return null;
+    const parsed = JSON.parse(await FileSystem.readAsStringAsync(path));
+    if (!Array.isArray(parsed?.downloaded)) return null;
+    return parsed as DownloadProgress;
+  } catch (e) {
+    return null;
+  }
+};
+
+const writeProgress = async (downloadId: string, progress: DownloadProgress) => {
+  try {
+    await FileSystem.writeAsStringAsync(progressPath(downloadId), JSON.stringify(progress));
+  } catch (e) {
+    console.error("Progress write error", e);
+  }
+};
+
 
 const SS_LANGUAGES = [
   { code: 'mg', label: 'Malagasy', flag: '🇲🇬' },
@@ -333,7 +366,9 @@ export default function LesonaSekolySabata() {
       for (const downloadId of downloadedQuarterlies) {
         const jsonPath = `${LESSONS_DIR}${downloadId}.json`;
         protectedFiles.add(jsonPath);
-        
+        // Keep the progress file: purging it would lose the lesson count
+        protectedFiles.add(progressPath(downloadId));
+
         try {
           const content = await FileSystem.readAsStringAsync(jsonPath);
           // Simple regex to find all local FileSystem URIs inside the JSON
@@ -436,6 +471,7 @@ export default function LesonaSekolySabata() {
 
   // Offline state
   const [downloadedQuarterlies, setDownloadedQuarterlies] = useState<string[]>([]);
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, DownloadProgress>>({});
 
   // Verse Modal state
   const [verseModalVisible, setVerseModalVisible] = useState(false);
@@ -732,19 +768,29 @@ export default function LesonaSekolySabata() {
       const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
       if (!dirInfo.exists) {
         setDownloadedQuarterlies([]);
+        setDownloadProgress({});
         return;
       }
       const files = await FileSystem.readDirectoryAsync(LESSONS_DIR);
+      // The directory also holds one file per lesson, the progress files and
+      // the downloaded covers/PDFs: only the quarterly summaries count here.
       const downloaded = files
-        .filter(f => f.endsWith(".json"))
+        .filter(f => f.endsWith(".json") && !f.endsWith(PROGRESS_SUFFIX) && !f.startsWith(OFFLINE_LESSONS_PREFIX))
         .map(f => f.replace(".json", ""));
       setDownloadedQuarterlies(downloaded);
+
+      const progress: Record<string, DownloadProgress> = {};
+      await Promise.all(downloaded.map(async (downloadId) => {
+        const p = await readProgress(downloadId);
+        if (p) progress[downloadId] = p;
+      }));
+      setDownloadProgress(progress);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (force = false) => {
     setLoading(true);
     try {
       const storageKey = getStorageKey(selectedLang);
@@ -755,11 +801,12 @@ export default function LesonaSekolySabata() {
       let shouldSync = true;
       if (stored) {
         setQuarterlyList(JSON.parse(stored));
-        if (lastSyncStr) {
+        // A manual refresh always hits the network, otherwise once a day is enough
+        if (lastSyncStr && !force) {
           const lastSync = new Date(lastSyncStr);
           const now = new Date();
-          if (lastSync.getFullYear() === now.getFullYear() && 
-              lastSync.getMonth() === now.getMonth() && 
+          if (lastSync.getFullYear() === now.getFullYear() &&
+              lastSync.getMonth() === now.getMonth() &&
               lastSync.getDate() === now.getDate()) {
             shouldSync = false;
           }
@@ -887,6 +934,38 @@ export default function LesonaSekolySabata() {
     return undefined;
   };
 
+  /**
+   * Fetches a quarterly index (the lesson list) from the network and refreshes
+   * its cache. Returns null when offline so callers can fall back on the cache.
+   */
+  const fetchQuarterlyIndex = async (id: string, indexPath?: string): Promise<Quarterly | null> => {
+    const storedItem = quarterlyList.find(q => q.id === id);
+    const itemIndex = indexPath || storedItem?.index;
+
+    let url: string;
+    if (itemIndex) {
+      const subdomain = (itemIndex.includes('/mg/') || itemIndex.includes('-cq')) ? 'inverse' : 'absg';
+      url = `https://${subdomain}.sspmadventist.org/api/v3/${itemIndex}/index.json`;
+    } else {
+      const qPath = id.replace(`${selectedLang}-`, '').replace(/-/g, '/');
+      const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
+      url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/${qPath}/index.json`;
+    }
+
+    const response = await fetch(`${url}?t=${Date.now()}`).catch(() => null);
+    if (!response || !response.ok) return null;
+
+    try {
+      const json = await response.json();
+      const validated = safeValidate(QuarterlySchema, json, json);
+      await AsyncStorage.setItem(`adventools_ss_q_detail_${selectedLang}_${id}`, JSON.stringify(validated));
+      return validated;
+    } catch (e) {
+      console.error("Quarterly index parse error", e);
+      return null;
+    }
+  };
+
   const fetchQuarterlyDetail = async (id: string, indexPath?: string) => {
     setLoading(true);
     setSelectedQuarterly(null);
@@ -899,33 +978,15 @@ export default function LesonaSekolySabata() {
         const json = JSON.parse(cached);
         setSelectedQuarterly(json);
         loadLessonTitles(json);
-        
-        // If it's already downloaded, we don't need to fetch from network
-        if (downloadedQuarterlies.includes(downloadId)) {
-          setLoading(false);
-          return;
-        }
+        // Show the cached quarterly right away, but still refresh below: a
+        // quarterly downloaded while incomplete must be able to see the
+        // lessons published since.
+        setLoading(false);
       }
 
-      const storedItem = quarterlyList.find(q => q.id === id);
-      const itemIndex = indexPath || storedItem?.index;
-
-      let url: string;
-      if (itemIndex) {
-        const subdomain = (itemIndex.includes('/mg/') || itemIndex.includes('-cq')) ? 'inverse' : 'absg';
-        url = `https://${subdomain}.sspmadventist.org/api/v3/${itemIndex}/index.json`;
-      } else {
-        const qPath = id.replace(`${selectedLang}-`, '').replace(/-/g, '/');
-        const subdomain = id.includes('-cq') ? 'inverse' : 'absg';
-        url = `https://${subdomain}.sspmadventist.org/api/v3/${selectedLang}/${qPath}/index.json`;
-      }
-
-      const response = await fetch(`${url}?t=${Date.now()}`).catch(() => null);
-      if (response && response.ok) {
-        const json = await response.json();
-        const validated = safeValidate(QuarterlySchema, json, json);
+      const validated = await fetchQuarterlyIndex(id, indexPath);
+      if (validated) {
         setSelectedQuarterly(validated);
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(validated));
         loadLessonTitles(validated);
       } else if (!cached) {
         throw new Error("Impossible de charger les données et aucun cache disponible.");
@@ -1079,16 +1140,35 @@ export default function LesonaSekolySabata() {
     }
   };
 
-  const downloadFullQuarterly = async (q: Quarterly) => {
+  /**
+   * Downloads the lessons of a quarterly.
+   *
+   * Lessons already saved are skipped, so calling this again on a quarterly
+   * that was downloaded while incomplete only fetches what has been published
+   * since -- no need to delete and start over.
+   */
+  const downloadFullQuarterly = async (quarterly: Quarterly, isUpdate = false) => {
     if (downloadingAll) return;
 
-    checkMobileDataWarning("Téléchargement complet du Trimestre", async () => {
+    const label = isUpdate ? "Mise à jour du Trimestre" : "Téléchargement complet du Trimestre";
+    checkMobileDataWarning(label, async () => {
       setDownloadingAll(true);
       let successCount = 0;
+      let q = quarterly;
       try {
       const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(LESSONS_DIR, { intermediates: true });
+      }
+
+      // An update starts by re-reading the quarterly index: lessons published
+      // after the first download only appear there.
+      if (isUpdate) {
+        const refreshed = await fetchQuarterlyIndex(q.id, q.index);
+        if (refreshed) {
+          q = refreshed;
+          setSelectedQuarterly(refreshed);
+        }
       }
 
       let quarterlyPath = q.index;
@@ -1105,7 +1185,10 @@ export default function LesonaSekolySabata() {
       }
 
       const subdomain = (quarterlyPath.includes('/mg/') || quarterlyPath.includes('-cq')) ? 'inverse' : 'absg';
-      const lessons = q.lessons || Array.from({ length: 13 }, (_, i) => ({
+      // Same fallback count as the lesson list, otherwise a babies quarterly
+      // (3 lessons) would always look incomplete against 13.
+      const isBabiesQ = q.id.includes('-bb-') || q.id.includes('babies');
+      const lessons = q.lessons || Array.from({ length: isBabiesQ ? 3 : 13 }, (_, i) => ({
         id: `${q.id}-${(i + 1).toString().padStart(2, '0')}`
       }));
 
@@ -1117,15 +1200,35 @@ export default function LesonaSekolySabata() {
         if (q.covers.square) q.covers.square = await downloadAndCacheFile(q.covers.square, qPrefix);
       }
 
+      const downloadId = `${selectedLang}_${q.id}`;
+      const summaryPath = `${LESSONS_DIR}${downloadId}.json`;
+
+      // Start from what is already on disk so a top-up keeps the lessons
+      // downloaded during the previous passes.
       const lessonsData: Record<string, WeeklyLesson> = {};
+      const existingSummary = await FileSystem.getInfoAsync(summaryPath);
+      if (existingSummary.exists) {
+        try {
+          const previous = JSON.parse(await FileSystem.readAsStringAsync(summaryPath));
+          if (previous && typeof previous === 'object') Object.assign(lessonsData, previous);
+        } catch (e) {
+          console.warn("Previous summary unreadable, starting fresh", e);
+        }
+      }
+      const alreadyHad = Object.keys(lessonsData).length;
+
       const batchSize = 3;
-      for (let i = 0; i < lessons.length; i += batchSize) {
+      let networkAborted = false;
+      for (let i = 0; i < lessons.length && !networkAborted; i += batchSize) {
         const batch = lessons.slice(i, i + batchSize);
         await Promise.all(batch.map(async (lesson, idx) => {
           try {
             const lessonId = (lesson.id && typeof lesson.id === 'string')
               ? (lesson.id.includes('-') ? lesson.id.split('-').pop() : lesson.id)
               : ((i + idx + 1).toString().padStart(2, '0'));
+
+            // Already downloaded on a previous pass: nothing to fetch
+            if (lessonId && lessonsData[lessonId]) return;
 
             // Try multiple sections (ss, aij, explore)
             const sections = ['ss', 'aij', 'explore'];
@@ -1157,7 +1260,10 @@ export default function LesonaSekolySabata() {
             }
 
             if (networkError && !lessonJson) {
-               throw new Error("Network failed during download");
+              // Connection lost: stop here but keep what was already fetched,
+              // the next update picks up where this one left off.
+              networkAborted = true;
+              return;
             }
 
             if (!lessonJson && q) {
@@ -1227,24 +1333,41 @@ export default function LesonaSekolySabata() {
               }
               successCount++;
             }
-          } catch (le) { 
-            console.error("Lesson DL error", le); 
-            throw le; 
+          } catch (le) {
+            // One lesson failing must not lose the whole batch
+            console.error("Lesson DL error", le);
           }
         }));
         await new Promise(r => setTimeout(r, 100));
       }
 
-      if (successCount === 0) throw new Error("Impossible de télécharger le contenu");
+      const haveIds = Object.keys(lessonsData).sort();
+      if (haveIds.length === 0) throw new Error("Impossible de télécharger le contenu");
 
-      const downloadId = `${selectedLang}_${q.id}`;
-      const filePath = `${LESSONS_DIR}${downloadId}.json`;
-      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(lessonsData));
-
+      await FileSystem.writeAsStringAsync(summaryPath, JSON.stringify(lessonsData));
       await AsyncStorage.setItem(`adventools_ss_q_detail_${downloadId}`, JSON.stringify(q));
 
+      const progress: DownloadProgress = {
+        downloaded: haveIds,
+        expected: lessons.length,
+        lastUpdate: new Date().toISOString(),
+      };
+      await writeProgress(downloadId, progress);
+
       setDownloadedQuarterlies(prev => prev.includes(downloadId) ? prev : [...prev, downloadId]);
-      showToast(`${t('download_success')} (${successCount} leçons)`, 'success');
+      setDownloadProgress(prev => ({ ...prev, [downloadId]: progress }));
+
+      const missing = Math.max(0, lessons.length - haveIds.length);
+      if (networkAborted) {
+        showToast(`${t('download_interrupted')} (${haveIds.length}/${lessons.length})`, 'info');
+      } else if (missing === 0) {
+        showToast(`${t('download_success')} (${haveIds.length} ${t('lessons_unit')})`, 'success');
+      } else if (successCount === 0 && alreadyHad > 0) {
+        // Nothing new published since the last pass
+        showToast(t('no_new_lessons'), 'info');
+      } else {
+        showToast(`${t('download_partial')} (${haveIds.length}/${lessons.length})`, 'info');
+      }
     } catch (e) {
       console.error(e);
       setAlertConfig({
@@ -1268,13 +1391,25 @@ export default function LesonaSekolySabata() {
       onConfirm: async () => {
         try {
           const downloadId = `${selectedLang}_${qId}`;
-          const filePath = `${LESSONS_DIR}${downloadId}.json`;
-          const info = await FileSystem.getInfoAsync(filePath);
-          if (info.exists) {
-            await FileSystem.deleteAsync(filePath);
+          // Remove the summary, the progress file and every per-lesson file,
+          // otherwise the lessons stay on disk and a later download skips them.
+          const toDelete = [`${downloadId}.json`, `${downloadId}${PROGRESS_SUFFIX}`];
+          const dirInfo = await FileSystem.getInfoAsync(LESSONS_DIR);
+          if (dirInfo.exists) {
+            const files = await FileSystem.readDirectoryAsync(LESSONS_DIR);
+            toDelete.push(...files.filter(f => f.startsWith(`${OFFLINE_LESSONS_PREFIX}${downloadId}_`)));
+          }
+          for (const name of toDelete) {
+            const info = await FileSystem.getInfoAsync(`${LESSONS_DIR}${name}`);
+            if (info.exists) await FileSystem.deleteAsync(`${LESSONS_DIR}${name}`, { idempotent: true });
           }
           await AsyncStorage.removeItem(`adventools_ss_q_detail_${downloadId}`);
           setDownloadedQuarterlies(prev => prev.filter(id => id !== downloadId));
+          setDownloadProgress(prev => {
+            const next = { ...prev };
+            delete next[downloadId];
+            return next;
+          });
           showToast(t('delete_success'), 'success');
         } catch (e) {
           console.error(e);
@@ -2354,13 +2489,15 @@ export default function LesonaSekolySabata() {
       return (
         <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
           {/* Quarterly Card */}
-          <QuarterlyCard 
+          <QuarterlyCard
             item={selectedQuarterly}
             variant="detail"
             onDownload={() => downloadFullQuarterly(selectedQuarterly)}
+            onUpdate={() => downloadFullQuarterly(selectedQuarterly, true)}
             onDelete={() => deleteQuarterly(selectedQuarterly.id)}
-            isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${selectedQuarterly.id}`)}
-            isCurrent={isQuarterlyCurrent(selectedQuarterly)}
+            isDownloaded={isDownloaded}
+            isCurrent={isCurrent}
+            progress={downloadProgress[downloadId]}
             downloadingAll={downloadingAll}
             t={t as any}
           />
@@ -2468,6 +2605,7 @@ export default function LesonaSekolySabata() {
                   variant="list"
                   width={width}
                   isDownloaded={downloadedQuarterlies.includes(`${selectedLang}_${item.id}`)}
+                  progress={downloadProgress[`${selectedLang}_${item.id}`]}
                   onPress={() => fetchQuarterlyDetail(item.id, item.index)}
                   t={t as any}
                 />
@@ -2559,7 +2697,7 @@ export default function LesonaSekolySabata() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={loadInitialData}
+              onPress={() => { loadInitialData(true); checkDownloaded(); }}
               className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
             >
               <RefreshCw size={18} color="#94a3b8" />
