@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-28",
+  "quarters": [
+    {
+      "id": "2026-Q3",
+      "annee": 2026,
+      "trimestre": 3,
+      "titre": "NY FANJAKAN'NY LANITRA",
+      "file": "2026-Q3.json",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/mofonaina/2026-Q3.json",
+      "startDate": "2026-07-02",
+      "endDate": "2026-09-26",
+      "count": 87,
+      "size": "209 KB",
+      "version": 1
+    },
+    {
+      "id": "2026-Q4",
+      "annee": 2026,
+      "trimestre": 4,
+      "titre": "NY FANJAKAN'NY LANITRA",
+      "file": "2026-Q4.json",
+      "url": "https://raw.githubusercontent.com/Brayan-Clark/adventools/data/mofonaina/2026-Q4.json",
+      "startDate": "2026-09-27",
+      "endDate": "2026-12-26",
+      "count": 91,
+      "size": "237 KB",
+      "version": 1
+    }
+  ]
+}
