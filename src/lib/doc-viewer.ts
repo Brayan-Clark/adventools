@@ -520,3 +520,181 @@ export async function renderPdfPageInto(
     return false;
   }
 }
+
+// ===========================================================================
+// Lecture continue d'un PDF (projection)
+// ===========================================================================
+
+/**
+ * Documents déjà ouverts, par URL. Sans ce cache, chaque page rendue
+ * retéléchargeait le fichier entier — rédhibitoire pour un document de
+ * plusieurs centaines de pages.
+ */
+const openDocs = new Map<string, Promise<any>>();
+
+function openPdf(url: string): Promise<any> {
+  let doc = openDocs.get(url);
+  if (!doc) {
+    doc = pdfLib().then((lib) => lib.getDocument({ url }).promise);
+    openDocs.set(url, doc);
+  }
+  return doc;
+}
+
+export interface PdfScroller {
+  /** Amène la page demandée (1-based) en haut de la zone visible. */
+  scrollToPage(n: number): void;
+  /** Facteur de zoom, 1 = page à la largeur du cadre. */
+  setZoom(z: number): void;
+  getZoom(): number;
+  /** Page actuellement en haut de la zone visible (1-based). */
+  currentPage(): number;
+  destroy(): void;
+}
+
+/**
+ * Affiche un PDF en défilement continu : les pages sont empilées et la
+ * molette fait défiler le document, pas la présentation.
+ *
+ * Seules les pages proches de la zone visible sont peintes ; les autres ne
+ * sont que des cadres à la bonne proportion. Un document de 892 pages tient
+ * ainsi en mémoire sans effondrer le navigateur.
+ */
+export async function mountPdfScroller(
+  container: HTMLElement,
+  url: string,
+  opts: { zoom?: number; onPageChange?: (page: number) => void } = {}
+): Promise<PdfScroller | null> {
+  let doc: any;
+  try {
+    doc = await openPdf(url);
+  } catch (e: any) {
+    console.error('[pdf] ouverture impossible', url, e);
+    container.dataset.pdfError = String(e?.message ?? e);
+    openDocs.delete(url); // ne pas figer un échec dans le cache
+    return null;
+  }
+
+  let zoom = opts.zoom ?? 1;
+  const total: number = doc.numPages;
+
+  container.innerHTML = '';
+  container.style.cssText =
+    'position:absolute;inset:0;overflow:auto;background:#525659;scroll-behavior:auto;-webkit-overflow-scrolling:touch';
+
+  const track = document.createElement('div');
+  track.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0';
+  container.appendChild(track);
+
+  // Proportion de la première page : suffit à dimensionner les cadres, les
+  // pages d'un même document ayant presque toujours le même format.
+  const first = await doc.getPage(1);
+  const base = first.getViewport({ scale: 1 });
+  const ratio = base.height / base.width;
+
+  const slots: HTMLDivElement[] = [];
+  for (let i = 1; i <= total; i++) {
+    const slot = document.createElement('div');
+    slot.dataset.page = String(i);
+    slot.style.cssText = 'position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.35);flex:0 0 auto';
+    track.appendChild(slot);
+    slots.push(slot);
+  }
+
+  function applyZoom() {
+    const width = Math.max(120, container.clientWidth * zoom - 20);
+    for (const slot of slots) {
+      slot.style.width = `${width}px`;
+      slot.style.height = `${width * ratio}px`;
+      // Le rendu existant n'est plus à la bonne échelle
+      slot.dataset.rendered = '';
+      slot.innerHTML = '';
+    }
+    void paintVisible();
+  }
+
+  const rendering = new Set<number>();
+
+  async function paint(n: number) {
+    const slot = slots[n - 1];
+    if (!slot || slot.dataset.rendered === '1' || rendering.has(n)) return;
+    rendering.add(n);
+    try {
+      const page = await doc.getPage(n);
+      const vp1 = page.getViewport({ scale: 1 });
+      const scale = Math.min((slot.clientWidth || 800) / vp1.width, 4);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.cssText = 'display:block;width:100%;height:100%';
+      await page.render({ canvasContext: canvas.getContext('2d')!, viewport, canvas }).promise;
+      if (slot.dataset.rendered !== '1') {
+        slot.innerHTML = '';
+        slot.appendChild(canvas);
+        slot.dataset.rendered = '1';
+      }
+    } catch {
+      /* page illisible : le cadre blanc reste */
+    } finally {
+      rendering.delete(n);
+    }
+  }
+
+  /** Peint la fenêtre visible et quelques pages de marge, libère les lointaines. */
+  async function paintVisible() {
+    const top = container.scrollTop;
+    const bottom = top + container.clientHeight;
+    const nearby: number[] = [];
+    slots.forEach((slot, idx) => {
+      const y = slot.offsetTop;
+      const h = slot.offsetHeight;
+      const visible = y + h > top - h * 2 && y < bottom + h * 2;
+      if (visible) nearby.push(idx + 1);
+      else if (slot.dataset.rendered === '1' && (y + h < top - h * 6 || y > bottom + h * 6)) {
+        slot.innerHTML = '';
+        slot.dataset.rendered = '';
+      }
+    });
+    for (const n of nearby) await paint(n);
+  }
+
+  let raf = 0;
+  const onScroll = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      void paintVisible();
+      opts.onPageChange?.(current());
+    });
+  };
+  container.addEventListener('scroll', onScroll, { passive: true });
+
+  function current(): number {
+    const top = container.scrollTop + container.clientHeight * 0.3;
+    for (let i = 0; i < slots.length; i++) {
+      if (slots[i].offsetTop + slots[i].offsetHeight > top) return i + 1;
+    }
+    return total;
+  }
+
+  applyZoom();
+
+  return {
+    scrollToPage(n) {
+      const slot = slots[Math.min(Math.max(1, n), total) - 1];
+      if (slot) container.scrollTop = slot.offsetTop - 10;
+      void paintVisible();
+    },
+    setZoom(z) {
+      zoom = Math.min(5, Math.max(0.4, z));
+      applyZoom();
+    },
+    getZoom: () => zoom,
+    currentPage: current,
+    destroy() {
+      container.removeEventListener('scroll', onScroll);
+      container.innerHTML = '';
+    },
+  };
+}

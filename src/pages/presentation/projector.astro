@@ -234,7 +234,8 @@ const lang: Lang = 'fr';
         pageHtml,
       } from '@/lib/presentation';
       import type { PresOverlays } from '@/lib/presentation';
-      import { hydratePdfSlides } from '@/lib/doc-viewer';
+      import { hydratePdfSlides, mountPdfScroller } from '@/lib/doc-viewer';
+      import type { PdfScroller } from '@/lib/doc-viewer';
 
       const lang = document.documentElement.lang as 'fr' | 'mg';
       const stage = document.getElementById('stage')!;
@@ -406,7 +407,7 @@ const lang: Lang = 'fr';
           { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
         const media = bgMediaHtml(s);
         stage.innerHTML = `${media}<div class="content" style="position:relative;z-index:1;width:100%;height:100%;font-size:${sizePx};color:${s.textColor || '#fff'}">${pageHtml(at.item, at.page, s, stanzaLabel)}</div>`;
-        void hydratePdfSlides(stage);
+        void mountDocScroller();
         // points
         dots.innerHTML = Array.from({ length: total }, (_, i) => `<span class="${i === pageIndex ? 'on' : ''}"></span>`).join('');
         hudPos.textContent = `${pageIndex + 1} / ${total}`;
@@ -504,6 +505,16 @@ const lang: Lang = 'fr';
         } else if (e.key === 'ArrowLeft') {
           e.preventDefault();
           prev();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          zoomBy(1.15);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          zoomBy(1 / 1.15);
+        } else if (e.key === '0' && scroller) {
+          e.preventDefault();
+          scroller.setZoom(1);
+          flashHud();
         } else if (e.key.toLowerCase() === 'b') {
           toggleBlack();
         } else if (e.key.toLowerCase() === 'h' && e.shiftKey) {
@@ -530,22 +541,44 @@ const lang: Lang = 'fr';
       // centaines de pages est pénible à la flèche ; les autres types de
       // slides gardent la navigation au clavier, pour éviter qu'un coup de
       // molette involontaire ne fasse sauter un cantique en pleine assemblée.
-      let wheelAcc = 0;
-      let wheelLock = false;
+      // --- Documents : défilement continu et zoom ---------------------------
+      let scroller: PdfScroller | null = null;
+
+      async function mountDocScroller() {
+        scroller?.destroy();
+        scroller = null;
+        const host = stage.querySelector<HTMLElement>('[data-pdf-scroller]');
+        if (!host) {
+          void hydratePdfSlides(stage);
+          return;
+        }
+        const url = host.dataset.pdfUrl ?? '';
+        scroller = await mountPdfScroller(host, url, {
+          onPageChange: (n) => {
+            hudPos.textContent = `${n} / ${docTotal || n}`;
+          },
+        });
+        // Repli si pdf.js échoue : au moins la première page
+        if (!scroller) void hydratePdfSlides(stage);
+      }
+
+      let docTotal = 0;
+
+      /** Zoom au clavier (+ / -) et à la molette avec Ctrl, comme un lecteur PDF. */
+      function zoomBy(factor: number) {
+        if (!scroller) return;
+        scroller.setZoom(scroller.getZoom() * factor);
+        flashHud();
+      }
+
       stage.addEventListener(
         'wheel',
         (e) => {
-          const at = pres ? pageAt(pres, pageIndex) : null;
-          if (!at || at.item.kind !== 'doc') return;
+          if (!scroller) return;
+          // Sans Ctrl, on laisse le conteneur défiler : c'est tout l'intérêt.
+          if (!e.ctrlKey) return;
           e.preventDefault();
-          if (wheelLock) return;
-          wheelAcc += e.deltaY;
-          if (Math.abs(wheelAcc) < 40) return;
-          const forward = wheelAcc > 0;
-          wheelAcc = 0;
-          wheelLock = true;
-          window.setTimeout(() => { wheelLock = false; }, 120);
-          if (forward) next(); else prev();
+          zoomBy(e.deltaY > 0 ? 0.9 : 1.1);
         },
         { passive: false }
       );

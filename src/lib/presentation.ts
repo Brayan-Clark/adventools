@@ -275,7 +275,9 @@ export function itemPageCount(item: PresentItem): number {
     case 'bible':
       return item.perVerse ? Math.max(1, item.verses?.length ?? 1) : 1;
     case 'doc':
-      return Math.max(1, item.docPages ?? 1);
+      // Un PDF ne compte que pour une diapositive : il se parcourt en
+      // défilement continu dans le projecteur, pas page par page.
+      return 1;
     default:
       return 1;
   }
@@ -402,7 +404,12 @@ export function pageHtml(
       // un `<iframe>` déclenchait un téléchargement au lieu d'afficher la page.
       // On dépose un canevas que `hydratePdfSlides` peint avec pdf.js.
       const url = esc(item.docUrl ?? '');
-      return `<canvas data-pdf-url="${url}" data-pdf-page="${page + 1}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff"></canvas>`;
+      // Conteneur repris par `mountPdfScroller` dans le projecteur (défilement
+      // continu + zoom). Ailleurs — aperçu du studio — `hydratePdfSlides`
+      // peint la première page dans le canevas de repli.
+      return `<div data-pdf-scroller data-pdf-url="${url}" style="position:absolute;inset:0;background:#525659">` +
+        `<canvas data-pdf-url="${url}" data-pdf-page="1" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff"></canvas>` +
+        `</div>`;
     }
     case 'cantique': {
       // Même parti pris que pour les versets : la strophe occupe l'écran, le

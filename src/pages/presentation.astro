@@ -709,12 +709,13 @@ const lang: Lang = 'fr';
   }
 
   async function resolveDocPages(item: PresentItem) {
-    if (item.kind !== 'doc' || !item.docUrl || item.docPages) return;
+    if (item.kind !== 'doc' || !item.docUrl) return;
     const pages = await pdfPageCount(item.docUrl).catch(() => 0);
-    if (pages <= 1) return;
-    // L'élément a pu être retiré ou la présentation changée entre-temps
+    if (pages < 1) return;
     const target = pres().items.find((it) => it.id === item.id);
-    if (!target) return;
+    if (!target || target.docPages === pages) return;
+    // Sert à afficher « N pages » dans le déroulé. La projection, elle, ne
+    // découpe plus le document : il se parcourt d'un seul tenant.
     target.docPages = pages;
     persist();
     renderAll();
