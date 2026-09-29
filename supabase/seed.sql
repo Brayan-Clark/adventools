@@ -104,3 +104,66 @@ INSERT INTO verses (text_fr, text_mg, reference)
 SELECT 'et Dieu essuiera toute larme de leurs yeux, et la mort n''existera plus, et il n''y aura plus ni deuil, ni cri, ni douleur, car ce qui était autrefois a disparu.', 'Hofafan''Andriamanitra ny ranomaso rehetra amin''ny mason''ireo vahoakany; ary tsy hisy fahafatesana intsony, sady tsy hisy alahelo na fitarainana na fahoriana intsony, fa efa lasa ny zavatra taloha.', 'Apocalypse 21:4'
 WHERE NOT EXISTS (SELECT 1 FROM verses WHERE reference = 'Apocalypse 21:4');
 
+
+-- ============ 4. Articles de fond ============
+-- Rédigés à partir des croyances fondamentales et des textes bibliques
+-- cités. Aucun auteur fictif : signés par la rédaction. Marqués du tag
+-- 'demo' pour pouvoir les retirer d'un seul coup :
+--   DELETE FROM media WHERE 'demo' = ANY(tags);
+
+INSERT INTO media (type, slug, title_fr, title_mg, description_fr, description_mg, content_fr, content_mg, speaker, category_id, tags)
+SELECT 'article', 'le-sabbat-septieme-jour', 'Le sabbat, mémorial de la création', 'Ny Sabata, fahatsiarovana ny famoronana', 'Pourquoi les adventistes observent-ils le septième jour ? Retour aux textes fondateurs.', 'Nahoana no mitandrina ny andro fahafito ny Advantista? Fiverenana amin''ny Soratra Masina.',
+       'Le sabbat n''apparaît pas au Sinaï : il est institué à la création. « Dieu bénit le septième jour et le sanctifia, parce qu''en ce jour il se reposa de toute son œuvre » (Genèse 2:3). Le quatrième commandement ne crée donc pas une obligation nouvelle, il rappelle une institution : « Souviens-toi du jour du repos, pour le sanctifier » (Exode 20:8).
+
+Jésus lui-même l''observe. « Il entra dans la synagogue le jour du sabbat, selon sa coutume » (Luc 4:16). Et il en précise le sens : « Le sabbat a été fait pour l''homme, et non l''homme pour le sabbat » (Marc 2:27). Le repos hebdomadaire n''est pas une contrainte, c''est un don.
+
+Pour l''Église adventiste du septième jour, ce jour est un signe : celui d''une confiance placée dans un Dieu créateur et rédempteur, et un temps rendu à la communion — avec Dieu, avec la famille, avec l''Église.', 'Tsy tao Sinay no nanombohan''ny Sabata: tamin''ny famoronana izy no naorina. « Nitahy ny andro fahafito Andriamanitra ka nanamasina azy, satria tamin''io no nitsaharany tamin''ny asany rehetra » (Genesisy 2:3).
+
+I Jesoa mihitsy no nitandrina azy. « Niditra tao amin''ny synagoga tamin''ny andro sabata Izy, araka ny fanaony » (Lioka 4:16). Ary nohazavainy ny heviny: « Ny Sabata no natao ho an''ny olona, fa tsy ny olona ho an''ny Sabata » (Marka 2:27).
+
+Ho an''ny Fiangonana Advantista Mitandrina ny Andro Fahafito, famantarana io andro io: fitokiana amin''Andriamanitra Mpahary sy Mpanavotra, ary fotoana atolotra ho amin''ny fiombonana.', 'Rédaction Andeaha Hizaha',
+       (SELECT id FROM categories WHERE slug = 'etude-biblique'), ARRAY['demo']
+WHERE NOT EXISTS (SELECT 1 FROM media WHERE slug = 'le-sabbat-septieme-jour');
+
+INSERT INTO media (type, slug, title_fr, title_mg, description_fr, description_mg, content_fr, content_mg, speaker, category_id, tags)
+SELECT 'article', 'le-sanctuaire-celeste', 'Le sanctuaire céleste', 'Ny fitoerana masina any an-danitra', 'Ce que le service du sanctuaire révèle du ministère actuel du Christ.', 'Izay ambaran''ny fanompoana ao amin''ny fitoerana masina momba ny asan''i Kristy ankehitriny.',
+       '« Nous avons un tel souverain sacrificateur, qui s''est assis à la droite du trône de la majesté divine dans les cieux, comme ministre du sanctuaire et du véritable tabernacle, qui a été dressé par le Seigneur et non par un homme » (Hébreux 8:1-2).
+
+Le sanctuaire terrestre décrit dans l''Exode était « l''image et l''ombre des choses célestes » (Hébreux 8:5). Ses deux parties, le lieu saint et le lieu très saint, ses sacrifices et son jour des expiations composaient une leçon en actes sur la manière dont Dieu traite le péché.
+
+L''adventisme y lit la clé du temps présent : le Christ n''a pas achevé son œuvre à la croix, il l''applique. Il intercède, il purifie, il prépare un peuple. Comprendre le sanctuaire, c''est comprendre où nous en sommes dans l''histoire du salut.', '« Manana Mpisoronabe toy izany isika, dia Ilay efa mipetraka eo an-kavanan''ny seza fiandrianan''ny Fahalehibiazana any an-danitra, Mpanao fanompoam-pivavahana ao amin''ny fitoerana masina » (Hebreo 8:1-2).
+
+Ny fitoerana masina tetỳ an-tany dia « tandindona sy aloky ny zavatra any an-danitra » (Hebreo 8:5). Ny fizarany roa, ny fanatitra, ary ny andro fanavotana dia lesona natao hampahafantarana ny fomba itondran''Andriamanitra ny ota.
+
+Eo no ahitan''ny Advantista ny fanalahidin''ny androm-piainantsika: tsy vita teo amin''ny hazo fijaliana ny asan''i Kristy, fa ampihariny izao. Mifona Izy, manadio, manomana vahoaka.', 'Rédaction Andeaha Hizaha',
+       (SELECT id FROM categories WHERE slug = 'prophetie'), ARRAY['demo']
+WHERE NOT EXISTS (SELECT 1 FROM media WHERE slug = 'le-sanctuaire-celeste');
+
+INSERT INTO media (type, slug, title_fr, title_mg, description_fr, description_mg, content_fr, content_mg, speaker, category_id, tags)
+SELECT 'article', 'esperance-du-retour', 'L''espérance du retour', 'Ny fanantenana ny fiverenany', 'La seconde venue du Christ : ce que le Nouveau Testament en dit, et ce qu''il n''en dit pas.', 'Ny fiavian''i Kristy fanindroany: izay lazain''ny Testamenta Vaovao, sy izay tsy lazainy.',
+       '« Le Seigneur lui-même, à un signal donné, descendra du ciel » (1 Thessaloniciens 4:16). Le retour du Christ est annoncé comme un événement personnel, littéral, visible et audible — « tout œil le verra » (Apocalypse 1:7).
+
+Le Nouveau Testament est aussi net sur ce qu''il ne révèle pas : « Pour ce qui est du jour et de l''heure, personne ne le sait » (Matthieu 24:36). Toute tentative de fixer une date se heurte à cette phrase.
+
+Reste l''essentiel : « Que votre cœur ne se trouble point. Je vais vous préparer une place, je reviendrai » (Jean 14:1-3). L''espérance adventiste n''est pas un calcul, c''est une attente active.', '« Ny Tompo no hidina avy any an-danitra » (1 Tesaloniana 4:16). Ambara ho zava-nitranga tena izy, hita maso sy re, ny fiavian''i Kristy — « ny maso rehetra hahita Azy » (Apokalypsy 1:7).
+
+Mazava koa ny Testamenta Vaovao amin''izay tsy ambarany: « Fa ny amin''izany andro sy ora izany dia tsy misy mahalala » (Matio 24:36). Tsy mahomby ny fikasana hametra daty.
+
+Ny tena zava-dehibe: « Aza malahelo ny fonareo. Handeha hamboatra fitoerana ho anareo Aho, dia ho avy indray » (Jaona 14:1-3).', 'Rédaction Andeaha Hizaha',
+       (SELECT id FROM categories WHERE slug = 'prophetie'), ARRAY['demo']
+WHERE NOT EXISTS (SELECT 1 FROM media WHERE slug = 'esperance-du-retour');
+
+INSERT INTO media (type, slug, title_fr, title_mg, description_fr, description_mg, content_fr, content_mg, speaker, category_id, tags)
+SELECT 'article', 'etat-des-morts', 'Que dit la Bible sur la mort ?', 'Inona no lazain''ny Baiboly momba ny fahafatesana?', 'Sommeil, résurrection, espérance : un parcours biblique sur l''état des morts.', 'Torimaso, fitsanganana, fanantenana: fandinihana ara-baiboly momba ny toetran''ny maty.',
+       'La Bible emploie une image constante : le sommeil. « Lazare, notre ami, dort ; mais je vais le réveiller » (Jean 11:11). Jésus explique ensuite sans détour qu''il parlait de sa mort.
+
+L''Ecclésiaste est direct : « Les vivants savent qu''ils mourront, mais les morts ne savent rien » (Ecclésiaste 9:5). Et le psalmiste : « Leurs pensées périssent » (Psaume 146:4).
+
+L''espérance ne tient donc pas à une survie immédiate, mais à la résurrection : « Les morts en Christ ressusciteront premièrement » (1 Thessaloniciens 4:16). C''est une bonne nouvelle : la mort n''est pas une porte vers un ailleurs incertain, c''est un sommeil dont le Christ réveille.', 'Sary iray no ampiasain''ny Baiboly hatrany: ny torimaso. « Lazarosy sakaizantsika matory, fa handeha hamoha azy Aho » (Jaona 11:11). Avy eo Jesoa dia nanazava mazava fa ny fahafatesany no notenenina.
+
+Mazava ny Mpitoriteny: « Fantatry ny velona fa ho faty izy, fa ny maty kosa tsy mahalala na inona na inona » (Mpitoriteny 9:5).
+
+Tsy miankina amin''ny fiainana avy hatrany noho izany ny fanantenana, fa amin''ny fitsanganana amin''ny maty: « Ny maty ao amin''i Kristy no hitsangana aloha » (1 Tesaloniana 4:16).', 'Rédaction Andeaha Hizaha',
+       (SELECT id FROM categories WHERE slug = 'etude-biblique'), ARRAY['demo']
+WHERE NOT EXISTS (SELECT 1 FROM media WHERE slug = 'etat-des-morts');
+
