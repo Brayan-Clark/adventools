@@ -399,8 +399,29 @@ export function pageHtml(
   }
 }
 
+/**
+ * Échappe une URL destinée à `url('…')`. Les guillemets, parenthèses et
+ * antislashs suffisent à sortir de la chaîne ; le point-virgule, lui, doit
+ * être conservé, sans quoi les URL `data:image/jpeg;base64,…` sont corrompues.
+ * À l'intérieur d'une chaîne CSS quotée, un `;` ne termine pas la déclaration.
+ */
+export function cssUrlSafe(u: string): string {
+  return u
+    .replace(/\\/g, '%5C')
+    .replace(/'/g, '%27')
+    .replace(/"/g, '%22')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29');
+}
+
 export function pageBackground(settings: PresentSettings): string {
-  return `background:${settings.bgValue}`;
+  const value = (settings.bgValue ?? '').trim();
+  // Un fond image est une URL, pas une valeur CSS : sans `url(…)` la
+  // déclaration était invalide et l'écran restait noir.
+  if (settings.bgType === 'image' && value) {
+    return `background:#000 url('${cssUrlSafe(value)}') center/cover no-repeat`;
+  }
+  return `background:${value}`;
 }
 
 /**
@@ -412,13 +433,7 @@ export function bgMediaHtml(settings: PresentSettings): string {
   const url = settings.bgMedia?.trim();
   const type = settings.bgMediaType ?? 'none';
   if (!url || type === 'none') return '';
-  const cssUrl = url
-    .replace(/'/g, '%27')
-    .replace(/"/g, '%22')
-    .replace(/\\/g, '%5C')
-    .replace(/\(/g, '%28')
-    .replace(/\)/g, '%29')
-    .replace(/;/g, '%3B');
+  const cssUrl = cssUrlSafe(url);
   if (type === 'video') {
     // YouTube → embed silencieux en boucle ; sinon fichier vidéo natif
     const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/i);

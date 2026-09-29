@@ -109,6 +109,39 @@ const lang: Lang = 'fr';
       ? `<img src="${esc(item.image)}" alt="" class="h-full w-full object-cover" />`
       : `<div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600 to-violet-600 text-white"><svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18V6l12-3v12M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`;
 
+    // Séries à épisodes : la piste unique `audio_url` ne suffit pas, les
+    // épisodes sont dans `lessons`. Sans cette liste, le lecteur restait vide.
+    const episodes = (Array.isArray((item as any).lessons) ? (item as any).lessons : [])
+      .filter((e: any) => e && typeof e.url === 'string' && e.url);
+    const firstSrc = item.audio_url || episodes[0]?.url || '';
+
+    const episodesHtml = episodes.length
+      ? `<div class="mt-8">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+              ${t(lang, 'episodes')} <span class="text-sm font-normal text-slate-400">(${episodes.length})</span>
+            </h2>
+          </div>
+          <input id="ep-search" type="search" placeholder="${t(lang, 'search_episode')}"
+                 class="input-dark mt-3 w-full rounded-xl px-4 py-2.5 text-sm" />
+          <p id="ep-empty" class="mt-4 hidden text-center text-sm text-slate-500">${t(lang, 'no_result')}</p>
+          <ol id="ep-list" class="mt-3 space-y-2">
+            ${episodes.map((e: any, i: number) => `
+              <li>
+                <button type="button" data-ep="${i}" data-src="${esc(e.url)}"
+                        class="ep-item flex w-full items-center gap-3 rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2.5 text-left transition hover:border-gold-500/50 dark:border-night-700 dark:bg-night-800/60">
+                  <span class="ep-num flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-xs font-bold text-slate-600 dark:bg-night-700 dark:text-slate-300">${i + 1}</span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-medium text-slate-800 dark:text-slate-100">${esc(e.title ?? `${t(lang, 'episode')} ${i + 1}`)}</span>
+                    ${e.size ? `<span class="block text-[11px] text-slate-400">${esc(e.size)}</span>` : ''}
+                  </span>
+                  <span class="ep-state text-[11px] font-semibold text-gold-600 dark:text-gold-400"></span>
+                </button>
+              </li>`).join('')}
+          </ol>
+        </div>`
+      : '';
+
     return `
       <nav class="mb-6 text-xs text-slate-400" aria-label="Fil d'ariane">
         <a href="${BASE}" class="hover:text-gold-600 dark:hover:text-gold-400">${t(lang, 'nav_home')}</a>
@@ -127,11 +160,14 @@ const lang: Lang = 'fr';
           <div class="min-w-0 flex-1">
             <p class="truncate font-display text-sm font-semibold text-slate-900 dark:text-white">${esc(title)}</p>
             ${item.speaker ? `<p class="truncate text-xs text-slate-500 dark:text-slate-400">${esc(item.speaker)}</p>` : ''}
-            <audio id="audio-player" class="mt-2 w-full" controls preload="none" src="${esc(item.audio_url ?? '')}" data-media-id="${item.id}">
+            <p id="now-playing" class="truncate text-xs text-gold-600 dark:text-gold-400"></p>
+            <audio id="audio-player" class="mt-2 w-full" controls preload="none" src="${esc(firstSrc)}" data-media-id="${item.id}">
               Votre navigateur ne supporte pas l'audio.
             </audio>
           </div>
         </div>
+
+        ${episodesHtml}
 
         <div class="mt-6 flex flex-wrap items-center gap-3">
           ${chips.join('')}
@@ -195,7 +231,73 @@ const lang: Lang = 'fr';
       relatedSection.classList.add('hidden');
     }
 
+    wireEpisodes();
     revealAll();
+  }
+
+  /**
+   * Séries à épisodes : sélection d'une piste, repère visuel de l'épisode en
+   * cours, enchaînement automatique et filtre de recherche.
+   */
+  function wireEpisodes() {
+    const player = document.getElementById('audio-player') as HTMLAudioElement | null;
+    const list = document.getElementById('ep-list');
+    if (!player || !list) return;
+    const audio = player; // narrowing conservé dans les closures
+
+    const items = Array.from(list.querySelectorAll<HTMLButtonElement>('.ep-item'));
+    const nowPlaying = document.getElementById('now-playing');
+    let current = -1;
+
+    function label(btn: HTMLButtonElement) {
+      return btn.querySelector('span > span')?.textContent?.trim() ?? '';
+    }
+
+    function select(index: number, autoplay: boolean) {
+      const btn = items[index];
+      if (!btn) return;
+      current = index;
+      items.forEach((b, i) => {
+        const on = i === index;
+        b.classList.toggle('border-gold-500', on);
+        b.classList.toggle('bg-gold-500/10', on);
+        b.querySelector('.ep-num')?.classList.toggle('bg-gold-500', on);
+        b.querySelector('.ep-num')?.classList.toggle('text-white', on);
+        const state = b.querySelector('.ep-state');
+        if (state) state.textContent = on ? '▶' : '';
+      });
+      const src = btn.dataset.src ?? '';
+      if (audio.src !== src) {
+        audio.src = src;
+        audio.load();
+      }
+      if (nowPlaying) nowPlaying.textContent = `${index + 1}. ${label(btn)}`;
+      if (autoplay) audio.play().catch(() => { /* lecture refusée sans geste utilisateur */ });
+      btn.scrollIntoView({ block: 'nearest' });
+    }
+
+    items.forEach((btn, i) => btn.addEventListener('click', () => select(i, true)));
+
+    // Enchaînement : à la fin d'un épisode, on passe au suivant
+    audio.addEventListener('ended', () => {
+      if (current >= 0 && current < items.length - 1) select(current + 1, true);
+    });
+
+    // Premier épisode présélectionné, sans lecture automatique
+    if (items.length) select(0, false);
+
+    const search = document.getElementById('ep-search') as HTMLInputElement | null;
+    const empty = document.getElementById('ep-empty');
+    search?.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      let shown = 0;
+      items.forEach((btn) => {
+        const match = !q || label(btn).toLowerCase().includes(q);
+        (btn.parentElement as HTMLElement).classList.toggle('hidden', !match);
+        if (match) shown++;
+      });
+      empty?.classList.toggle('hidden', shown > 0);
+    });
   }
 
   load();

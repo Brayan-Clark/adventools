@@ -33,6 +33,10 @@ const dict = {
   search_placeholder: { fr: 'Rechercher sermons, cours…', mg: 'Karohy toriteny, fampianarana…' },
   search_button: { fr: 'Rechercher', mg: 'Karohy' },
   search_no_results: { fr: 'Aucun résultat trouvé.', mg: 'Tsy misy valiny.' },
+  episodes: { fr: 'Épisodes', mg: 'Fizarana' },
+  episode: { fr: 'Épisode', mg: 'Fizarana' },
+  search_episode: { fr: 'Rechercher un épisode…', mg: 'Hitady fizarana…' },
+  no_result: { fr: 'Aucun résultat.', mg: 'Tsy misy valiny.' },
   search_results_for: { fr: 'Résultats pour', mg: 'Valiny ho an’ny' },
   search_all: { fr: 'Tout', mg: 'Rehetra' },
 

@@ -131,12 +131,14 @@ const lang: Lang = 'fr';
         font: 600 clamp(13px, 2vmin, 20px)/1 system-ui, sans-serif;
         color: rgba(255, 255, 255, 0.92);
         letter-spacing: 0.05em;
-        padding-right: 6rem;
       }
-      /* Boucle fluide : le texte est dupliqué, on défile de 0 à -50% */
+      /* Le texte entre par le bord droit de l'écran et sort par le bord
+         gauche : il traverse toute la largeur, quelle que soit sa longueur.
+         La boucle par duplication ne parcourait que la largeur du texte, donc
+         à peine quelques centimètres pour un message court. */
       @keyframes ticker-scroll {
-        from { transform: translateX(0); }
-        to { transform: translateX(-50%); }
+        from { transform: translateX(100vw); }
+        to { transform: translateX(-100%); }
       }
       #dots {
         position: fixed;
@@ -196,7 +198,7 @@ const lang: Lang = 'fr';
     <div id="clock"></div>
     <div id="timer"></div>
     <div id="ticker">
-      <div class="ticker-track"><span class="ticker-text"></span><span class="ticker-text"></span></div>
+      <div class="ticker-track"><span class="ticker-text"></span></div>
     </div>
     <div id="hud">
       <span class="hud-chip" id="hud-pos"></span>
@@ -326,10 +328,11 @@ const lang: Lang = 'fr';
         tickerEl.querySelectorAll('.ticker-text').forEach((el) => {
           el.textContent = txt || '📜';
         });
-        // vitesse : durée (s) ≈ (longueur × largeur moyenne + espace) / vitesse
-        const len = Math.max(1, txt.length);
+        // Durée = distance réelle à parcourir (largeur écran + largeur du
+        // texte) divisée par la vitesse en pixels par seconde.
         const speed = Math.max(1, overlays.tickerSpeed || 60);
-        tickerTrack.style.animationDuration = `${((len * 10 + 220) / speed).toFixed(1)}s`;
+        const distance = window.innerWidth + tickerTrack.scrollWidth;
+        tickerTrack.style.animationDuration = `${(distance / speed).toFixed(1)}s`;
         tickerEl.classList.toggle('show', overlays.tickerOn && txt.length > 0);
       }
       function toggleTicker() {
