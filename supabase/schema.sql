@@ -176,6 +176,11 @@ CREATE POLICY "Lecture publique mofonaina" ON mofonaina FOR SELECT USING (true);
 CREATE POLICY "Lecture publique media" ON media FOR SELECT USING (true);
 CREATE POLICY "Lecture publique categories" ON categories FOR SELECT USING (true);
 CREATE POLICY "Lecture publique verses" ON verses FOR SELECT USING (true);
+-- Les rôles doivent rester lisibles par les comptes connectés : sans cette
+-- politique, la jointure `role:roles(*)` revient vide et l'interface prend un
+-- administrateur pour un visiteur.
+CREATE POLICY "Lecture des roles par les comptes connectes"
+  ON roles FOR SELECT TO authenticated USING (true);
 
 -- Politiques pour les utilisateurs authentifiés
 CREATE POLICY "Utilisateurs peuvent voir leur profil" ON users FOR SELECT USING (auth.uid() = id);

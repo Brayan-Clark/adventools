@@ -422,6 +422,13 @@ const dict = {
   pres_block_width: { fr: 'Largeur du bloc', mg: 'Sakan’ny bloc' },
   pres_auto_hint: { fr: '0 = auto', mg: '0 = ho azy' },
   nav_apps: { fr: 'Applications', mg: 'Rindranasa' },
+  admin_by_type: { fr: 'Répartition par type', mg: 'Fizarazarana araka ny karazany' },
+  admin_most_viewed: { fr: 'Les plus consultés', mg: 'Be mpijery indrindra' },
+  admin_kpi_total: { fr: 'Contenus publiés', mg: 'Votoaty navoaka' },
+  admin_kpi_views: { fr: 'Vues cumulées', mg: 'Fitambaran’ny fijerena' },
+  admin_kpi_featured: { fr: 'En vedette', mg: 'Asongadina' },
+  admin_kpi_latest: { fr: 'Dernier ajout', mg: 'Farany nampiana' },
+  admin_no_views: { fr: 'Aucune consultation enregistrée.', mg: 'Mbola tsy nisy fijerena voarakitra.' },
   apps_section: { fr: 'Nos applications', mg: 'Ireo rindranasanay' },
   apps_subtitle: {
     fr: 'Téléchargez Adventools et retrouvez l’historique des versions avec leurs nouveautés.',

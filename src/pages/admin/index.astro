@@ -62,7 +62,20 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
       </div>
 
       <!-- Statistiques -->
-      <div id="stats-grid" class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"></div>
+      <!-- Chiffres clés -->
+      <div id="kpi-grid" class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4"></div>
+
+      <!-- Répartition et palmarès -->
+      <div class="mt-6 grid gap-6 lg:grid-cols-5">
+        <section class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur lg:col-span-3 dark:border-night-700/60 dark:bg-night-800/70">
+          <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400">{t(lang, 'admin_by_type')}</h2>
+          <div id="type-chart" class="mt-5"></div>
+        </section>
+        <section class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur lg:col-span-2 dark:border-night-700/60 dark:bg-night-800/70">
+          <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400">{t(lang, 'admin_most_viewed')}</h2>
+          <ol id="top-viewed" class="mt-5 space-y-3"></ol>
+        </section>
+      </div>
 
       <!-- Onglets -->
       <div id="admin-tabs" class="mt-10 flex items-center gap-1 border-b border-slate-200/70 dark:border-night-700/50" role="tablist">
@@ -232,7 +245,8 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
 </Layout>
 
 <script>
-  import { t } from '@/lib/i18n';
+  import { t, pickTitle } from '@/lib/i18n';
+  import { formatDate } from '@/lib/client-render';
   import {
     supabase,
     signIn,
@@ -649,18 +663,101 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
     renderStats();
   }
 
+  /** Tuile de chiffre clé : une valeur qui se lit d'un coup d'œil, sans graphe. */
+  function kpi(value: string, label: string, hint = ''): string {
+    return `
+      <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/70">
+        <p class="font-display text-3xl font-bold text-slate-900 dark:text-white">${value}</p>
+        <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">${esc(label)}</p>
+        ${hint ? `<p class="mt-1 truncate text-[11px] text-slate-400">${esc(hint)}</p>` : ''}
+      </div>`;
+  }
+
+  const nf = new Intl.NumberFormat(lang === 'mg' ? 'fr-FR' : 'fr-FR');
+
   function renderStats() {
-    // Les compteurs se déduisent de la liste déjà chargée : l'ancienne version
-    // relançait six requêtes `count` à chaque ouverture.
+    // Tout se déduit de la liste déjà chargée : relancer des requêtes `count`
+    // à chaque ouverture ne servait à rien.
+    const total = allMedia.length;
+    const views = allMedia.reduce((n, m) => n + (m.views ?? 0), 0);
+    const featured = allMedia.filter((m) => m.featured).length;
+    const latest = [...allMedia].sort((a, b) =>
+      String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
+    )[0];
+
+    $('kpi-grid').innerHTML = [
+      kpi(nf.format(total), T('admin_kpi_total')),
+      kpi(nf.format(views), T('admin_kpi_views')),
+      kpi(nf.format(featured), T('admin_kpi_featured')),
+      kpi(
+        latest ? formatDate(String(latest.created_at ?? '').slice(0, 10), lang) : '—',
+        T('admin_kpi_latest'),
+        latest ? pickTitle(latest, lang) : ''
+      ),
+    ].join('');
+
+    renderTypeChart(total);
+    renderTopViewed();
+  }
+
+  /**
+   * Répartition par type. Une seule mesure, donc une seule teinte et pas de
+   * légende : la couleur ne porte aucune information ici, ce sont les
+   * longueurs qui se comparent. Valeurs affichées en toutes lettres à côté
+   * de chaque barre, l'axe serait du bruit pour six catégories.
+   */
+  function renderTypeChart(total: number) {
     const defs: MediaItem['type'][] = ['sermon', 'course', 'conference', 'audio', 'article', 'seminar'];
-    $('stats-grid').innerHTML = defs
-      .map((type) => {
-        const n = allMedia.filter((m) => m.type === type).length;
+    const rows = defs
+      .map((type) => ({ type, n: allMedia.filter((m) => m.type === type).length }))
+      .sort((a, b) => b.n - a.n);
+    const max = Math.max(1, ...rows.map((r) => r.n));
+
+    $('type-chart').innerHTML = rows
+      .map(({ type, n }) => {
+        const pct = (n / max) * 100;
+        const share = total ? Math.round((n / total) * 100) : 0;
         return `
-        <div class="rounded-2xl border border-slate-200/70 bg-white p-4 text-center shadow-sm dark:border-night-700/60 dark:bg-night-800/70">
-          <p class="font-display text-3xl font-bold text-gold-600 dark:text-gold-400">${n}</p>
-          <p class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">${esc(T('type_' + type))}</p>
+        <div class="flex items-center gap-3 py-1.5">
+          <span class="w-28 shrink-0 truncate text-xs font-medium text-slate-600 dark:text-slate-300">${esc(T('type_' + type))}</span>
+          <span class="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-night-700/70">
+            <span class="absolute inset-y-0 left-0 rounded-full bg-gold-500" style="width:${pct.toFixed(1)}%"></span>
+          </span>
+          <span class="w-14 shrink-0 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">
+            <span class="font-semibold text-slate-800 dark:text-slate-100">${n}</span>
+            <span class="text-[10px] text-slate-400"> ${share}%</span>
+          </span>
         </div>`;
+      })
+      .join('');
+  }
+
+  function renderTopViewed() {
+    const top = [...allMedia]
+      .filter((m) => (m.views ?? 0) > 0)
+      .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+      .slice(0, 5);
+
+    if (!top.length) {
+      $('top-viewed').innerHTML = `<li class="text-xs text-slate-400">${esc(T('admin_no_views'))}</li>`;
+      return;
+    }
+    const max = Math.max(...top.map((m) => m.views ?? 0));
+    $('top-viewed').innerHTML = top
+      .map((m, i) => {
+        const v = m.views ?? 0;
+        return `
+        <li>
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="min-w-0 truncate text-xs text-slate-700 dark:text-slate-200">
+              <span class="mr-1 font-bold text-slate-400">${i + 1}.</span>${esc(pickTitle(m, lang))}
+            </span>
+            <span class="shrink-0 text-xs font-semibold tabular-nums text-slate-800 dark:text-slate-100">${nf.format(v)}</span>
+          </div>
+          <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-night-700/70">
+            <span class="block h-full rounded-full bg-gold-500" style="width:${((v / max) * 100).toFixed(1)}%"></span>
+          </span>
+        </li>`;
       })
       .join('');
   }
