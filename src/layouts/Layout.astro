@@ -159,6 +159,15 @@ const ogImage = image.startsWith('http') ? image : new URL(image, Astro.site ?? 
         { threshold: 0.08 }
       );
       document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+      // Filet de sécurité : l'animation ne doit jamais conditionner la lecture.
+      // Les sections dont le contenu arrive par fetch sont masquées au premier
+      // passage de l'observateur, qui ne les rattrapait pas toujours une fois
+      // affichées — la Bibliothèque et la Méditation du jour restaient alors
+      // invisibles tout en occupant la place. Passé ce délai, tout est montré.
+      setTimeout(() => {
+        document.querySelectorAll('.reveal:not(.visible)').forEach((el) => el.classList.add('visible'));
+      }, 2500);
     </script>
   </body>
 </html>
