@@ -222,6 +222,7 @@ const lang: Lang = 'fr';
       import {
         DEFAULT_SETTINGS,
         backgroundValue,
+        customFontSize,
         bgMediaHtml,
         loadPresentations,
         loadActive,
@@ -397,7 +398,12 @@ const lang: Lang = 'fr';
         stage.style.background = backgroundValue(s);
         stage.classList.add('show');
         stage.classList.toggle('bleed', ['image', 'video', 'doc'].includes(at.item.kind));
-        const sizePx = { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
+        // Taille libre si elle est définie, sinon le palier. La valeur est
+        // exprimée pour 1080 px de haut et remise à l'échelle de l'écran réel,
+        // pour que l'aperçu du studio et la projection concordent.
+        const sizePx =
+          customFontSize(s, window.innerHeight) ??
+          { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
         const media = bgMediaHtml(s);
         stage.innerHTML = `${media}<div class="content" style="position:relative;z-index:1;width:100%;height:100%;font-size:${sizePx};color:${s.textColor || '#fff'}">${pageHtml(at.item, at.page, s, stanzaLabel)}</div>`;
         void hydratePdfSlides(stage);

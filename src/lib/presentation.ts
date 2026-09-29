@@ -26,6 +26,32 @@ export interface PresentSettings {
   /** Fond média : image ou vidéo derrière le contenu (façon VideoPsalm) */
   bgMedia?: string;
   bgMediaType?: 'none' | 'image' | 'video';
+  /**
+   * Taille du texte en pixels, exprimée pour un écran de 1080 px de haut et
+   * mise à l'échelle de l'affichage réel. 0 ou absent : on garde le palier
+   * `textSize`. Permet de sortir des quatre paliers.
+   */
+  textSizePx?: number;
+  /**
+   * Largeur du bloc de contenu, en pourcentage de l'écran. 0 ou absent :
+   * largeur automatique (92 % au centre, 55 % sur un côté). C'est elle qui
+   * décide où le texte passe à la ligne, donc l'espace laissé sur les côtés.
+   */
+  blockWidth?: number;
+}
+
+/** Hauteur de référence des réglages exprimés en pixels. */
+export const REFERENCE_HEIGHT = 1080;
+
+/**
+ * Taille de police à appliquer au conteneur de contenu, pour une hauteur
+ * d'affichage donnée. Renvoie `null` si aucune taille personnalisée n'est
+ * définie : l'appelant garde alors son calcul par palier.
+ */
+export function customFontSize(settings: PresentSettings, stageHeightPx: number): string | null {
+  const px = settings.textSizePx ?? 0;
+  if (!px || px <= 0 || stageHeightPx <= 0) return null;
+  return `${((px * stageHeightPx) / REFERENCE_HEIGHT).toFixed(2)}px`;
 }
 
 export interface PresentItem {
@@ -335,7 +361,10 @@ export function pageHtml(
   // Calé sur un côté, le bloc est volontairement plus étroit : sinon il
   // occupait quasiment toute la largeur et « à gauche » ne se distinguait pas
   // du centre. La moitié libre est justement ce qu'on cherche à dégager.
-  const blockWidth = horizontal === 'center' ? '92%' : '55%';
+  const customWidth = settings.blockWidth ?? 0;
+  const blockWidth = customWidth > 0
+    ? `${Math.min(100, customWidth)}%`
+    : horizontal === 'center' ? '92%' : '55%';
   const posFrame = (inner: string, width = blockWidth) =>
     `<div style="display:flex;width:100%;height:100%;align-items:${vertical};justify-content:${horizontal}">` +
     `<div style="width:${width};max-width:${width};text-align:${align}">${inner}</div></div>`;

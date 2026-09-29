@@ -193,6 +193,18 @@ const lang: Lang = 'fr';
           <option value="xl">{t(lang, 'pres_size_xl')}</option>
         </select>
       </label>
+      <label class="col-span-2 flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">
+        <span>{t(lang, 'pres_text_size_px')} <span class="text-slate-400">({t(lang, 'pres_auto_hint')})</span></span>
+        <input id="text-size-px" type="number" min="0" max="220" step="2" placeholder="0"
+               class="input-dark w-20 rounded px-1.5 py-0.5 text-right text-xs" />
+      </label>
+      <label class="col-span-2 flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">
+        <span>{t(lang, 'pres_block_width')} <span class="text-slate-400">({t(lang, 'pres_auto_hint')})</span></span>
+        <span class="flex items-center gap-2">
+          <input id="block-width" type="range" min="0" max="100" step="1" class="w-28 accent-amber-500" />
+          <output id="block-width-out" class="w-10 text-right text-slate-400">auto</output>
+        </span>
+      </label>
       <label class="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">
         {t(lang, 'pres_position')}
         <select id="position" class="input-dark rounded px-1 py-0.5 text-xs">
@@ -283,6 +295,7 @@ const lang: Lang = 'fr';
     pageHtml,
     bgMediaHtml,
     backgroundValue,
+    customFontSize,
     itemPageCount,
     demoPresentation,
     loadOverlays,
@@ -847,8 +860,13 @@ const lang: Lang = 'fr';
     const s: PresentSettings = { ...p.settings, ...(at.item.settingsOverride ?? {}) };
 
     stage.style.background = backgroundValue(s);
-    const base = { sm: 1.1, md: 1.35, lg: 1.6, xl: 1.9 }[s.textSize ?? 'lg'];
-    stage.style.fontSize = `${(base * Math.min(stage.clientWidth || 900, 1400)) / 900}rem`;
+    const custom = customFontSize(s, stage.clientHeight);
+    if (custom) {
+      stage.style.fontSize = custom;
+    } else {
+      const base = { sm: 1.1, md: 1.35, lg: 1.6, xl: 1.9 }[s.textSize ?? 'lg'];
+      stage.style.fontSize = `${(base * Math.min(stage.clientWidth || 900, 1400)) / 900}rem`;
+    }
     stage.innerHTML = `${bgMediaHtml(s)}<div style="position:relative;z-index:1;width:100%;height:100%">${pageHtml(at.item, at.page, s, T('pres_stanza'))}</div>`;
     void hydratePdfSlides(stage);
 
@@ -1073,6 +1091,9 @@ const lang: Lang = 'fr';
   const autoAdvance = $<HTMLInputElement>('auto-advance');
   const bgMediaType = $<HTMLSelectElement>('bg-media-type');
   const bgMedia = $<HTMLInputElement>('bg-media');
+  const textSizePx = $<HTMLInputElement>('text-size-px');
+  const blockWidth = $<HTMLInputElement>('block-width');
+  const blockWidthOut = $<HTMLOutputElement>('block-width-out');
 
   bgPresetsEl.innerHTML = BG_PRESETS.map(
     (p) =>
@@ -1113,6 +1134,9 @@ const lang: Lang = 'fr';
     bgValue.value = s.bgValue;
     textColor.value = s.textColor.startsWith('#') ? s.textColor : '#ffffff';
     textSize.value = s.textSize;
+    textSizePx.value = s.textSizePx ? String(s.textSizePx) : '';
+    blockWidth.value = String(s.blockWidth ?? 0);
+    blockWidthOut.textContent = s.blockWidth ? `${s.blockWidth}%` : 'auto';
     positionSel.value = s.position;
     alignment.value = s.alignment;
     verseNumbers.checked = s.showVerseNumbers;
@@ -1149,6 +1173,15 @@ const lang: Lang = 'fr';
   bgValue.addEventListener('change', () => applySetting('bgValue', bgValue.value));
   textColor.addEventListener('input', () => applySetting('textColor', textColor.value));
   textSize.addEventListener('change', () => applySetting('textSize', textSize.value as any));
+  // 0 ou champ vide : on retombe sur le palier de taille / la largeur automatique
+  textSizePx.addEventListener('input', () =>
+    applySetting('textSizePx', Math.max(0, Number(textSizePx.value) || 0) as any)
+  );
+  blockWidth.addEventListener('input', () => {
+    const v = Math.max(0, Math.min(100, Number(blockWidth.value) || 0));
+    blockWidthOut.textContent = v ? `${v}%` : 'auto';
+    applySetting('blockWidth', v as any);
+  });
   positionSel.addEventListener('change', () => applySetting('position', positionSel.value as any));
   alignment.addEventListener('change', () => applySetting('alignment', alignment.value as any));
   verseNumbers.addEventListener('change', () => applySetting('showVerseNumbers', verseNumbers.checked));
