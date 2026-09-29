@@ -2,7 +2,7 @@
   "expo": {
     "name": "Adventools",
     "slug": "adventools",
-    "version": "1.3.3",
+    "version": "1.3.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "adventools",
@@ -49,7 +49,7 @@
         "USE_EXACT_ALARM",
         "RECEIVE_BOOT_COMPLETED"
       ],
-      "versionCode": 5,
+      "versionCode": 6,
       "newArchEnabled": true
     },
     "web": {
