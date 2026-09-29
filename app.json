@@ -112,7 +112,8 @@
       ],
       "expo-quick-actions",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withAndroidSigning"
     ],
     "experiments": {
       "typedRoutes": true

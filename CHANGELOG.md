@@ -2,6 +2,25 @@
 
 Toutes les modifications notables apportées à ce projet seront documentées dans ce fichier.
 
+## [1.3.4] - 2026-09-29
+
+### ✨ Nouveautés
+- *Mofon'aina* : Ajout du **4ᵉ trimestre 2026** — « Ny Fanjakan'ny Lanitra », 91 méditations du 27 septembre au 26 décembre, avec pour chaque jour le psaume, le plan de lecture et l'heure du coucher du soleil des sabbats.
+- *Mofon'aina* : Les nouveaux trimestres publiés sont désormais **détectés automatiquement**. Plus besoin de mettre à jour l'application pour recevoir un nouveau livret.
+
+### 🐛 Corrections
+- *Mofon'aina* : La lecture du jour était introuvable lorsque le livret et le trimestre calendaire ne coïncidaient pas — c'était le cas du 27 au 30 septembre, le livret du 4ᵉ trimestre commençant avant octobre.
+- *École du sabbat* : Un trimestre téléchargé alors que toutes ses leçons n'étaient pas encore publiées restait figé. Le bouton de rafraîchissement ne relançait rien s'il avait déjà synchronisé dans la journée, et il fallait tout supprimer pour récupérer les leçons manquantes.
+- *École du sabbat* : Une **mise à jour** récupère maintenant uniquement les leçons parues depuis le dernier téléchargement, sans retélécharger celles déjà présentes ni perdre vos surlignages. La carte du trimestre affiche l'avancement (par exemple « 9/13 leçons »).
+- *École du sabbat* : Une coupure de connexion en cours de téléchargement ne fait plus tout perdre ; la mise à jour suivante reprend là où elle s'était arrêtée.
+- *École du sabbat* : La suppression d'un trimestre efface désormais réellement tous ses fichiers, et l'espace occupé affiché est correct.
+
+### 🔧 Technique
+- Première version signée avec la clé officielle d'Adventools (voir l'avertissement ci-dessous).
+- Les APK sont désormais construits et publiés par GitHub Actions.
+
+---
+
 ## [1.3.0] - 2026-05-22
 
 ### ✨ Nouveautés & UX

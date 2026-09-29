@@ -10,7 +10,8 @@
     "web": "npx expo start --web",
     "release:a": "npx expo run:android --variant release && mv android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/adventools.apk",
     "build:apk": "eas build --platform android --profile preview",
-    "build:final": "eas build --platform android --profile production"
+    "build:final": "eas build --platform android --profile production",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/alice": "^0.4.1",
