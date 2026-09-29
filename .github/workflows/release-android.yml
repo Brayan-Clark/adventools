@@ -41,7 +41,14 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # Le SDK Android est préinstallé sur l'image ubuntu-latest ; inutile de
+      # passer par setup-android, qui échoue en voulant installer le paquet
+      # obsolète « tools ».
+      - name: Vérifier le SDK Android
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/build-tools" | tail -1
+          yes | "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
 
       - uses: gradle/actions/setup-gradle@v4
 
