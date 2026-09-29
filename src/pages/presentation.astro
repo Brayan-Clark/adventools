@@ -196,18 +196,24 @@ const lang: Lang = 'fr';
       <label class="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">
         {t(lang, 'pres_position')}
         <select id="position" class="input-dark rounded px-1 py-0.5 text-xs">
-          <option value="center">{t(lang, 'pres_pos_center')}</option>
-          <option value="left">{t(lang, 'pres_pos_left')}</option>
-          <option value="right">{t(lang, 'pres_pos_right')}</option>
-          <option value="top">{t(lang, 'pres_pos_top')}</option>
-          <option value="bottom">{t(lang, 'pres_pos_bottom')}</option>
+          <option value="top-left">↖ {t(lang, 'pres_pos_top')} {t(lang, 'pres_pos_left')}</option>
+          <option value="top">↑ {t(lang, 'pres_pos_top')}</option>
+          <option value="top-right">↗ {t(lang, 'pres_pos_top')} {t(lang, 'pres_pos_right')}</option>
+          <option value="left">← {t(lang, 'pres_pos_left')}</option>
+          <option value="center">◉ {t(lang, 'pres_pos_center')}</option>
+          <option value="right">→ {t(lang, 'pres_pos_right')}</option>
+          <option value="bottom-left">↙ {t(lang, 'pres_pos_bottom')} {t(lang, 'pres_pos_left')}</option>
+          <option value="bottom">↓ {t(lang, 'pres_pos_bottom')}</option>
+          <option value="bottom-right">↘ {t(lang, 'pres_pos_bottom')} {t(lang, 'pres_pos_right')}</option>
         </select>
       </label>
       <label class="flex items-center justify-between gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">
         {t(lang, 'pres_alignment')}
         <select id="alignment" class="input-dark rounded px-1 py-0.5 text-xs">
-          <option value="center">{t(lang, 'pres_align_center')}</option>
           <option value="left">{t(lang, 'pres_align_left')}</option>
+          <option value="center">{t(lang, 'pres_align_center')}</option>
+          <option value="right">{t(lang, 'pres_align_right')}</option>
+          <option value="justify">{t(lang, 'pres_align_justify')}</option>
         </select>
       </label>
       <label class="col-span-2 flex items-center gap-2 rounded-lg border border-slate-200/70 px-2.5 py-1.5 text-xs dark:border-night-700">

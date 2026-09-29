@@ -93,7 +93,22 @@ const lang: Lang = 'fr';
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 
-  let currentCol = COLLECTIONS[0].id;
+  /** Recueil retenu d'une visite à l'autre : c'est lui qui fait office de défaut. */
+  const COLLECTION_PREF = 'ah-hymnal-collection';
+
+  function rememberCollection(id: string) {
+    try { localStorage.setItem(COLLECTION_PREF, id); } catch { /* stockage indisponible */ }
+  }
+
+  function preferredCollection(): string {
+    try {
+      const saved = localStorage.getItem(COLLECTION_PREF);
+      if (saved && collectionById(saved)) return saved;
+    } catch { /* stockage indisponible */ }
+    return COLLECTIONS[0].id;
+  }
+
+  let currentCol = preferredCollection();
   let songs: Song[] = [];
   let visible = PAGE_SIZE;
   let query = '';
@@ -125,6 +140,7 @@ const lang: Lang = 'fr';
     const btn = (e.target as HTMLElement).closest('[data-col]') as HTMLElement | null;
     if (!btn || !btn.dataset.col || btn.dataset.col === currentCol) return;
     currentCol = btn.dataset.col;
+    rememberCollection(currentCol);
     renderCollections();
     void openCollection(currentCol);
   });
@@ -419,7 +435,7 @@ const lang: Lang = 'fr';
   const initial = new URLSearchParams(location.search).get('c');
   if (initial) {
     const colId = initial.slice(0, initial.lastIndexOf('-'));
-    if (collectionById(colId)) currentCol = colId;
+    if (collectionById(colId)) { currentCol = colId; rememberCollection(colId); }
     renderCollections();
     void showDetail(initial);
     void openCollection(currentCol);

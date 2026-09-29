@@ -13,9 +13,12 @@ export interface PresentSettings {
   bgValue: string;
   textColor: string;
   textSize: 'sm' | 'md' | 'lg' | 'xl';
-  alignment: 'center' | 'left';
+  alignment: 'left' | 'center' | 'right' | 'justify';
   /** Position du texte sur l'écran (façon VideoPsalm) */
-  position: 'center' | 'left' | 'right' | 'top' | 'bottom';
+  position:
+    | 'top-left' | 'top' | 'top-right'
+    | 'left' | 'center' | 'right'
+    | 'bottom-left' | 'bottom' | 'bottom-right';
   showVerseNumbers: boolean;
   transition: 'fade' | 'none';
   /** Secondes avant avance automatique (0 = désactivé) */
@@ -312,17 +315,30 @@ export function pageHtml(
       .replace(/\)/g, '%29')
       .replace(/;/g, '%3B');
   const textColor = settings.textColor || '#ffffff';
-  const align = settings.alignment === 'left' ? 'left' : 'center';
+  // L'alignement du texte est indépendant de la position du bloc : on peut
+  // vouloir un bloc calé à gauche dont le texte reste justifié.
+  const align = (['left', 'center', 'right', 'justify'] as const).includes(settings.alignment as any)
+    ? settings.alignment
+    : 'center';
 
-  // Position du contenu sur l'écran (façon VideoPsalm) : centre, gauche,
-  // droite, haut ou bas. Le cadre remplit toute la hauteur et aligne le texte.
+  // Position du bloc sur l'écran, sur une grille de neuf : les anciennes
+  // valeurs ('left', 'top'…) restent comprises.
   const position = settings.position ?? 'center';
-  const posFrame = (inner: string) => {
-    const alignItems = position === 'left' ? 'flex-start' : position === 'right' ? 'flex-end' : 'center';
-    const justify = position === 'top' ? 'flex-start' : position === 'bottom' ? 'flex-end' : 'center';
-    const textAlign = position === 'left' ? 'left' : position === 'right' ? 'right' : align;
-    return `<div style="display:flex;flex-direction:column;width:100%;height:100%;align-items:${alignItems};justify-content:${justify};text-align:${textAlign}">${inner}</div>`;
-  };
+  const vertical = position.startsWith('top') ? 'flex-start' : position.startsWith('bottom') ? 'flex-end' : 'center';
+  const horizontal = position.endsWith('left') ? 'flex-start' : position.endsWith('right') ? 'flex-end' : 'center';
+
+  /**
+   * Cadre plein écran qui place le bloc de contenu. `width` le limite pour
+   * qu'un bloc calé à gauche laisse réellement le côté droit vide — sans
+   * quoi il occupait toute la largeur et paraissait centré.
+   */
+  // Calé sur un côté, le bloc est volontairement plus étroit : sinon il
+  // occupait quasiment toute la largeur et « à gauche » ne se distinguait pas
+  // du centre. La moitié libre est justement ce qu'on cherche à dégager.
+  const blockWidth = horizontal === 'center' ? '92%' : '55%';
+  const posFrame = (inner: string, width = blockWidth) =>
+    `<div style="display:flex;width:100%;height:100%;align-items:${vertical};justify-content:${horizontal}">` +
+    `<div style="width:${width};max-width:${width};text-align:${align}">${inner}</div></div>`;
 
   const titleHtml = (extra?: string) => {
     const label = item.subtitle
@@ -367,11 +383,10 @@ export function pageHtml(
       const stanza = item.stanzas?.[page] ?? item.stanzas?.[0] ?? '';
       const numLabel = item.cNum ? esc(`${stanzaLabel} ${page + 1}`) : '';
       const caption = [item.title, item.subtitle].filter(Boolean).map((x) => esc(x!)).join(' · ');
+      const stanzaBody = `<pre style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:1.05em;line-height:1.55;text-align:inherit">${esc(stanza)}</pre>`;
       return `<div style="position:relative;width:100%;height:100%;color:${textColor}">
         ${numLabel ? `<div style="position:absolute;top:0;right:0;font-size:.4em;font-weight:700;letter-spacing:.1em;opacity:.72">${numLabel}</div>` : ''}
-        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:1.6em .4em">
-          <pre style="margin:0;max-width:92%;white-space:pre-wrap;font-family:inherit;font-size:1.05em;line-height:1.55;text-align:${align}">${esc(stanza)}</pre>
-        </div>
+        <div style="position:absolute;inset:1.6em .4em">${posFrame(stanzaBody)}</div>
         ${caption ? `<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.3em;letter-spacing:.2em;text-transform:uppercase;opacity:.45">${caption}</div>` : ''}
       </div>`;
     }
@@ -395,11 +410,10 @@ export function pageHtml(
       // répété au-dessus du texte, il prenait la place du verset.
       const reference = esc(item.refLabel || item.title || '');
       const source = esc(item.versionLabel || '');
+      const verseBody = `<div style="font-size:1.05em;line-height:1.5">${versesHtml.join('')}</div>`;
       return `<div style="position:relative;width:100%;height:100%;color:${textColor}">
         ${reference ? `<div style="position:absolute;top:0;right:0;font-size:.4em;font-weight:700;letter-spacing:.1em;opacity:.72">${reference}</div>` : ''}
-        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:1.6em .4em">
-          <div style="max-width:92%;font-size:1.05em;line-height:1.5;text-align:${align}">${versesHtml.join('')}</div>
-        </div>
+        <div style="position:absolute;inset:1.6em .4em">${posFrame(verseBody)}</div>
         ${source ? `<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.3em;letter-spacing:.2em;text-transform:uppercase;opacity:.45">${source}</div>` : ''}
       </div>`;
     }

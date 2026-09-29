@@ -417,6 +417,8 @@ const dict = {
   pres_alignment: { fr: 'Alignement', mg: 'Firindrana' },
   pres_align_center: { fr: 'Centré', mg: 'Afovoany' },
   pres_align_left: { fr: 'Gauche', mg: 'Havia' },
+  pres_align_right: { fr: 'Droite', mg: 'Havanana' },
+  pres_align_justify: { fr: 'Justifié', mg: 'Mirindra' },
   pres_verse_numbers: { fr: 'Numéros de versets', mg: 'Laharana andininy' },
   pres_auto_advance: { fr: 'Avance automatique (secondes, 0 = arrêt)', mg: 'Fandrosoana mandeha (segonina, 0 = tsy misy)' },
   pres_stanza: { fr: 'strophe', mg: 'andalan-kira' },

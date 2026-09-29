@@ -534,13 +534,25 @@ const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
     }
   }
 
-  /** ?version= en priorité, puis isDefault, puis MG65/SBF (références), puis première version. */
+  /** Version retenue d'une visite à l'autre : c'est elle qui fait office de défaut. */
+  const VERSION_PREF = 'ah-bible-version';
+
+  function rememberVersion(file: string) {
+    try { localStorage.setItem(VERSION_PREF, file); } catch { /* stockage indisponible */ }
+  }
+
+  /** ?version=, puis le choix mémorisé, puis isDefault, puis MG65/SBF, puis la première. */
   function pickDefaultVersion(vs: Version[]): string {
     const q = new URLSearchParams(location.search).get('version');
     if (q) {
       const m = vs.find((v) => v.file === q || v.id === q);
       if (m) return m.file;
     }
+    try {
+      const saved = localStorage.getItem(VERSION_PREF);
+      const m = saved && vs.find((v) => v.file === saved);
+      if (m) return m.file;
+    } catch { /* stockage indisponible */ }
     const def = vs.find((v) => v.isDefault === true);
     if (def) return def.file;
     const mg = vs.find((v) => v.file === 'MG65.SQLite3');
@@ -584,6 +596,7 @@ const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
     if (v === currentVersion) return;
     const prev = currentVersion;
     currentVersion = v;
+    rememberVersion(v);
     syncVersionChips(v);
     try {
       const db = await loadDb(v);

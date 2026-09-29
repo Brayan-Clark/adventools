@@ -520,6 +520,30 @@ const lang: Lang = 'fr';
         }
       });
 
+      // Molette : parcourir un document page à page. Un PDF de plusieurs
+      // centaines de pages est pénible à la flèche ; les autres types de
+      // slides gardent la navigation au clavier, pour éviter qu'un coup de
+      // molette involontaire ne fasse sauter un cantique en pleine assemblée.
+      let wheelAcc = 0;
+      let wheelLock = false;
+      stage.addEventListener(
+        'wheel',
+        (e) => {
+          const at = pres ? pageAt(pres, pageIndex) : null;
+          if (!at || at.item.kind !== 'doc') return;
+          e.preventDefault();
+          if (wheelLock) return;
+          wheelAcc += e.deltaY;
+          if (Math.abs(wheelAcc) < 40) return;
+          const forward = wheelAcc > 0;
+          wheelAcc = 0;
+          wheelLock = true;
+          window.setTimeout(() => { wheelLock = false; }, 120);
+          if (forward) next(); else prev();
+        },
+        { passive: false }
+      );
+
       document.addEventListener('pointermove', () => flashHud());
 
       // Démarrage : plein écran au clic sur l'écran
