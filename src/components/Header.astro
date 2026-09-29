@@ -283,7 +283,11 @@ const linkIdle =
   const toggle = document.getElementById('theme-toggle');
   toggle?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('ah-theme', isDark ? 'dark' : 'light');
+    try {
+      localStorage.setItem('ah-theme', isDark ? 'dark' : 'light');
+    } catch {
+      /* stockage refusé : le thème vaut pour la page courante */
+    }
   });
 
   // Menu mobile
@@ -349,7 +353,41 @@ const linkIdle =
     }
   });
 
-  // Langue : cookie + ?lang= pour conserver la langue pendant la navigation
+  // ---- Bascule de langue -------------------------------------------------
+  // Le site est prérendu en français : `otherLang` était figé sur « MG » au
+  // build. Une fois en malgache, le bouton proposait donc encore le malgache
+  // et l'on ne pouvait plus revenir au français. On recalcule la cible dans
+  // le navigateur, à partir de la langue réellement active.
+  function currentLang(): string {
+    const p = new URLSearchParams(location.search).get('lang');
+    if (p === 'mg' || p === 'fr') return p;
+    try {
+      const c = localStorage.getItem('ah-lang');
+      if (c === 'mg' || c === 'fr') return c;
+    } catch {
+      /* stockage indisponible */
+    }
+    return 'fr';
+  }
+
+  function syncLangSwitch() {
+    const target = currentLang() === 'fr' ? 'mg' : 'fr';
+    document.querySelectorAll<HTMLElement>('[data-lang-switch]').forEach((el) => {
+      el.setAttribute('data-lang-switch', target);
+      el.setAttribute('title', target === 'mg' ? 'Basculer en malgache' : 'Basculer en français');
+      // Le libellé n'est mis à jour que s'il ne sert qu'à ça : le lien du menu
+      // mobile porte une phrase, pas un code de langue.
+      const label = el.textContent?.trim() ?? '';
+      if (label === 'MG' || label === 'FR') el.textContent = target.toUpperCase();
+      if (el instanceof HTMLAnchorElement) {
+        const url = new URL(location.href);
+        url.searchParams.set('lang', target);
+        el.href = url.toString();
+      }
+    });
+  }
+  syncLangSwitch();
+
   document.querySelectorAll('[data-lang-switch]').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
