@@ -70,6 +70,10 @@ const ogImage = image.startsWith('http') ? image : new URL(image, Astro.site ?? 
         } catch (e) {
           document.documentElement.classList.add('dark');
         }
+        // Marque l'exécution du JS : l'apparition au défilement n'est appliquée
+        // que dans ce cas. Sans ce garde-fou, une erreur de script laissait des
+        // sections entières en opacity:0 — invisibles mais occupant la place.
+        document.documentElement.classList.add('js');
       })();
     </script>
   </head>

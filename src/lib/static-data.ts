@@ -1,6 +1,6 @@
 /**
  * Méditations quotidiennes (mofonaina) chargées depuis la branche `data`
- * d'adventools, avec cache localStorage (TTL 24 h) et repli sur le JSON
+ * d'adventools, avec cache localStorage (TTL 1 h) et repli sur le JSON
  * embarqué dans le site pour le hors-ligne.
  *
  * Les cantiques ne passent plus par ici : ils ont leur propre module
@@ -13,7 +13,7 @@ const BASE = ((import.meta as any).env?.BASE_URL ?? '/').replace(/\/?$/, '/');
 // 1 heure : la revalidation conditionnelle rend le rafraîchissement bon marché,
 // un TTL de 24 h retardait d'une journée toute correction publiée sur `data`.
 const CACHE_TTL = 1000 * 60 * 60;
-const CACHE_KEY = 'mofonaina-v3';
+const CACHE_KEY = 'mofonaina-v4';
 
 interface CacheEntry<T> {
   data: T;
@@ -77,11 +77,27 @@ export interface MofonainaDayJson {
   contenu?: string;
   content?: string;
   source?: string;
+  /** Publiés à partir du livret du 4ᵉ trimestre 2026. */
+  jour_semaine?: string;
+  psaume_du_jour?: string;
+  lecture_du_jour?: string;
+  coucher_du_soleil?: string;
 }
 
 interface MofonainaFile {
   trimestre?: { annee?: number; numero_trimestre?: number; titre_principal?: string };
   meditations?: MofonainaDayJson[];
+}
+
+interface ManifestQuarter {
+  id: string;
+  startDate: string;
+  endDate: string;
+  url: string;
+}
+
+interface MofonainaManifest {
+  quarters?: ManifestQuarter[];
 }
 
 /** Nom de fichier `YYYY-QN` d'un trimestre, décalé de `offset` trimestres. */
@@ -93,14 +109,36 @@ function quarterFile(date: Date, offset = 0): string {
 }
 
 /**
- * Méditations du trimestre courant. Si le fichier du trimestre n'est pas
- * (encore) publié sur la branche `data`, on essaie le trimestre précédent
- * avant de retomber sur le JSON embarqué : sans ce repli, la page devenait
- * vide au changement de trimestre.
+ * Toutes les méditations publiées sur la branche `data`.
+ *
+ * Le manifeste liste les trimestres disponibles : les charger tous évite deux
+ * écueils. D'abord le livret ne suit pas le trimestre calendaire — celui du 4ᵉ
+ * trimestre 2026 commence le 27 septembre — et deviner le fichier à partir du
+ * mois faisait manquer la méditation du jour pendant quelques jours à chaque
+ * bascule. Ensuite la navigation par date peut remonter au-delà du trimestre
+ * courant.
+ *
+ * Repli en cascade si le manifeste est injoignable : fichier du trimestre
+ * calendaire (ancien comportement), puis JSON embarqué pour le hors-ligne.
  */
 export async function getMofonainaJson(): Promise<MofonainaDayJson[]> {
   const cached = getCache<MofonainaDayJson[]>(CACHE_KEY);
   if (Array.isArray(cached) && cached.length) return cached;
+
+  const manifest = await fetchJson<MofonainaManifest>(`${RAW}/mofonaina/manifest.json`);
+  if (manifest && Array.isArray(manifest.quarters) && manifest.quarters.length) {
+    const files = await Promise.all(
+      manifest.quarters
+        .filter((q) => q?.url)
+        .map((q) => fetchJson<MofonainaFile>(q.url))
+    );
+    const all = files.flatMap((f) => (Array.isArray(f?.meditations) ? f!.meditations : []));
+    if (all.length) {
+      all.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      setCache(CACHE_KEY, all);
+      return all;
+    }
+  }
 
   const now = new Date();
   for (const offset of [0, -1]) {

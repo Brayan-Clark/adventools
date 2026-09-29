@@ -119,6 +119,25 @@ const lang: Lang = 'fr';
         ? paras.map((p) => `<p class="mt-4 whitespace-pre-line text-[16px] leading-relaxed text-slate-700 dark:text-slate-300">${p}</p>`).join('')
         : `<p class="whitespace-pre-line text-[16px] leading-relaxed text-slate-700 dark:text-slate-300">${content}</p>`;
 
+      // Repères du livret, publiés à partir du 4ᵉ trimestre 2026
+      const chips = [
+        today.psaume_du_jour && `📖 ${today.psaume_du_jour}`,
+        today.lecture_du_jour && `📚 ${today.lecture_du_jour}`,
+        today.coucher_du_soleil && `🌇 ${today.coucher_du_soleil}`,
+      ].filter(Boolean) as string[];
+      const chipsHtml = chips.length
+        ? `<div class="mt-5 flex flex-wrap justify-center gap-2">${chips
+            .map(
+              (c) =>
+                `<span class="rounded-full border border-gold-500/30 bg-gold-500/10 px-3 py-1 text-[11px] font-semibold text-gold-700 dark:text-gold-300">${c}</span>`
+            )
+            .join('')}</div>`
+        : '';
+
+      const sourceHtml = today.source
+        ? `<p class="mt-6 text-right text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">— ${today.source}</p>`
+        : '';
+
       root.innerHTML = `
         <article class="overflow-hidden rounded-3xl border border-gold-500/40 bg-gradient-to-b from-white to-gold-500/5 shadow-soft dark:from-night-800 dark:to-gold-500/5 dark:border-gold-500/30">
           <div class="border-b border-gold-500/30 bg-gold-500/10 px-6 py-3">
@@ -131,6 +150,8 @@ const lang: Lang = 'fr';
               ${today.titre_du_jour}
             </h2>
 
+            ${chipsHtml}
+
             <blockquote class="mx-auto mt-6 max-w-xl rounded-2xl border-l-4 border-gold-500 bg-gold-500/5 px-5 py-4 text-center">
               <p class="text-[15px] italic leading-relaxed text-slate-600 dark:text-slate-300">« ${today.verset_texte} »</p>
               <footer class="mt-2 text-xs font-semibold uppercase tracking-wider text-gold-600 dark:text-gold-400">
@@ -138,7 +159,7 @@ const lang: Lang = 'fr';
               </footer>
             </blockquote>
 
-            <div class="mx-auto mt-6 max-w-2xl">${body}</div>
+            <div class="mx-auto mt-6 max-w-2xl">${body}${sourceHtml}</div>
 
             <!-- Navigation date -->
             <div class="mt-8 flex flex-wrap items-center justify-center gap-3">

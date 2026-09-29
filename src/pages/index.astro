@@ -138,7 +138,7 @@ const heroImage =
   </section>
 
   <!-- ==================== AUDIO ==================== -->
-  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+  <section id="audio-section" class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
     <div class="reveal flex items-end justify-between gap-4">
       <div>
         <p class="section-kicker">✦ <span data-i18n="audio_section">{t(lang, 'audio_section')}</span></p>
@@ -337,12 +337,16 @@ const heroImage =
       }
 
       // En vedette
+      // Chaque section se masque quand elle n'a rien à montrer : un titre suivi
+      // d'une grille vide laissait de grands blancs sur la page d'accueil.
+      show(document.getElementById('featured-section'), featured.length > 0);
       const featuredGrid = document.getElementById('featured-grid');
       if (featuredGrid && featured.length) {
         featuredGrid.innerHTML = featured.map((m) => mediaCardHtml(m, lang)).join('');
       }
 
       // Catégories
+      show(document.getElementById('categories-section'), categories.length > 0);
       const catGrid = document.getElementById('categories-grid');
       if (catGrid) {
         // Icônes partagées : la note de musique de cette table était un tracé
@@ -359,6 +363,7 @@ const heroImage =
       }
 
       // Sermons
+      show(document.getElementById('sermons-section'), latestSermons.length > 0);
       const sermonsGrid = document.getElementById('sermons-grid');
       if (sermonsGrid && latestSermons.length) sermonsGrid.innerHTML = latestSermons.map((m) => mediaCardHtml(m, lang)).join('');
 
@@ -368,6 +373,7 @@ const heroImage =
       if (coursesGrid && courses.length) coursesGrid.innerHTML = courses.map((m) => mediaCardHtml(m, lang)).join('');
 
       // Audio
+      show(document.getElementById('audio-section'), audioItems.length > 0);
       const audioGrid = document.getElementById('audio-grid');
       if (audioGrid && audioItems.length) audioGrid.innerHTML = audioItems.map((m) => mediaCardHtml(m, lang)).join('');
 
