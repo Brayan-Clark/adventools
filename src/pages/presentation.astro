@@ -676,6 +676,24 @@ const lang: Lang = 'fr';
     flatIndex = firstPageOf(p.items.length - 1);
     persist();
     renderAll();
+    void resolveDocPages(item);
+  }
+
+  /**
+   * Un PDF ajouté ne connaît pas encore son nombre de pages : il comptait donc
+   * pour une seule page et la projection n'avançait jamais au-delà de la
+   * première. On le demande à pdf.js après coup, puis on rafraîchit.
+   */
+  async function resolveDocPages(item: PresentItem) {
+    if (item.kind !== 'doc' || !item.docUrl || item.docPages) return;
+    const pages = await pdfPageCount(item.docUrl).catch(() => 0);
+    if (pages <= 1) return;
+    // L'élément a pu être retiré ou la présentation changée entre-temps
+    const target = pres().items.find((it) => it.id === item.id);
+    if (!target) return;
+    target.docPages = pages;
+    persist();
+    renderAll();
   }
 
   function renderItems() {
