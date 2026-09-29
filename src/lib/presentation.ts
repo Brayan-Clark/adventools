@@ -368,16 +368,29 @@ export function pageHtml(
       // Mode par verset : n'affiche que le verset courant (une page = un verset)
       const all = item.verses ?? [];
       const verses = item.perVerse && all.length ? (all[page] ? [all[page]] : all) : all;
+      // Numéro en exposant dans le fil du texte : la colonne de numéros
+      // décalait le verset et mangeait la largeur utile.
       const versesHtml = verses.map(
         (v) =>
-          `<div style="display:flex;gap:.7em;margin-bottom:.55em">${
+          `<span style="display:inline">${
             settings.showVerseNumbers
-              ? `<span style="flex:0 0 1.6em;text-align:right;font-weight:800;opacity:.55">${v.verse}</span>`
+              ? `<sup style="font-size:.45em;font-weight:700;opacity:.5;margin-right:.15em">${v.verse}</sup>`
               : ''
-          }<span style="flex:1;min-width:0">${esc(v.text)}</span></div>`
+          }${esc(v.text)} </span>`
       );
-      const ref = item.perVerse && item.refLabel ? item.refLabel : item.versionLabel ? item.versionLabel : '';
-      return posFrame(`${titleHtml(ref)}<div style="max-width:94%;margin:0 auto;font-size:.9em;line-height:1.55;text-align:inherit;color:${textColor}">${versesHtml.join('')}</div>`);
+      // Mise en page façon logiciel de projection : la référence en haut à
+      // droite, discrète ; le texte occupe le centre, c'est lui qu'on lit ;
+      // la version en bas au centre, plus effacée encore. Le titre n'est plus
+      // répété au-dessus du texte, il prenait la place du verset.
+      const reference = esc(item.refLabel || item.title || '');
+      const source = esc(item.versionLabel || '');
+      return `<div style="position:relative;width:100%;height:100%;color:${textColor}">
+        ${reference ? `<div style="position:absolute;top:0;right:0;font-size:.4em;font-weight:700;letter-spacing:.1em;opacity:.72">${reference}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:1.6em .4em">
+          <div style="max-width:92%;font-size:1.05em;line-height:1.5;text-align:${align}">${versesHtml.join('')}</div>
+        </div>
+        ${source ? `<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.3em;letter-spacing:.2em;text-transform:uppercase;opacity:.45">${source}</div>` : ''}
+      </div>`;
     }
     case 'text': {
       const body = (item.textContent ?? '')
@@ -414,14 +427,21 @@ export function cssUrlSafe(u: string): string {
     .replace(/\)/g, '%29');
 }
 
-export function pageBackground(settings: PresentSettings): string {
+/**
+ * Valeur de la propriété `background`, à affecter via `style.background`.
+ * Un fond image est une URL, pas une valeur CSS : sans `url(…)` la
+ * déclaration est invalide et l'écran reste noir.
+ */
+export function backgroundValue(settings: PresentSettings): string {
   const value = (settings.bgValue ?? '').trim();
-  // Un fond image est une URL, pas une valeur CSS : sans `url(…)` la
-  // déclaration était invalide et l'écran restait noir.
   if (settings.bgType === 'image' && value) {
-    return `background:#000 url('${cssUrlSafe(value)}') center/cover no-repeat`;
+    return `#000 url('${cssUrlSafe(value)}') center/cover no-repeat`;
   }
-  return `background:${value}`;
+  return value;
+}
+
+export function pageBackground(settings: PresentSettings): string {
+  return `background:${backgroundValue(settings)}`;
 }
 
 /**

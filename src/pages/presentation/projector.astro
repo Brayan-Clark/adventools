@@ -221,7 +221,7 @@ const lang: Lang = 'fr';
       import { t } from '@/lib/i18n';
       import {
         DEFAULT_SETTINGS,
-        pageBackground,
+        backgroundValue,
         bgMediaHtml,
         loadPresentations,
         loadActive,
@@ -394,7 +394,7 @@ const lang: Lang = 'fr';
         if (!at) return;
         // Réglages de l'élément : personnalisation par slide (settingsOverride) fusionnée
         const s = { ...(pres.settings ?? DEFAULT_SETTINGS), ...(at.item.settingsOverride ?? {}) };
-        stage.style.cssText = pageBackground(s);
+        stage.style.background = backgroundValue(s);
         stage.classList.add('show');
         stage.classList.toggle('bleed', ['image', 'video', 'doc'].includes(at.item.kind));
         const sizePx = { sm: 'min(5vmin,2.4rem)', md: 'min(6.5vmin,3.4rem)', lg: 'min(8vmin,4.4rem)', xl: 'min(9.5vmin,5.6rem)' }[s.textSize ?? 'lg'];
