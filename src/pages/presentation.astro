@@ -684,6 +684,11 @@ const lang: Lang = 'fr';
    * pour une seule page et la projection n'avançait jamais au-delà de la
    * première. On le demande à pdf.js après coup, puis on rafraîchit.
    */
+  /** Rattrape les PDF déjà présents dans le déroulé, quelle que soit leur date d'ajout. */
+  async function resolveAllDocPages() {
+    for (const item of pres().items.slice()) await resolveDocPages(item);
+  }
+
   async function resolveDocPages(item: PresentItem) {
     if (item.kind !== 'doc' || !item.docUrl || item.docPages) return;
     const pages = await pdfPageCount(item.docUrl).catch(() => 0);
@@ -922,14 +927,30 @@ const lang: Lang = 'fr';
       pageStrip.innerHTML = '';
       return;
     }
-    pageStrip.innerHTML = Array.from({ length: pages }, (_, i) => {
+    // Fenêtre glissante autour de la page courante : un PDF de plusieurs
+    // centaines de pages produisait autant de boutons, et la bande devenait
+    // inutilisable. Les bornes restent accessibles aux extrémités.
+    const WINDOW = 12;
+    const current = flatIndex - first;
+    let from = Math.max(0, current - Math.floor(WINDOW / 2));
+    const to = Math.min(pages, from + WINDOW);
+    from = Math.max(0, to - WINDOW);
+
+    const btn = (i: number) => {
       const on = first + i === flatIndex;
       return `<button data-page="${first + i}" class="shrink-0 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
         on
           ? 'border-gold-500 bg-gold-500/15 text-gold-600 dark:text-gold-400'
           : 'border-slate-200/70 text-slate-500 hover:border-gold-400/60 dark:border-night-700 dark:text-slate-300'
       }">${i + 1}</button>`;
-    }).join('');
+    };
+    const gap = '<span class="shrink-0 px-1 text-[11px] text-slate-400">…</span>';
+
+    pageStrip.innerHTML = [
+      from > 0 ? btn(0) + (from > 1 ? gap : '') : '',
+      Array.from({ length: to - from }, (_, k) => btn(from + k)).join(''),
+      to < pages ? (to < pages - 1 ? gap : '') + btn(pages - 1) : '',
+    ].join('');
     pageStrip.querySelectorAll<HTMLElement>('[data-page]').forEach((b) =>
       b.addEventListener('click', () => {
         flatIndex = Number(b.dataset.page);
@@ -1348,6 +1369,9 @@ const lang: Lang = 'fr';
   renderAll();
   requestAnimationFrame(renderPreview);
   void showSource('hymns').then(() => handleDeepLink());
+  // Les PDF ajoutés avant que le nombre de pages soit résolu comptent encore
+  // pour une seule page : on les rattrape à l'ouverture.
+  void resolveAllDocPages();
 </script>
 
 <style>

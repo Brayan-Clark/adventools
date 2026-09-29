@@ -360,9 +360,20 @@ export function pageHtml(
       return `<canvas data-pdf-url="${url}" data-pdf-page="${page + 1}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff"></canvas>`;
     }
     case 'cantique': {
+      // Même parti pris que pour les versets : la strophe occupe l'écran, le
+      // reste s'efface. Le titre et le recueil passent en bas, le numéro de
+      // strophe en haut à droite. Auparavant le bloc de titre poussait les
+      // paroles vers le bas et leur prenait la place.
       const stanza = item.stanzas?.[page] ?? item.stanzas?.[0] ?? '';
-      const numLabel = item.cNum ? `${stanzaLabel} ${page + 1}` : '';
-      return posFrame(`${titleHtml(numLabel)}<pre style="margin:0 auto;max-width:92%;white-space:pre-wrap;font-family:inherit;font-size:1em;line-height:1.6;text-align:inherit;color:${textColor}">${esc(stanza)}</pre>`);
+      const numLabel = item.cNum ? esc(`${stanzaLabel} ${page + 1}`) : '';
+      const caption = [item.title, item.subtitle].filter(Boolean).map((x) => esc(x!)).join(' · ');
+      return `<div style="position:relative;width:100%;height:100%;color:${textColor}">
+        ${numLabel ? `<div style="position:absolute;top:0;right:0;font-size:.4em;font-weight:700;letter-spacing:.1em;opacity:.72">${numLabel}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:1.6em .4em">
+          <pre style="margin:0;max-width:92%;white-space:pre-wrap;font-family:inherit;font-size:1.05em;line-height:1.55;text-align:${align}">${esc(stanza)}</pre>
+        </div>
+        ${caption ? `<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.3em;letter-spacing:.2em;text-transform:uppercase;opacity:.45">${caption}</div>` : ''}
+      </div>`;
     }
     case 'bible': {
       // Mode par verset : n'affiche que le verset courant (une page = un verset)
