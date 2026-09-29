@@ -4,6 +4,18 @@
 -- manifeste audio/etudes de la branche `data`, et les 28 croyances
 -- fondamentales de l'Église adventiste du septième jour.
 
+-- ============ 0. Resynchroniser les séquences ============
+-- Les lignes déjà présentes ont été insérées avec des `id` explicites, ce qui
+-- laisse les séquences à leur valeur initiale : le premier INSERT sans id
+-- réclamerait l'id 1, déjà pris (« duplicate key value violates unique
+-- constraint »). On repositionne chaque séquence après le plus grand id.
+SELECT setval(pg_get_serial_sequence('media', 'id'),
+              COALESCE((SELECT MAX(id) FROM media), 0) + 1, false);
+SELECT setval(pg_get_serial_sequence('verses', 'id'),
+              COALESCE((SELECT MAX(id) FROM verses), 0) + 1, false);
+SELECT setval(pg_get_serial_sequence('categories', 'id'),
+              COALESCE((SELECT MAX(id) FROM categories), 0) + 1, false);
+
 -- ============ 1. Séries d'études audio ============
 -- Comble la section Audio, vide aujourd'hui (« 0 écoute audio »).
 -- Épisodes réels, avec leurs fichiers audio d'origine.
