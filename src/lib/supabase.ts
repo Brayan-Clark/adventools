@@ -246,6 +246,24 @@ export async function getCategories() {
   return data as Category[];
 }
 
+/** Création d'une catégorie. Réservé aux administrateurs par RLS. */
+export async function createCategory(payload: Partial<Category>) {
+  const { data, error } = await supabase.from('categories').insert(payload).select().single();
+  if (error) throw error;
+  return data as Category;
+}
+
+export async function updateCategory(id: number, payload: Partial<Category>) {
+  const { data, error } = await supabase.from('categories').update(payload).eq('id', id).select().single();
+  if (error) throw error;
+  return data as Category;
+}
+
+export async function deleteCategory(id: number) {
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ============================================================
 // FONCTIONS VERSETS
 // ============================================================
@@ -264,6 +282,23 @@ export async function getVerses() {
 
   if (error) throw error;
   return data as Verse[];
+}
+
+export async function createVerse(payload: Partial<Verse>) {
+  const { data, error } = await supabase.from('verses').insert(payload).select().single();
+  if (error) throw error;
+  return data as Verse;
+}
+
+export async function updateVerse(id: number, payload: Partial<Verse>) {
+  const { data, error } = await supabase.from('verses').update(payload).eq('id', id).select().single();
+  if (error) throw error;
+  return data as Verse;
+}
+
+export async function deleteVerse(id: number) {
+  const { error } = await supabase.from('verses').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ============================================================

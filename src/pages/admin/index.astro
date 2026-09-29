@@ -82,6 +82,12 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
         <button data-tab="content" role="tab" class="admin-tab rounded-t-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
           {t(lang, 'admin_tab_content')}
         </button>
+        <button data-tab="categories" role="tab" class="admin-tab rounded-t-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
+          {t(lang, 'admin_tab_categories')}
+        </button>
+        <button data-tab="verses" role="tab" class="admin-tab rounded-t-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
+          {t(lang, 'admin_tab_verses')}
+        </button>
         <button data-tab="users" role="tab" class="admin-tab rounded-t-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-gold-600 dark:text-slate-300">
           {t(lang, 'admin_tab_users')}
         </button>
@@ -231,6 +237,50 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
         </div>
       </div>
 
+      <!-- ========== ONGLET CATÉGORIES ========== -->
+      <div id="tab-categories" class="mt-6 hidden">
+        <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">{t(lang, 'admin_tab_categories')}</h2>
+            <span class="text-xs text-slate-400">{t(lang, 'admin_cat_hint')}</span>
+          </div>
+          <form id="cat-form" class="mt-4 grid gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-4 sm:grid-cols-4 dark:border-night-700 dark:bg-night-900/40">
+            <input type="hidden" id="cat-id" />
+            <input id="cat-name-fr" class="input-dark" placeholder={t(lang, 'admin_cat_name_fr')} required />
+            <input id="cat-name-mg" class="input-dark" placeholder={t(lang, 'admin_cat_name_mg')} />
+            <input id="cat-slug" class="input-dark font-mono text-xs" placeholder="slug" required />
+            <div class="flex items-center gap-2">
+              <button type="submit" class="btn-gold px-4 py-2 text-xs">{t(lang, 'admin_save')}</button>
+              <button type="button" id="cat-reset" class="btn-ghost px-3 py-2 text-xs">{t(lang, 'admin_cancel')}</button>
+            </div>
+            <span id="cat-msg" class="text-sm sm:col-span-4"></span>
+          </form>
+          <div id="cat-list" class="mt-4 space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- ========== ONGLET VERSETS ========== -->
+      <div id="tab-verses" class="mt-6 hidden">
+        <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-display text-xl font-semibold text-slate-900 dark:text-white">{t(lang, 'admin_tab_verses')}</h2>
+            <span class="text-xs text-slate-400">{t(lang, 'admin_verse_hint')}</span>
+          </div>
+          <form id="verse-form" class="mt-4 grid gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-night-700 dark:bg-night-900/40">
+            <input type="hidden" id="verse-id" />
+            <input id="verse-ref" class="input-dark" placeholder={t(lang, 'admin_verse_ref')} required />
+            <textarea id="verse-fr" rows="2" class="input-dark" placeholder={t(lang, 'admin_verse_fr')} required></textarea>
+            <textarea id="verse-mg" rows="2" class="input-dark" placeholder={t(lang, 'admin_verse_mg')} required></textarea>
+            <div class="flex items-center gap-2">
+              <button type="submit" class="btn-gold px-4 py-2 text-xs">{t(lang, 'admin_save')}</button>
+              <button type="button" id="verse-reset" class="btn-ghost px-3 py-2 text-xs">{t(lang, 'admin_cancel')}</button>
+              <span id="verse-msg" class="text-sm"></span>
+            </div>
+          </form>
+          <div id="verse-list" class="mt-4 space-y-2"></div>
+        </div>
+      </div>
+
       <!-- ========== ONGLET UTILISATEURS ========== -->
       <div id="tab-users" class="mt-6 hidden">
         <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/80">
@@ -268,6 +318,13 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
     getCurrentUser,
     getMedia,
     getCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    getVerses,
+    createVerse,
+    updateVerse,
+    deleteVerse,
     createMedia,
     updateMedia,
     deleteMedia,
@@ -316,9 +373,14 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
   // utilisé par le panneau de l'assistant IA, présent sur toutes les pages.
   const adminTabs = () => $('admin-tabs').querySelectorAll<HTMLElement>('[data-tab]');
 
-  function showTab(name: 'content' | 'users') {
-    $('tab-content').classList.toggle('hidden', name !== 'content');
-    $('tab-users').classList.toggle('hidden', name !== 'users');
+  type TabName = 'content' | 'categories' | 'verses' | 'users';
+
+  function showTab(name: TabName) {
+    for (const t of ['content', 'categories', 'verses', 'users'] as TabName[]) {
+      $(`tab-${t}`).classList.toggle('hidden', t !== name);
+    }
+    if (name === 'categories') void loadCategoriesTab();
+    if (name === 'verses') void loadVersesTab();
     adminTabs().forEach((b) => {
       const on = b.dataset.tab === name;
       b.classList.toggle('border-b-2', on);
@@ -329,7 +391,7 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
     });
   }
   adminTabs().forEach((b) =>
-    b.addEventListener('click', () => showTab(b.dataset.tab as 'content' | 'users'))
+    b.addEventListener('click', () => showTab(b.dataset.tab as TabName))
   );
 
   // ══════════════════════ AUTHENTIFICATION ══════════════════════
@@ -890,6 +952,164 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
       })
       .join('');
   }
+
+  // ══════════════════════ CATÉGORIES ══════════════════════
+  // Les catégories classent tous les contenus du site ; elles n'étaient
+  // modifiables que directement en base.
+
+  let cats: Category[] = [];
+
+  async function loadCategoriesTab() {
+    try {
+      cats = await getCategories();
+    } catch {
+      $('cat-list').innerHTML = `<p class="text-sm text-rose-500">${esc(T('admin_load_failed'))}</p>`;
+      return;
+    }
+    $('cat-list').innerHTML = cats
+      .map(
+        (c) => `
+        <div class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/70 px-4 py-2.5 dark:border-night-700">
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">${esc(c.name_fr)}</span>
+            <span class="block truncate text-[11px] text-slate-400">${esc(c.name_mg ?? '')} · ${esc(c.slug)}</span>
+          </span>
+          <button data-cat-edit="${c.id}" class="btn-ghost px-2.5 py-1 text-xs">${esc(T('admin_edit'))}</button>
+          <button data-cat-del="${c.id}" class="btn-ghost px-2.5 py-1 text-xs hover:!border-rose-500/60 hover:!text-rose-500">${esc(T('admin_delete'))}</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function resetCatForm() {
+    ($('cat-id') as HTMLInputElement).value = '';
+    ['cat-name-fr', 'cat-name-mg', 'cat-slug'].forEach((id) => (($(id) as HTMLInputElement).value = ''));
+    $('cat-msg').textContent = '';
+  }
+
+  $('cat-reset').addEventListener('click', resetCatForm);
+
+  $('cat-list').addEventListener('click', async (e) => {
+    const t = e.target as HTMLElement;
+    const edit = t.closest('[data-cat-edit]') as HTMLElement | null;
+    const del = t.closest('[data-cat-del]') as HTMLElement | null;
+    if (edit) {
+      const c = cats.find((x) => String(x.id) === edit.dataset.catEdit);
+      if (!c) return;
+      ($('cat-id') as HTMLInputElement).value = String(c.id);
+      ($('cat-name-fr') as HTMLInputElement).value = c.name_fr ?? '';
+      ($('cat-name-mg') as HTMLInputElement).value = c.name_mg ?? '';
+      ($('cat-slug') as HTMLInputElement).value = c.slug ?? '';
+      $('cat-form').scrollIntoView({ block: 'nearest' });
+    }
+    if (del) {
+      if (!confirm(T('admin_confirm_delete'))) return;
+      try {
+        await deleteCategory(Number(del.dataset.catDel));
+        await loadCategoriesTab();
+      } catch (err: any) {
+        $('cat-msg').textContent = err?.message ?? T('admin_save_failed');
+      }
+    }
+  });
+
+  $<HTMLFormElement>('cat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = ($('cat-id') as HTMLInputElement).value;
+    const payload = {
+      name_fr: ($('cat-name-fr') as HTMLInputElement).value.trim(),
+      name_mg: ($('cat-name-mg') as HTMLInputElement).value.trim(),
+      slug: ($('cat-slug') as HTMLInputElement).value.trim() || slugify(($('cat-name-fr') as HTMLInputElement).value),
+    };
+    try {
+      if (id) await updateCategory(Number(id), payload);
+      else await createCategory(payload);
+      resetCatForm();
+      await loadCategoriesTab();
+      $('cat-msg').textContent = T('admin_saved');
+    } catch (err: any) {
+      $('cat-msg').textContent = err?.message ?? T('admin_save_failed');
+    }
+  });
+
+  // ══════════════════════ VERSETS ══════════════════════
+  // Alimentent le verset du jour affiché sur la page d'accueil.
+
+  let verses: any[] = [];
+
+  async function loadVersesTab() {
+    try {
+      verses = await getVerses();
+    } catch {
+      $('verse-list').innerHTML = `<p class="text-sm text-rose-500">${esc(T('admin_load_failed'))}</p>`;
+      return;
+    }
+    $('verse-list').innerHTML = verses
+      .map(
+        (v) => `
+        <div class="flex flex-wrap items-start gap-3 rounded-xl border border-slate-200/70 px-4 py-2.5 dark:border-night-700">
+          <span class="min-w-0 flex-1">
+            <span class="block text-xs font-bold uppercase tracking-wide text-gold-600 dark:text-gold-400">${esc(v.reference)}</span>
+            <span class="mt-0.5 block text-[13px] text-slate-700 dark:text-slate-200">${esc(v.text_fr)}</span>
+            <span class="block text-[12px] italic text-slate-400">${esc(v.text_mg ?? '')}</span>
+          </span>
+          <button data-verse-edit="${v.id}" class="btn-ghost px-2.5 py-1 text-xs">${esc(T('admin_edit'))}</button>
+          <button data-verse-del="${v.id}" class="btn-ghost px-2.5 py-1 text-xs hover:!border-rose-500/60 hover:!text-rose-500">${esc(T('admin_delete'))}</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function resetVerseForm() {
+    ($('verse-id') as HTMLInputElement).value = '';
+    ['verse-ref', 'verse-fr', 'verse-mg'].forEach((id) => (($(id) as HTMLInputElement).value = ''));
+    $('verse-msg').textContent = '';
+  }
+
+  $('verse-reset').addEventListener('click', resetVerseForm);
+
+  $('verse-list').addEventListener('click', async (e) => {
+    const t = e.target as HTMLElement;
+    const edit = t.closest('[data-verse-edit]') as HTMLElement | null;
+    const del = t.closest('[data-verse-del]') as HTMLElement | null;
+    if (edit) {
+      const v = verses.find((x) => String(x.id) === edit.dataset.verseEdit);
+      if (!v) return;
+      ($('verse-id') as HTMLInputElement).value = String(v.id);
+      ($('verse-ref') as HTMLInputElement).value = v.reference ?? '';
+      ($('verse-fr') as HTMLTextAreaElement).value = v.text_fr ?? '';
+      ($('verse-mg') as HTMLTextAreaElement).value = v.text_mg ?? '';
+      $('verse-form').scrollIntoView({ block: 'nearest' });
+    }
+    if (del) {
+      if (!confirm(T('admin_confirm_delete'))) return;
+      try {
+        await deleteVerse(Number(del.dataset.verseDel));
+        await loadVersesTab();
+      } catch (err: any) {
+        $('verse-msg').textContent = err?.message ?? T('admin_save_failed');
+      }
+    }
+  });
+
+  $<HTMLFormElement>('verse-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = ($('verse-id') as HTMLInputElement).value;
+    const payload = {
+      reference: ($('verse-ref') as HTMLInputElement).value.trim(),
+      text_fr: ($('verse-fr') as HTMLTextAreaElement).value.trim(),
+      text_mg: ($('verse-mg') as HTMLTextAreaElement).value.trim(),
+    };
+    try {
+      if (id) await updateVerse(Number(id), payload);
+      else await createVerse(payload);
+      resetVerseForm();
+      await loadVersesTab();
+      $('verse-msg').textContent = T('admin_saved');
+    } catch (err: any) {
+      $('verse-msg').textContent = err?.message ?? T('admin_save_failed');
+    }
+  });
 
   // ══════════════════════ UTILISATEURS ══════════════════════
 
