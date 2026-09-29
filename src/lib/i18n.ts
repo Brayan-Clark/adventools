@@ -423,6 +423,7 @@ const dict = {
   pres_auto_hint: { fr: '0 = auto', mg: '0 = ho azy' },
   nav_apps: { fr: 'Applications', mg: 'Rindranasa' },
   admin_by_type: { fr: 'Répartition par type', mg: 'Fizarazarana araka ny karazany' },
+  admin_preview: { fr: 'Aperçu', mg: 'Topi-maso' },
   admin_most_viewed: { fr: 'Les plus consultés', mg: 'Be mpijery indrindra' },
   admin_kpi_total: { fr: 'Contenus publiés', mg: 'Votoaty navoaka' },
   admin_kpi_views: { fr: 'Vues cumulées', mg: 'Fitambaran’ny fijerena' },

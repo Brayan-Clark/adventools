@@ -137,25 +137,25 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
               <textarea id="f-desc-mg" rows="2" class="input-dark"></textarea>
             </div>
 
-            <div id="content-block" class="hidden sm:col-span-2">
+            <div id="content-block" class="hidden sm:col-span-2" data-editor="f-content-fr">
               <label class={field} for="f-content-fr">{t(lang, 'admin_content_fr')}</label>
               <textarea id="f-content-fr" rows="12" class="input-dark leading-relaxed"></textarea>
             </div>
-            <div id="content-block-mg" class="hidden sm:col-span-2">
+            <div id="content-block-mg" class="hidden sm:col-span-2" data-editor="f-content-mg">
               <label class={field} for="f-content-mg">{t(lang, 'admin_content_mg')}</label>
               <textarea id="f-content-mg" rows="12" class="input-dark leading-relaxed"></textarea>
               <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{t(lang, 'admin_content_hint')}</p>
             </div>
 
-            <div>
+            <div data-field="speaker">
               <label class={field} for="f-speaker">{t(lang, 'admin_speaker')}</label>
               <input id="f-speaker" class="input-dark" />
             </div>
-            <div>
+            <div data-field="duration">
               <label class={field} for="f-duration">{t(lang, 'admin_duration')}</label>
               <input id="f-duration" class="input-dark" placeholder="48:12" />
             </div>
-            <div>
+            <div data-field="date">
               <label class={field} for="f-date">{t(lang, 'admin_date')}</label>
               <input id="f-date" type="date" class="input-dark" />
             </div>
@@ -169,7 +169,7 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
               { id: 'video', label: t(lang, 'admin_video'), bucket: 'videos', accept: 'video/*' },
               { id: 'audio', label: t(lang, 'admin_audio'), bucket: 'audio', accept: 'audio/*' },
             ].map((f) => (
-              <div class="sm:col-span-2">
+              <div class="sm:col-span-2" data-field={f.id}>
                 <label class={field} for={`f-${f.id}`}>{f.label}</label>
                 <div class="flex gap-2">
                   <input id={`f-${f.id}`} class="input-dark" placeholder="https://…" />
@@ -246,6 +246,7 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
 
 <script>
   import { t, pickTitle } from '@/lib/i18n';
+  import { renderMarkdown } from '@/lib/doc-viewer';
   import { formatDate } from '@/lib/client-render';
   import {
     supabase,
@@ -423,16 +424,131 @@ const field = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-sla
     slugTouched = true;
   });
 
+  /**
+   * Champs pertinents par type de contenu. Un article n'a ni vidéo, ni audio,
+   * ni durée ; un audio n'a pas de vidéo. Afficher tout pour tout le monde
+   * noyait les quelques champs qui comptent vraiment.
+   */
+  const FIELDS_BY_TYPE: Record<string, string[]> = {
+    sermon: ['speaker', 'duration', 'date', 'video', 'audio', 'image'],
+    course: ['speaker', 'date', 'image', 'content'],
+    conference: ['speaker', 'date', 'image', 'content'],
+    seminar: ['speaker', 'date', 'image', 'content'],
+    audio: ['speaker', 'duration', 'date', 'audio', 'image'],
+    article: ['speaker', 'date', 'image', 'content'],
+  };
+
   function updateTypeVisibility(type: string) {
     const withLessons = type === 'course' || type === 'conference';
     $('lessons-block').classList.toggle('hidden', !withLessons);
     $('lessons-title').textContent = T(type === 'conference' ? 'admin_sessions' : 'admin_lessons');
     $('add-lesson').textContent = T(type === 'conference' ? 'admin_add_session' : 'admin_add_lesson');
-    const isArticle = type === 'article';
-    $('content-block').classList.toggle('hidden', !isArticle);
-    $('content-block-mg').classList.toggle('hidden', !isArticle);
+
+    const allowed = new Set(FIELDS_BY_TYPE[type] ?? FIELDS_BY_TYPE.article);
+
+    // Texte long : réservé aux types qui en ont un
+    const withContent = allowed.has('content');
+    $('content-block').classList.toggle('hidden', !withContent);
+    $('content-block-mg').classList.toggle('hidden', !withContent);
+
+    for (const id of ['speaker', 'duration', 'date', 'image', 'video', 'audio']) {
+      const block = document.querySelector<HTMLElement>(`[data-field="${id}"]`);
+      if (block) block.classList.toggle('hidden', !allowed.has(id));
+    }
   }
   typeSelect.addEventListener('change', () => updateTypeVisibility(typeSelect.value));
+
+  // ══════════════════════ MISE EN FORME DU TEXTE ══════════════════════
+  // Le contenu est stocké en Markdown, c'est ce que le site sait rendre.
+  // La barre insère donc la syntaxe correspondante : pas de bouton qui
+  // produirait quelque chose que l'affichage ignorerait.
+  const TOOLS: { md: string; label: string; title: string; block?: boolean; wrap?: boolean }[] = [
+    { md: '# ', label: 'H1', title: 'Titre 1', block: true },
+    { md: '## ', label: 'H2', title: 'Titre 2', block: true },
+    { md: '### ', label: 'H3', title: 'Titre 3', block: true },
+    { md: '**', label: 'B', title: 'Gras', wrap: true },
+    { md: '*', label: 'I', title: 'Italique', wrap: true },
+    { md: '> ', label: '❝', title: 'Citation', block: true },
+    { md: '- ', label: '•', title: 'Liste à puces', block: true },
+    { md: '1. ', label: '1.', title: 'Liste numérotée', block: true },
+    { md: '`', label: '</>', title: 'Code', wrap: true },
+    { md: '[texte](https://)', label: '🔗', title: 'Lien' },
+    { md: '\n---\n', label: '―', title: 'Séparateur' },
+  ];
+
+  /** Applique une mise en forme à la sélection courante du champ. */
+  function applyTool(ta: HTMLTextAreaElement, tool: (typeof TOOLS)[number]) {
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.slice(start, end);
+
+    let insert: string;
+    let caret: number;
+    if (tool.wrap) {
+      insert = `${tool.md}${selected || ''}${tool.md}`;
+      caret = selected ? start + insert.length : start + tool.md.length;
+    } else if (tool.block) {
+      // Préfixe chaque ligne sélectionnée, ou la ligne courante
+      const lineStart = ta.value.lastIndexOf('\n', start - 1) + 1;
+      const body = ta.value.slice(lineStart, end) || '';
+      insert = body
+        .split('\n')
+        .map((l) => (l.startsWith(tool.md) ? l : tool.md + l))
+        .join('\n');
+      ta.setRangeText(insert, lineStart, end, 'end');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      ta.focus();
+      return;
+    } else {
+      insert = tool.md;
+      caret = start + insert.length;
+    }
+    ta.setRangeText(insert, start, end, 'end');
+    ta.selectionStart = ta.selectionEnd = caret;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.focus();
+  }
+
+  /** Barre d'outils + aperçu rendu, posés au-dessus de chaque champ long. */
+  function mountEditors() {
+    document.querySelectorAll<HTMLElement>('[data-editor]').forEach((block) => {
+      if (block.dataset.editorReady === '1') return;
+      const ta = document.getElementById(block.dataset.editor!) as HTMLTextAreaElement | null;
+      if (!ta) return;
+      block.dataset.editorReady = '1';
+
+      const bar = document.createElement('div');
+      bar.className = 'mb-2 flex flex-wrap items-center gap-1';
+      bar.innerHTML =
+        TOOLS.map(
+          (t, i) =>
+            `<button type="button" data-tool="${i}" title="${esc(t.title)}" class="rounded-lg border border-slate-200/70 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-gold-500/60 hover:text-gold-600 dark:border-night-700 dark:text-slate-300 dark:hover:text-gold-400">${t.label}</button>`
+        ).join('') +
+        `<button type="button" data-preview class="ml-auto rounded-lg border border-slate-200/70 px-2 py-1 text-xs font-semibold text-slate-500 transition hover:border-gold-500/60 dark:border-night-700 dark:text-slate-400">${esc(T('admin_preview'))}</button>`;
+      ta.parentElement!.insertBefore(bar, ta);
+
+      const preview = document.createElement('div');
+      preview.className =
+        'mt-2 hidden max-h-80 overflow-y-auto rounded-xl border border-slate-200/70 bg-white/70 p-4 text-sm dark:border-night-700 dark:bg-night-900/40';
+      ta.parentElement!.insertBefore(preview, ta.nextSibling);
+
+      bar.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('button');
+        if (!btn) return;
+        if (btn.hasAttribute('data-preview')) {
+          const on = preview.classList.toggle('hidden');
+          if (!on) preview.innerHTML = renderMarkdown(ta.value || '');
+          return;
+        }
+        applyTool(ta, TOOLS[Number(btn.dataset.tool)]);
+      });
+      ta.addEventListener('input', () => {
+        if (!preview.classList.contains('hidden')) preview.innerHTML = renderMarkdown(ta.value || '');
+      });
+    });
+  }
+  mountEditors();
+
 
   function lessonRow(data: Record<string, string> = {}) {
     const div = document.createElement('div');
