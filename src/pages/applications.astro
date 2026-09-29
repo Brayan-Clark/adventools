@@ -1,0 +1,158 @@
+---
+// Page 100 % statique : les versions sont lues côté client depuis l'API des
+// releases GitHub, avec cache local. Aucun build n'est nécessaire pour qu'une
+// nouvelle version apparaisse ici.
+import Layout from '@/layouts/Layout.astro';
+import { t } from '@/lib/i18n';
+import type { Lang } from '@/lib/types';
+
+const lang: Lang = 'fr';
+---
+
+<Layout lang={lang} title={t(lang, 'nav_apps')} description={t(lang, 'apps_subtitle')}>
+  <section class="mx-auto max-w-4xl px-4 py-14 sm:px-6">
+    <div class="reveal text-center">
+      <p class="section-kicker">✦ {t(lang, 'nav_apps')}</p>
+      <h1 class="section-title mt-1 text-4xl">📱 {t(lang, 'apps_section')}</h1>
+      <p class="mx-auto mt-4 max-w-2xl text-slate-500 dark:text-slate-400">{t(lang, 'apps_subtitle')}</p>
+    </div>
+
+    <!-- Dernière version -->
+    <div id="latest" class="reveal mt-10">
+      <div class="h-56 animate-pulse rounded-3xl bg-slate-200/60 dark:bg-night-800/60"></div>
+    </div>
+
+    <!-- Versions précédentes -->
+    <div id="history-wrap" class="reveal mt-12 hidden">
+      <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+        🕗 {t(lang, 'apps_previous')}
+      </h2>
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{t(lang, 'apps_previous_hint')}</p>
+      <div id="history" class="mt-5 space-y-3"></div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { t } from '@/lib/i18n';
+  import { clientLang, formatDate } from '@/lib/client-render';
+  import { renderMarkdown } from '@/lib/doc-viewer';
+
+  const lang = clientLang();
+  const REPO = 'Brayan-Clark/adventools';
+  const API = `https://api.github.com/repos/${REPO}/releases?per_page=30`;
+  // L'API GitHub limite à 60 appels par heure et par adresse : un cache court
+  // suffit à ne jamais s'en approcher tout en montrant vite une nouvelle version.
+  const CACHE_KEY = 'ah-app-releases-v1';
+  const CACHE_TTL = 1000 * 60 * 30;
+
+  interface Asset { name: string; size: number; browser_download_url: string; download_count: number }
+  interface Release {
+    tag_name: string; name: string; body: string; published_at: string;
+    prerelease: boolean; draft: boolean; html_url: string; assets: Asset[];
+  }
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  const mo = (n: number) => `${(n / 1048576).toFixed(0)} Mo`;
+
+  /** Premier APK d'une release : c'est lui qu'on propose au téléchargement. */
+  const apkOf = (r: Release) => r.assets.find((a) => a.name.toLowerCase().endsWith('.apk')) ?? null;
+
+  async function fetchReleases(): Promise<Release[]> {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts < CACHE_TTL && Array.isArray(data) && data.length) return data;
+      }
+    } catch { /* cache illisible : on refait l'appel */ }
+
+    const res = await fetch(API, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error(`GitHub ${res.status}`);
+    const all: Release[] = await res.json();
+    const data = all.filter((r) => !r.draft && apkOf(r));
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch { /* quota */ }
+    return data;
+  }
+
+  function latestCard(r: Release): string {
+    const apk = apkOf(r)!;
+    return `
+      <article class="overflow-hidden rounded-3xl border border-gold-500/40 bg-gradient-to-b from-white to-gold-500/5 shadow-soft dark:border-gold-500/30 dark:from-night-800 dark:to-gold-500/5">
+        <div class="border-b border-gold-500/30 bg-gold-500/10 px-6 py-3 text-center">
+          <p class="text-xs font-bold uppercase tracking-widest text-gold-600 dark:text-gold-400">
+            ✦ ${t(lang, 'apps_latest')} ✦
+          </p>
+        </div>
+        <div class="p-6 sm:p-8">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="min-w-0">
+              <h2 class="font-display text-2xl font-bold text-slate-900 dark:text-white">Adventools</h2>
+              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                ${esc(r.tag_name)} · ${formatDate(r.published_at.slice(0, 10), lang)} · ${mo(apk.size)}
+              </p>
+            </div>
+            <a href="${esc(apk.browser_download_url)}" class="btn-gold px-5 py-2.5 text-sm" download>
+              ⬇ ${t(lang, 'apps_download')}
+            </a>
+          </div>
+          <div class="prose-slate mt-6 max-w-none text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            ${renderMarkdown(r.body || t(lang, 'apps_no_notes'))}
+          </div>
+          <p class="mt-6 text-[11px] text-slate-400 dark:text-slate-500">
+            ${t(lang, 'apps_android_hint')}
+          </p>
+        </div>
+      </article>`;
+  }
+
+  function historyRow(r: Release): string {
+    const apk = apkOf(r)!;
+    return `
+      <details class="group rounded-2xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-night-700/60 dark:bg-night-800/70">
+        <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 px-5 py-3.5 text-sm">
+          <span class="font-semibold text-slate-800 dark:text-slate-100">
+            ${esc(r.tag_name)}
+            ${r.prerelease ? `<span class="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">${t(lang, 'apps_prerelease')}</span>` : ''}
+          </span>
+          <span class="flex items-center gap-3 text-xs text-slate-400">
+            <span>${formatDate(r.published_at.slice(0, 10), lang)}</span>
+            <span>${mo(apk.size)}</span>
+            <span class="text-gold-600 group-open:rotate-180 dark:text-gold-400">⌄</span>
+          </span>
+        </summary>
+        <div class="border-t border-slate-200/70 px-5 py-4 dark:border-night-700/60">
+          <div class="prose-slate max-w-none text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+            ${renderMarkdown(r.body || t(lang, 'apps_no_notes'))}
+          </div>
+          <a href="${esc(apk.browser_download_url)}" class="btn-ghost mt-4 inline-block px-4 py-2 text-xs" download>
+            ⬇ ${t(lang, 'apps_download_version')} ${esc(r.tag_name)}
+          </a>
+        </div>
+      </details>`;
+  }
+
+  async function load() {
+    const latest = document.getElementById('latest')!;
+    try {
+      const releases = await fetchReleases();
+      if (!releases.length) {
+        latest.innerHTML = `<p class="text-center text-sm text-slate-500">${t(lang, 'apps_none')}</p>`;
+        return;
+      }
+      // La plus récente d'abord : l'API les renvoie déjà dans cet ordre.
+      latest.innerHTML = latestCard(releases[0]);
+
+      const rest = releases.slice(1);
+      if (rest.length) {
+        document.getElementById('history')!.innerHTML = rest.map(historyRow).join('');
+        document.getElementById('history-wrap')!.classList.remove('hidden');
+      }
+      document.querySelectorAll('.reveal:not(.visible)').forEach((el) => el.classList.add('visible'));
+    } catch {
+      latest.innerHTML = `<p class="text-center text-sm text-slate-500">⚠️ ${t(lang, 'apps_error')}</p>`;
+    }
+  }
+
+  load();
+</script>
