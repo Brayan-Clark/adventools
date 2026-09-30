@@ -186,6 +186,9 @@ function mapQuarterFile(fileData: any): Mofonaina[] {
 const sortByDateDesc = (list: Mofonaina[]): Mofonaina[] =>
   [...list].sort((a, b) => (a.daty < b.daty ? 1 : a.daty > b.daty ? -1 : 0));
 
+const sortByDateAsc = (list: Mofonaina[]): Mofonaina[] =>
+  [...list].sort((a, b) => (a.daty > b.daty ? 1 : a.daty < b.daty ? -1 : 0));
+
 /**
  * Downloads every quarter listed in the manifest that is missing locally, or
  * whose `version` was bumped. This is what makes a newly published quarter
@@ -362,8 +365,10 @@ export async function getCurrentTelovolanaInfo(): Promise<Telovolana | null> {
 }
 
 /**
- * Every reading of the quarter we are currently in. The cache now holds
- * several quarters, so it has to be filtered.
+ * Every reading of the quarter we are currently in, in chronological order.
+ * The cache now holds several quarters, so it has to be filtered. The cache
+ * itself is sorted newest first (handy to find today's reading), but the
+ * quarter list has to read like the booklet: first day of the quarter first.
  */
 export async function getAllMofonainaForQuarter(): Promise<Mofonaina[]> {
   try {
@@ -374,7 +379,7 @@ export async function getAllMofonainaForQuarter(): Promise<Mofonaina[]> {
     const quarter = currentQuarterOf(data);
     if (!quarter) return [];
 
-    return data.filter(m => m.id_telovolana === quarter.id);
+    return sortByDateAsc(data.filter(m => m.id_telovolana === quarter.id));
   } catch (error) {
     console.error('Error getting all mofonaina:', error);
     return [];

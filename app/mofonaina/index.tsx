@@ -1,7 +1,7 @@
 import { Stack, router } from 'expo-router';
 import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square, Edit, BookOpen } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -31,6 +31,10 @@ export default function MofonainaScreen() {
   const [mofonaina, setMofonaina] = useState<Mofonaina | null>(null);
   const [quarterList, setQuarterList] = useState<Mofonaina[]>([]);
   const [showQuarterModal, setShowQuarterModal] = useState(false);
+  // The quarter list is chronological, so the selected day sits wherever it falls
+  // in the trimester. Remember its offset to bring it to the top on open.
+  const quarterScrollRef = useRef<ScrollView>(null);
+  const selectedItemOffset = useRef(0);
   const [isConnected, setIsConnected] = useState<boolean | null>(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -107,6 +111,18 @@ export default function MofonainaScreen() {
     } catch (e) {
       console.error("Error saving highlight", e);
     }
+  };
+
+  const scrollQuarterListToSelected = () => {
+    quarterScrollRef.current?.scrollTo({
+      y: Math.max(selectedItemOffset.current - 12, 0),
+      animated: false,
+    });
+  };
+
+  const openQuarterModal = () => {
+    selectedItemOffset.current = 0;
+    setShowQuarterModal(true);
   };
 
   const splitIntoSentences = (text: string) => {
@@ -536,7 +552,7 @@ export default function MofonainaScreen() {
               </View>
 
                {/* Quarterly Info Footer */}
-              <TouchableOpacity onPress={() => setShowQuarterModal(true)} activeOpacity={0.8} className="bg-slate-900/40 rounded-[32px] p-6 border border-white/5 flex-row items-center">
+              <TouchableOpacity onPress={openQuarterModal} activeOpacity={0.8} className="bg-slate-900/40 rounded-[32px] p-6 border border-white/5 flex-row items-center">
                  <View className="w-14 h-14 rounded-2xl bg-blue-500/20 items-center justify-center mr-5">
                     <Text className="text-primary font-bold text-lg">{mofonaina.telovolana.taona}</Text>
                  </View>
@@ -621,7 +637,7 @@ export default function MofonainaScreen() {
       </View>
 
       {/* Quarter List Modal */}
-      <Modal visible={showQuarterModal} animationType="slide" transparent={true} onRequestClose={() => setShowQuarterModal(false)}>
+      <Modal visible={showQuarterModal} animationType="slide" transparent={true} onShow={scrollQuarterListToSelected} onRequestClose={() => setShowQuarterModal(false)}>
         <View className="flex-1 bg-[#020617]/95 backdrop-blur-xl">
           <SafeAreaView className="flex-1">
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-white/10">
@@ -630,13 +646,18 @@ export default function MofonainaScreen() {
                 <ChevronLeft size={20} color="#f8fafc" style={{ transform: [{ rotate: '-90deg' }] }} />
               </TouchableOpacity>
             </View>
-            <ScrollView className="flex-1 px-4 pt-4">
+            <ScrollView ref={quarterScrollRef} className="flex-1 px-4 pt-4">
               {quarterList.map((item, index) => {
                 const itemDate = new Date(item.daty);
                 const isSelected = item.daty === mofonaina?.daty;
                 return (
                   <TouchableOpacity
                     key={`q_item_${index}`}
+                    onLayout={isSelected ? (e) => {
+                      selectedItemOffset.current = e.nativeEvent.layout.y;
+                      // Layout can land after onShow (long lists), so scroll here too.
+                      scrollQuarterListToSelected();
+                    } : undefined}
                     onPress={() => {
                       setCurrentDate(itemDate);
                       setShowQuarterModal(false);
