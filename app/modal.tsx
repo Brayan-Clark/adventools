@@ -6,6 +6,7 @@ import { useSettings } from '@/lib/settings-context';
 import { useToast } from '@/lib/toast-context';
 import { useAlert } from '@/lib/alert-context';
 import { clearHistory } from '@/lib/user-storage';
+import { getSsCategories, resolveSsCategory } from '@/lib/sabbath-school';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -84,8 +85,11 @@ export default function Settings() {
     { id: "membre", translations: { fr: "Membre", mg: "Mpikambana", en: "Member" } }
   ];
   const [availableDepartments, setAvailableDepartments] = useState<any[]>(DEFAULT_DEPARTMENTS);
-  const [userEDS, setUserEDS] = useState('Lesona Lehibe (+ 35 taona)');
+  const [userEDS, setUserEDS] = useState('Lesona Lehibe');
   const [isEDSModalVisible, setIsEDSModalVisible] = useState(false);
+  const [edsClasses, setEdsClasses] = useState<string[]>([]);
+  const [edsLoading, setEdsLoading] = useState(false);
+  const [edsHint, setEdsHint] = useState('');
 
   // Tabs state
   const [activeTab, setActiveTab] = useState<'general' | 'reading' | 'system' | 'support'>('general');
@@ -186,17 +190,27 @@ export default function Settings() {
   const [oldPinInput, setOldPinInput] = useState('');
   const [newPinInput, setNewPinInput] = useState('');
 
-  const EDS_CLASSES = [
-    "Lesona Zaza minono (0-12 volana)",
-    "Lesona Zazakely (1-3 taona)",
-    "Lesona Kilonga (4-6 taona)",
-    "Lesona Ankizy (7-9 taona)",
-    "Lesona Tanora zandriny (10-12 taona)",
-    "Lesona Mantoanto (13-14 taona)",
-    "Lesona Zatovo (15-18 taona)",
-    "Lesona Tanora zokiny (19-35 taona)",
-    "Lesona Lehibe (+ 35 taona)"
-  ];
+  const openEDSModal = async () => {
+    setIsEDSModalVisible(true);
+    setEdsLoading(true);
+    setEdsHint('');
+    try {
+      // The SS category used by the lesson screen: keep both screens aligned.
+      const ssLang = (await AsyncStorage.getItem('adventools_ss_selected_lang')) || 'mg';
+      const classes = await getSsCategories(ssLang, { refresh: true });
+      setEdsClasses(classes);
+      const resolved = resolveSsCategory(userEDS, classes);
+      if (resolved) {
+        setUserEDS(resolved);
+      } else {
+        setEdsHint("Votre ancienne classe n'existe plus dans les leçons disponibles. Choisissez-en une nouvelle.");
+      }
+    } catch (e) {
+      console.error('Failed to load Sabbath School categories', e);
+    } finally {
+      setEdsLoading(false);
+    }
+  };
 
   // Load settings on mount
   useEffect(() => {
@@ -333,6 +347,7 @@ export default function Settings() {
   const saveEDS = async (eds: string) => {
     setUserEDS(eds);
     await AsyncStorage.setItem('profile_eds_class', eds);
+    await updateSettings({ profile_eds_class: eds });
     setIsEDSModalVisible(false);
   };
 
@@ -654,7 +669,7 @@ export default function Settings() {
                   icon={<BookOpen size={18} color="#64748b" />}
                   label={t('eds_class')}
                   value={userEDS}
-                  onPress={() => setIsEDSModalVisible(true)}
+                  onPress={openEDSModal}
                 />
                 <SettingItem
                   icon={<Shield size={18} color="#64748b" />}
@@ -910,23 +925,35 @@ export default function Settings() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <View className="gap-2 mb-10">
-                {EDS_CLASSES.map((eds) => {
-                  const isSelected = userEDS === eds;
-                  return (
-                    <TouchableOpacity
-                      key={eds}
-                      onPress={() => saveEDS(eds)}
-                      className={`px-5 py-4 rounded-2xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <Text className={`text-sm ${isSelected ? 'text-primary font-bold' : 'text-slate-300'}`}>{eds}</Text>
-                        {isSelected && <Check size={18} color="#3b82f6" />}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {!!edsHint && (
+                <View className="bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 mb-4">
+                  <Text className="text-amber-400 text-xs leading-5">{edsHint}</Text>
+                </View>
+              )}
+              {edsLoading ? (
+                <View className="py-10 items-center">
+                  <ActivityIndicator size="small" color="#3b82f6" />
+                  <Text className="text-slate-500 text-xs mt-3">Chargement des classes...</Text>
+                </View>
+              ) : (
+                <View className="gap-2 mb-10">
+                  {edsClasses.map((eds) => {
+                    const isSelected = userEDS === eds;
+                    return (
+                      <TouchableOpacity
+                        key={eds}
+                        onPress={() => saveEDS(eds)}
+                        className={`px-5 py-4 rounded-2xl border ${isSelected ? 'bg-primary/10 border-primary' : 'bg-slate-800/50 border-slate-800'}`}
+                      >
+                        <View className="flex-row items-center justify-between">
+                          <Text className={`text-sm ${isSelected ? 'text-primary font-bold' : 'text-slate-300'}`}>{eds}</Text>
+                          {isSelected && <Check size={18} color="#3b82f6" />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>

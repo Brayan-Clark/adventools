@@ -21,6 +21,10 @@ const MG_DAY_LABELS = ['Alah', 'Alat', 'Tal', 'Alar', 'Alak', 'Zom', 'Sab'];
 //   Lesona Lehibe     → IDs like "mg-ss-2026-02"        (no suffix)
 //   Tanora Zokiny     → IDs like "mg-ss-2026-02-cq"     (ends with -cq)
 const CLASS_TO_SUFFIX: Record<string, { suffix: string; label: string }> = {
+  // Current labels saved by the profile (exact API category titles)
+  'Lesona Lehibe':                        { suffix: 'adult', label: 'Sekoly Sabata' },
+  'Lesona Tanora Zokiny':                 { suffix: 'cq',    label: 'Tanora Zokiny' },
+  // Legacy labels kept for profiles saved by older versions
   'Lesona Lehibe (+ 35 taona)':           { suffix: 'adult', label: 'Sekoly Sabata' },
   'Lesona Tanora zokiny (19-35 taona)':   { suffix: 'cq',    label: 'Tanora Zokiny' },
   'Lesona Zatovo (15-18 taona)':          { suffix: 'earliteen', label: 'Zatovo' },
@@ -35,6 +39,27 @@ const CLASS_TO_SUFFIX: Record<string, { suffix: string; label: string }> = {
 // ────────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ────────────────────────────────────────────────────────────────────────────────
+
+const normalizeClassLabel = (value: string): string =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+/** Resolve the saved EDS class (new or legacy label) to a widget quarterly selector. */
+function getClassInfo(edsClass: string): { suffix: string; label: string } {
+  const DEFAULT = CLASS_TO_SUFFIX['Lesona Lehibe'];
+  if (!edsClass) return DEFAULT;
+  if (CLASS_TO_SUFFIX[edsClass]) return CLASS_TO_SUFFIX[edsClass];
+  const norm = normalizeClassLabel(edsClass);
+  const match = Object.keys(CLASS_TO_SUFFIX).find((key) => {
+    const k = normalizeClassLabel(key);
+    return k === norm || norm.startsWith(`${k} `);
+  });
+  return match ? CLASS_TO_SUFFIX[match] : DEFAULT;
+}
 
 async function readSqliteSetting<T>(key: string, defaultValue: T): Promise<T> {
   let db: SQLite.SQLiteDatabase | null = null;
@@ -256,9 +281,9 @@ async function renderLesona(props: WidgetTaskHandlerProps) {
     //    No AsyncStorage fallback: see getQuarterlies() for why the widget avoids it.
     const edsClass: string =
       (await readSqliteSetting<string>('profile_eds_class', '')) ||
-      'Lesona Lehibe (+ 35 taona)';
+      'Lesona Lehibe';
 
-    const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
+    const classInfo = getClassInfo(edsClass);
     category = classInfo.label;
 
     const lang = 'mg';
@@ -378,9 +403,9 @@ async function renderLesonaAndro(props: WidgetTaskHandlerProps) {
   try {
     const edsClass: string =
       (await readSqliteSetting<string>('profile_eds_class', '')) ||
-      'Lesona Lehibe (+ 35 taona)';
+      'Lesona Lehibe';
 
-    const classInfo = CLASS_TO_SUFFIX[edsClass] ?? CLASS_TO_SUFFIX['Lesona Lehibe (+ 35 taona)'];
+    const classInfo = getClassInfo(edsClass);
     category = classInfo.label;
 
     const lang = 'mg';

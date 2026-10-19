@@ -45,6 +45,12 @@ import { getAllNotes, saveNote } from '@/lib/user-storage';
 import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange, uniqueId } from '@/lib/utils';
 import { QuarterlyItemSchema, QuarterlySchema, WeeklyLessonSchema, safeValidate } from '@/lib/schemas';
 import { useToast } from '@/lib/toast-context';
+import {
+  categoryMatches,
+  normalizeSsLabel,
+  resolveSsCategory,
+  writeCachedSsCategories,
+} from '@/lib/sabbath-school';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View, Pressable } from 'react-native';
 import Markdown from 'react-native-markdown-display';
@@ -307,17 +313,28 @@ export default function LesonaSekolySabata() {
   const [readingLesson, setReadingLesson] = useState<WeeklyLesson | null>(null);
   const [activeSegmentIdx, setActiveSegmentIdx] = useState(0);
   const [currentLessonId, setCurrentLessonId] = useState("");
-  const [activeCategory, setActiveCategory] = useState("Lesona Lehibe (+ 35 taona)");
+  const [activeCategory, setActiveCategory] = useState("");
+  const [edsCategorySetting, setEdsCategorySetting] = useState("");
   const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
   const [selectedLang, setSelectedLang] = useState<string>('mg');
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const resolvedEdsRef = useRef('');
   const { qId: qIdParam, lId: lIdParam } = useLocalSearchParams();
 
-  // Sync active category with profile settings
+  // Load the EDS class saved in the profile. Older versions stored fixed labels
+  // (e.g. "Lesona Lehibe (+ 35 taona)") that must be resolved against the real
+  // categories returned by the API.
   useEffect(() => {
-    if (globalSettings?.profile_eds_class) {
-      setActiveCategory(globalSettings.profile_eds_class);
-    }
+    let cancelled = false;
+    const load = async () => {
+      let stored = globalSettings?.profile_eds_class || '';
+      if (!stored) {
+        stored = (await AsyncStorage.getItem('profile_eds_class')) || '';
+      }
+      if (!cancelled) setEdsCategorySetting(stored);
+    };
+    load();
+    return () => { cancelled = true; };
   }, [globalSettings?.profile_eds_class]);
 
   // Premium Alert State
@@ -815,6 +832,19 @@ export default function LesonaSekolySabata() {
         setQuarterlyList([]);
       }
 
+      // A manual refresh must always revalidate the lesson titles, otherwise the
+      // list keeps displaying the titles cached during a previous sync.
+      if (force) {
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const titlePrefix = `adventools_ss_lesson_titles_${selectedLang}_`;
+          const titleKeys = allKeys.filter(k => k.startsWith(titlePrefix));
+          if (titleKeys.length > 0) await AsyncStorage.multiRemove(titleKeys);
+        } catch (e) {
+          console.error("Error clearing lesson title cache", e);
+        }
+      }
+
       if (shouldSync) {
         // Fetch fresh with cache busting
         let url = `${getApiBase(selectedLang)}/index.json?t=${Date.now()}`;
@@ -822,16 +852,21 @@ export default function LesonaSekolySabata() {
 
         const response = await fetch(url).catch(() => null);
         let items: QuarterlyItem[] = [];
+        const groupTitles: string[] = [];
 
         if (response && response.ok) {
           const data = await response.json();
           if (data && data.groups) {
             data.groups.forEach((group: any) => {
+              const groupTitle = typeof group?.title === 'string' ? group.title.trim() : "";
+              if (groupTitle && !groupTitles.includes(groupTitle)) {
+                groupTitles.push(groupTitle);
+              }
               if (group.resources) {
                 group.resources.forEach((res: any) => {
                   const validated = QuarterlyItemSchema.safeParse({
                     ...res,
-                    groupTitle: group.title || ""
+                    groupTitle
                   });
                   if (validated.success) {
                     items.push(validated.data);
@@ -842,6 +877,11 @@ export default function LesonaSekolySabata() {
               }
             });
           }
+        }
+
+        // Keep the categories used by the settings screen in sync with the API.
+        if (groupTitles.length > 0) {
+          await writeCachedSsCategories(selectedLang, groupTitles);
         }
 
         items.sort((a, b) => {
@@ -966,18 +1006,19 @@ export default function LesonaSekolySabata() {
     }
   };
 
-  const fetchQuarterlyDetail = async (id: string, indexPath?: string) => {
+  const fetchQuarterlyDetail = async (id: string, indexPath?: string, forceRefresh = false) => {
     setLoading(true);
     setSelectedQuarterly(null);
+    setLessonTitlesMap({});
     try {
       const downloadId = `${selectedLang}_${id}`;
       const cacheKey = `adventools_ss_q_detail_${downloadId}`;
-      const cached = await AsyncStorage.getItem(cacheKey);
+      const cached = forceRefresh ? null : await AsyncStorage.getItem(cacheKey);
       
       if (cached) {
         const json = JSON.parse(cached);
         setSelectedQuarterly(json);
-        loadLessonTitles(json);
+        await loadLessonTitles(json, forceRefresh);
         // Show the cached quarterly right away, but still refresh below: a
         // quarterly downloaded while incomplete must be able to see the
         // lessons published since.
@@ -987,7 +1028,7 @@ export default function LesonaSekolySabata() {
       const validated = await fetchQuarterlyIndex(id, indexPath);
       if (validated) {
         setSelectedQuarterly(validated);
-        loadLessonTitles(validated);
+        await loadLessonTitles(validated, forceRefresh);
       } else if (!cached) {
         throw new Error("Impossible de charger les données et aucun cache disponible.");
       }
@@ -1006,7 +1047,7 @@ export default function LesonaSekolySabata() {
     }
   };
 
-  const loadLessonTitles = async (q: Quarterly) => {
+  const loadLessonTitles = async (q: Quarterly, forceRefresh = false) => {
     const isBabies = q.id.includes('-bb-') || q.id.includes('babies');
     const isGuide = q.id.includes('-pb') || q.id.includes('-pth') || q.id.includes('guide');
     const weekLabel = selectedLang === 'mg' ? 'Herinandro' : (selectedLang === 'fr' ? 'Semaine' : (t('week' as any) || 'Week'));
@@ -1015,57 +1056,69 @@ export default function LesonaSekolySabata() {
       title: isGuide ? `${cleanSspmMarkdown(q.title)} - Part ${i + 1}` : `${weekLabel} ${i + 1}`
     }));
 
+    // Titles are scoped by quarterly id: two quarterlies can both have a lesson
+    // "01" with different titles, and the previous global map mixed them up.
+    const titleKey = (lessonId: string) => `${q.id}_${lessonId}`;
+
     try {
       const titles: Record<string, string> = {};
       
-      // Load cached titles from AsyncStorage first
+      // Load cached titles from AsyncStorage first (new format: { titles, updatedAt },
+      // old format: a plain map kept for backward compatibility).
       const cacheKey = `adventools_ss_lesson_titles_${selectedLang}_${q.id}`;
       const cachedTitlesStr = await AsyncStorage.getItem(cacheKey);
       let cachedTitles: Record<string, string> = {};
+      let cachedAt = 0;
       if (cachedTitlesStr) {
         try {
-          cachedTitles = JSON.parse(cachedTitlesStr);
+          const parsed = JSON.parse(cachedTitlesStr);
+          if (parsed && typeof parsed === 'object' && parsed.titles && typeof parsed.titles === 'object') {
+            cachedTitles = parsed.titles;
+            cachedAt = parsed.updatedAt ? new Date(parsed.updatedAt).getTime() : 0;
+          } else if (parsed && typeof parsed === 'object') {
+            cachedTitles = parsed;
+          }
         } catch (_) {}
       }
+
+      const TITLE_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+      const cacheIsStale = forceRefresh || !cachedAt || Date.now() - cachedAt > TITLE_CACHE_TTL;
 
       lessons.forEach((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
         if (lId) {
           const lTitle = cachedTitles[lId] || l.title || l.name || "";
-          if (lTitle) titles[lId] = lTitle;
+          if (lTitle) titles[titleKey(lId)] = lTitle;
         }
       });
       setLessonTitlesMap(titles);
 
       const prefix = `${selectedLang}-`;
       
-      // Helper function to check if a title is a generic placeholder and needs a fetch
+      // Only labels generated locally count as placeholders ("Herinandro 1", ...).
+      // A real title containing "andro" or "part" must never be refetched forever.
       const isPlaceholderTitle = (tName: string): boolean => {
         const low = tName.trim().toLowerCase();
-        return !low || 
-               low.includes('herinandro') || 
-               low.includes('semaine') || 
-               low.includes('week') || 
-               low.includes('part') ||
-               low.includes('lesson') ||
-               low.includes('leçon') ||
-               low.includes('lecon') ||
-               low.includes('andro') ||
-               !!low.match(/^(lesson|leçon|lecon|andro|week|herinandro|semaine)\s*\d+/i);
+        if (!low) return true;
+        return /^(herinandro|semaine|week|andro|lesson|le[cç]on|part)\s*\d+\b/i.test(low);
       };
 
       const lessonsToFetch = lessons.filter((l: any) => {
         const lIdStr = (l.id && typeof l.id === 'string') ? l.id : "";
         const lId = lIdStr.split('-').pop();
         if (!lId) return false;
-        
-        // If we already have a real title in cachedTitles (not a placeholder), don't fetch
+
+        const currentTitle = titles[titleKey(lId)] || '';
+
+        // A forced refresh or an expired cache revalidates every title.
+        if (forceRefresh || cacheIsStale) return true;
+
+        // Fresh cache with a real title: nothing to do.
         if (cachedTitles[lId] && !isPlaceholderTitle(cachedTitles[lId])) {
           return false;
         }
 
-        const currentTitle = titles[lId] || '';
         return isPlaceholderTitle(currentTitle);
       });
 
@@ -1083,7 +1136,7 @@ export default function LesonaSekolySabata() {
           let lUrl: string;
           if (q.index) {
             const sub = (q.index.includes('/mg/') || q.id.includes('-cq')) ? 'inverse' : 'absg';
-            lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json`;
+            lUrl = `https://${sub}.sspmadventist.org/api/v3/${q.index}/${lId}/index.json?t=${Date.now()}`;
           } else {
             const qPart = q.id.replace(prefix, '').replace('mg-', '').replace('ss-', '').replace('aij-', '').replace('explore-', '').replace(/-/g, '/');
             const sub = (q.id.includes('-cq')) ? 'inverse' : 'absg';
@@ -1098,10 +1151,10 @@ export default function LesonaSekolySabata() {
               const lJson = JSON.parse(text);
               if (lJson.title) {
                 const cleanedTitle = cleanSspmMarkdown(lJson.title);
-                titles[lId] = cleanedTitle;
+                titles[titleKey(lId)] = cleanedTitle;
                 cachedTitles[lId] = cleanedTitle;
                 hasNewTitles = true;
-                setLessonTitlesMap(prev => ({ ...prev, [lId]: cleanedTitle }));
+                setLessonTitlesMap(prev => ({ ...prev, [titleKey(lId)]: cleanedTitle }));
               }
             }
           } catch (e) {
@@ -1114,8 +1167,13 @@ export default function LesonaSekolySabata() {
         }
       }
 
+      // Only bump the cache timestamp when at least one title was actually
+      // refreshed, otherwise a network failure would hide the staleness for hours.
       if (hasNewTitles) {
-        await AsyncStorage.setItem(cacheKey, JSON.stringify(cachedTitles));
+        await AsyncStorage.setItem(cacheKey, JSON.stringify({
+          titles: cachedTitles,
+          updatedAt: new Date().toISOString(),
+        }));
       }
     } catch (e) {
       console.error("Error loading titles", e);
@@ -1790,16 +1848,21 @@ export default function LesonaSekolySabata() {
   };
 
   const categories = useMemo(() => {
-    const apiCats = Array.from(new Set(quarterlyList.map(item => item.groupTitle)))
-      .filter(title => !!title && title.trim() !== '');
-    return apiCats;
+    const byLabel = new Map<string, string>();
+    quarterlyList.forEach(item => {
+      const title = (item.groupTitle || '').trim();
+      const key = normalizeSsLabel(title);
+      if (title && key && !byLabel.has(key)) byLabel.set(key, title);
+    });
+    return Array.from(byLabel.values());
   }, [quarterlyList]);
 
   const matchCategory = (groupTitle: string, active: string): boolean => {
     if (!active) return true;
-    const g = groupTitle.toLowerCase();
-    const a = active.toLowerCase();
-    return g.includes(a) || a.includes(g);
+    // Strict matching against the categories actually returned by the API,
+    // with support for old labels such as "Lesona Lehibe (+ 35 taona)".
+    return normalizeSsLabel(groupTitle) === normalizeSsLabel(active)
+      || categoryMatches(active, groupTitle);
   };
 
   const filteredQuarterlies = useMemo(() => {
@@ -1807,30 +1870,21 @@ export default function LesonaSekolySabata() {
     return quarterlyList.filter(item => matchCategory(item.groupTitle, activeCategory));
   }, [quarterlyList, activeCategory]);
 
+  // Open directly on the category selected in the profile. If that old value
+  // does not exist in the API, show all categories instead of silently
+  // falling back to "Lesona Lehibe" (which mixed every class together).
   useEffect(() => {
-    if (categories.length === 0) return;
-    if (!activeCategory) return;
-    const hasMatch = categories.some(cat => matchCategory(cat, activeCategory));
-    if (!hasMatch) {
-      setActiveCategory(categories[0]);
-    }
-  }, [categories]);
+    if (!edsCategorySetting || categories.length === 0) return;
+    const resolved = resolveSsCategory(edsCategorySetting, categories);
+    if (resolved === resolvedEdsRef.current) return;
+    resolvedEdsRef.current = resolved;
+    setActiveCategory(resolved);
+  }, [categories, edsCategorySetting]);
 
   useEffect(() => {
+    resolvedEdsRef.current = '';
     setActiveCategory('');
-  }, [selectedLang]);
-
-  useEffect(() => {
-    if (selectedLang !== 'mg') return;
-    const loadEDS = async () => {
-      try {
-        const storedEDS = await AsyncStorage.getItem('profile_eds_class');
-        if (storedEDS) setActiveCategory(storedEDS);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    loadEDS();
+    setLessonTitlesMap({});
   }, [selectedLang]);
 
 
@@ -2521,7 +2575,7 @@ export default function LesonaSekolySabata() {
               const lessonIdStr = (lesson.id && typeof lesson.id === 'string') ? lesson.id : "";
               const lessonNum = lessonIdStr.split('-').pop() || "";
               const isToday = lessonNum === todayLessonId;
-              const actualTitle = lessonTitlesMap[lessonNum] || cleanSspmMarkdown((lesson as Lesson).title);
+              const actualTitle = lessonTitlesMap[`${selectedQuarterly.id}_${lessonNum}`] || cleanSspmMarkdown((lesson as Lesson).title);
 
               return (
                 <TouchableOpacity
@@ -2581,7 +2635,7 @@ export default function LesonaSekolySabata() {
             className={`px-6 py-2 rounded-full mr-3 ${!activeCategory ? 'bg-primary' : 'bg-slate-900 border border-slate-800'}`}
           >
             <Text className={`font-bold text-xs ${!activeCategory ? 'text-white' : 'text-slate-400'}`}>
-              {t('categories')} ·{quarterlyList.length}
+              {t('all')} · {quarterlyList.length}
             </Text>
           </TouchableOpacity>
           {categories.map(cat => (
@@ -2674,30 +2728,41 @@ export default function LesonaSekolySabata() {
           </View>
         </View>
 
-        {!readingLesson && !selectedQuarterly && (
+        {!readingLesson && (
           <View className="flex-row items-center gap-3">
+            {!selectedQuarterly && (
+              <TouchableOpacity
+                onPress={() => {
+                  calculateStorage();
+                  setStorageModalVisible(true);
+                }}
+                className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
+              >
+                <HardDrive size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
+
+            {!selectedQuarterly && (
+              <TouchableOpacity
+                onPress={() => setShowLangPicker(true)}
+                className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
+              >
+                <Globe size={18} color="#94a3b8" />
+                <View className="absolute -top-1 -right-1 bg-primary px-1.5 py-0.5 rounded-md border border-slate-900 shadow-sm">
+                   <Text className="text-[7px] text-white font-bold uppercase">{selectedLang}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               onPress={() => {
-                calculateStorage();
-                setStorageModalVisible(true);
+                if (selectedQuarterly) {
+                  fetchQuarterlyDetail(selectedQuarterly.id, selectedQuarterly.index, true);
+                } else {
+                  loadInitialData(true);
+                }
+                checkDownloaded();
               }}
-              className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
-            >
-              <HardDrive size={18} color="#94a3b8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowLangPicker(true)}
-              className="w-10 h-10 rounded-full bg-slate-900 items-center justify-center border border-white/5"
-            >
-              <Globe size={18} color="#94a3b8" />
-              <View className="absolute -top-1 -right-1 bg-primary px-1.5 py-0.5 rounded-md border border-slate-900 shadow-sm">
-                 <Text className="text-[7px] text-white font-bold uppercase">{selectedLang}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => { loadInitialData(true); checkDownloaded(); }}
               className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
             >
               <RefreshCw size={18} color="#94a3b8" />

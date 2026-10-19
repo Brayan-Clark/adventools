@@ -2,6 +2,18 @@
 
 Toutes les modifications notables apportées à ce projet seront documentées dans ce fichier.
 
+## [1.3.5] - 2026-10-19
+
+### 🐛 Corrections
+- *École du sabbat (Malagasy)* : Le filtre du haut utilise désormais les **catégories réellement publiées** (« Lesona Lehibe », « Lesona Tanora Zokiny », etc.) au lieu d'une liste fixe. Il ne mélange plus toutes les classes dans « Lesona Lehibe » : une classe qui n'existe pas dans les leçons disponibles affiche « Tout » plutôt qu'un contenu qui ne lui correspond pas.
+- *École du sabbat* : La **classe EDS** des paramètres est maintenant alimentée par les mêmes catégories que l'écran des leçons. Choisir une classe ouvre directement le bon filtre, et les anciennes valeurs (ex. « Lesona Lehibe (+ 35 taona) », « Lesona Tanora zokiny (19-35 taona) ») sont reconnues et migrées.
+- *École du sabbat* : Les **titres des leçons** se rafraîchissent réellement. Le cache est désormais propre à chaque trimestre (plus de titre d'un trimestre affiché sur un autre), il expire au bout de 6 heures, et le bouton de rafraîchissement force la mise à jour des titres. Un appui sur le bouton depuis un trimestre ouvert le rafraîchit sans quitter la page.
+
+### ✨ Améliorations
+- *Mofon'aina* : La liste du trimestre s'ouvre sur la méditation du jour, puis les jours suivants, au lieu de démarrer au premier jour du livret. La liste reste entièrement défilable (mois précédents et suivants).
+
+---
+
 ## [1.3.4] - 2026-09-29
 
 ### ✨ Nouveautés

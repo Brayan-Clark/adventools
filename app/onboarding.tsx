@@ -17,23 +17,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setSetting } from '@/lib/user-storage';
+import { getSsCategories, resolveSsCategory } from '@/lib/sabbath-school';
 import { AppText as Text } from '@/components/ui/AppText';
 
 
 const { width } = Dimensions.get('window');
 const ONBOARDING_KEY = 'adventools_onboarding_done';
-
-const EDS_CLASSES = [
-  "Lesona Zaza minono (0-12 volana)",
-  "Lesona Zazakely (1-3 taona)",
-  "Lesona Kilonga (4-6 taona)",
-  "Lesona Ankizy (7-9 taona)",
-  "Lesona Tanora zandriny (10-12 taona)",
-  "Lesona Mantoanto (13-14 taona)",
-  "Lesona Zatovo (15-18 taona)",
-  "Lesona Tanora zokiny (19-35 taona)",
-  "Lesona Lehibe (+ 35 taona)",
-];
 
 const DEFAULT_DEPARTMENTS = [
   { id: "pasteur", translations: { fr: "Pasteur", mg: "Mpitandrina", en: "Pastor" } },
@@ -69,7 +58,8 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
-  const [selectedEDS, setSelectedEDS] = useState('Lesona Lehibe (+ 35 taona)');
+  const [selectedEDS, setSelectedEDS] = useState('Lesona Lehibe');
+  const [edsClasses, setEdsClasses] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [availableDepts, setAvailableDepts] = useState<any[]>(DEFAULT_DEPARTMENTS);
   const [saving, setSaving] = useState(false);
@@ -79,6 +69,24 @@ export default function OnboardingScreen() {
 
   // Dots progress
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // The EDS classes are the real Sabbath School categories served by the API,
+  // so the profile selection always maps to an existing lesson category.
+  useEffect(() => {
+    const loadEdsClasses = async () => {
+      try {
+        const ssLang = (await AsyncStorage.getItem('adventools_ss_selected_lang')) || 'mg';
+        const classes = await getSsCategories(ssLang, { refresh: true });
+        if (classes.length > 0) {
+          setEdsClasses(classes);
+          setSelectedEDS(prev => resolveSsCategory(prev, classes) || classes[0]);
+        }
+      } catch (e) {
+        console.log("Error loading Sabbath School categories");
+      }
+    };
+    loadEdsClasses();
+  }, []);
 
   useEffect(() => {
     // Load departments from manifest
@@ -156,6 +164,7 @@ export default function OnboardingScreen() {
         }
         await AsyncStorage.setItem('profile_eds_class', selectedEDS);
         await setSetting('profile_eds_class', selectedEDS);
+        await updateSettings({ profile_eds_class: selectedEDS });
         
         if (departments.length > 0) {
           await AsyncStorage.setItem('profile_departments', JSON.stringify(departments));
@@ -166,8 +175,9 @@ export default function OnboardingScreen() {
         await AsyncStorage.setItem('profile_name', 'Fianatra Baiboly');
         await setSetting('profile_name', 'Fianatra Baiboly');
         
-        await AsyncStorage.setItem('profile_eds_class', 'Lesona Lehibe (+ 35 taona)');
-        await setSetting('profile_eds_class', 'Lesona Lehibe (+ 35 taona)');
+        await AsyncStorage.setItem('profile_eds_class', 'Lesona Lehibe');
+        await setSetting('profile_eds_class', 'Lesona Lehibe');
+        await updateSettings({ profile_eds_class: 'Lesona Lehibe' });
       }
       
       // Crucial: Save to both for reliability during transition
@@ -403,7 +413,7 @@ export default function OnboardingScreen() {
               className="mb-8"
               contentContainerStyle={{ paddingRight: 8 }}
             >
-              {EDS_CLASSES.map((cls) => (
+              {edsClasses.map((cls) => (
                 <TouchableOpacity
                   key={cls}
                   onPress={() => setSelectedEDS(cls)}

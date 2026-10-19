@@ -1,7 +1,7 @@
 import { Stack, router } from 'expo-router';
 import { ChevronLeft, Calendar, Share2, WifiOff, RefreshCw, Bookmark, Heart, Clock, Volume2, Square, Edit, BookOpen } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View, Share, Alert, Image, ImageBackground, Dimensions, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -124,6 +124,27 @@ export default function MofonainaScreen() {
     selectedItemOffset.current = 0;
     setShowQuarterModal(true);
   };
+
+  // The quarter is stored chronologically (first day first), but the list reads
+  // best starting from the reading closest to us. Rotate it so the selected day
+  // (today by default) sits at the top, then the following days, then the days
+  // that came before it.
+  const orderedQuarterList = useMemo(() => {
+    if (quarterList.length === 0) return quarterList;
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    const anchor = mofonaina?.daty || todayStr;
+
+    let startIndex = quarterList.findIndex(item => item.daty === anchor);
+    if (startIndex < 0) {
+      startIndex = quarterList.findIndex(item => item.daty === todayStr);
+    }
+    if (startIndex <= 0) return quarterList;
+
+    return [...quarterList.slice(startIndex), ...quarterList.slice(0, startIndex)];
+  }, [quarterList, mofonaina?.daty]);
 
   const splitIntoSentences = (text: string) => {
     // Improved regex that splits by sentences but preserves all characters including trailing quotes/parentheses
@@ -647,12 +668,12 @@ export default function MofonainaScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView ref={quarterScrollRef} className="flex-1 px-4 pt-4">
-              {quarterList.map((item, index) => {
+              {orderedQuarterList.map((item) => {
                 const itemDate = new Date(item.daty);
                 const isSelected = item.daty === mofonaina?.daty;
                 return (
                   <TouchableOpacity
-                    key={`q_item_${index}`}
+                    key={`q_item_${item.daty}`}
                     onLayout={isSelected ? (e) => {
                       selectedItemOffset.current = e.nativeEvent.layout.y;
                       // Layout can land after onShow (long lists), so scroll here too.
