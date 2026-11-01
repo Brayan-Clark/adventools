@@ -2,6 +2,24 @@
 
 Toutes les modifications notables apportées à ce projet seront documentées dans ce fichier.
 
+## [1.3.6] - 2026-11-01
+
+### ✨ Nouveautés
+- *École du sabbat* : Les **langues disponibles sont désormais lues depuis le serveur** — 95 langues au lieu de 3 pour les leçons et 6 pour l'audio et la vidéo. Chaque langue s'affiche dans sa propre écriture (中文, አማርኛ, Kiswahili…), le malgache, le français et l'anglais restent en tête de liste, et un champ de recherche permet de trouver sa langue sans faire défiler. Une langue ajoutée sur le serveur apparaît sans mise à jour de l'application.
+- *Mofon'aina* : Le livret publie pour chaque jour un **psaume**, une **lecture** et l'**heure du coucher du soleil** des sabbats. Ces informations étaient téléchargées mais n'étaient affichées nulle part ; elles apparaissent maintenant sous le verset du jour. Le psaume s'ouvre d'un appui dans la Bible.
+- *Mofon'aina* : Le **jour de la semaine du livret** est affiché tel qu'il est publié. « Sabata » s'affiche enfin « Sabata » au lieu de « Saturday ».
+
+### 🐛 Corrections
+- *École du sabbat* : Hors-ligne et dans une langue jamais encore synchronisée, le filtre du haut affichait les catégories **malgaches** quelle que soit la langue choisie. Il n'affiche plus de catégorie inventée.
+- *École du sabbat (audio et vidéo)* : Une langue sans contenu publié affichait « Aucun résultat », impossible à distinguer d'un filtre trop restrictif. Un message clair invite désormais à changer de langue.
+- *École du sabbat* : Si le serveur principal ne répond pas, l'application bascule sur le serveur miroir pour **toutes** les langues, et non plus seulement pour l'anglais.
+
+### 🔧 Technique
+- *Mofon'aina* : Les méditations ne sont plus relues et réanalysées depuis le disque à chaque appel (environ 450 Ko, plusieurs fois par ouverture d'écran). Elles sont gardées en mémoire avec un index par date, et le cache est invalidé dès que le widget réécrit le fichier depuis son propre processus.
+- Suppression de l'ancien écran de leçons `lesona_v1` (1 900 lignes), restée accessible comme route et porteuse de sa propre liste de langues figée.
+
+---
+
 ## [1.3.5] - 2026-10-19
 
 ### 🐛 Corrections

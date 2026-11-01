@@ -28,6 +28,7 @@ export interface TranslationSchema {
   beliefs: string;
   holy_bible: string;
   choose_language: string;
+  search_language: string;
   install_other_versions: string;
   search_book: string;
   search_text: string;
@@ -365,6 +366,11 @@ export interface TranslationSchema {
   podcasts_streaming: string;
   all_lessons_in_theme: string;
   quarter_number: string;
+  no_content_for_language: string;
+  change_language: string;
+  psalm_of_the_day: string;
+  reading_of_the_day: string;
+  sunset: string;
   all_downloaded: string;
   download_all_confirm: string;
   all: string;

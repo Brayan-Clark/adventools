@@ -13,14 +13,25 @@ const CATEGORY_CACHE_PREFIX = 'adventools_ss_categories_';
 export const getSsApiBase = (lang: string) => `https://inverse.sspmadventist.org/api/v3/${lang}/ss`;
 export const getSsAbsgBase = (lang: string) => `https://absg.sspmadventist.org/api/v3/${lang}/ss`;
 
-export const getSsIndexUrl = (lang: string) => {
-  const base = lang === 'en' ? getSsAbsgBase(lang) : getSsApiBase(lang);
-  return `${base}/index.json`;
-};
+/**
+ * Both hosts mirror the same payload for every language, so the second entry is
+ * only a fallback when the first one is unreachable.
+ */
+export const getSsIndexUrls = (lang: string) => [
+  `${getSsApiBase(lang)}/index.json`,
+  `${getSsAbsgBase(lang)}/index.json`,
+];
+
+export const getSsIndexUrl = (lang: string) => getSsIndexUrls(lang)[0];
 
 export const getSsCategoryCacheKey = (lang: string) => `${CATEGORY_CACHE_PREFIX}${lang}`;
 
-/** Local fallback used before the API has ever answered (offline first launch). */
+/**
+ * Local fallback used before the API has ever answered (offline first launch).
+ * Only covers the languages the app itself ships; any other language returns an
+ * empty list, which the lesson screen reads as "no filter, show everything"
+ * rather than showing labels that do not exist in that language.
+ */
 export const DEFAULT_SS_CATEGORIES: Record<string, string[]> = {
   mg: ['Lesona Lehibe', 'Lesona Tanora Zokiny'],
   fr: ['Classe des Adultes', 'InVerse', 'Division Interaméricaine'],
@@ -74,7 +85,7 @@ export const resolveSsCategory = (value: string, categories: string[]): string =
 };
 
 export const getDefaultSsCategories = (lang: string): string[] =>
-  DEFAULT_SS_CATEGORIES[lang] || DEFAULT_SS_CATEGORIES.mg;
+  DEFAULT_SS_CATEGORIES[lang] || [];
 
 export const readCachedSsCategories = async (lang: string): Promise<string[]> => {
   try {
@@ -106,8 +117,13 @@ export const writeCachedSsCategories = async (lang: string, categories: string[]
 
 /** Fetches the category titles from the API index (groups). */
 export const fetchSsCategories = async (lang: string): Promise<string[]> => {
-  const res = await fetch(`${getSsIndexUrl(lang)}?t=${Date.now()}`);
-  if (!res.ok) throw new Error(`Sabbath School index HTTP ${res.status}`);
+  const bust = Date.now();
+  let res: Response | null = null;
+  for (const url of getSsIndexUrls(lang)) {
+    res = await fetch(`${url}?t=${bust}`).catch(() => null);
+    if (res?.ok) break;
+  }
+  if (!res?.ok) throw new Error(`Sabbath School index HTTP ${res?.status ?? 'unreachable'}`);
   const data = await res.json();
   const categories: string[] = [];
   for (const group of data?.groups || []) {

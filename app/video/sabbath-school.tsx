@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ChevronLeft, PlayCircle, Globe, RefreshCw, Search, AlertCircle, Download, Trash2, WifiOff } from 'lucide-react-native';
+import { ChevronLeft, PlayCircle, Globe, RefreshCw, Search, AlertCircle, Download, Trash2, WifiOff, X } from 'lucide-react-native';
 import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, TouchableOpacity, View, Image, SectionList, TextInput, ActivityIndicator, Modal } from 'react-native';
 import { useToast } from '@/lib/toast-context';
@@ -11,6 +11,12 @@ import { useSettings } from '../../lib/settings-context';
 import { useTranslation } from '../../lib/i18n';
 import { AppText as Text } from '@/components/ui/AppText';
 import { checkMobileDataWarning } from '@/lib/data-saver';
+import {
+  DEFAULT_SS_LANGUAGES,
+  filterSsLanguages,
+  getSsLanguages,
+  type SsLanguage,
+} from '@/lib/sabbath-school-languages';
 
 
 interface VideoClip {
@@ -27,15 +33,6 @@ interface VideoClip {
 const SS_VIDEO_DIR = `${FileSystem.documentDirectory}sabbath-school-video/`;
 const SS_VIDEO_METADATA = `${SS_VIDEO_DIR}metadata.json`;
 const SS_VIDEO_CACHE = `${SS_VIDEO_DIR}media-cache.json`;
-
-const SUPPORTED_LANGS = [
-  { code: 'fr', label: 'Français' },
-  { code: 'mg', label: 'Malagasy' },
-  { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
-  { code: 'pt', label: 'Português' },
-  { code: 'de', label: 'Deutsch' }
-];
 
 const SERIES_TYPES = [
   { id: 'all', label: 'Toutes' },
@@ -67,11 +64,13 @@ export default function SabbathSchoolVideoScreen() {
   const { showAlert } = useAlert();
   const { settings: globalSettings } = useSettings();
   
-  const initialLang = SUPPORTED_LANGS.find(l => l.label === currentLang)?.code || 'fr';
+  const initialLang = DEFAULT_SS_LANGUAGES.find(l => l.label === currentLang)?.code || 'fr';
   const [mediaLang, setMediaLang] = useState(initialLang);
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [ssLanguages, setSsLanguages] = useState<SsLanguage[]>(DEFAULT_SS_LANGUAGES);
+  const [langQuery, setLangQuery] = useState('');
   const [videoClips, setVideoClips] = useState<VideoClip[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -88,6 +87,27 @@ export default function SabbathSchoolVideoScreen() {
   const fontFamilyBold = 'Lexend_700Bold';
 
   useEffect(() => { initAndLoad(); }, [mediaLang]);
+
+  // Languages come from the API so one added upstream needs no new build.
+  useEffect(() => {
+    let cancelled = false;
+    getSsLanguages({ refresh: true })
+      .then(list => {
+        if (!cancelled && list.length > 0) setSsLanguages(list);
+      })
+      .catch(() => { /* keep the bundled fallback */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const visibleSsLanguages = useMemo(
+    () => filterSsLanguages(ssLanguages, langQuery),
+    [ssLanguages, langQuery]
+  );
+
+  const closeLangModal = () => {
+    setLangModalVisible(false);
+    setLangQuery('');
+  };
 
   // Reconcile: scan disk and rebuild downloadedVideos from actual files.
   const reconcileDownloads = async (): Promise<Record<string, boolean>> => {
@@ -375,8 +395,18 @@ export default function SabbathSchoolVideoScreen() {
                 <Text className="text-slate-700 text-center text-xs mt-2">Aucun cache disponible. Connectez-vous pour charger les vidéos.</Text>
                 <TouchableOpacity onPress={() => initAndLoad()} className="mt-6 bg-amber-500 px-6 py-3 rounded-xl"><Text className="text-black font-bold text-xs">Réessayer</Text></TouchableOpacity>
             </View>
+        ) : videoClips.length === 0 ? (
+            // Nothing at all for this language, as opposed to filters matching
+            // nothing: most of the 95 languages have no video published.
+            <View className="flex-1 items-center justify-center px-10">
+                <PlayCircle size={32} color="#1e293b" />
+                <Text className="text-slate-600 text-center text-xs mt-4">{t('no_content_for_language')}</Text>
+                <TouchableOpacity onPress={() => setLangModalVisible(true)} className="mt-6 bg-amber-500 px-6 py-3 rounded-xl">
+                    <Text className="text-black font-bold text-xs">{t('change_language')}</Text>
+                </TouchableOpacity>
+            </View>
         ) : filteredClips.length === 0 ? (
-            <View className="flex-1 items-center justify-center px-10"><Text className="text-slate-600 text-center text-xs">Aucune vidéo.</Text></View>
+            <View className="flex-1 items-center justify-center px-10"><Text className="text-slate-600 text-center text-xs">{t('no_results')}</Text></View>
         ) : (
             <SectionList sections={sections} keyExtractor={(item, index) => item.id + index} contentContainerStyle={{ paddingBottom: 100 }} stickySectionHeadersEnabled={true}
                 renderSectionHeader={({ section: { title } }) => ( <View className="bg-slate-950/95 px-6 py-2 border-b border-white/5"><Text className="text-amber-500 font-bold text-[8px] uppercase tracking-widest">{title}</Text></View> )}
@@ -408,18 +438,41 @@ export default function SabbathSchoolVideoScreen() {
         )}
       </View>
 
-      <Modal visible={langModalVisible} transparent animationType="fade">
-        <TouchableOpacity activeOpacity={1} onPress={() => setLangModalVisible(false)} className="flex-1 bg-black/90 items-center justify-center p-8">
-            <View className="bg-slate-900 w-full rounded-3xl border border-white/10 p-6">
-                <Text className="text-white font-black text-center mb-6 uppercase tracking-widest">Langue</Text>
-                <View className="flex-row flex-wrap justify-between gap-3">
-                    {SUPPORTED_LANGS.map(lang => (
-                        <TouchableOpacity key={lang.code} onPress={() => { setMediaLang(lang.code); setLangModalVisible(false); }} className={`w-[48%] py-4 rounded-2xl border items-center ${mediaLang === lang.code ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-white/5'}`}>
-                            <Text className={`font-bold ${mediaLang === lang.code ? 'text-black' : 'text-slate-400'}`}>{lang.label}</Text>
+      <Modal visible={langModalVisible} transparent animationType="fade" onRequestClose={closeLangModal}>
+        <TouchableOpacity activeOpacity={1} onPress={closeLangModal} className="flex-1 bg-black/90 items-center justify-center p-6">
+            <TouchableOpacity activeOpacity={1} onPress={e => e.stopPropagation()} className="bg-slate-900 w-full rounded-3xl border border-white/10 p-6" style={{ maxHeight: '80%' }}>
+                <Text className="text-white font-black text-center mb-4 uppercase tracking-widest">{t('choose_language')}</Text>
+
+                <View className="flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 mb-4">
+                    <Search size={18} color="#64748b" />
+                    <TextInput
+                        value={langQuery}
+                        onChangeText={setLangQuery}
+                        placeholder={t('search_language')}
+                        placeholderTextColor="#64748b"
+                        autoCorrect={false}
+                        className="flex-1 text-white text-base px-3 py-3"
+                    />
+                    {langQuery !== '' && (
+                        <TouchableOpacity onPress={() => setLangQuery('')} hitSlop={8}>
+                            <X size={18} color="#64748b" />
                         </TouchableOpacity>
-                    ))}
+                    )}
                 </View>
-            </View>
+
+                <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                    <View className="flex-row flex-wrap justify-between gap-3">
+                        {visibleSsLanguages.map(lang => (
+                            <TouchableOpacity key={lang.code} onPress={() => { setMediaLang(lang.code); closeLangModal(); }} className={`w-[48%] py-4 px-2 rounded-2xl border items-center ${mediaLang === lang.code ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-white/5'}`}>
+                                <Text numberOfLines={1} className={`font-bold ${mediaLang === lang.code ? 'text-black' : 'text-slate-400'}`}>{lang.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                    {visibleSsLanguages.length === 0 && (
+                        <Text className="text-slate-500 text-center py-6">{t('no_results')}</Text>
+                    )}
+                </ScrollView>
+            </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>

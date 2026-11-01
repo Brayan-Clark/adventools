@@ -39,7 +39,8 @@ import {
   Mic,
   Database,
   HardDrive,
-  Copy
+  Copy,
+  Search
 } from 'lucide-react-native';
 import { getAllNotes, saveNote } from '@/lib/user-storage';
 import { cleanSspmMarkdown, stripMarkdownLinks, parseDate, formatDateRange, uniqueId } from '@/lib/utils';
@@ -51,6 +52,12 @@ import {
   resolveSsCategory,
   writeCachedSsCategories,
 } from '@/lib/sabbath-school';
+import {
+  DEFAULT_SS_LANGUAGES,
+  filterSsLanguages,
+  getSsLanguages,
+  type SsLanguage,
+} from '@/lib/sabbath-school-languages';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Linking, Modal, Platform, Share as RNShare, ScrollView, TextInput, TouchableOpacity, useWindowDimensions, View, Pressable } from 'react-native';
 import Markdown from 'react-native-markdown-display';
@@ -100,12 +107,6 @@ const writeProgress = async (downloadId: string, progress: DownloadProgress) => 
   }
 };
 
-
-const SS_LANGUAGES = [
-  { code: 'mg', label: 'Malagasy', flag: '🇲🇬' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-];
 
 const getShareSignature = (lang: string) => {
   switch (lang?.toLowerCase()) {
@@ -318,6 +319,8 @@ export default function LesonaSekolySabata() {
   const [lessonTitlesMap, setLessonTitlesMap] = useState<Record<string, string>>({});
   const [selectedLang, setSelectedLang] = useState<string>('mg');
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [ssLanguages, setSsLanguages] = useState<SsLanguage[]>(DEFAULT_SS_LANGUAGES);
+  const [langQuery, setLangQuery] = useState('');
   const resolvedEdsRef = useRef('');
   const { qId: qIdParam, lId: lIdParam } = useLocalSearchParams();
 
@@ -448,6 +451,28 @@ export default function LesonaSekolySabata() {
     loadSavedLang();
   }, [globalSettings.language]);
 
+  // The picker list comes from the API so a language added upstream shows up
+  // without a new build; the cache answers instantly and offline.
+  useEffect(() => {
+    let cancelled = false;
+    getSsLanguages({ refresh: true })
+      .then(list => {
+        if (!cancelled && list.length > 0) setSsLanguages(list);
+      })
+      .catch(() => { /* keep the bundled fallback */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const visibleSsLanguages = useMemo(
+    () => filterSsLanguages(ssLanguages, langQuery),
+    [ssLanguages, langQuery]
+  );
+
+  const selectedLangLabel = useMemo(
+    () => ssLanguages.find(l => l.code === selectedLang)?.label || selectedLang.toUpperCase(),
+    [ssLanguages, selectedLang]
+  );
+
   useEffect(() => {
     if (qIdParam && !selectedQuarterly) {
       fetchQuarterlyDetail(qIdParam as string);
@@ -483,6 +508,7 @@ export default function LesonaSekolySabata() {
   const changeLang = async (l: string) => {
     setSelectedLang(l);
     setShowLangPicker(false);
+    setLangQuery('');
     await AsyncStorage.setItem('adventools_ss_selected_lang', l);
   };
 
@@ -846,11 +872,13 @@ export default function LesonaSekolySabata() {
       }
 
       if (shouldSync) {
-        // Fetch fresh with cache busting
-        let url = `${getApiBase(selectedLang)}/index.json?t=${Date.now()}`;
-        if (selectedLang === 'en') url = `${getAbsgBase(selectedLang)}/index.json?t=${Date.now()}`;
-
-        const response = await fetch(url).catch(() => null);
+        // Fetch fresh with cache busting. Both hosts mirror the same payload for
+        // every language, so the second one is only a fallback.
+        const bust = Date.now();
+        let response = await fetch(`${getApiBase(selectedLang)}/index.json?t=${bust}`).catch(() => null);
+        if (!response || !response.ok) {
+          response = await fetch(`${getAbsgBase(selectedLang)}/index.json?t=${bust}`).catch(() => null);
+        }
         let items: QuarterlyItem[] = [];
         const groupTitles: string[] = [];
 
@@ -2722,7 +2750,7 @@ export default function LesonaSekolySabata() {
             </Text>
             <View className="flex-row items-center">
               <Text className="text-slate-500 text-xs mr-2">
-                {readingLesson ? t('daily_study') : SS_LANGUAGES.find(l => l.code === selectedLang)?.label || 'Sekoly Sabata'}
+                {readingLesson ? t('daily_study') : selectedLangLabel}
               </Text>
             </View>
           </View>
@@ -2780,30 +2808,66 @@ export default function LesonaSekolySabata() {
         visible={showLangPicker}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowLangPicker(false)}
+        onRequestClose={() => { setShowLangPicker(false); setLangQuery(''); }}
       >
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => setShowLangPicker(false)}
-          className="flex-1 bg-black/60 items-center justify-center px-10"
+          onPress={() => { setShowLangPicker(false); setLangQuery(''); }}
+          className="flex-1 bg-black/60 items-center justify-center px-6"
         >
           <TouchableOpacity
             activeOpacity={1}
             onPress={e => e.stopPropagation()}
             className="w-full bg-slate-900 rounded-[32px] border border-slate-800 p-6"
+            style={{ maxHeight: '80%' }}
           >
-            <Text className="text-white text-lg font-bold mb-6 text-center">{t('choose_language')}</Text>
-            {SS_LANGUAGES.map(lang => (
-              <TouchableOpacity
-                key={lang.code}
-                onPress={() => changeLang(lang.code)}
-                className={`flex-row items-center p-4 rounded-2xl mb-3 border ${selectedLang === lang.code ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5'}`}
-              >
-                <Text className="text-2xl mr-4">{lang.flag}</Text>
-                <Text className={`text-base font-bold flex-1 ${selectedLang === lang.code ? 'text-primary' : 'text-white'}`}>{lang.label}</Text>
-                {selectedLang === lang.code && <CheckCircle size={20} color="#3b82f6" />}
-              </TouchableOpacity>
-            ))}
+            <Text className="text-white text-lg font-bold mb-4 text-center">{t('choose_language')}</Text>
+
+            <View className="flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 mb-4">
+              <Search size={18} color="#64748b" />
+              <TextInput
+                value={langQuery}
+                onChangeText={setLangQuery}
+                placeholder={t('search_language')}
+                placeholderTextColor="#64748b"
+                autoCorrect={false}
+                className="flex-1 text-white text-base px-3 py-3"
+              />
+              {langQuery !== '' && (
+                <TouchableOpacity onPress={() => setLangQuery('')} hitSlop={8}>
+                  <X size={18} color="#64748b" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {visibleSsLanguages.map(lang => (
+                <TouchableOpacity
+                  key={lang.code}
+                  onPress={() => changeLang(lang.code)}
+                  className={`flex-row items-center p-4 rounded-2xl mb-3 border ${selectedLang === lang.code ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5'}`}
+                >
+                  {lang.flag ? (
+                    <Text className="text-2xl mr-4">{lang.flag}</Text>
+                  ) : (
+                    // Most codes map to several countries, so show the code instead.
+                    <View className="w-8 h-8 mr-4 rounded-lg bg-white/10 items-center justify-center">
+                      <Text className="text-slate-300 text-[10px] font-bold">{lang.code.toUpperCase()}</Text>
+                    </View>
+                  )}
+                  <View className="flex-1">
+                    <Text className={`text-base font-bold ${selectedLang === lang.code ? 'text-primary' : 'text-white'}`}>{lang.label}</Text>
+                    {lang.name !== lang.label && (
+                      <Text className="text-slate-500 text-xs">{lang.name}</Text>
+                    )}
+                  </View>
+                  {selectedLang === lang.code && <CheckCircle size={20} color="#3b82f6" />}
+                </TouchableOpacity>
+              ))}
+              {visibleSsLanguages.length === 0 && (
+                <Text className="text-slate-500 text-center py-6">{t('no_results')}</Text>
+              )}
+            </ScrollView>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

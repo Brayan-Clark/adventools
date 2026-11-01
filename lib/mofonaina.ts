@@ -18,6 +18,25 @@ const MANIFEST_CACHE_FILE = `${QUARTERS_DIR}manifest.json`;
 
 const FETCH_TIMEOUT_MS = 20000;
 
+/**
+ * In-process cache of the parsed devotionals, plus a date index.
+ *
+ * The cache file holds every quarter (~450 KB), and the screens call
+ * getMofonainaForDate / getCurrentTelovolanaInfo / getAllMofonainaForQuarter
+ * several times per open. Re-reading and re-parsing it each time is wasteful,
+ * so the parsed form is kept in memory.
+ *
+ * It is keyed by the last-sync stamp rather than held forever: the widget runs
+ * in its own Android process and can rewrite the file underneath us. Reading
+ * that tiny stamp file is far cheaper than parsing the payload, so a write from
+ * the other process still invalidates this cache.
+ */
+let memo: {
+  stamp: string;
+  list: Mofonaina[];
+  byDate: Map<string, Mofonaina>;
+} | null = null;
+
 async function readCacheFile(path: string): Promise<string | null> {
   try {
     const info = await FileSystem.getInfoAsync(path);
@@ -183,6 +202,32 @@ function mapQuarterFile(fileData: any): Mofonaina[] {
     }));
 }
 
+function setMemo(stamp: string, list: Mofonaina[]): void {
+  const byDate = new Map<string, Mofonaina>();
+  for (const m of list) {
+    // Dates are stored as YYYY-MM-DD, but slice defensively in case a
+    // published file ever carries a time component.
+    if (m?.daty) byDate.set(m.daty.slice(0, 10), m);
+  }
+  memo = { stamp, list, byDate };
+}
+
+/** The parsed devotionals, re-reading the file only when the sync stamp moved. */
+async function loadCachedList(): Promise<Mofonaina[]> {
+  const stamp = (await readCacheFile(LAST_SYNC_FILE)) || '';
+  if (memo && memo.stamp === stamp) return memo.list;
+
+  const content = await readCacheFile(CACHE_FILE);
+  if (!content) return [];
+  try {
+    const list: Mofonaina[] = JSON.parse(content);
+    setMemo(stamp, list);
+    return list;
+  } catch {
+    return [];
+  }
+}
+
 const sortByDateDesc = (list: Mofonaina[]): Mofonaina[] =>
   [...list].sort((a, b) => (a.daty < b.daty ? 1 : a.daty > b.daty ? -1 : 0));
 
@@ -274,12 +319,14 @@ async function syncCurrentQuarterDirectly(): Promise<{ list: Mofonaina[]; abbrev
 export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
   try {
     const lastSyncStr = await readCacheFile(LAST_SYNC_FILE);
-    const cachedStr = await readCacheFile(CACHE_FILE);
+    // Only the existence of the cache matters here; parsing its ~450 KB is
+    // deferred to loadCachedList, which memoizes the result.
+    const hasCache = memo !== null || (await FileSystem.getInfoAsync(CACHE_FILE)).exists;
 
     let shouldSync = force;
 
     if (!shouldSync) {
-      if (!lastSyncStr || !cachedStr) {
+      if (!lastSyncStr || !hasCache) {
         shouldSync = true;
       } else {
         const lastSync = new Date(lastSyncStr);
@@ -297,27 +344,21 @@ export async function syncMofonaina(force = false): Promise<Mofonaina[]> {
       const result = (await syncFromManifest()) || (await syncCurrentQuarterDirectly());
 
       if (result && result.list.length > 0) {
+        const stamp = new Date().toISOString();
         await writeCacheFile(CACHE_FILE, JSON.stringify(result.list));
-        await writeCacheFile(LAST_SYNC_FILE, new Date().toISOString());
+        await writeCacheFile(LAST_SYNC_FILE, stamp);
         if (result.abbreviations) {
           await writeJsonFile(ABBREVIATIONS_FILE, result.abbreviations);
         }
+        setMemo(stamp, result.list);
         return result.list;
       }
     }
 
-    if (cachedStr) {
-      return JSON.parse(cachedStr);
-    }
-
-    return [];
+    return await loadCachedList();
   } catch (error) {
     console.error('Error syncing mofonaina:', error);
-    const cachedStr = await readCacheFile(CACHE_FILE);
-    if (cachedStr) {
-      return JSON.parse(cachedStr);
-    }
-    return [];
+    return await loadCachedList();
   }
 }
 
@@ -328,10 +369,12 @@ export async function getMofonainaForDate(date: Date = new Date()): Promise<Mofo
   const all = await syncMofonaina();
   const targetDateStr = normalizeDate(date);
 
-  // Find the exact match for the date using string comparison on prefix YYYY-MM-DD
-  const match = all.find(m => m.daty && m.daty.startsWith(targetDateStr));
+  // Served by the date index built alongside the memory cache; the linear scan
+  // is only a fallback for the (unmemoized) empty-cache case.
+  const indexed = memo?.byDate.get(targetDateStr);
+  if (indexed) return indexed;
 
-  return match || null;
+  return all.find(m => m.daty && m.daty.startsWith(targetDateStr)) || null;
 }
 
 /**
@@ -353,10 +396,9 @@ function currentQuarterOf(all: Mofonaina[]): Telovolana | null {
  */
 export async function getCurrentTelovolanaInfo(): Promise<Telovolana | null> {
   try {
-    const content = await readCacheFile(CACHE_FILE);
-    if (!content) return null;
+    const data = await loadCachedList();
+    if (data.length === 0) return null;
 
-    const data: Mofonaina[] = JSON.parse(content);
     return currentQuarterOf(data);
   } catch (error) {
     console.error('Error getting telovolana info:', error);
@@ -372,10 +414,9 @@ export async function getCurrentTelovolanaInfo(): Promise<Telovolana | null> {
  */
 export async function getAllMofonainaForQuarter(): Promise<Mofonaina[]> {
   try {
-    const content = await readCacheFile(CACHE_FILE);
-    if (!content) return [];
+    const data = await loadCachedList();
+    if (data.length === 0) return [];
 
-    const data: Mofonaina[] = JSON.parse(content);
     const quarter = currentQuarterOf(data);
     if (!quarter) return [];
 
