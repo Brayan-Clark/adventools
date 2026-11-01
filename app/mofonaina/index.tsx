@@ -304,8 +304,8 @@ export default function MofonainaScreen() {
     if (!mofonaina) return;
     try {
       const extras = [
-        mofonaina.salamo_androany && `${t('psalm_of_the_day')}: ${mofonaina.salamo_androany}`,
-        mofonaina.vakiteny_androany && `${t('reading_of_the_day')}: ${mofonaina.vakiteny_androany}`,
+        mofonaina.salamo_androany && `${t('bible_reading_plan')}: ${mofonaina.salamo_androany}`,
+        mofonaina.vakiteny_androany && `${t('book_reading')}: ${mofonaina.vakiteny_androany}`,
         mofonaina.filentehan_masoandro && `${t('sunset')}: ${mofonaina.filentehan_masoandro}`,
       ].filter(Boolean).join('\n');
 
@@ -549,46 +549,33 @@ export default function MofonainaScreen() {
                   reading on Sundays and the sunset on Friday/Sabbath, so every
                   row is rendered only when its value is actually there. */}
               {(mofonaina.salamo_androany || mofonaina.vakiteny_androany || mofonaina.filentehan_masoandro) && (
-                <View className="bg-white/5 rounded-[32px] border border-white/5 p-5 mb-8">
+                <View className="flex-row flex-wrap items-center gap-x-5 gap-y-2 -mt-4 mb-8 px-1">
                   {!!mofonaina.salamo_androany && (
                     <TouchableOpacity
                       onPress={() => openRefInBible(mofonaina.salamo_androany)}
                       activeOpacity={0.6}
                       className="flex-row items-center"
                     >
-                      <View className="w-10 h-10 rounded-2xl bg-blue-500/15 items-center justify-center mr-4">
-                        <Bookmark size={16} color="#60a5fa" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{t('psalm_of_the_day')}</Text>
-                        <Text className="text-blue-300 font-bold text-sm">{mofonaina.salamo_androany}</Text>
-                      </View>
-                      <ChevronLeft size={16} color="#475569" style={{ transform: [{ rotate: '180deg' }] }} />
+                      <Bookmark size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('bible_reading_plan')}</Text>
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.salamo_androany}</Text>
                     </TouchableOpacity>
                   )}
 
                   {!!mofonaina.vakiteny_androany && (
-                    <View className={`flex-row items-center ${mofonaina.salamo_androany ? 'mt-4 pt-4 border-t border-white/5' : ''}`}>
-                      <View className="w-10 h-10 rounded-2xl bg-emerald-500/15 items-center justify-center mr-4">
-                        <BookOpen size={16} color="#34d399" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{t('reading_of_the_day')}</Text>
-                        {/* An EGW book reference ("MM toko 19-20"), not a Bible one: plain text. */}
-                        <Text className="text-white font-bold text-sm">{mofonaina.vakiteny_androany}</Text>
-                      </View>
+                    <View className="flex-row items-center">
+                      <BookOpen size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('book_reading')}</Text>
+                      {/* An EGW book reference ("MM toko 19-20"), not a Bible one: plain text. */}
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.vakiteny_androany}</Text>
                     </View>
                   )}
 
                   {!!mofonaina.filentehan_masoandro && (
-                    <View className={`flex-row items-center ${(mofonaina.salamo_androany || mofonaina.vakiteny_androany) ? 'mt-4 pt-4 border-t border-white/5' : ''}`}>
-                      <View className="w-10 h-10 rounded-2xl bg-orange-500/15 items-center justify-center mr-4">
-                        <Clock size={16} color="#fb923c" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{t('sunset')}</Text>
-                        <Text className="text-orange-300 font-bold text-sm">{mofonaina.filentehan_masoandro}</Text>
-                      </View>
+                    <View className="flex-row items-center">
+                      <Clock size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('sunset')}</Text>
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.filentehan_masoandro}</Text>
                     </View>
                   )}
                 </View>

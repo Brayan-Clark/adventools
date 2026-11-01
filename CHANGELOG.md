@@ -6,7 +6,7 @@ Toutes les modifications notables apportées à ce projet seront documentées da
 
 ### ✨ Nouveautés
 - *École du sabbat* : Les **langues disponibles sont désormais lues depuis le serveur** — 95 langues au lieu de 3 pour les leçons et 6 pour l'audio et la vidéo. Chaque langue s'affiche dans sa propre écriture (中文, አማርኛ, Kiswahili…), le malgache, le français et l'anglais restent en tête de liste, et un champ de recherche permet de trouver sa langue sans faire défiler. Une langue ajoutée sur le serveur apparaît sans mise à jour de l'application.
-- *Mofon'aina* : Le livret publie pour chaque jour un **psaume**, une **lecture** et l'**heure du coucher du soleil** des sabbats. Ces informations étaient téléchargées mais n'étaient affichées nulle part ; elles apparaissent maintenant sous le verset du jour. Le psaume s'ouvre d'un appui dans la Bible.
+- *Mofon'aina* : Le livret publie pour chaque jour le **Diabe**, le **Velomin'ny teniny** et l'**heure du coucher du soleil** des sabbats. Ces informations étaient téléchargées mais n'étaient affichées nulle part ; elles apparaissent maintenant en une ligne discrète sous le verset du jour. Le Diabe s'ouvre d'un appui dans la Bible.
 - *Mofon'aina* : Le **jour de la semaine du livret** est affiché tel qu'il est publié. « Sabata » s'affiche enfin « Sabata » au lieu de « Saturday ».
 
 ### 🐛 Corrections

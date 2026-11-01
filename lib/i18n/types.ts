@@ -368,8 +368,8 @@ export interface TranslationSchema {
   quarter_number: string;
   no_content_for_language: string;
   change_language: string;
-  psalm_of_the_day: string;
-  reading_of_the_day: string;
+  bible_reading_plan: string;
+  book_reading: string;
   sunset: string;
   all_downloaded: string;
   download_all_confirm: string;
