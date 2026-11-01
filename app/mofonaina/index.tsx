@@ -262,8 +262,8 @@ export default function MofonainaScreen() {
     return null;
   };
 
-  const openChapterInBible = async () => {
-    const ref = mofonaina?.toerana_soratra_masina;
+  /** Opens any Malagasy scripture reference in the Bible reader. */
+  const openRefInBible = async (ref?: string) => {
     if (!ref) return;
     try {
       const parsed = parseScriptureRef(ref);
@@ -298,10 +298,18 @@ export default function MofonainaScreen() {
     }
   };
 
+  const openChapterInBible = () => openRefInBible(mofonaina?.toerana_soratra_masina);
+
   const shareMofonaina = async () => {
     if (!mofonaina) return;
     try {
-      const textToShare = `${mofonaina.lohateny_andro}\n\n"${mofonaina.andininy_soratra_masina}"\n${mofonaina.toerana_soratra_masina}\n\n${mofonaina.mofon_aina}\n\nLoharano: ${mofonaina.loharano || ''}`;
+      const extras = [
+        mofonaina.salamo_androany && `${t('bible_reading_plan')}: ${mofonaina.salamo_androany}`,
+        mofonaina.vakiteny_androany && `${t('book_reading')}: ${mofonaina.vakiteny_androany}`,
+        mofonaina.filentehan_masoandro && `${t('sunset')}: ${mofonaina.filentehan_masoandro}`,
+      ].filter(Boolean).join('\n');
+
+      const textToShare = `${mofonaina.lohateny_andro}\n\n"${mofonaina.andininy_soratra_masina}"\n${mofonaina.toerana_soratra_masina}\n\n${mofonaina.mofon_aina}\n\nLoharano: ${mofonaina.loharano || ''}${extras ? `\n\n${extras}` : ''}`;
       await Share.share({
         message: textToShare,
         title: 'Mofon\'aina'
@@ -366,21 +374,32 @@ export default function MofonainaScreen() {
     };
   }, []);
 
-  const formatDate = (date: Date) => {
+  /**
+   * `withWeekday` is turned off when the booklet itself provides the day name:
+   * Intl has no Malagasy data on Hermes, so it would render "Saturday" where
+   * the booklet says "Sabata".
+   */
+  const formatDate = (date: Date, withWeekday = true) => {
     const localeMap: Record<string, string> = {
       'English': 'en-US',
       'Français': 'fr-FR',
       'Malagasy': 'mg-MG'
     };
     const locale = localeMap[globalSettings.language] || 'fr-FR';
-    
+
     return date.toLocaleDateString(locale, {
-      weekday: 'long',
+      ...(withWeekday ? { weekday: 'long' as const } : {}),
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   };
+
+  /** The booklet's own day name when published, otherwise the locale's. */
+  const dateLabel = (date: Date) =>
+    mofonaina?.andro_herinandro
+      ? `${mofonaina.andro_herinandro} • ${formatDate(date, false)}`
+      : formatDate(date);
 
   // Font adjustments handled dynamically by AppText
 
@@ -479,7 +498,7 @@ export default function MofonainaScreen() {
                <View className="flex-row items-center">
                   <Clock size={12} color="#94a3b8" />
                   <Text className="text-slate-400 text-[10px] ml-1.5 font-bold uppercase tracking-wider">
-                    {formatDate(currentDate)}
+                    {dateLabel(currentDate)}
                   </Text>
                </View>
                {isConnected === false && (
@@ -525,6 +544,42 @@ export default function MofonainaScreen() {
                     </TouchableOpacity>
                  </View>
               </LinearGradient>
+
+              {/* Booklet extras (T4 2026 onwards). The booklet only publishes the
+                  reading on Sundays and the sunset on Friday/Sabbath, so every
+                  row is rendered only when its value is actually there. */}
+              {(mofonaina.salamo_androany || mofonaina.vakiteny_androany || mofonaina.filentehan_masoandro) && (
+                <View className="flex-row flex-wrap items-center gap-x-5 gap-y-2 -mt-4 mb-8 px-1">
+                  {!!mofonaina.salamo_androany && (
+                    <TouchableOpacity
+                      onPress={() => openRefInBible(mofonaina.salamo_androany)}
+                      activeOpacity={0.6}
+                      className="flex-row items-center"
+                    >
+                      <Bookmark size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('bible_reading_plan')}</Text>
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.salamo_androany}</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {!!mofonaina.vakiteny_androany && (
+                    <View className="flex-row items-center">
+                      <BookOpen size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('book_reading')}</Text>
+                      {/* An EGW book reference ("MM toko 19-20"), not a Bible one: plain text. */}
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.vakiteny_androany}</Text>
+                    </View>
+                  )}
+
+                  {!!mofonaina.filentehan_masoandro && (
+                    <View className="flex-row items-center">
+                      <Clock size={11} color="#64748b" />
+                      <Text className="text-slate-500 text-[11px] ml-1.5">{t('sunset')}</Text>
+                      <Text className="text-slate-300 text-[11px] font-bold ml-1.5">{mofonaina.filentehan_masoandro}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Main Content Card */}
               <View className="bg-white/5 rounded-[40px] border border-white/5 p-8 mb-8">
